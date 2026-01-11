@@ -10,26 +10,21 @@
              alt="배너를 클릭하면 시연영상 유튜브 링크로 연결됩니다" 
              width="45%">
     </a>
-    <img src="https://github.com/user-attachments/assets/c9849e66-96eb-4801-afbb-d8d034e472cf" 
-         alt="Unity4기 우수상-1" 
-         width="45%">
 </div>
 
 
 <h1 align="center">
-    <img src="https://github.com/user-attachments/assets/af066f75-b035-4092-9f4a-b7df11760858" alt="Pixelmon Icon" title="Pixelmon" width="5%"/>
-    나만의 픽셀몬 키우기
-    <img src="https://github.com/user-attachments/assets/af066f75-b035-4092-9f4a-b7df11760858" alt="Pixelmon Icon" title="Pixelmon" width="5%"/>
+    Witch Can't Cook
 </h1>
 
 <p align="center">
-    <b> Team: 밥도둑 </b>
+    <b> Team W.C.C. </b>
 </p>
 
 ---
 
 ## 🚀 다운로드 링크
-[나만의 픽셀몬 키우기 : Google Play](https://play.google.com/store/apps/details?id=com.teamsparta.unity1Pixelmon&hl=ko "원활한 게임플레이가 가능하고 최신 업데이트가 반영되므로 강력 추천!")&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[나만의 픽셀몬 키우기 : itch.io](https://bobburglar.itch.io/pixelmon-idle "비추천...")
+[Witch Can't Cook : itch.io](여기에 게임 링크 추가할 예정...)
 
 ---
 
@@ -40,7 +35,6 @@
 ## 📖 목차
 + [팀 소개](#팀-소개)
 + [프로젝트 소개](#프로젝트-소개)
-+ [깃 컨벤션](#깃-컨벤션)
 + [기능 소개](#기능-소개)
 + [기술적인 도전과제](#기술적인-도전과제)
 + [와이어프레임](#와이어프레임)
@@ -55,47 +49,25 @@
 
 | **이름**   | **직책** |
 |------------|----------|
-| 성지윤     | ❤️ 팀장 |
-| 정승연     | 💙 부팀장 | 
-| 이강혁     | 💛 팀원A | 
-| 정해성     | 🩷 팀원B |
+| 정진우     | ❤️ 메인기획 |
+| 김도윤     | 🩷 서브기획 |
+| 정승연     | 💙 클라A | 
+| 이선재     | 💛 클라B | 
+| 최혁규     | 🩷 서버 |
 
 ---
 
 ## ✨ 프로젝트 소개
 
-`Project Name` 픽셀몬 키우기
+`Project Name` Witch Can't Cook
 
-`Info` 사냥을 통해서 알을 얻고, 알을 부화시켜 함께 싸우세요!
+`Info` 기획이 채워주겠지 뭐
 
-`Stack` C#, Unity-2022.3.17f, Visual Studio2022-17.9.6   
+`Stack` C#, Unity6.3LTS(6000.3.3f1), Visual Studio2022-17.9.6   
 
 - **차별화된 경험 제공**: 귀여운 픽셀몬을 키우는 재미를 핵심 요소로 삼아 방치형 RPG 게임 시장에서 차별화된 경험을 제공합니다.
 - **다양한 플레이 스타일 지원**: 조이스틱 이동 기능을 추가하여 조작감을 선호하는 플레이어를 위한 더 다양한 플레이 스타일을 지원합니다.
 - **간단한 조작과 접근성**: 간단한 조작과 누구나 쉽게 접근할 수 있는 게임 시스템으로 다양한 연령층을 대상으로 마케팅할 수 있도록 목표했습니다.
-
-[📖 목차로 돌아가기](https://github.com/BobBurglar/PixelmonSourceCode/blob/main/README.md#-%EB%AA%A9%EC%B0%A8)
-
----
-
-## ✨ 깃 컨벤션
-
-- **Commit 규칙**
-    - init: 최초 커밋
-    - feat: 기능 추가
-    - update: 기능 변경
-    - refactor: 구조 개선
-    - add: 파일 추가
-    - move: 파일 이동, 코드 이동 등
-    - remove: 파일 삭제
-    - art: UI 개선
-    - fix: 버그 수정
-    - chore: 기타 잡일
- 
-- **Branch 전략**
-    - dev (하루에 한 번 main 업데이트)
-    - 기능마다 1개의 branch.
-    - 기능 추가 시: feat/(기능 이름)
 
 [📖 목차로 돌아가기](https://github.com/BobBurglar/PixelmonSourceCode/blob/main/README.md#-%EB%AA%A9%EC%B0%A8)
 
