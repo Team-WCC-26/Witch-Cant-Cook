@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 [Serializable]
-public class Ingredient_attribute : IData
+public class IngredientAttribute : IData
 {
     public int id;            // 아이디
     public string name;       // 이름

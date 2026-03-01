@@ -32,6 +32,7 @@ public class GameManager : Singleton<GameManager>
     private void InitBaseManagers()
     {
         InitManager<UIManager>();
+        InitManager<StageManager>();
     }
 
     

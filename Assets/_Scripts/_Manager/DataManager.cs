@@ -18,7 +18,8 @@ public class DataManager : Singleton<DataManager>
     [SerializeField] private bool destroyGSpreadReaderAfterInit = true;
 
     [Header("Data Fields")]
-    [SerializeField] private GameData<Ingredient_attribute> ingredientAttributes;
+    [SerializeField] private GameData<IngredientAttribute> ingredientAttributes;
+    [SerializeField] private GameData<IngredientStat> ingredientStat;
 
     public bool IsDataLoaded { get; private set; }
 
