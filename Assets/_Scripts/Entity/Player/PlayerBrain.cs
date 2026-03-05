@@ -10,8 +10,6 @@ public sealed class PlayerBrain : MonoBehaviour
     [SerializeField] private Rigidbody rb = null;
     [SerializeField] private PlayerInputHandler input = null;
     [SerializeField] private PlayerMovement movement = null;
-    [SerializeField] private LowerBodyController lowerBody = null;
-    [SerializeField] private UpperBodyController upperBody = null;
     [SerializeField] private PlayerCameraController camController = null;
 
     public Collider Col => col;
@@ -19,8 +17,6 @@ public sealed class PlayerBrain : MonoBehaviour
     public PlayerInputHandler Input => input;
     public PlayerMovement Movement => movement;
     public PlayerCameraController CameraController => camController;
-    public LowerBodyController LowerBody => lowerBody;
-    public UpperBodyController UpperBody => upperBody;
 
     private void Awake()
     {
@@ -28,8 +24,6 @@ public sealed class PlayerBrain : MonoBehaviour
 
         if (input == null) input = GetComponent<PlayerInputHandler>();
         if (movement == null) movement = GetComponent<PlayerMovement>();
-        if (lowerBody == null) lowerBody = GetComponent<LowerBodyController>();
-        if (upperBody == null) upperBody = GetComponent<UpperBodyController>();
     }
 
     //private void Update()
