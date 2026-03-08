@@ -8,8 +8,15 @@ public class StageManager : Singleton<StageManager>
     public float happiness = 0f; // 0.0 ~ 1.0 (100%)
     public int lives = 3;
 
+    // 판정 조건 수치
+    private readonly float HAPPINESS_STANDARD = 0.7f;
+    private readonly int TARGET_STAGE_COUNT = 7;
 
-    private PhaseBase currentPhase;
+
+    private PhaseBase currentPhase = null;
+    public PhaseBase CurrentPhase => currentPhase;
+
+    [SerializeField]
     private StageConfig config;
     private int currentStageIndex = 0;
 
@@ -20,16 +27,24 @@ public class StageManager : Singleton<StageManager>
     private CookingPhase cookingPhase;
     private JudgePhase judgePhase;
 
+    private bool isGameStarted = false; // 게임 시작 여부 체크용 (선택)
+
+    public void StartPrep() => ChangePhase(prepPhase);
+    public void StartCooking() => ChangePhase(cookingPhase);
+    public void StartJudging() => ChangePhase(judgePhase);
+
     void Start()
     {
-        config = Resources.Load<StageConfig>("StageConfig");
+        //config = Resources.Load<StageConfig>("StageConfig");
         // 페이즈 초기화
         prepPhase = new PrepPhase(this);
         cookingPhase = new CookingPhase(this);
         judgePhase = new JudgePhase(this);
 
+
+        // TODO : 게임 시작 버튼을 누르면 시작하도록 변경
         // 첫 라운드 시작: 준비 페이즈로
-        ChangePhase(prepPhase);
+        //ChangePhase(prepPhase);
     }
 
     void Update()
@@ -47,15 +62,13 @@ public class StageManager : Singleton<StageManager>
     public void FinishStage()
     {
         // 게임 오버 조건 체크
-        if (happiness < 0.7f || lives <= 0)
+        if (happiness < HAPPINESS_STANDARD || lives <= 0)
         {
             GameOver();
             return;
         }
 
         // 게임 클리어 조건 체크
-        const int TARGET_STAGE_COUNT = 7;
-
         if (currentStageIndex >= TARGET_STAGE_COUNT - 1)
         {
             GameClear();
@@ -88,6 +101,26 @@ public class StageManager : Singleton<StageManager>
     private void PlayEndingScene()
     {
         // 엔딩 연출 호출
+    }
+
+    public void StartGame()
+    {
+        if (isGameStarted) return; // 이미 시작했다면 중복 실행 방지
+
+        Debug.Log("<color=green>▶ 게임 시작!</color>");
+        isGameStarted = true;
+
+        ChangePhase(prepPhase);
+    }
+
+    /// <summary>
+    /// 테스트용 > 현재 페이즈를 건너뛰고 다음 페이즈로 이동
+    /// </summary>
+    public void SkipToNext()
+    {
+        if (currentPhase is PrepPhase) StartCooking();
+        else if (currentPhase is CookingPhase) StartJudging();
+        else if (currentPhase is JudgePhase) FinishStage();
     }
 
 }
