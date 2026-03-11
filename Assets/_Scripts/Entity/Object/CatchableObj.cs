@@ -19,24 +19,31 @@ public class CatchableObj : MonoBehaviour
 
     public bool IsHold { get; private set; } = false;
 
-    public void OnCatch()
+    public void OnPick()
     {
         IsHold = true;
+        
+        SetPhysicsState(false);
     }
 
     public void OnDrop()
     {
         IsHold = false;
+        
+        SetPhysicsState(true);
     }
 
     public void OnThrow()
     {
         IsHold = false;
+        
+        SetPhysicsState(true);
     }
 
     public void SetPhysicsState(bool enablePhysics)
     {
         if (rb == null) return;
+        col.enabled = enablePhysics;
 
         if (!enablePhysics)
         {

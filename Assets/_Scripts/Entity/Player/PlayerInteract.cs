@@ -50,7 +50,6 @@ public class PlayerInteract : MonoBehaviour
 
         target.OnDrop();
         target.transform.SetParent(null, true);
-        target.SetPhysicsState(true);
 
         IgnoreCollisionWithPlayer(target, false);
     }
@@ -64,7 +63,6 @@ public class PlayerInteract : MonoBehaviour
 
         target.OnThrow();
         target.transform.SetParent(null, true);
-        target.SetPhysicsState(true);
 
         IgnoreCollisionWithPlayer(target, false);
 
@@ -83,9 +81,8 @@ public class PlayerInteract : MonoBehaviour
     #region interact º¸Á¶
     private void Pick()
     {
-        HeldObj.OnCatch();
-        HeldObj.SetPhysicsState(false);
-
+        HeldObj.OnPick();
+        
         IgnoreCollisionWithPlayer(HeldObj, true);
 
         HeldObj.transform.SetParent(leftHandPos, false);
