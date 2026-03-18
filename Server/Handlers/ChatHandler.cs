@@ -1,13 +1,18 @@
-﻿using Protocol;
+using Protocol;
+using System.Text;
 
-namespace Server
+namespace Server;
+
+public class ChatHandler : PacketHandlerBase
 {
-    public class ChatHandler : PacketHandlerBase<ChatMessagePacket>
+    [PacketHandler(PacketId.C_ChatMessage)]
+    public static void Handle(Session session, PacketPackageInfo package)
     {
-        [PacketHandler(PacketId.ChatMessage)]
-        public void Handle(Session session, ChatMessagePacket packet)
-        {
-            
-        }
+        var chatPacket = DeSerialize<ChatMessagePacket>(package.Body);
+        chatPacket.Sender = session.SessionID;
+
+        Console.WriteLine($"[{session.SessionID}] {chatPacket.Message}");
+
+        session.Player.Room.BroadCast(PacketSerializer.Serialize(chatPacket, true));
     }
 }

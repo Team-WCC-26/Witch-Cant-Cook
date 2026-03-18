@@ -3,9 +3,14 @@ using System.Net.Sockets;
 using System.Text;
 using Protocol;
 using System.Threading.Tasks;
+using MemoryPack;
+
+namespace TestClient;
 
 class Program
 {
+    public static bool IsJoinedRoom = false;
+
     static async Task Main(string[] args)
     {
         var client = new TcpClient();
@@ -16,20 +21,18 @@ class Program
 
         var stream = client.GetStream();
 
-        // 서버 메시지 수신 스레드
+        PacketReceiver packetReceiver = new();
+
         _ = Task.Run(async () =>
         {
-            var buffer = new byte[1024];
-
-            while (true)
+            try
             {
-                int length = await stream.ReadAsync(buffer);
-
-                if (length == 0)
-                    break;
-
-                var message = Encoding.UTF8.GetString(buffer, 6, length);
-                Console.WriteLine(message);
+                await packetReceiver.StartAsync(stream);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"[Disconnected] {e.Message}");
+                Environment.Exit(0);
             }
         });
 
@@ -38,13 +41,63 @@ class Program
         {
             var input = Console.ReadLine();
 
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+            Console.Write("\r" + new string(' ', Console.BufferWidth) + "\r");
+            Console.SetCursorPosition(0, Console.CursorTop);
+
             if (string.IsNullOrEmpty(input))
                 continue;
 
-            var chatPacket = new ChatMessagePacket();
-            chatPacket.Message = input;
+            byte[] data;
 
-            var data = PacketSerializer.Serialize(chatPacket);
+            if (input[0] == '/')
+            {
+                string[] command = input.Split(" ");
+
+                switch (command[0])
+                {
+                    case "/create":
+                        CreateRoomPacket createRoomPacket = new();
+                        data = PacketSerializer.Serialize(createRoomPacket);
+
+                        break;
+
+                    case "/enter":
+                        JoinRoomPacket joinRoomPacket = new()
+                        {
+                            RoomId = int.Parse(command[1])
+                        };
+                        data = PacketSerializer.Serialize(joinRoomPacket);
+
+                        break;
+
+                    case "/rooms":
+                        GetRoomPacket getRoomPacket = new();
+                        data = PacketSerializer.Serialize(getRoomPacket);
+
+                        break;
+
+                    //case "/exit":
+                    //    data = new byte[1];
+                    //    break;
+
+                    default:
+                        continue;
+                }
+            }
+            else if (IsJoinedRoom)
+            {
+                ChatMessagePacket chatPacket = new()
+                {
+                    Message = input
+                };
+                data = PacketSerializer.Serialize(chatPacket);
+            }
+            else
+            {
+                continue;
+            }
+
             await stream.WriteAsync(data);
         }
     }

@@ -1,13 +1,12 @@
-﻿namespace Protocol
-{
-    [AttributeUsage(AttributeTargets.Method)]
-    public class PacketHandlerAttribute : Attribute
-    {
-        public PacketId PacketId { get; }
+namespace Protocol;
 
-        public PacketHandlerAttribute(PacketId id)
-        {
-            PacketId = id;
-        }
+[AttributeUsage(AttributeTargets.Method)]
+public class PacketHandlerAttribute : Attribute
+{
+    public PacketId PacketId { get; }
+
+    public PacketHandlerAttribute(PacketId id)
+    {
+        PacketId = id;
     }
 }

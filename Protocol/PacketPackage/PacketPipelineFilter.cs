@@ -1,4 +1,4 @@
-﻿using SuperSocket.ProtoBase;
+using SuperSocket.ProtoBase;
 using System.Buffers;
 
 namespace Protocol

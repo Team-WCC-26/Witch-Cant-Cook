@@ -1,26 +1,44 @@
-﻿namespace Protocol
+namespace Protocol;
+
+/// <summary>
+/// 짝수 -> 클라 패킷
+/// 홀수 -> 서버 패킷
+/// </summary>
+public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_로 할지 정해야할듯
 {
-    public enum PacketId : ushort
-    {
-        // 시스템 패킷 (1~99)
-        Connect = 1,
-        Disconnect = 2,
-        Heartbeat = 3,
+    // 시스템 패킷 (0~99)
+    C_Connect = 2,
+    
+    C_Disconnect = 4,
+    S_Disconnect = 5,
 
-        // 인증 관련 패킷 (100~199)
-        LoginRequest = 100,
-        LoginResponse = 101,
+    C_Heartbeat = 6,
+    S_Heartbeat = 7,
 
-        // 채팅 관련 패킷 (200~299)
-        ChatMessage = 200,
-        WhisperMessage = 201,
+    // 인증 관련 패킷 (100~199)
+    C_LoginRequest = 100,
+    S_LoginResponse = 101,
 
-        // 게임 상태 패킷 (300~399)
-        PlayerMove = 300,
-        PlayerAction = 301,
-        SpawnObject = 302,
+    // 룸 관련 패킷 (200~299)
+    C_CreateRoom = 200,
+    S_CreateRoom = 201, // 생성 즉시 방 참가해야 해서 S_JoinRoom으로 통합해야 할수도
 
-        // 기타 패킷 (400~)
-        // ...
-    }
+    C_GetRoom = 202,
+    S_GetRoom = 203,
+
+    C_JoinRoom = 204,
+    S_JoinRoom = 205,
+
+    C_ChatMessage = 210,
+    S_ChatMessage = 211,
+
+    S_Notification = 213,
+
+    // 게임 상태 패킷 (300~399) // TODO => 클라쪽 데이터 형식 요청 후 작성
+    PlayerMove = 300,
+    PlayerAction = 301,
+    SpawnObject = 302,
+
+    // 기타 패킷 (400~)
+    // ...
 }

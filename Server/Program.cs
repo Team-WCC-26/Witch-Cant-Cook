@@ -1,4 +1,4 @@
-﻿using SuperSocket;
+using SuperSocket;
 using SuperSocket.Server;
 using SuperSocket.ProtoBase;
 using Microsoft.Extensions.Hosting;
@@ -11,67 +11,55 @@ using Protocol;
 using MemoryPack;
 using System.Buffers;
 
-namespace Server
+namespace Server;
+
+class Program
 {
-    class Program
+    // 모든 접속 세션 저장
+    static ConcurrentDictionary<string, IAppSession> sessions = new();
+
+    static async Task Main(string[] args)
     {
-        // 모든 접속 세션 저장
-        static ConcurrentDictionary<string, IAppSession> sessions = new();
+        PacketDispatcher.RegisterAll();
 
-        static async Task Main(string[] args)
-        {
-            PacketDispatcher.RegisterAll();
+        var host = SuperSocketHostBuilder
+            .Create<PacketPackageInfo, PacketPipelineFilter>()
 
-            var host = SuperSocketHostBuilder
-                .Create<PacketPackageInfo, PacketPipelineFilter>()
-
-                .UseSessionHandler(
-                    onConnected: async (session) =>
-                    {
-                        sessions[session.SessionID] = session;
-                        Console.WriteLine($"Client connected: {session.SessionID}");
-                        await session.SendAsync(Encoding.UTF8.GetBytes("      Welcome to chat server\r\n"));
-                    },
-                    onClosed: (session, reason) =>
-                    {
-                        sessions.TryRemove(session.SessionID, out _);
-                        Console.WriteLine($"Client disconnected: {session.SessionID}");
-                        return ValueTask.CompletedTask;
-                    })
-
-                .UsePackageDecoder<PacketPackageDecoder>()
-
-                .UsePackageHandler(async (session, package) =>
+            .UseSession<Session>()
+            .UseSessionHandler(
+                onConnected: async (session) =>
                 {
-                    var buffer = package.Body;
-
-                    var chatPacket = MemoryPackSerializer.Deserialize<ChatMessagePacket>(buffer);
-
-                    Console.WriteLine($"[{session.SessionID}] {chatPacket.Message}");
-
-                    // 모든 세션에 메시지 전송
-                    foreach (var s in sessions.Values)
-                    {
-                        await s.SendAsync(Encoding.UTF8.GetBytes($"      [{session.SessionID}] {chatPacket.Message}\r\n"));
-                    }
+                    sessions[session.SessionID] = session;
+                    Console.WriteLine($"Client connected: {session.SessionID}");
+                },
+                onClosed: (session, reason) =>
+                {
+                    sessions.TryRemove(session.SessionID, out _);
+                    Console.WriteLine($"Client disconnected: {session.SessionID}");
+                    return ValueTask.CompletedTask;
                 })
 
-                .ConfigureSuperSocket(options =>
+            .UsePackageDecoder<PacketPackageDecoder>()
+            .UsePackageHandler(async (session, package) =>
+            {
+                PacketDispatcher.Dispatch(session, (PacketId)package.Id, package);
+            })
+
+            .ConfigureSuperSocket(options =>
+            {
+                options.Name = "ChatServer";
+                options.Listeners = new List<ListenOptions>
                 {
-                    options.Name = "ChatServer";
-                    options.Listeners = new List<ListenOptions>
-                    {
-                    new ListenOptions
-                    {
-                        Ip = "Any",
-                        Port = 4040
-                    }
-                    };
-                })
+                new ListenOptions
+                {
+                    Ip = "Any",
+                    Port = 4040
+                }
+                };
+            })
 
-                .Build();
+            .Build();
 
-            await host.RunAsync();
-        }
+        await host.RunAsync();
     }
 }

@@ -1,6 +1,5 @@
-﻿namespace Protocol
+namespace Protocol;
+
+public interface IPacket
 {
-    public interface IPacket
-    {
-    }
 }

@@ -1,13 +1,12 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System.Buffers;
 
-namespace Protocol
+namespace Protocol;
+
+public class PacketHandlerBase
 {
-    public class PacketHandlerBase<T>
+    public static T DeSerialize<T>(ReadOnlySequence<byte> buffer) where T : class, IPacket
     {
-        public T DeSerialize(ReadOnlySequence<byte> buffer)
-        {
-            return MemoryPackSerializer.Deserialize<T>(buffer);
-        }
+        return MemoryPackSerializer.Deserialize<T>(buffer);
     }
 }

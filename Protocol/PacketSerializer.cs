@@ -1,24 +1,25 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System.Buffers;
 
-namespace Protocol
+namespace Protocol;
+
+public static class PacketSerializer
 {
-    public static class PacketSerializer
+    public static byte[] Serialize<T>(T packet, bool isServerPacket = false) where T : class, IPacket
     {
-        public static byte[] Serialize<T>(T packet) where T : IPacket
-        {
-            byte[] data = MemoryPackSerializer.Serialize(packet);
+        byte[] data = MemoryPackSerializer.Serialize(packet);
 
-            int size = data.Length; // size + id 포함
+        int size = data.Length;
 
-            using MemoryStream ms = new();
-            using BinaryWriter writer = new(ms);
+        using MemoryStream ms = new();
+        using BinaryWriter writer = new(ms);
 
-            writer.Write(size);
-            writer.Write((ushort)101);
-            writer.Write(data);
+        ushort ushortId = (ushort)PacketTypeRegistry.GetId(packet.GetType(), isServerPacket);
 
-            return ms.ToArray();
-        }
+        writer.Write(size);
+        writer.Write(ushortId);
+        writer.Write(data);
+
+        return ms.ToArray();
     }
 }

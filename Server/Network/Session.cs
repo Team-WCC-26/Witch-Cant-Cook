@@ -1,63 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+using SuperSocket;
+using SuperSocket.Connection;
+using SuperSocket.Server;
 
-namespace Server
+namespace Server;
+
+public class Session : AppSession
 {
-    public abstract class Session
+    public Player Player { get; set; } = new();
+
+    protected override ValueTask OnSessionConnectedAsync()
     {
-        Socket _socket;
-        RecvBuffer _recvBuffer = new RecvBuffer(4096);
+        Player.PlayerId = SessionID;
+        Player.Session = this;
 
-        public void Start(Socket socket)
-        {
-            _socket = socket;
-            RegisterRecv();
-        }
+        return base.OnSessionConnectedAsync();
+    }
 
-        void RegisterRecv()
-        {
-            _recvBuffer.Clean();
+    protected override ValueTask OnSessionClosedAsync(CloseEventArgs e)
+    {
+        Player.LeaveRoom();
 
-            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-            args.SetBuffer(_recvBuffer.WriteSegment);
-            args.Completed += OnRecvCompleted;
-
-            _socket.ReceiveAsync(args);
-        }
-
-        void OnRecvCompleted(object sender, SocketAsyncEventArgs args)
-        {
-            if (args.BytesTransferred > 0 && args.SocketError == SocketError.Success)
-            {
-                _recvBuffer.OnWrite(args.BytesTransferred);
-
-                int processLen = OnRecv(_recvBuffer.ReadSegment);
-
-                if (processLen < 0)
-                {
-                    Disconnect();
-                    return;
-                }
-
-                _recvBuffer.OnRead(processLen);
-
-                RegisterRecv();
-            }
-            else
-            {
-                Disconnect();
-            }
-        }
-
-        protected abstract int OnRecv(ArraySegment<byte> buffer);
-
-        void Disconnect()
-        {
-            _socket.Close();
-        }
+        return base.OnSessionClosedAsync(e);
     }
 }

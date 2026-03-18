@@ -1,53 +1,60 @@
-ï»¿using System.Reflection;
+using System.Collections.Concurrent;
+using System.Reflection;
 using Protocol;
+using SuperSocket.Server.Abstractions.Session;
 
-namespace Server
+namespace Server;
+
+public static class PacketDispatcher
 {
-    public static class PacketDispatcher
+    private static readonly ConcurrentDictionary<PacketId, Action<IAppSession, PacketPackageInfo>> _handlers = new();
+
+    public static void RegisterAll()
     {
-        private static readonly Dictionary<PacketId, Action<Session, IPacket>> _handlers = new();
+        var types = Assembly.GetExecutingAssembly().GetTypes();
 
-        public static void RegisterAll()
+        foreach (var type in types)
         {
-            var types = Assembly.GetExecutingAssembly().GetTypes();
-
-            foreach (var type in types)
+            foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+                var attr = method.GetCustomAttribute<PacketHandlerAttribute>();
+
+                if (attr == null) continue;
+
+                var parameters = method.GetParameters();
+
+                if (parameters.Length != 2)
                 {
-                    var attr = method.GetCustomAttribute<PacketHandlerAttribute>();
-
-                    if (attr == null) continue;
-
-                    var parameters = method.GetParameters();
-
-                    if (parameters.Length != 2)
-                    {
-                        throw new Exception($"Invalid handler signature: {method.Name}");
-                    }
-
-                    var packetType = parameters[1].ParameterType;
-
-                    Action<Session, IPacket> action = (session, packet) =>
-                    {
-                        method.Invoke(null, [session, packet]);
-                    };
-
-                    _handlers[attr.PacketId] = action;
+                    throw new Exception($"Invalid handler signature: {method.Name}");
                 }
+
+                var packetType = parameters[1].ParameterType;
+
+                Action<IAppSession, PacketPackageInfo> action = (session, packet) =>
+                {
+                    method.Invoke(null, [session, packet]);
+                };
+
+                _handlers[attr.PacketId] = action;
             }
         }
+    }
 
-        public static void Dispatch(Session session, PacketId id, IPacket packet)
+    public static void Dispatch(IAppSession session, PacketId id, PacketPackageInfo package)
+    {
+        if (((ushort)id & 1) > 0) // Å¬¶ó ÆÐÅ¶ÀÌ ¾Æ´Ò °æ¿ì
         {
-            if (_handlers.TryGetValue(id, out var handler))
-            {
-                handler(session, packet);
-            }
-            else
-            {
-                Console.WriteLine($"Unhandled packet: {id}");
-            }
+            Console.WriteLine($"Wrong Packet Id: {id}");
+            return;
+        }
+
+        if (_handlers.TryGetValue(id, out var handler))
+        {
+            handler(session, package);
+        }
+        else
+        {
+            Console.WriteLine($"Unhandled packet: {id}");
         }
     }
 }
