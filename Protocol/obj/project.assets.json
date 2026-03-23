@@ -1,0 +1,260 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0": {
+      "MemoryPack/1.21.4": {
+        "type": "package",
+        "dependencies": {
+          "MemoryPack.Core": "1.21.4",
+          "MemoryPack.Generator": "1.21.4"
+        }
+      },
+      "MemoryPack.Core/1.21.4": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/MemoryPack.Core.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/MemoryPack.Core.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "MemoryPack.Generator/1.21.4": {
+        "type": "package"
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net6.0/_._": {}
+        }
+      },
+      "SuperSocket.ProtoBase/2.0.2": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0"
+        },
+        "compile": {
+          "lib/net9.0/SuperSocket.ProtoBase.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/SuperSocket.ProtoBase.dll": {
+            "related": ".xml"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MemoryPack/1.21.4": {
+      "sha512": "wy3JTBNBsO8LfQcBvvYsWr3lm2Oakolrfu0UQ3oSJSEiD+7ye0GUhYTaXuYYBowqsXBXWD9gf2218ae0JRiYVQ==",
+      "type": "package",
+      "path": "memorypack/1.21.4",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "memorypack.1.21.4.nupkg.sha512",
+        "memorypack.nuspec"
+      ]
+    },
+    "MemoryPack.Core/1.21.4": {
+      "sha512": "6RszGorZ0ejNmp37ZcboPBMvvPCuNW2jlrdQfcs/lMzE5b3pmPF6hsm/laDc34hRlbAST1ZxaX/DvYu2DF5sBQ==",
+      "type": "package",
+      "path": "memorypack.core/1.21.4",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "lib/net7.0/MemoryPack.Core.dll",
+        "lib/net7.0/MemoryPack.Core.xml",
+        "lib/net8.0/MemoryPack.Core.dll",
+        "lib/net8.0/MemoryPack.Core.xml",
+        "lib/netstandard2.1/MemoryPack.Core.dll",
+        "lib/netstandard2.1/MemoryPack.Core.xml",
+        "memorypack.core.1.21.4.nupkg.sha512",
+        "memorypack.core.nuspec"
+      ]
+    },
+    "MemoryPack.Generator/1.21.4": {
+      "sha512": "g14EsSS85yn0lHTi0J9ivqlZMf09A2iI51fmI+0KkzIzyCbWOBWPi5mdaY7YWmXprk12aYh9u/qfWHQUYthlwg==",
+      "type": "package",
+      "path": "memorypack.generator/1.21.4",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "analyzers/dotnet/cs/MemoryPack.Generator.dll",
+        "memorypack.generator.1.21.4.nupkg.sha512",
+        "memorypack.generator.nuspec"
+      ]
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.0": {
+      "sha512": "cjWrLkJXK0rs4zofsK4bSdg+jhDLTaxrkXu4gS6Y7MAlCvRyNNgwY/lJi5RDlQOnSZweHqoyvgvbdvQsRIW+hg==",
+      "type": "package",
+      "path": "microsoft.extensions.dependencyinjection.abstractions/8.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/Microsoft.Extensions.DependencyInjection.Abstractions.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net6.0/_._",
+        "buildTransitive/netcoreapp2.0/Microsoft.Extensions.DependencyInjection.Abstractions.targets",
+        "lib/net462/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "lib/net462/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
+        "lib/net6.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "lib/net6.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
+        "lib/net7.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "lib/net7.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
+        "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
+        "lib/netstandard2.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "lib/netstandard2.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
+        "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
+        "microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+        "microsoft.extensions.dependencyinjection.abstractions.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "SuperSocket.ProtoBase/2.0.2": {
+      "sha512": "foE2k7cpFAlFqyiGqrfogT4tDWC2sHMtTJ2FYEW4k9KWqydZPgNemjF75mOe0MseSY9BTnpZMrR0gbh/I6XR7g==",
+      "type": "package",
+      "path": "supersocket.protobase/2.0.2",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net6.0/SuperSocket.ProtoBase.dll",
+        "lib/net6.0/SuperSocket.ProtoBase.xml",
+        "lib/net7.0/SuperSocket.ProtoBase.dll",
+        "lib/net7.0/SuperSocket.ProtoBase.xml",
+        "lib/net8.0-android34.0/SuperSocket.ProtoBase.dll",
+        "lib/net8.0-android34.0/SuperSocket.ProtoBase.xml",
+        "lib/net8.0-ios18.0/SuperSocket.ProtoBase.dll",
+        "lib/net8.0-ios18.0/SuperSocket.ProtoBase.xml",
+        "lib/net8.0-macos15.0/SuperSocket.ProtoBase.dll",
+        "lib/net8.0-macos15.0/SuperSocket.ProtoBase.xml",
+        "lib/net8.0-tvos18.0/SuperSocket.ProtoBase.dll",
+        "lib/net8.0-tvos18.0/SuperSocket.ProtoBase.xml",
+        "lib/net8.0/SuperSocket.ProtoBase.dll",
+        "lib/net8.0/SuperSocket.ProtoBase.xml",
+        "lib/net9.0-android35.0/SuperSocket.ProtoBase.dll",
+        "lib/net9.0-android35.0/SuperSocket.ProtoBase.xml",
+        "lib/net9.0-ios18.0/SuperSocket.ProtoBase.dll",
+        "lib/net9.0-ios18.0/SuperSocket.ProtoBase.xml",
+        "lib/net9.0-macos15.0/SuperSocket.ProtoBase.dll",
+        "lib/net9.0-macos15.0/SuperSocket.ProtoBase.xml",
+        "lib/net9.0-tvos18.0/SuperSocket.ProtoBase.dll",
+        "lib/net9.0-tvos18.0/SuperSocket.ProtoBase.xml",
+        "lib/net9.0/SuperSocket.ProtoBase.dll",
+        "lib/net9.0/SuperSocket.ProtoBase.xml",
+        "supersocket.protobase.2.0.2.nupkg.sha512",
+        "supersocket.protobase.nuspec",
+        "v2.0.2.md"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0": [
+      "MemoryPack >= 1.21.4",
+      "SuperSocket.ProtoBase >= 2.0.2"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\villainouskirby\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\villainouskirby\\Documents\\GitHub\\Witch-Cant-Cook\\Protocol\\Protocol.csproj",
+      "projectName": "Protocol",
+      "projectPath": "C:\\Users\\villainouskirby\\Documents\\GitHub\\Witch-Cant-Cook\\Protocol\\Protocol.csproj",
+      "packagesPath": "C:\\Users\\villainouskirby\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\villainouskirby\\Documents\\GitHub\\Witch-Cant-Cook\\Protocol\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\villainouskirby\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.100"
+    },
+    "frameworks": {
+      "net9.0": {
+        "targetAlias": "net9.0",
+        "dependencies": {
+          "MemoryPack": {
+            "target": "Package",
+            "version": "[1.21.4, )"
+          },
+          "SuperSocket.ProtoBase": {
+            "target": "Package",
+            "version": "[2.0.2, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
