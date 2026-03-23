@@ -34,5 +34,5 @@ jobs:
       # 4) Unity Assets 경로로 복사
       - name: Move generated files to Unity Assets
         run: |
-          mkdir -p Assets/Scripts/Network/Protocol
+          mkdir -p Assets/_Scripts/Network/Protocol
           cp Generated/Protocol/*.cs Assets/_Scripts/Network/Protocol/
