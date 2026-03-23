@@ -4,74 +4,68 @@ namespace Server;
 
 public class Room
 {
-    private Queue<Action> _jobs = new(); // TODO => Global Job + Shard 시스템으로 넘겨줘야 함
-    private bool _isRunning = false;
-
     public int RoomId { get; }
-    public bool IsEnable => _players.Count >= 0 && _players.Count <= MaxPlayerCount;
-
-    public readonly int MaxPlayerCount = 2;
     private readonly List<Player> _players = new();
+    public readonly int MaxPlayerCount = 2;
+    private int _playerCnt = 0;
+
+    private JobQueue _jobQueue = new();
+    private Shard _shard;
 
     public Room(int id)
     {
         RoomId = id;
     }
 
-    public void Push(Action job)
+    public bool IsEnable()
     {
-        lock (_jobs)
-        {
-            _jobs.Enqueue(job);
-
-            if (_isRunning) return;
-
-            _isRunning = true;
-        }
-        
+        return _playerCnt >= 0 && _playerCnt <= MaxPlayerCount;
     }
 
-    private void Process()
+    public void PushJob(Action job) => _jobQueue.Push(job);
+
+    public void InitShard(Shard shard)
     {
-        while (true)
-        {
-            Action job;
+        _shard = shard;
+        _jobQueue.InitShard(shard);
+    }
 
-            lock (_jobs)
-            {
-                if (_jobs.Count == 0)
-                {
-                    _isRunning = false;
-                    return;
-                }
-
-                job = _jobs.Dequeue();
-            }
-
-            job.Invoke();
-        }
+    public Shard GetShard()
+    {
+        return _shard;
     }
 
     public void Enter(Player player)
     {
-        _players.Add(player);
-        player.Room = this;
+        PushJob(() => // shard test
+        {
+            _players.Add(player);
+            player.Room = this;
+            _playerCnt++;
+        });
     }
 
     public void Leave(Player player)
     {
-        _players.Remove(player);
-        player.Room = null;
+        PushJob(() =>
+        {
+            _players.Remove(player);
+            player.Room = null;
+            _playerCnt--;
+        });
     }
 
     public void BroadCast(byte[] packet)
     {
-        foreach (var player in _players)
+        PushJob(() =>
         {
-            player.Send(packet);
-        }
+            foreach (var player in _players)
+            {
+                player.Send(packet);
+            }
+        });
     }
-
+    
     public void Notificate(string message)
     {
         RoomNotificationPacket packet = new()

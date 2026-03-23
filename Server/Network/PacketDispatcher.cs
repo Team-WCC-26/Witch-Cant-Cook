@@ -20,7 +20,7 @@ public static class PacketDispatcher
                 var attr = method.GetCustomAttribute<PacketHandlerAttribute>();
 
                 if (attr == null) continue;
-
+                 
                 var parameters = method.GetParameters();
 
                 if (parameters.Length != 2)

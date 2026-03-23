@@ -7,14 +7,14 @@ public class RoomHandler : PacketHandlerBase
     [PacketHandler(PacketId.C_CreateRoom)]
     public static void CreateRoom(Session session, PacketPackageInfo package)
     {
-        JoinRoom(session, RoomManager.CreateRoom());
+        JoinRoom(session, ServerContext.Instance.RoomManager.CreateRoom());
     }
 
     [PacketHandler(PacketId.C_GetRoom)]
     public static void GetRoom(Session session, PacketPackageInfo package)
     {
         GetRoomPacket packet = new();
-        packet.RoomIds = RoomManager.GetEnableRooms();
+        packet.RoomIds = ServerContext.Instance.RoomManager.GetEnableRooms();
         
         session.Player.Send(PacketSerializer.Serialize(packet, true));
     }
@@ -24,12 +24,21 @@ public class RoomHandler : PacketHandlerBase
     {
         var packet = DeSerialize<JoinRoomPacket>(package.Body);
 
-        JoinRoom(session, RoomManager.GetRoom(packet.RoomId));
+        JoinRoom(session, ServerContext.Instance.RoomManager.GetRoom(packet.RoomId));
     }
 
-    public static void JoinRoom(Session session, Room room)
+    public static void JoinRoom(Session session, Room? room)
     {
-        if (room == null) return;
+        if (room == null)
+        {
+
+            return;
+        }
+        else if (!room.IsEnable())
+        {
+
+            return;
+        }
 
         room.Enter(session.Player);
         

@@ -1,29 +1,43 @@
+using System.Collections.Concurrent;
+
 namespace Server;
 
-public static class RoomManager
+public class RoomManager
 {
-    private static readonly Dictionary<int, Room> _rooms = new();
-    private static int _roomId = 1;
+    private readonly ConcurrentDictionary<int, Room> _rooms = new();
+    private int _roomId = 1;
 
-    public static Room CreateRoom()
+    private readonly ShardManager _shardManager;
+
+    private object _lock = new();
+
+    public RoomManager(ShardManager shardManager)
     {
-        var room = new Room(_roomId++);
-        _rooms.Add(room.RoomId, room);
+        _shardManager = shardManager;
+    }
+
+    public Room CreateRoom()
+    {
+        int id = Interlocked.Increment(ref _roomId);
+        Room room = new(id);
+        _rooms.TryAdd(id, room);
+        _shardManager.RegisterRoom(room);
+
         return room;
     }
 
-    public static Room GetRoom(int roomId)
+    public Room? GetRoom(int roomId)
     {
         return _rooms.TryGetValue(roomId, out var room) ? room : null;
     }
 
-    public static List<int> GetEnableRooms()
+    public List<int> GetEnableRooms()
     {
         List<int> rooms = new();
 
         foreach (var roomPair in _rooms)
         {
-            if (roomPair.Value.IsEnable)
+            if (roomPair.Value.IsEnable())
             {
                 rooms.Add(roomPair.Key);
             }
@@ -32,8 +46,9 @@ public static class RoomManager
         return rooms;
     }
 
-    public static void RemoveRoom(int roomId)
+    public void RemoveRoom(int roomId)
     {
-        _rooms.Remove(roomId);
+        _rooms.Remove(roomId, out var room);
+        room?.GetShard().UnregisterRoom(roomId);
     }
 }

@@ -8,7 +8,7 @@ public class Player
 {
     public string PlayerId { get; set; }
     public IAppSession Session { get; set; }
-    public Room Room { get; set; }
+    public Room? Room { get; set; }
     public Vector3 Pos { get; set; }
 
     public void Send(byte[] packet)
