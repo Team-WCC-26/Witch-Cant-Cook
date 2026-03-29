@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerInteract : MonoBehaviour
@@ -10,10 +11,13 @@ public class PlayerInteract : MonoBehaviour
     [SerializeField] private Transform rightHandPos;
 
     [Header("Interact Settings")]
+    [SerializeField] private LayerMask interactLayer;
     [SerializeField] private float rayStartOffset = 0.3f;
     [SerializeField] private float interactDistance = 3.0f;
-    [SerializeField] private LayerMask interactLayer;
+
+    [Header("Throw Settings")]
     [SerializeField] private float defaultThrowForce = 8.0f;
+    [SerializeField] private float throwStartOffset = 2.0f;
 
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
@@ -64,17 +68,20 @@ public class PlayerInteract : MonoBehaviour
         target.OnThrow();
         target.transform.SetParent(null, true);
 
-        IgnoreCollisionWithPlayer(target, false);
+        Transform cam = brain.PlayerCam.transform;
+        Vector3 throwDir = cam.forward.normalized;
+        target.transform.position = cam.position + throwDir * throwStartOffset;
 
         Rigidbody targetRb = target.Rb;
         if (targetRb == null) return;
 
-        Vector3 throwDir = GetAimDirection();
         float throwForce = target.ThrowForce > 0.0f ? target.ThrowForce : defaultThrowForce;
 
         targetRb.linearVelocity = Vector3.zero;
         targetRb.angularVelocity = Vector3.zero;
         targetRb.AddForce(throwDir * throwForce, ForceMode.Impulse);
+
+        StartCoroutine(IgnoreCollisionDelay(target, false, 0.2f));
     }
     #endregion
 
@@ -88,6 +95,13 @@ public class PlayerInteract : MonoBehaviour
         HeldObj.transform.SetParent(leftHandPos, false);
         HeldObj.transform.localPosition = HeldObj.HoldLocalPosition;
         HeldObj.transform.localRotation = Quaternion.Euler(HeldObj.HoldLocalEulerAngles);
+    }
+
+    private IEnumerator IgnoreCollisionDelay(CatchableObj target, bool ignore, float delay = 1f)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (target != null) IgnoreCollisionWithPlayer(target, ignore);
     }
     #endregion
 
