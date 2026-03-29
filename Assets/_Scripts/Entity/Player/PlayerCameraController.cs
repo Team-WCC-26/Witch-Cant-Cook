@@ -2,33 +2,45 @@ using UnityEngine;
 
 public sealed class PlayerCameraController : MonoBehaviour
 {
-    [Header("Refs")]
+    [Header("Brain")]
     [SerializeField] private PlayerBrain brain = null;
-    [SerializeField] private Transform yawRoot = null;     // 플레이어 루트(Yaw)
-    [SerializeField] private Transform pitchPivot = null;  // 카메라 피벗(Pitch)
+    private PlayerInputHandler input = null;
 
-    [Header("Tuning")]
-    [SerializeField] private float sensitivity = 0.12f;
-    [SerializeField] private bool invertY = false;
-    [SerializeField] private float minPitchDeg = -70f;
-    [SerializeField] private float maxPitchDeg = 70f;
+    [Header("Refs")]
+    [SerializeField] private Transform yawRoot = null;
+    [SerializeField] private Transform pitchRoot = null;
 
-    [Header("Cursor")]
+    [Header("Cursor Setting")]
     [SerializeField] private bool lockCursor = true;
 
-    private PlayerInputHandler input;
+    [Header("Tune Setting")]
+    [SerializeField] private float cameraSensitivity = 0.12f;
+    [SerializeField] private bool invertY = false;
+    [SerializeField] private float minPitch = -70f;
+    [SerializeField] private float maxPitch = 70f;
 
+    // Camera Rotation State
+    private float yawDeg = 0f;
     private float pitchDeg = 0f;
 
     private void Awake()
     {
-        if (brain == null) brain = GetComponent<PlayerBrain>();
+        if (brain == null && !TryGetComponent(out brain))
+        {
+            Debug.LogWarning("PlayerBrain is not assigned.");
+            return;
+        }
+
         input = brain.Input;
 
-        if (yawRoot == null) yawRoot = transform.root;
-        if (pitchPivot == null) pitchPivot = transform;
+        if (yawRoot == null)
+            Debug.LogWarning("yawRoot is not assigned.");
+        else yawDeg = NormalizeAngle(yawRoot.localEulerAngles.y);
 
-        pitchDeg = NormalizePitch(pitchPivot.localEulerAngles.x);
+        if (pitchRoot == null)
+            Debug.LogWarning("pitchRoot is not assigned.");
+        else
+            pitchDeg = NormalizeAngle(pitchRoot.localEulerAngles.x);
     }
 
     private void OnEnable()
@@ -43,25 +55,26 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void Update()
     {
-        if (input == null || yawRoot == null || pitchPivot == null) return;
+        if (input == null || yawRoot == null || pitchRoot == null) return;
 
         Vector2 look = input.LookDelta;
         if (look.sqrMagnitude < 0.000001f) return;
 
-        float yawDelta = look.x * sensitivity;
-        float pitchDelta = look.y * sensitivity * (invertY ? 1f : -1f);
+        float yawDelta = look.x * cameraSensitivity;
+        float pitchDelta = look.y * cameraSensitivity * (invertY ? 1f : -1f);
 
-        yawRoot.Rotate(0f, yawDelta, 0f, Space.Self);
+        yawDeg += yawDelta;
+        yawRoot.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
 
-        pitchDeg = Mathf.Clamp(pitchDeg + pitchDelta, minPitchDeg, maxPitchDeg);
-        pitchPivot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
+        pitchDeg = Mathf.Clamp(pitchDeg + pitchDelta, minPitch, maxPitch);
+        pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
     }
 
-    private static float NormalizePitch(float eulerX)
+    private static float NormalizeAngle(float euler)
     {
-        float x = eulerX;
-        if (x > 180f) x -= 360f;
-        return x;
+        float value = euler;
+        if (value > 180f) value -= 360f;
+        return value;
     }
 
     private static void ApplyCursor(bool locked)
