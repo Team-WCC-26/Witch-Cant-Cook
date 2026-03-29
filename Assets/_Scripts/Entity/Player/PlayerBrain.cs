@@ -6,17 +6,21 @@ public sealed class PlayerBrain : MonoBehaviour
     [SerializeField] private bool autoFindOnAwake = true;
 
     [Header("Refs")]
+    [SerializeField] private Camera playerCamera;
     [SerializeField] private Collider col = null;
     [SerializeField] private Rigidbody rb = null;
     [SerializeField] private PlayerInputHandler input = null;
     [SerializeField] private PlayerMovement movement = null;
     [SerializeField] private PlayerCameraController camController = null;
+    [SerializeField] private PlayerInteract interact = null;
 
+    public Camera PlayerCam => playerCamera;
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public PlayerInputHandler Input => input;
     public PlayerMovement Movement => movement;
     public PlayerCameraController CameraController => camController;
+    public PlayerInteract Interact => interact;
 
     private void Awake()
     {
