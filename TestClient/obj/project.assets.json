@@ -2,34 +2,34 @@
   "version": 3,
   "targets": {
     "net9.0": {
-      "MemoryPack/1.9.0": {
+      "MemoryPack/1.21.4": {
         "type": "package",
         "dependencies": {
-          "MemoryPack.Core": "1.9.0",
-          "MemoryPack.Generator": "1.9.0"
+          "MemoryPack.Core": "1.21.4",
+          "MemoryPack.Generator": "1.21.4"
         }
       },
-      "MemoryPack.Core/1.9.0": {
+      "MemoryPack.Core/1.21.4": {
         "type": "package",
         "compile": {
-          "lib/net7.0/MemoryPack.Core.dll": {
+          "lib/net8.0/MemoryPack.Core.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net7.0/MemoryPack.Core.dll": {
+          "lib/net8.0/MemoryPack.Core.dll": {
             "related": ".xml"
           }
         }
       },
-      "MemoryPack.Generator/1.9.0": {
+      "MemoryPack.Generator/1.21.4": {
         "type": "package"
       },
       "Protocol/1.0.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "MemoryPack": "1.9.0"
+          "MemoryPack": "1.21.4"
         },
         "compile": {
           "bin/placeholder/Protocol.dll": {}
@@ -41,44 +41,46 @@
     }
   },
   "libraries": {
-    "MemoryPack/1.9.0": {
-      "sha512": "pjmvDuoswR/Tqndj0nz0Hv625Fm5K9pTbqNCib6EcpaWV1rnDz/RENIFtkgRuzTlyw7Oj9S5ag/vPOlCp1NkvA==",
+    "MemoryPack/1.21.4": {
+      "sha512": "wy3JTBNBsO8LfQcBvvYsWr3lm2Oakolrfu0UQ3oSJSEiD+7ye0GUhYTaXuYYBowqsXBXWD9gf2218ae0JRiYVQ==",
       "type": "package",
-      "path": "memorypack/1.9.0",
+      "path": "memorypack/1.21.4",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
-        "memorypack.1.9.0.nupkg.sha512",
+        "memorypack.1.21.4.nupkg.sha512",
         "memorypack.nuspec"
       ]
     },
-    "MemoryPack.Core/1.9.0": {
-      "sha512": "uMgS5uXRvYeGpxoOA3fa42SnMENanaKFtL2+TJZztZXA0QptBkRIRjVEUpo9RuLq6mxLrbkhiLExC++PpJfeCA==",
+    "MemoryPack.Core/1.21.4": {
+      "sha512": "6RszGorZ0ejNmp37ZcboPBMvvPCuNW2jlrdQfcs/lMzE5b3pmPF6hsm/laDc34hRlbAST1ZxaX/DvYu2DF5sBQ==",
       "type": "package",
-      "path": "memorypack.core/1.9.0",
+      "path": "memorypack.core/1.21.4",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "lib/net7.0/MemoryPack.Core.dll",
         "lib/net7.0/MemoryPack.Core.xml",
+        "lib/net8.0/MemoryPack.Core.dll",
+        "lib/net8.0/MemoryPack.Core.xml",
         "lib/netstandard2.1/MemoryPack.Core.dll",
         "lib/netstandard2.1/MemoryPack.Core.xml",
-        "memorypack.core.1.9.0.nupkg.sha512",
+        "memorypack.core.1.21.4.nupkg.sha512",
         "memorypack.core.nuspec"
       ]
     },
-    "MemoryPack.Generator/1.9.0": {
-      "sha512": "U1nV7MZgt33xapnIRq61Bi1xjtxDPSeXVPJfh2gUIvSd51qJ0lunwhNEKmvvdoc51aEskZappDEU94+6SaMOPQ==",
+    "MemoryPack.Generator/1.21.4": {
+      "sha512": "g14EsSS85yn0lHTi0J9ivqlZMf09A2iI51fmI+0KkzIzyCbWOBWPi5mdaY7YWmXprk12aYh9u/qfWHQUYthlwg==",
       "type": "package",
-      "path": "memorypack.generator/1.9.0",
+      "path": "memorypack.generator/1.21.4",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "analyzers/dotnet/cs/MemoryPack.Generator.dll",
-        "memorypack.generator.1.9.0.nupkg.sha512",
+        "memorypack.generator.1.21.4.nupkg.sha512",
         "memorypack.generator.nuspec"
       ]
     },
