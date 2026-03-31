@@ -1,58 +1,104 @@
 {
   "version": 3,
   "targets": {
-    "net9.0": {
-      "MemoryPack/1.21.4": {
+    ".NETStandard,Version=v2.1": {
+      "MemoryPack/1.9.0": {
         "type": "package",
         "dependencies": {
-          "MemoryPack.Core": "1.21.4",
-          "MemoryPack.Generator": "1.21.4"
+          "MemoryPack.Core": "1.9.0",
+          "MemoryPack.Generator": "1.9.0"
         }
       },
-      "MemoryPack.Core/1.21.4": {
+      "MemoryPack.Core/1.9.0": {
         "type": "package",
+        "dependencies": {
+          "System.Collections.Immutable": "6.0.0",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+        },
         "compile": {
-          "lib/net8.0/MemoryPack.Core.dll": {
+          "lib/netstandard2.1/MemoryPack.Core.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net8.0/MemoryPack.Core.dll": {
+          "lib/netstandard2.1/MemoryPack.Core.dll": {
             "related": ".xml"
           }
         }
       },
-      "MemoryPack.Generator/1.21.4": {
+      "MemoryPack.Generator/1.9.0": {
         "type": "package"
       },
-      "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.0": {
+      "System.Buffers/4.5.1": {
         "type": "package",
         "compile": {
-          "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+          "ref/netstandard2.0/System.Buffers.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+          "lib/netstandard2.0/System.Buffers.dll": {
             "related": ".xml"
           }
-        },
-        "build": {
-          "buildTransitive/net6.0/_._": {}
         }
       },
-      "SuperSocket.ProtoBase/2.0.2": {
+      "System.Collections.Immutable/6.0.0": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0"
+          "System.Memory": "4.5.4",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
         },
         "compile": {
-          "lib/net9.0/SuperSocket.ProtoBase.dll": {
+          "lib/netstandard2.0/System.Collections.Immutable.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net9.0/SuperSocket.ProtoBase.dll": {
+          "lib/netstandard2.0/System.Collections.Immutable.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "System.Memory/4.5.4": {
+        "type": "package",
+        "dependencies": {
+          "System.Buffers": "4.5.1",
+          "System.Numerics.Vectors": "4.4.0",
+          "System.Runtime.CompilerServices.Unsafe": "4.5.3"
+        },
+        "compile": {
+          "lib/netstandard2.0/System.Memory.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/System.Memory.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "System.Numerics.Vectors/4.4.0": {
+        "type": "package",
+        "compile": {
+          "ref/netstandard2.0/System.Numerics.Vectors.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/System.Numerics.Vectors.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "System.Runtime.CompilerServices.Unsafe/6.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.dll": {
             "related": ".xml"
           }
         }
@@ -60,122 +106,196 @@
     }
   },
   "libraries": {
-    "MemoryPack/1.21.4": {
-      "sha512": "wy3JTBNBsO8LfQcBvvYsWr3lm2Oakolrfu0UQ3oSJSEiD+7ye0GUhYTaXuYYBowqsXBXWD9gf2218ae0JRiYVQ==",
+    "MemoryPack/1.9.0": {
+      "sha512": "pjmvDuoswR/Tqndj0nz0Hv625Fm5K9pTbqNCib6EcpaWV1rnDz/RENIFtkgRuzTlyw7Oj9S5ag/vPOlCp1NkvA==",
       "type": "package",
-      "path": "memorypack/1.21.4",
+      "path": "memorypack/1.9.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
-        "memorypack.1.21.4.nupkg.sha512",
+        "memorypack.1.9.0.nupkg.sha512",
         "memorypack.nuspec"
       ]
     },
-    "MemoryPack.Core/1.21.4": {
-      "sha512": "6RszGorZ0ejNmp37ZcboPBMvvPCuNW2jlrdQfcs/lMzE5b3pmPF6hsm/laDc34hRlbAST1ZxaX/DvYu2DF5sBQ==",
+    "MemoryPack.Core/1.9.0": {
+      "sha512": "uMgS5uXRvYeGpxoOA3fa42SnMENanaKFtL2+TJZztZXA0QptBkRIRjVEUpo9RuLq6mxLrbkhiLExC++PpJfeCA==",
       "type": "package",
-      "path": "memorypack.core/1.21.4",
+      "path": "memorypack.core/1.9.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "lib/net7.0/MemoryPack.Core.dll",
         "lib/net7.0/MemoryPack.Core.xml",
-        "lib/net8.0/MemoryPack.Core.dll",
-        "lib/net8.0/MemoryPack.Core.xml",
         "lib/netstandard2.1/MemoryPack.Core.dll",
         "lib/netstandard2.1/MemoryPack.Core.xml",
-        "memorypack.core.1.21.4.nupkg.sha512",
+        "memorypack.core.1.9.0.nupkg.sha512",
         "memorypack.core.nuspec"
       ]
     },
-    "MemoryPack.Generator/1.21.4": {
-      "sha512": "g14EsSS85yn0lHTi0J9ivqlZMf09A2iI51fmI+0KkzIzyCbWOBWPi5mdaY7YWmXprk12aYh9u/qfWHQUYthlwg==",
+    "MemoryPack.Generator/1.9.0": {
+      "sha512": "U1nV7MZgt33xapnIRq61Bi1xjtxDPSeXVPJfh2gUIvSd51qJ0lunwhNEKmvvdoc51aEskZappDEU94+6SaMOPQ==",
       "type": "package",
-      "path": "memorypack.generator/1.21.4",
+      "path": "memorypack.generator/1.9.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "analyzers/dotnet/cs/MemoryPack.Generator.dll",
-        "memorypack.generator.1.21.4.nupkg.sha512",
+        "memorypack.generator.1.9.0.nupkg.sha512",
         "memorypack.generator.nuspec"
       ]
     },
-    "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.0": {
-      "sha512": "cjWrLkJXK0rs4zofsK4bSdg+jhDLTaxrkXu4gS6Y7MAlCvRyNNgwY/lJi5RDlQOnSZweHqoyvgvbdvQsRIW+hg==",
+    "System.Buffers/4.5.1": {
+      "sha512": "Rw7ijyl1qqRS0YQD/WycNst8hUUMgrMH4FCn1nNm27M4VxchZ1js3fVjQaANHO5f3sN4isvP4a+Met9Y4YomAg==",
       "type": "package",
-      "path": "microsoft.extensions.dependencyinjection.abstractions/8.0.0",
+      "path": "system.buffers/4.5.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net461/System.Buffers.dll",
+        "lib/net461/System.Buffers.xml",
+        "lib/netcoreapp2.0/_._",
+        "lib/netstandard1.1/System.Buffers.dll",
+        "lib/netstandard1.1/System.Buffers.xml",
+        "lib/netstandard2.0/System.Buffers.dll",
+        "lib/netstandard2.0/System.Buffers.xml",
+        "lib/uap10.0.16299/_._",
+        "ref/net45/System.Buffers.dll",
+        "ref/net45/System.Buffers.xml",
+        "ref/netcoreapp2.0/_._",
+        "ref/netstandard1.1/System.Buffers.dll",
+        "ref/netstandard1.1/System.Buffers.xml",
+        "ref/netstandard2.0/System.Buffers.dll",
+        "ref/netstandard2.0/System.Buffers.xml",
+        "ref/uap10.0.16299/_._",
+        "system.buffers.4.5.1.nupkg.sha512",
+        "system.buffers.nuspec",
+        "useSharedDesignerContext.txt",
+        "version.txt"
+      ]
+    },
+    "System.Collections.Immutable/6.0.0": {
+      "sha512": "l4zZJ1WU2hqpQQHXz1rvC3etVZN+2DLmQMO79FhOTZHMn8tDRr+WU287sbomD0BETlmKDn0ygUgVy9k5xkkJdA==",
+      "type": "package",
+      "path": "system.collections.immutable/6.0.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "LICENSE.TXT",
-        "PACKAGE.md",
         "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/Microsoft.Extensions.DependencyInjection.Abstractions.targets",
-        "buildTransitive/net462/_._",
-        "buildTransitive/net6.0/_._",
-        "buildTransitive/netcoreapp2.0/Microsoft.Extensions.DependencyInjection.Abstractions.targets",
-        "lib/net462/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-        "lib/net462/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "lib/net6.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-        "lib/net6.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "lib/net7.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-        "lib/net7.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-        "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "lib/netstandard2.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-        "lib/netstandard2.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-        "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
-        "microsoft.extensions.dependencyinjection.abstractions.nuspec",
+        "buildTransitive/netcoreapp2.0/System.Collections.Immutable.targets",
+        "buildTransitive/netcoreapp3.1/_._",
+        "lib/net461/System.Collections.Immutable.dll",
+        "lib/net461/System.Collections.Immutable.xml",
+        "lib/net6.0/System.Collections.Immutable.dll",
+        "lib/net6.0/System.Collections.Immutable.xml",
+        "lib/netstandard2.0/System.Collections.Immutable.dll",
+        "lib/netstandard2.0/System.Collections.Immutable.xml",
+        "system.collections.immutable.6.0.0.nupkg.sha512",
+        "system.collections.immutable.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "SuperSocket.ProtoBase/2.0.2": {
-      "sha512": "foE2k7cpFAlFqyiGqrfogT4tDWC2sHMtTJ2FYEW4k9KWqydZPgNemjF75mOe0MseSY9BTnpZMrR0gbh/I6XR7g==",
+    "System.Memory/4.5.4": {
+      "sha512": "1MbJTHS1lZ4bS4FmsJjnuGJOu88ZzTT2rLvrhW7Ygic+pC0NWA+3hgAen0HRdsocuQXCkUTdFn9yHJJhsijDXw==",
       "type": "package",
-      "path": "supersocket.protobase/2.0.2",
+      "path": "system.memory/4.5.4",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
-        "lib/net6.0/SuperSocket.ProtoBase.dll",
-        "lib/net6.0/SuperSocket.ProtoBase.xml",
-        "lib/net7.0/SuperSocket.ProtoBase.dll",
-        "lib/net7.0/SuperSocket.ProtoBase.xml",
-        "lib/net8.0-android34.0/SuperSocket.ProtoBase.dll",
-        "lib/net8.0-android34.0/SuperSocket.ProtoBase.xml",
-        "lib/net8.0-ios18.0/SuperSocket.ProtoBase.dll",
-        "lib/net8.0-ios18.0/SuperSocket.ProtoBase.xml",
-        "lib/net8.0-macos15.0/SuperSocket.ProtoBase.dll",
-        "lib/net8.0-macos15.0/SuperSocket.ProtoBase.xml",
-        "lib/net8.0-tvos18.0/SuperSocket.ProtoBase.dll",
-        "lib/net8.0-tvos18.0/SuperSocket.ProtoBase.xml",
-        "lib/net8.0/SuperSocket.ProtoBase.dll",
-        "lib/net8.0/SuperSocket.ProtoBase.xml",
-        "lib/net9.0-android35.0/SuperSocket.ProtoBase.dll",
-        "lib/net9.0-android35.0/SuperSocket.ProtoBase.xml",
-        "lib/net9.0-ios18.0/SuperSocket.ProtoBase.dll",
-        "lib/net9.0-ios18.0/SuperSocket.ProtoBase.xml",
-        "lib/net9.0-macos15.0/SuperSocket.ProtoBase.dll",
-        "lib/net9.0-macos15.0/SuperSocket.ProtoBase.xml",
-        "lib/net9.0-tvos18.0/SuperSocket.ProtoBase.dll",
-        "lib/net9.0-tvos18.0/SuperSocket.ProtoBase.xml",
-        "lib/net9.0/SuperSocket.ProtoBase.dll",
-        "lib/net9.0/SuperSocket.ProtoBase.xml",
-        "supersocket.protobase.2.0.2.nupkg.sha512",
-        "supersocket.protobase.nuspec",
-        "v2.0.2.md"
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net461/System.Memory.dll",
+        "lib/net461/System.Memory.xml",
+        "lib/netcoreapp2.1/_._",
+        "lib/netstandard1.1/System.Memory.dll",
+        "lib/netstandard1.1/System.Memory.xml",
+        "lib/netstandard2.0/System.Memory.dll",
+        "lib/netstandard2.0/System.Memory.xml",
+        "ref/netcoreapp2.1/_._",
+        "system.memory.4.5.4.nupkg.sha512",
+        "system.memory.nuspec",
+        "useSharedDesignerContext.txt",
+        "version.txt"
+      ]
+    },
+    "System.Numerics.Vectors/4.4.0": {
+      "sha512": "UiLzLW+Lw6HLed1Hcg+8jSRttrbuXv7DANVj0DkL9g6EnnzbL75EB7EWsw5uRbhxd/4YdG8li5XizGWepmG3PQ==",
+      "type": "package",
+      "path": "system.numerics.vectors/4.4.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/MonoAndroid10/_._",
+        "lib/MonoTouch10/_._",
+        "lib/net46/System.Numerics.Vectors.dll",
+        "lib/net46/System.Numerics.Vectors.xml",
+        "lib/netcoreapp2.0/_._",
+        "lib/netstandard1.0/System.Numerics.Vectors.dll",
+        "lib/netstandard1.0/System.Numerics.Vectors.xml",
+        "lib/netstandard2.0/System.Numerics.Vectors.dll",
+        "lib/netstandard2.0/System.Numerics.Vectors.xml",
+        "lib/portable-net45+win8+wp8+wpa81/System.Numerics.Vectors.dll",
+        "lib/portable-net45+win8+wp8+wpa81/System.Numerics.Vectors.xml",
+        "lib/xamarinios10/_._",
+        "lib/xamarinmac20/_._",
+        "lib/xamarintvos10/_._",
+        "lib/xamarinwatchos10/_._",
+        "ref/MonoAndroid10/_._",
+        "ref/MonoTouch10/_._",
+        "ref/net46/System.Numerics.Vectors.dll",
+        "ref/net46/System.Numerics.Vectors.xml",
+        "ref/netcoreapp2.0/_._",
+        "ref/netstandard1.0/System.Numerics.Vectors.dll",
+        "ref/netstandard1.0/System.Numerics.Vectors.xml",
+        "ref/netstandard2.0/System.Numerics.Vectors.dll",
+        "ref/netstandard2.0/System.Numerics.Vectors.xml",
+        "ref/xamarinios10/_._",
+        "ref/xamarinmac20/_._",
+        "ref/xamarintvos10/_._",
+        "ref/xamarinwatchos10/_._",
+        "system.numerics.vectors.4.4.0.nupkg.sha512",
+        "system.numerics.vectors.nuspec",
+        "useSharedDesignerContext.txt",
+        "version.txt"
+      ]
+    },
+    "System.Runtime.CompilerServices.Unsafe/6.0.0": {
+      "sha512": "/iUeP3tq1S0XdNNoMz5C9twLSrM/TH+qElHkXWaPvuNOt+99G75NrV0OS2EqHx5wMN7popYjpc8oTjC1y16DLg==",
+      "type": "package",
+      "path": "system.runtime.compilerservices.unsafe/6.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/netcoreapp2.0/System.Runtime.CompilerServices.Unsafe.targets",
+        "buildTransitive/netcoreapp3.1/_._",
+        "lib/net461/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/net461/System.Runtime.CompilerServices.Unsafe.xml",
+        "lib/net6.0/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/net6.0/System.Runtime.CompilerServices.Unsafe.xml",
+        "lib/netcoreapp3.1/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/netcoreapp3.1/System.Runtime.CompilerServices.Unsafe.xml",
+        "lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.xml",
+        "system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
+        "system.runtime.compilerservices.unsafe.nuspec",
+        "useSharedDesignerContext.txt"
       ]
     }
   },
   "projectFileDependencyGroups": {
-    "net9.0": [
-      "MemoryPack >= 1.21.4",
-      "SuperSocket.ProtoBase >= 2.0.2"
+    ".NETStandard,Version=v2.1": [
+      "MemoryPack >= 1.9.0"
     ]
   },
   "packageFolders": {
@@ -200,15 +320,15 @@
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
-        "net9.0"
+        "netstandard2.1"
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net9.0": {
-          "targetAlias": "net9.0",
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
           "projectReferences": {}
         }
       },
@@ -225,16 +345,12 @@
       "SdkAnalysisLevel": "9.0.100"
     },
     "frameworks": {
-      "net9.0": {
-        "targetAlias": "net9.0",
+      "netstandard2.1": {
+        "targetAlias": "netstandard2.1",
         "dependencies": {
           "MemoryPack": {
             "target": "Package",
-            "version": "[1.21.4, )"
-          },
-          "SuperSocket.ProtoBase": {
-            "target": "Package",
-            "version": "[2.0.2, )"
+            "version": "[1.9.0, )"
           }
         },
         "imports": [
@@ -249,11 +365,11 @@
         "assetTargetFallback": true,
         "warn": true,
         "frameworkReferences": {
-          "Microsoft.NETCore.App": {
+          "NETStandard.Library": {
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102\\RuntimeIdentifierGraph.json"
       }
     }
   }
