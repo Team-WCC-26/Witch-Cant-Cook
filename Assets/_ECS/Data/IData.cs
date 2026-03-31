@@ -8,7 +8,7 @@ public interface IData
 }
 
 [Serializable]
-public class GameData<T> where T : class, IData
+public class GameData<T> where T : IData
 {
     public List<T> data = new List<T>();
     private readonly Dictionary<int, T> dataDict = new Dictionary<int, T>();
@@ -35,7 +35,7 @@ public class GameData<T> where T : class, IData
             return value;
 
         Debug.LogWarning($"[GSpread] Data not found: {key} in {typeof(T).Name}");
-        return null;
+        return default;
     }
 
     public bool TryGet(int key, out T value) => dataDict.TryGetValue(key, out value);
