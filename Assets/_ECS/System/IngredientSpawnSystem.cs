@@ -43,7 +43,7 @@ public partial class IngredientSpawnSystem : SystemBase
             IngredientAttribute data = ingredientList[i];
 
             // 엔티티에 실제 데이터(구조체) 주입
-            entityManager.SetComponentData(entity, data);
+            //entityManager.SetComponentData(entity, data);
 
             // 확인용 로그 (선택 사항)
             Debug.Log($"[ECS] 재료 생성 완료: {data.name.ToString()} (ID: {data.id})");
