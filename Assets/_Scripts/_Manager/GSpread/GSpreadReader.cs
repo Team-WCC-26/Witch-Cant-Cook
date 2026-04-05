@@ -341,4 +341,35 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
         return list;
     }
+
+    public List<T> ImportDataStruct<T>() where T : struct
+    {
+        var sheet = sheets.Find(s => s.className == typeof(T).Name);
+        if (sheet == null || sheet.datas == null) return new List<T>();
+        return ConvertToListStruct<T>(sheet.datas);
+    }
+
+    private List<T> ConvertToListStruct<T>(List<Dictionary<string, string>> datas) where T : struct
+    {
+        var list = new List<T>();
+        foreach (var data in datas)
+        {
+            T item = ConvertToStruct<T>(data);
+            list.Add(item);
+        }
+        return list;
+    }
+
+    private T ConvertToStruct<T>(Dictionary<string, string> data) where T : struct
+    {
+        object boxed = Activator.CreateInstance(typeof(T)); // 구조체를 오브젝트로 박싱
+        var fields = typeof(T).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+        foreach (var field in fields)
+        {
+            if (!data.TryGetValue(field.Name, out string value) || string.IsNullOrEmpty(value)) continue;
+            field.SetValue(boxed, ConvertValue(value, field.FieldType)); // 박싱된 상태여야 값이 대입됨
+        }
+        return (T)boxed; // 다시 언박싱해서 반환
+    }
 }

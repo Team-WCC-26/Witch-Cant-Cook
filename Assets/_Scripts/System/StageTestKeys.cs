@@ -1,9 +1,22 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class StageTestKeys : MonoBehaviour
 {
+    public Button BTN_playground;
 
+    private void Start()
+    {
+        if (BTN_playground != null)
+        {
+            BTN_playground.onClick.AddListener(() =>
+            {
+                SceneManager.LoadScene("Playground");
+            });
+        }
+    }
     private void Update()
     {
         if (Keyboard.current.tabKey.wasPressedThisFrame)
@@ -18,4 +31,6 @@ public class StageTestKeys : MonoBehaviour
             }
         }
     }
+
+
 }

@@ -31,6 +31,7 @@ public class GameManager : Singleton<GameManager>
     #region Sub Methods
     private void InitBaseManagers()
     {
+        InitManager<DataManager>();
         InitManager<UIManager>();
         InitManager<StageManager>();
     }
