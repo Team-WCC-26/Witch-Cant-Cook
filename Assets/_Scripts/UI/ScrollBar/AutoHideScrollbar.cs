@@ -1,38 +1,72 @@
 using Cysharp.Threading.Tasks;
-using System.Threading;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
+[RequireComponent(typeof(ScrollRect))]
 public class AutoHideScrollbar : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 {
-    [SerializeField] private GameObject _scrollbar;
+    [SerializeField] private Image _scrollbar;
     [SerializeField] private float _hideDelay = 2f;
 
-    private float _lastInteractionTime;
+    [Header("Fade")]
+    [SerializeField] private float _showDuration = 0.2f;
+    [SerializeField] private float _hideDuration = 0.3f;
+    
+    private ScrollRect _scrollRect;
 
+    private float _lastInteractionTime;
+    private bool _isDragging = false;
+
+    private void Start()
+    {
+        _scrollRect = GetComponent<ScrollRect>();
+        _scrollRect.onValueChanged.AddListener(OnValueChanged);
+
+        _scrollbar.DOFade(0, 0);
+    }
+
+    private void Update()
+    {
+        if (_isDragging || _scrollbar.color.a == 0f) return;
+
+        if (Time.time - _lastInteractionTime > _hideDelay)
+        {
+            Hide();
+        }
+    }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        _scrollbar.SetActive(true);
+        _isDragging = true;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         _lastInteractionTime = Time.time;
+        _isDragging = false;
+    }
 
-        if (_scrollbar.activeSelf)
+    private void OnValueChanged(Vector2 vec = default)
+    {
+        _lastInteractionTime = Time.time;
+        Show();
+    }
+
+    private void Show()
+    {
+        if (_scrollbar.color.a == 0f)
         {
-            StartTimer().Forget();
+            _scrollbar.DOFade(1f, _showDuration);
         }
     }
 
-    private async UniTaskVoid StartTimer()
+    private void Hide()
     {
-        while (Time.time - _lastInteractionTime < _hideDelay)
+        if (_scrollbar.color.a == 1f)
         {
-            await UniTask.Yield();
+            _scrollbar.DOFade(0f, _hideDuration);
         }
-
-        _scrollbar.SetActive(false);
     }
 }
