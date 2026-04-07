@@ -15,11 +15,14 @@ public class DataManager : Singleton<DataManager>
     [SerializeField] private GSpreadReader gspreadReader;
 
     [Header("Lifecycle")]
-    [SerializeField] private bool destroyGSpreadReaderAfterInit = true;
+    [SerializeField] private bool destroyGSpreadReaderAfterInit = false;
 
     [Header("Data Fields")]
-    [SerializeField] private GameData<IngredientAttribute> ingredientAttributes;
-    [SerializeField] private GameData<IngredientStat> ingredientStat;
+    [SerializeField] private GameData<IngredientAttribute> ingredientAttributes = new();
+    [SerializeField] private GameData<IngredientStat> ingredientStat = new();
+
+    public GameData<IngredientAttribute> GetIngredientAttributes() => ingredientAttributes;
+    public GameData<IngredientStat> GetIngredientStats() => ingredientStat;
 
     public bool IsDataLoaded { get; private set; }
 
@@ -47,11 +50,19 @@ public class DataManager : Singleton<DataManager>
 
         if (useGSpread)
         {
+            // [핵심] 인스펙터 할당이 null이라면 씬에서 직접 찾습니다.
+            if (gspreadReader == null)
+            {
+                gspreadReader = FindAnyObjectByType<GSpreadReader>();
+            }
+
             if (gspreadReader == null)
             {
                 Debug.LogError("[DataManager] gspreadReader is not assigned.");
                 yield break;
             }
+
+            yield return null;
 
             // 이벤트 구독(콜백이 있을 때만)
             Action<float, string> progressHandler = null;
@@ -257,4 +268,25 @@ public class DataManager : Singleton<DataManager>
         valueCb?.Invoke(1f);
         return true;
     }
+
+    // 1. 개별 바인딩 함수 (각각의 역할만 수행)
+    public void BindIngredientAttribute(List<IngredientAttribute> data)
+    {
+        ingredientAttributes.SetData(data);
+    }
+
+    public void BindIngredientStat(List<IngredientStat> data)
+    {
+        ingredientStat.SetData(data);
+    }
+
+    // 2. 일괄 처리 함수 (구글 시트 로드가 끝났을 때 한 번에 호출)
+    public void BindAllIngredientData(List<IngredientAttribute> attributes, List<IngredientStat> stats)
+    {
+        BindIngredientAttribute(attributes);
+        BindIngredientStat(stats);
+
+        Debug.Log("[DataManager] 재료 관련 모든 데이터 바인딩 완료!");
+    }
+
 }
