@@ -37,7 +37,7 @@ public class Room
 
     public void Enter(Player player)
     {
-        PushJob(() => // shard test
+        PushJob(() =>
         {
             _players.Add(player);
             player.Room = this;

@@ -5,7 +5,7 @@ namespace Protocol;
 
 public static class PacketSerializer
 {
-    public static byte[] Serialize<T>(T packet, bool isServerPacket = false) where T : class, IPacket
+    public static byte[] Serialize<T>(T packet, bool isServerPacket = false) where T : class
     {
         byte[] data = MemoryPackSerializer.Serialize(packet);
 
