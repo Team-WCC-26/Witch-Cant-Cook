@@ -5,7 +5,7 @@ namespace Server;
 public class RoomManager
 {
     private readonly ConcurrentDictionary<int, Room> _rooms = new();
-    private int _roomId = 1;
+    private int _roomId = 0;
 
     private readonly ShardManager _shardManager;
 

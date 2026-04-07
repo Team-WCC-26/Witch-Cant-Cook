@@ -31,7 +31,7 @@ public static class PacketTypeRegistry
         });
     }
 
-    public static PacketId GetBaseId<T>() where T : IPacket => GetBaseId(typeof(T));
+    public static PacketId GetBaseId<T>() => GetBaseId(typeof(T));
 
     public static PacketId GetId(Type packetType, bool isServerPacket)
     {
@@ -39,7 +39,7 @@ public static class PacketTypeRegistry
         return isServerPacket && ((ushort)baseId & 1) == 0 ? (PacketId)((ushort)baseId + 1) : baseId;
     }
 
-    public static PacketId GetId<T>(bool isServerPacket) where T : IPacket => GetId(typeof(T), isServerPacket);
+    public static PacketId GetId<T>(bool isServerPacket) => GetId(typeof(T), isServerPacket);
 
     public static bool TryGetBaseId(Type packetType, out PacketId id) => _typeToBaseId.TryGetValue(packetType, out id);
 }
