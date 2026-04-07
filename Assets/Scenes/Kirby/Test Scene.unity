@@ -994,8 +994,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f43a514fce6118548a68b66b66996209, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AutoHideScrollbar
-  _scrollbar: {fileID: 1173111883}
+  _scrollbar: {fileID: 1173111885}
   _hideDelay: 2
+  _showDuration: 0.2
+  _hideDuration: 0.3
 --- !u!114 &931309200
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1009,9 +1011,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ScrollRect
   m_Content: {fileID: 1417460659}
-  m_Horizontal: 1
+  m_Horizontal: 0
   m_Vertical: 1
-  m_MovementType: 1
+  m_MovementType: 2
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
@@ -1074,26 +1076,13 @@ GameObject:
   m_Component:
   - component: {fileID: 966166536}
   - component: {fileID: 966166535}
-  - component: {fileID: 966166534}
   m_Layer: 0
   m_Name: ServerConnector
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &966166534
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 966166533}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f66dfed264f280489a68fac74952e21, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PacketReceiver
+  m_IsActive: 1
 --- !u!114 &966166535
 MonoBehaviour:
   m_ObjectHideFlags: 0

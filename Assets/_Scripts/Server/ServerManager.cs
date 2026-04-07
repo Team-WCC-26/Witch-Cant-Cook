@@ -4,11 +4,9 @@ using UnityEngine;
 using Protocol;
 using Cysharp.Threading.Tasks;
 using System.Threading;
-using DG.Tweening;
 
 namespace Server
 {
-    // TODO => 유니티 스레드에서 handler를 실행할 JobQueue 만들기
     public class ServerManager : Singleton<ServerManager>
     {
         public bool IsEnterRoom = false;
@@ -38,8 +36,11 @@ namespace Server
 
             _ = UniTask.RunOnThreadPool(() =>
             {
-                _packetReceiver.StartAsync(_stream, _cts.Token).Forget();
+                _ = _packetReceiver.StartAsync(_stream, _cts.Token);
             });
+
+            _jobWorker.Initialize();
+            _ = _jobWorker.StartProcess(_cts.Token);
         }
 
         public void RegisterHandler(PacketId id, Action<ReadOnlyMemory<byte>> action)
@@ -55,6 +56,11 @@ namespace Server
         public void DispatchPacket(PacketId id, ReadOnlyMemory<byte> data)
         {
             _packetDispatcher.Dispatch(id, data);
+        }
+
+        public void PushJob(Action job)
+        {
+            _jobWorker.Push(job);
         }
 
         public void Input()
@@ -132,7 +138,7 @@ namespace Server
 
         }
 
-        private void SendData(byte[] data)
+        public void SendData(byte[] data)
         {
             _stream.WriteAsync(data);
         }

@@ -22,7 +22,7 @@ namespace Server
         {
             if (_packetHandlers.TryGetValue(id, out var handler))
             {
-                handler.Invoke(data);
+                ServerManager.Instance.PushJob(() => handler.Invoke(data));
             }
         }
     }
