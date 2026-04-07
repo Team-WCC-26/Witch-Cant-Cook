@@ -4,6 +4,7 @@ using UnityEngine;
 using Protocol;
 using Cysharp.Threading.Tasks;
 using System.Threading;
+using DG.Tweening;
 
 namespace Server
 {
@@ -11,7 +12,6 @@ namespace Server
     public class ServerManager : Singleton<ServerManager>
     {
         public bool IsEnterRoom = false;
-
         private TcpClient _client = new(); // 단순 Tcp가 아니라 Socket단위로 구조 수정해서 tcp/udp 모두 받을 수 있게 해야 함
         private NetworkStream _stream;
 
