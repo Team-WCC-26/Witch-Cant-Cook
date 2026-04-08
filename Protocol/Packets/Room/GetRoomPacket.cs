@@ -7,5 +7,13 @@ namespace Protocol;
 [PacketId(PacketId.S_GetRoom)]
 public partial class GetRoomPacket
 {
-    public List<int> RoomIds { get; set; } = new();
+    public List<RoomData> RoomDatas { get; set; } = new();
+}
+
+[MemoryPackable]
+public partial struct RoomData
+{
+    public string Id;
+    public string Name;
+    public bool BIsPrivate;
 }

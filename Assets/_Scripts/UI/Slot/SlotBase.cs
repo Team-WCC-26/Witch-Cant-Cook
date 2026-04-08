@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BaseSlot : MonoBehaviour
+public class SlotBase : MonoBehaviour
 {
     [Header("Info")]
     [SerializeField] private TextMeshProUGUI _name;

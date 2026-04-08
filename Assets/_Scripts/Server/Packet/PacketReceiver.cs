@@ -4,6 +4,7 @@ using System;
 using Protocol;
 using Cysharp.Threading.Tasks;
 using System.Threading;
+using System.Buffers;
 
 namespace Server
 {
@@ -27,7 +28,7 @@ namespace Server
                 while (true)
                 {
                     EnsureCapacity(1024);
-
+                    
                     int bytesRead = await stream.ReadAsync(_buffer, _writePos, _buffer.Length - _writePos, token);
 
                     if (bytesRead == 0) break;
@@ -66,8 +67,6 @@ namespace Server
                 var body = new ReadOnlyMemory<byte>(packet);
 
                 ServerManager.Instance.DispatchPacket((PacketId)id, body);
-
-                //HandlePacket(id, body);
 
                 _readPos += length + 6;
             }
