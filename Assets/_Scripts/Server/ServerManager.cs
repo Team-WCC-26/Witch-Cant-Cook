@@ -82,7 +82,7 @@ namespace Server
                         break;
 
                     case "/enter":
-                        EnterRoom(int.Parse(command[1]));
+                        EnterRoom(command[1]);
                         break;
 
                     case "/rooms":
@@ -114,7 +114,7 @@ namespace Server
             SendData(data);
         }
 
-        public void EnterRoom(int id)
+        public void EnterRoom(string id)
         {
             if (IsEnterRoom) return;
 
@@ -138,9 +138,9 @@ namespace Server
 
         }
 
-        public void SendData(byte[] data)
+        public async UniTask SendData(byte[] data)
         {
-            _stream.WriteAsync(data);
+            await _stream.WriteAsync(data);
         }
     }
 }

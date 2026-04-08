@@ -1,4 +1,7 @@
-﻿using TMPro;
+﻿using Cysharp.Threading.Tasks;
+using Protocol;
+using Server;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -45,9 +48,16 @@ public class LobbyCreator : MonoBehaviour
         _icon.sprite = string.IsNullOrEmpty(value) ? _publicSprite : _privateSprite;
     }
 
-    public void CreateLobby()
+    public async void CreateLobby()
     {
-        _lobbyRounter.CreateLobby(_nameInput.text, _passwordInput.text);
+        CreateRoomPacket packet = new()
+        {
+            RoomName = _nameInput.text,
+            RoomPassword = _passwordInput.text,
+        };
+
+        await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+
         gameObject.SetActive(false);
     }
 }

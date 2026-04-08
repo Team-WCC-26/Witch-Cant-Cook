@@ -62,7 +62,8 @@ public class PacketReceiver
         {
             case PacketId.S_GetRoom:
                 var getRoomPacket = MemoryPackSerializer.Deserialize<GetRoomPacket>(body);
-                Console.WriteLine("Current Rooms : " + string.Join(", ", getRoomPacket.RoomIds));
+
+                Console.WriteLine("Current Rooms : " + string.Join(", ", getRoomPacket.RoomDatas.Select(x => x.Id)));
                 break;
 
             case PacketId.S_JoinRoom:

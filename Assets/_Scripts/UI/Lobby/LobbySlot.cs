@@ -1,24 +1,22 @@
-﻿using System;
+﻿using Protocol;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-public class LobbySlot : BaseSlot
+public class LobbySlot : SlotBase
 {
-    public bool BIsPrivate => string.IsNullOrEmpty(_password);
+    public bool BIsPrivate => _roomData.BIsPrivate;
 
-    private string _id;
-    private string _name;
-    private string _password;
+    private RoomData _roomData;
 
-    public void Init(string id, string name, string password, Sprite sprite)
+    public void Init(RoomData roomData, Sprite sprite)
     {
-        _name = name;
-        _password = password;
+        _roomData = roomData;
 
-        InitData(name, sprite);
+        InitData(_roomData.Name, sprite);
         SetIconActive(BIsPrivate);
     }
 }

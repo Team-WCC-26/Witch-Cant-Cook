@@ -61,7 +61,7 @@ class Program
                     case "/enter":
                         JoinRoomPacket joinRoomPacket = new()
                         {
-                            RoomId = int.Parse(command[1])
+                            RoomId = command[1]
                         };
                         data = PacketSerializer.Serialize(joinRoomPacket);
 
