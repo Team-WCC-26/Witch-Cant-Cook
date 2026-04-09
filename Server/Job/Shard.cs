@@ -4,7 +4,7 @@ namespace Server;
 
 public class Shard
 {
-    private readonly ConcurrentDictionary<int, Room> _roomDict = new();
+    private readonly ConcurrentDictionary<string, Room> _roomDict = new(); // Hash로 바꾸고 id값만 저장하는게 나을수도
     private readonly ConcurrentQueue<Action> _jobs = new();
     private readonly SemaphoreSlim _signal = new(0);
 
@@ -17,12 +17,12 @@ public class Shard
 
         Push(() =>
         {
-            _roomDict.TryAdd(room.RoomId, room);
+            _roomDict.TryAdd(room.Id, room);
             _roomCnt++;
         });
     }
 
-    public void UnregisterRoom(int id)
+    public void UnregisterRoom(string id)
     {
         Push(() =>
         {
@@ -31,7 +31,7 @@ public class Shard
         });
     }
 
-    public void UnregisterRoom(Room room) => UnregisterRoom(room.RoomId);
+    public void UnregisterRoom(Room room) => UnregisterRoom(room.Id);
 
     public void Push(Action job)
     {

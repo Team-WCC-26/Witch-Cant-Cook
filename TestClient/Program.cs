@@ -1,9 +1,5 @@
-﻿using System;
-using System.Net.Sockets;
-using System.Text;
+﻿using System.Net.Sockets;
 using Protocol;
-using System.Threading.Tasks;
-using MemoryPack;
 
 namespace TestClient;
 
@@ -13,8 +9,8 @@ class Program
 
     static async Task Main(string[] args)
     {
+        Console.WriteLine(typeof(ChatMessagePacket).Assembly.Location);
         var client = new TcpClient();
-
         await client.ConnectAsync("127.0.0.1", 4040);
 
         Console.WriteLine("Connected to server");
@@ -65,7 +61,7 @@ class Program
                     case "/enter":
                         JoinRoomPacket joinRoomPacket = new()
                         {
-                            RoomId = int.Parse(command[1])
+                            RoomId = command[1]
                         };
                         data = PacketSerializer.Serialize(joinRoomPacket);
 

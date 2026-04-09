@@ -4,7 +4,10 @@ namespace Server;
 
 public class Room
 {
-    public int RoomId { get; }
+    public string Id { get; }
+    public string Name { get; }
+    public string Password { get; }
+
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
     private int _playerCnt = 0;
@@ -12,9 +15,11 @@ public class Room
     private JobQueue _jobQueue = new();
     private Shard _shard;
 
-    public Room(int id)
+    public Room(string id, string name, string password)
     {
-        RoomId = id;
+        Id = id;
+        Name = name;
+        Password = password;
     }
 
     public bool IsEnable()
@@ -37,7 +42,7 @@ public class Room
 
     public void Enter(Player player)
     {
-        PushJob(() => // shard test
+        PushJob(() =>
         {
             _players.Add(player);
             player.Room = this;

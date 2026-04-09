@@ -15,6 +15,8 @@ public static class PacketDispatcher
 
         foreach (var type in types)
         {
+            if (!typeof(PacketHandlerBase).IsAssignableFrom(type)) continue;
+
             foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var attr = method.GetCustomAttribute<PacketHandlerAttribute>();
