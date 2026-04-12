@@ -22,7 +22,7 @@ public struct Health : IComponentData
 /// <summary>
 /// 투척 형태
 /// </summary>
-public enum ThrowingType { Linear, Parabolic, None }
+public enum ThrowingType { parabola, javelin, shuriken, none }
 
 // 물리 특성
 public struct IngredientPhysics : IComponentData
@@ -35,7 +35,7 @@ public struct IngredientCombat : IComponentData
 {
     public int Damage;
     // 태그의 경우 enum이나 정수형 ID로 관리하는 것이 최적화에 좋습니다.
-    public int TagID;
+    public FixedString32Bytes Tag;
 }
 public struct IngredientSpawnRequest : IComponentData
 {

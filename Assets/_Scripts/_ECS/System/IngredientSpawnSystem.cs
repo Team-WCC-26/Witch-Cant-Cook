@@ -16,7 +16,11 @@ public partial class IngredientSpawnSystem : SystemBase
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         // 프리팹 정보를 담고 있는 싱글톤 데이터 가져오기 (미리 설정되어 있어야 함)
-        if (!SystemAPI.TryGetSingleton<IngredientSpawnConfig>(out var config)) return;
+        if (!SystemAPI.TryGetSingleton<IngredientSpawnConfig>(out var config))
+        { 
+            Debug.LogError("IngredientSpawnConfig 싱글톤이 존재하지 않습니다. 스폰 시스템이 작동하려면 프리팹 엔티티가 필요합니다.");
+            return;
+        }
 
         // 4. 모든 스폰 요청 엔티티를 순회
         foreach (var (request, requestEntity) in SystemAPI.Query<IngredientSpawnRequest>().WithEntityAccess())
@@ -52,14 +56,14 @@ public partial class IngredientSpawnSystem : SystemBase
                 ecb.AddComponent(newEntity, new IngredientPhysics
                 {
                     Weight = statRaw.weight,
-                    Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.Parabolic)
+                    Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.parabola)
                 });
 
                 // 4. 전투 정보
                 ecb.AddComponent(newEntity, new IngredientCombat
                 {
                     Damage = statRaw.damage,
-                    TagID = int.Parse(ingredientRaw.tag) // 태그가 문자열이라면 변환 필요
+                    Tag = ingredientRaw.tag // 태그가 문자열이라면 변환 필요
                 });
 
                 // [위치 설정] 요청된 좌표로 이동
