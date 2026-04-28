@@ -13,7 +13,7 @@ public class StageTestKeys : MonoBehaviour
         {
             BTN_playground.onClick.AddListener(() =>
             {
-                SceneManager.LoadScene("Playground");
+                SceneManager.LoadScene("TestScene 1");
             });
         }
     }

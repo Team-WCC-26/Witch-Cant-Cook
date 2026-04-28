@@ -7,7 +7,7 @@ public class IngredientSpawnerAuthoring : MonoBehaviour
     public GameObject ingredientPrefab; // 인스펙터에서 아까 만든 구 프리팹 할당
 
     // 2. 베이킹 클래스
-    class Baker : Baker<IngredientSpawnerAuthoring>
+    public class Baker : Baker<IngredientSpawnerAuthoring>
     {
         public override void Bake(IngredientSpawnerAuthoring authoring)
         {

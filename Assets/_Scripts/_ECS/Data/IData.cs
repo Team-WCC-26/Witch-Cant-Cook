@@ -40,5 +40,6 @@ public class GameData<T> where T : IData
 
     public bool TryGet(int key, out T value) => dataDict.TryGetValue(key, out value);
     public List<T> GetAll() => data;
+    public T GetData(int id) => dataDict.GetValueOrDefault(id);
     public int Count => data?.Count ?? 0;
 }
