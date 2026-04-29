@@ -19,7 +19,6 @@ public sealed class PlayerCameraController : MonoBehaviour
     [SerializeField] private float minPitch = -70f;
     [SerializeField] private float maxPitch = 70f;
 
-    // Camera Rotation State
     private float yawDeg = 0f;
     private float pitchDeg = 0f;
 
@@ -33,14 +32,25 @@ public sealed class PlayerCameraController : MonoBehaviour
 
         input = brain.Input;
 
+        yawDeg = NormalizeAngle(brain.transform.eulerAngles.y);
+
         if (yawRoot == null)
+        {
             Debug.LogWarning("yawRoot is not assigned.");
-        else yawDeg = NormalizeAngle(yawRoot.localEulerAngles.y);
+        }
+        else
+        {
+            yawRoot.localRotation = Quaternion.identity;
+        }
 
         if (pitchRoot == null)
+        {
             Debug.LogWarning("pitchRoot is not assigned.");
+        }
         else
+        {
             pitchDeg = NormalizeAngle(pitchRoot.localEulerAngles.x);
+        }
     }
 
     private void OnEnable()
@@ -55,25 +65,35 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void Update()
     {
-        if (input == null || yawRoot == null || pitchRoot == null) return;
+        if (input == null || brain == null || yawRoot == null || pitchRoot == null)
+        {
+            return;
+        }
 
         Vector2 look = input.LookDelta;
-        if (look.sqrMagnitude < 0.000001f) return;
 
-        float yawDelta = look.x * cameraSensitivity;
-        float pitchDelta = look.y * cameraSensitivity * (invertY ? 1f : -1f);
+        if (look.sqrMagnitude >= 0.000001f)
+        {
+            float yawDelta = look.x * cameraSensitivity;
+            float pitchDelta = look.y * cameraSensitivity * (invertY ? 1f : -1f);
 
-        yawDeg += yawDelta;
-        yawRoot.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
+            yawDeg += yawDelta;
+            pitchDeg = Mathf.Clamp(pitchDeg + pitchDelta, minPitch, maxPitch);
+        }
 
-        pitchDeg = Mathf.Clamp(pitchDeg + pitchDelta, minPitch, maxPitch);
+        brain.transform.rotation = Quaternion.Euler(0f, yawDeg, 0f);
+        yawRoot.localRotation = Quaternion.identity;
         pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
     }
 
     private static float NormalizeAngle(float euler)
     {
         float value = euler;
-        if (value > 180f) value -= 360f;
+        if (value > 180f)
+        {
+            value -= 360f;
+        }
+
         return value;
     }
 
