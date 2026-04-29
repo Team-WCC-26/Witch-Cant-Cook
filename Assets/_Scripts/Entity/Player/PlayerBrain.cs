@@ -43,11 +43,6 @@ public sealed class PlayerBrain : MonoBehaviour
         actionController = new PlayerActionController(this);
     }
 
-    private void Start()
-    {
-        bodyParts[0].gameObject.SetActive(false);
-    }
-
     private void Update()
     {
         stateResolver.UpdateTick();
@@ -62,6 +57,9 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        stateResolver.NotifyCollision(collision);
+        if (stateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default)
+        {
+            stateResolver.NotifyCollision(collision);
+        }
     }
 }
