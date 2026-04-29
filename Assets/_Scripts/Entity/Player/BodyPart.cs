@@ -6,7 +6,7 @@ public enum BodyPartType
     Pelvis,
     Spine,
     Head,
-    
+
     UpperArmLeft,
     UpperArmRight,
     ForearmLeft,
@@ -32,11 +32,33 @@ public class BodyPart : MonoBehaviour
 
     [Header("Animated Body")]
     [SerializeField] private Transform animatedBody;
-    
 
     public BodyPartType Type => type;
     public Rigidbody Rb => rb;
     public Collider Col => col;
     public ConfigurableJoint Joint => joint;
     public Transform AnimatedBody => animatedBody;
+
+    private void Awake()
+    {
+        InitializeRagdollState();
+    }
+
+    private void InitializeRagdollState()
+    {
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.detectCollisions = true;
+
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        if (col != null)
+        {
+            col.enabled = true;
+        }
+    }
 }
