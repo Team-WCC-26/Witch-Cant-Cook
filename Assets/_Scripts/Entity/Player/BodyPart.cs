@@ -41,11 +41,6 @@ public class BodyPart : MonoBehaviour
 
     private void Awake()
     {
-        InitializeRagdollState();
-    }
-
-    private void InitializeRagdollState()
-    {
         InitializeRigidbody();
         InitializeCollider();
         InitializeJoint();
@@ -58,8 +53,8 @@ public class BodyPart : MonoBehaviour
             return;
         }
 
-        rb.isKinematic = false;
-        rb.useGravity = true;
+        rb.isKinematic = true;
+        rb.useGravity = false;
         rb.detectCollisions = true;
 
         rb.linearVelocity = Vector3.zero;
@@ -68,12 +63,12 @@ public class BodyPart : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
-        rb.maxDepenetrationVelocity = 0.5f;
-        rb.solverIterations = 12;
-        rb.solverVelocityIterations = 8;
+        rb.maxDepenetrationVelocity = 0.8f;
+        rb.solverIterations = 8;
+        rb.solverVelocityIterations = 4;
 
-        rb.linearDamping = 0.25f;
-        rb.angularDamping = 1.2f;
+        rb.linearDamping = 0.05f;
+        rb.angularDamping = 0.2f;
     }
 
     private void InitializeCollider()
@@ -95,29 +90,17 @@ public class BodyPart : MonoBehaviour
 
         joint.enableCollision = false;
         joint.enablePreprocessing = false;
-        joint.projectionMode = JointProjectionMode.PositionAndRotation;
-        joint.projectionDistance = 0.08f;
-        joint.projectionAngle = 12f;
+        joint.projectionMode = JointProjectionMode.None;
 
-        JointDrive angularDrive = new JointDrive
+        JointDrive disabledDrive = new JointDrive
         {
             positionSpring = 0f,
-            positionDamper = 8f,
-            maximumForce = 80f
+            positionDamper = 0f,
+            maximumForce = 0f
         };
 
-        joint.angularXDrive = angularDrive;
-        joint.angularYZDrive = angularDrive;
-
-        joint.rotationDriveMode = RotationDriveMode.Slerp;
-
-        JointDrive slerpDrive = new JointDrive
-        {
-            positionSpring = 0f,
-            positionDamper = 8f,
-            maximumForce = 80f
-        };
-
-        joint.slerpDrive = slerpDrive;
+        joint.angularXDrive = disabledDrive;
+        joint.angularYZDrive = disabledDrive;
+        joint.slerpDrive = disabledDrive;
     }
 }
