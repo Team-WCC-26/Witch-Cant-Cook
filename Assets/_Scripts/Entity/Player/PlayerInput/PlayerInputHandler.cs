@@ -48,34 +48,23 @@ public class PlayerInputHandler : MonoBehaviour
         LookDelta = context.ReadValue<Vector2>();
     }
 
+    public void OnSprint(InputAction.CallbackContext context)
+    {
+        IsRunning = context.ReadValueAsButton();
+    }
+
     //default: 마우스 좌클릭
     public void OnPrimaryTriggered(InputAction.CallbackContext context)
     {
         if (!context.started) return;
-
-        Debug.Log("Left Clicked");
         InputPerformed?.Invoke(KeyInput.Primary);
-
-        //if (brain.Interact.IsHolding)
-        //{
-        //    brain.Interact.Drop();
-        //}
-        //else
-        //{
-        //    brain.Interact.TryPick();
-        //}
     }
 
     //default: 마우스 우클릭
     public void OnSecondaryTriggered(InputAction.CallbackContext context)
     {
         if (!context.started) return;
-
-        Debug.Log("Right Clicked");
         InputPerformed?.Invoke(KeyInput.Secondary);
-
-        //if (!brain.Interact.IsHolding) return;
-        //brain.Interact.TryThrow();
     }
     #endregion
 }

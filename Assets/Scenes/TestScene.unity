@@ -1381,7 +1381,7 @@ Animator:
   m_GameObject: {fileID: 250145053}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: 0e63ffaf6271eb044a4862db5ff544e0, type: 3}
-  m_Controller: {fileID: 9100000, guid: c39fcc96cbe0208469544805f92c492f, type: 2}
+  m_Controller: {fileID: 9100000, guid: 3a6a6fc9f04a892438fd79abe967ff7d, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -3763,7 +3763,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &695133384
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7195,7 +7195,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!54 &1128177624
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8855,15 +8855,19 @@ MonoBehaviour:
     m_ActionId: f1ba0d36-48eb-4cd5-b651-1c94a6531f70
     m_ActionName: 'Player/Jump[/Keyboard/space]'
   - m_PersistentCalls:
-      m_Calls: []
-    m_ActionId: 2776c80d-3c14-4091-8c56-d04ced07a2b0
-    m_ActionName: 'Player/Previous[/Keyboard/1]'
-  - m_PersistentCalls:
-      m_Calls: []
-    m_ActionId: b7230bb6-fc9b-4f52-8b25-f5e19cb2c2ba
-    m_ActionName: 'Player/Next[/Keyboard/2]'
-  - m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1387082641}
+        m_TargetAssemblyTypeName: PlayerInputHandler, Assembly-CSharp
+        m_MethodName: OnSprint
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
     m_ActionId: 641cd816-40e6-41b4-8c3d-04687c349290
     m_ActionName: 'Player/Sprint[/Keyboard/leftShift]'
   - m_PersistentCalls:
@@ -8910,7 +8914,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1387082641}
         m_TargetAssemblyTypeName: PlayerInputHandler, Assembly-CSharp
-        m_MethodName: OnLeftClicked
+        m_MethodName: OnPrimaryTriggered
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -8926,7 +8930,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1387082641}
         m_TargetAssemblyTypeName: PlayerInputHandler, Assembly-CSharp
-        m_MethodName: OnRightClicked
+        m_MethodName: OnSecondaryTriggered
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -9230,7 +9234,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &1403381020
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -15209,8 +15213,6 @@ SceneRoots:
   - {fileID: 8944336656728804943}
   - {fileID: 866640089}
   - {fileID: 980250139}
-  - {fileID: 1403381023}
-  - {fileID: 1128177628}
   - {fileID: 1516232832}
   - {fileID: 826774836}
   - {fileID: 241890545}
@@ -15220,4 +15222,6 @@ SceneRoots:
   - {fileID: 2070925442996835048}
   - {fileID: 2089991245}
   - {fileID: 1628673163}
+  - {fileID: 1403381023}
   - {fileID: 695133389}
+  - {fileID: 1128177628}
