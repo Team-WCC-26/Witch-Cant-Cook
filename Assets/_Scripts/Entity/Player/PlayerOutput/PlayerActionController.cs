@@ -15,7 +15,7 @@ public class PlayerActionController
         this.brain = brain;
 
         animController = new PlayerAnimController(brain);
-        ragdollController = new PlayerRagdollController(brain);
+        ragdollController = new PlayerRagdollController(brain, animController);
         movement = new PlayerMovement(brain);
 
         prevMode = PlayerPhysicalMode.Default;

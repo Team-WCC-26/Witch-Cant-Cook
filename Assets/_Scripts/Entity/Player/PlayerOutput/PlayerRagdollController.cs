@@ -1,30 +1,26 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerRagdollController
 {
     private readonly PlayerBrain brain;
+    private readonly PlayerAnimController animController;
     private readonly IReadOnlyList<BodyPart> bodyParts;
 
-    private const float PenetrationCheckPadding = 0.05f;
-    private const float MaxResolveDistance = 0.8f;
-    private const float TemporaryIgnoreDuration = 0.25f;
+    private const float MaxEnterAngularVelocity = 3f;
 
     private bool isRagdoll;
 
-    public PlayerRagdollController(PlayerBrain brain)
+    public PlayerRagdollController(PlayerBrain brain, PlayerAnimController animController)
     {
         this.brain = brain;
+        this.animController = animController;
         bodyParts = brain.BodyParts;
+
+        SetRagdollPhysicsActive(false);
     }
 
     public void Enter()
-    {
-        Enter(null);
-    }
-
-    public void Enter(Collider hitCollider)
     {
         if (isRagdoll)
         {
@@ -33,19 +29,22 @@ public class PlayerRagdollController
 
         isRagdoll = true;
 
+        animController.ForceIdle();
+
         brain.Animator.enabled = false;
+        brain.Col.isTrigger = true;
 
-        Physics.SyncTransforms();
-
-        ResolveRagdollPenetration();
-        ResetRagdollVelocity();
-
-        if (hitCollider != null)
+        if (brain.Rb != null)
         {
-            brain.StartCoroutine(TemporarilyIgnoreHitCollider(hitCollider));
+            brain.Rb.useGravity = false;
+            brain.Rb.linearVelocity = Vector3.zero;
+            brain.Rb.angularVelocity = Vector3.zero;
         }
 
-        brain.Col.enabled = false;
+        SetRagdollPhysicsActive(true);
+        ClampRagdollAngularVelocity();
+
+        Physics.SyncTransforms();
     }
 
     public void Recover()
@@ -58,110 +57,74 @@ public class PlayerRagdollController
         isRagdoll = false;
 
         ResetRagdollVelocity();
+        ResetRootVelocity();
+
+        SetRagdollPhysicsActive(false);
 
         brain.Animator.enabled = true;
-        brain.Col.enabled = true;
+        brain.Col.isTrigger = false;
+
+        if (brain.Rb != null)
+        {
+            brain.Rb.useGravity = true;
+        }
 
         Physics.SyncTransforms();
     }
 
-    private IEnumerator TemporarilyIgnoreHitCollider(Collider hitCollider)
+    private void SetRagdollPhysicsActive(bool active)
     {
         foreach (var part in bodyParts)
         {
-            if (part.Col == null)
+            if (part.Rb == null)
             {
                 continue;
             }
 
-            Physics.IgnoreCollision(part.Col, hitCollider, true);
-        }
-
-        yield return new WaitForSeconds(TemporaryIgnoreDuration);
-
-        foreach (var part in bodyParts)
-        {
-            if (part.Col == null)
-            {
-                continue;
-            }
-
-            Physics.IgnoreCollision(part.Col, hitCollider, false);
+            part.Rb.isKinematic = !active;
+            part.Rb.useGravity = active;
+            part.Rb.detectCollisions = true;
         }
     }
 
-    private void ResolveRagdollPenetration()
+    private void ClampRagdollAngularVelocity()
     {
-        Vector3 totalOffset = Vector3.zero;
-
         foreach (var part in bodyParts)
         {
-            Collider colA = part.Col;
-
-            if (colA == null || !colA.enabled)
+            if (part.Rb == null)
             {
                 continue;
             }
 
-            Bounds bounds = colA.bounds;
-            float radius = bounds.extents.magnitude + PenetrationCheckPadding;
-
-            Collider[] overlaps = Physics.OverlapSphere(
-                bounds.center,
-                radius,
-                ~0,
-                QueryTriggerInteraction.Ignore
+            part.Rb.angularVelocity = Vector3.ClampMagnitude(
+                part.Rb.angularVelocity,
+                MaxEnterAngularVelocity
             );
-
-            foreach (var colB in overlaps)
-            {
-                if (colB == null || colB == colA)
-                {
-                    continue;
-                }
-
-                if (colB.transform.IsChildOf(brain.transform))
-                {
-                    continue;
-                }
-
-                bool isOverlapped = Physics.ComputePenetration(
-                    colA,
-                    colA.transform.position,
-                    colA.transform.rotation,
-                    colB,
-                    colB.transform.position,
-                    colB.transform.rotation,
-                    out Vector3 direction,
-                    out float distance
-                );
-
-                if (!isOverlapped)
-                {
-                    continue;
-                }
-
-                totalOffset += direction * distance;
-            }
         }
-
-        if (totalOffset.sqrMagnitude <= 0.0001f)
-        {
-            return;
-        }
-
-        totalOffset = Vector3.ClampMagnitude(totalOffset, MaxResolveDistance);
-        brain.transform.position += totalOffset;
-
-        Physics.SyncTransforms();
     }
 
     private void ResetRagdollVelocity()
     {
         foreach (var part in bodyParts)
         {
+            if (part.Rb == null)
+            {
+                continue;
+            }
+
             part.Rb.linearVelocity = Vector3.zero;
             part.Rb.angularVelocity = Vector3.zero;
         }
+    }
+
+    private void ResetRootVelocity()
+    {
+        if (brain.Rb == null)
+        {
+            return;
+        }
+
+        brain.Rb.linearVelocity = Vector3.zero;
+        brain.Rb.angularVelocity = Vector3.zero;
     }
 }

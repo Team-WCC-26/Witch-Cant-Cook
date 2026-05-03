@@ -4,7 +4,7 @@ public class PlayerPhysicalFSM
 {
     private readonly PlayerBrain brain;
 
-    private readonly float ragdollDuration = 1.5f;
+    private readonly float ragdollDuration = 2.5f;
     private readonly float recoverDuration = 0.7f;
 
     private float modeStartTime = 0f;

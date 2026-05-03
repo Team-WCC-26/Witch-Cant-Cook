@@ -6,6 +6,7 @@ public class PlayerAnimController
     private readonly Animator animator;
 
     private readonly int isMoveHash = Animator.StringToHash("IsMove");
+    private readonly int toIdleHash = Animator.StringToHash("ToIdle");
 
     public PlayerAnimController(PlayerBrain brain)
     {
@@ -17,11 +18,18 @@ public class PlayerAnimController
     {
         if (state.PhysicalMode != PlayerPhysicalMode.Default)
         {
-            animator.SetBool(isMoveHash, false);
+            ForceIdle();
             return;
         }
 
         bool isMove = state.MoveDir.sqrMagnitude > 0.0001f;
         animator.SetBool(isMoveHash, isMove);
+    }
+
+    public void ForceIdle()
+    {
+        animator.SetBool(isMoveHash, false);
+        animator.SetTrigger(toIdleHash);
+        animator.Update(0f);
     }
 }
