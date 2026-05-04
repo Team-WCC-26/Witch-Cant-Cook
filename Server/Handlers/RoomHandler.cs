@@ -16,9 +16,11 @@ public class RoomHandler : PacketHandlerBase
     [PacketHandler(PacketId.C_GetRoom)]
     public static void GetRoom(Session session, PacketPackageInfo package)
     {
-        GetRoomPacket packet = new();
+        var packet = DeSerialize<GetRoomPacket>(package.Body);
         var rooms = ServerContext.Instance.RoomManager.GetEnableRooms();
-        
+
+        packet.RoomDatas.Clear();
+
         foreach (var room in rooms)
         {
             packet.RoomDatas.Add(new RoomData()

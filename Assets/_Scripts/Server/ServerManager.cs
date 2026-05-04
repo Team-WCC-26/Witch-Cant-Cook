@@ -4,11 +4,15 @@ using UnityEngine;
 using Protocol;
 using Cysharp.Threading.Tasks;
 using System.Threading;
+using TMPro;
+using MemoryPack;
 
 namespace Server
 {
     public class ServerManager : Singleton<ServerManager>
     {
+        [SerializeField] TMP_InputField _input;
+
         public bool IsEnterRoom = false;
         private TcpClient _client = new(); // 단순 Tcp가 아니라 Socket단위로 구조 수정해서 tcp/udp 모두 받을 수 있게 해야 함
         private NetworkStream _stream;
@@ -43,6 +47,18 @@ namespace Server
             _ = _jobWorker.StartProcess(_cts.Token);
         }
 
+        public void PushJob(Action job)
+        {
+            _jobWorker.Push(job);
+        }
+
+        public async UniTask SendData(byte[] data)
+        {
+            await _stream.WriteAsync(data);
+        }
+
+        #region Packet Dispatcher
+
         public void RegisterHandler(PacketId id, Action<ReadOnlyMemory<byte>> action)
         {
             _packetDispatcher.Register(id, action);
@@ -58,14 +74,11 @@ namespace Server
             _packetDispatcher.Dispatch(id, data);
         }
 
-        public void PushJob(Action job)
-        {
-            _jobWorker.Push(job);
-        }
+        #endregion
 
         public void Input()
         {
-            var input = "";
+            var input = _input.text;
 
             if (string.IsNullOrEmpty(input)) return;
 
@@ -136,11 +149,6 @@ namespace Server
         public void ExitRoom()
         {
 
-        }
-
-        public async UniTask SendData(byte[] data)
-        {
-            await _stream.WriteAsync(data);
         }
     }
 }

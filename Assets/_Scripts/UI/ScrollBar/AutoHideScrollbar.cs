@@ -19,9 +19,13 @@ public class AutoHideScrollbar : MonoBehaviour, IBeginDragHandler, IEndDragHandl
     private float _lastInteractionTime;
     private bool _isDragging = false;
 
-    private void Start()
+    private void Awake()
     {
         _scrollRect = GetComponent<ScrollRect>();
+    }
+
+    private void Start()
+    {
         _scrollbar.DOFade(0, 0);
     }
 

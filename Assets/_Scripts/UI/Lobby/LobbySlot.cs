@@ -1,22 +1,17 @@
 ﻿using Protocol;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
+using UI.Slot;
 
 public class LobbySlot : SlotBase
 {
-    public bool BIsPrivate => _roomData.BIsPrivate;
-
-    private RoomData _roomData;
-
-    public void Init(RoomData roomData, Sprite sprite)
+    public void Init(LobbySlotData data)
     {
-        _roomData = roomData;
-
-        InitData(_roomData.Name, sprite);
-        SetIconActive(BIsPrivate);
+        base.Init(data);
+        SetIconActive(data.RoomData.BIsPrivate);
     }
+}
+
+public class LobbySlotData : SlotDataBase
+{
+    public override string Name => RoomData.Name;
+    public RoomData RoomData { get; set; }
 }
