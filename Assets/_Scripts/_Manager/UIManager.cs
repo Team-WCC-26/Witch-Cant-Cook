@@ -45,8 +45,7 @@ public class UIManager : Singleton<UIManager>
         if (ui == null)
         {
             //TODO : ResourceManager로부터 프리팹 에셋 로드.
-            T prefab = null;
-            //var prefab = await ResourceManager.Instance.LoadAsset<T>(typeof(T).ToString(), eAddressableType.UI);
+            var prefab = Resources.Load<T>($"UI/{typeof(T).Name}");
             ui = Instantiate(prefab, Instance.parents[(int)prefab.uiPosition]);
 
             ui.name = ui.name.Replace("(Clone)", "");
