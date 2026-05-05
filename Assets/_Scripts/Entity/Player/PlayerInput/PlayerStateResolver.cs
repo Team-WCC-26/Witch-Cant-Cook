@@ -30,8 +30,8 @@ public class PlayerStateResolver
         PlayerPhysicalMode physicalMode = CurrentState.PhysicalMode;
         PlayerInteraction interaction = inputFSM.CurrentInteraction;
 
-        Vector2 moveDir = brain.Input.MoveDir;
-        bool isRun = brain.Input.IsRunning;
+        Vector2 moveDir = brain.Input.RawMoveDir;
+        bool isRun = brain.Input.RawIsRunning;
 
         if (physicalMode != PlayerPhysicalMode.Default)
         {
