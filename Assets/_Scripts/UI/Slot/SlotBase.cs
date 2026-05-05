@@ -2,37 +2,45 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class SlotBase : MonoBehaviour
+namespace UI.Slot
 {
-    [Header("Info")]
-    [SerializeField] private TextMeshProUGUI _name;
-    [SerializeField] private Image _icon;
-
-    [Header("Setting")]
-    [SerializeField] private int _maxNameLength = 15;
-
-    public void InitData(string name, Sprite sprite)
+    public class SlotBase : MonoBehaviour
     {
-        if (_name)
+        [Header("Info")]
+        [SerializeField] private TMP_Text _name;
+        [SerializeField] private Image _icon;
+
+        [Header("Setting")]
+        [SerializeField] private int _maxNameLength = 15;
+
+        private void Awake()
         {
-            if (name.Length > _maxNameLength)
+            _name.maxVisibleCharacters = _maxNameLength;
+        }
+
+        public void Init(SlotDataBase data)
+        {
+            if (_name)
             {
-                name = name[.._maxNameLength];
+                if (name.Length > _maxNameLength)
+                {
+                    name = name[.._maxNameLength];
+                }
+
+                _name.text = data.Name;
             }
 
-            _name.text = name ;
+            if (_icon)
+            {
+                _icon.sprite = data.Sprite;
+            }
         }
-        
-        if (_icon)
+
+        public void SetIconActive(bool active)
         {
-            _icon.sprite = sprite;
+            if (_icon == null) return;
+
+            _icon.gameObject.SetActive(active);
         }
-    }
-
-    public void SetIconActive(bool active)
-    {
-        if (_icon == null) return;
-
-        _icon.gameObject.SetActive(active);
     }
 }
