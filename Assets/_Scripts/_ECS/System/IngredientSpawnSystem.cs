@@ -29,7 +29,7 @@ public partial class IngredientSpawnSystem : SystemBase
             var ingredientRaw = DataManager.Instance.GetIngredient().Get(request.IngredientID);
 
             // ingredientRaw.stat_id를 이용해 스탯 정보도 가져옴
-            int statId = int.Parse(ingredientRaw.stat_id);
+            int statId = int.Parse(ingredientRaw.statID);
             var statRaw = DataManager.Instance.GetIngredientStat().Get(statId);
 
             if (ingredientRaw != null && statRaw != null)
