@@ -70,7 +70,7 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
 
-        Vector2 look = input.LookDelta;
+        Vector2 look = input.RawLookDelta;
 
         if (look.sqrMagnitude >= 0.000001f)
         {
