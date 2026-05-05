@@ -18,11 +18,11 @@ public class DataManager : Singleton<DataManager>
     [SerializeField] private bool destroyGSpreadReaderAfterInit = false;
 
     [Header("Data Fields")]
-    [SerializeField] private GameData<IngredientAttribute> ingredientAttributes = new();
+    [SerializeField] private GameData<Ingredient> ingredient = new();
     [SerializeField] private GameData<IngredientStat> ingredientStat = new();
 
-    public GameData<IngredientAttribute> GetIngredientAttributes() => ingredientAttributes;
-    public GameData<IngredientStat> GetIngredientStats() => ingredientStat;
+    public GameData<Ingredient> GetIngredient() => ingredient;
+    public GameData<IngredientStat> GetIngredientStat() => ingredientStat;
 
     public bool IsDataLoaded { get; private set; }
 
@@ -270,9 +270,9 @@ public class DataManager : Singleton<DataManager>
     }
 
     // 1. 개별 바인딩 함수 (각각의 역할만 수행)
-    public void BindIngredientAttribute(List<IngredientAttribute> data)
+    public void BindIngredient(List<Ingredient> data)
     {
-        ingredientAttributes.SetData(data);
+        ingredient.SetData(data);
     }
 
     public void BindIngredientStat(List<IngredientStat> data)
@@ -281,12 +281,27 @@ public class DataManager : Singleton<DataManager>
     }
 
     // 2. 일괄 처리 함수 (구글 시트 로드가 끝났을 때 한 번에 호출)
-    public void BindAllIngredientData(List<IngredientAttribute> attributes, List<IngredientStat> stats)
+    public void BindAllIngredientData(List<Ingredient> attributes, List<IngredientStat> stats)
     {
-        BindIngredientAttribute(attributes);
+        BindIngredient(attributes);
         BindIngredientStat(stats);
 
         Debug.Log("[DataManager] 재료 관련 모든 데이터 바인딩 완료!");
     }
 
+    public static T ParseEnum<T>(string value, T defaultValue) where T : struct, Enum
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return defaultValue;
+        }
+
+        if (Enum.TryParse<T>(value, true, out T result))
+        {
+            return result;
+        }
+
+        Debug.LogWarning($"[EnumParse] '{value}'는 {typeof(T).Name}에 정의되지 않은 값입니다. 기본값({defaultValue})으로 설정합니다.");
+        return defaultValue;
+    }
 }
