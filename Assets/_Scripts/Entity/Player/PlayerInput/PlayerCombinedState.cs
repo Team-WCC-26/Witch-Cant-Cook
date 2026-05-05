@@ -1,3 +1,4 @@
+using MemoryPack;
 using UnityEngine;
 
 public enum PlayerPhysicalMode
@@ -17,7 +18,8 @@ public enum PlayerInteraction
     SpecialInteract
 }
 
-public readonly struct PlayerCombinedState
+[MemoryPackable]
+public readonly partial struct PlayerCombinedState
 {
     public readonly PlayerPhysicalMode PhysicalMode;
     public readonly Vector2 MoveDir;

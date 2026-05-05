@@ -2,13 +2,12 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[Flags]
 public enum KeyInput
 {
     None = 0,
-    Primary = 1 << 0, //좌클릭
-    Secondary = 1 << 1, //우클릭
-    Interact = 1 << 2, //E
+    Primary, //좌클릭
+    Secondary, //우클릭
+    Interact, //F
 } 
 
 public class PlayerInputHandler : MonoBehaviour
@@ -16,14 +15,14 @@ public class PlayerInputHandler : MonoBehaviour
     //InputSystem의 KeyInput Event 발송
     public event Action<KeyInput> InputPerformed;
 
-    public Vector2 MoveDir { get; private set; }
-    public Vector2 LookDelta { get; private set; }
-    public bool IsRunning { get; private set; } = false;
+    public Vector2 RawMoveDir { get; private set; }
+    public Vector2 RawLookDelta { get; private set; }
+    public bool RawIsRunning { get; private set; } = false;
 
     #region Unity Callbacks
     private void LateUpdate()
     {
-        LookDelta = Vector2.zero;
+        RawLookDelta = Vector2.zero;
     }
     #endregion
 
@@ -32,25 +31,32 @@ public class PlayerInputHandler : MonoBehaviour
     {
         if (context.canceled)
         {
-            MoveDir = Vector2.zero;
+            RawMoveDir = Vector2.zero;
             return;
         }
-        MoveDir = context.ReadValue<Vector2>();
+        RawMoveDir = context.ReadValue<Vector2>();
     }
 
     public void OnLook(InputAction.CallbackContext context)
     {
         if (context.canceled)
         {
-            LookDelta = Vector2.zero;
+            RawLookDelta = Vector2.zero;
             return;
         }
-        LookDelta = context.ReadValue<Vector2>();
+        RawLookDelta = context.ReadValue<Vector2>();
     }
 
     public void OnSprint(InputAction.CallbackContext context)
     {
-        IsRunning = context.ReadValueAsButton();
+        RawIsRunning = context.ReadValueAsButton();
+    }
+
+    //default : F키
+    public void OnInteract(InputAction.CallbackContext context)
+    {
+        if (!context.started) return;
+        InputPerformed?.Invoke(KeyInput.Interact);
     }
 
     //default: 마우스 좌클릭
