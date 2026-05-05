@@ -2,7 +2,7 @@
 
 public class ShardManager
 {
-    private readonly int _shardCnt = 4;
+    private readonly int _shardCnt = 8;
     private Shard[] _shards;
     
     public ShardManager()

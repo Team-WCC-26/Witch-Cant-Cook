@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using Protocol;
+﻿using Protocol;
 using Server;
 using TMPro;
 using UnityEngine;
@@ -7,8 +6,6 @@ using UnityEngine.UI;
 
 public class LobbyCreator : MonoBehaviour
 {
-    [SerializeField] private LobbyRouter _lobbyRounter;
-
     [Header("Input Field")]
     [SerializeField] private TMP_InputField _nameInput;
     [SerializeField] private TMP_InputField _passwordInput;
@@ -25,6 +22,8 @@ public class LobbyCreator : MonoBehaviour
 
     private void OnEnable()
     {
+        Init();
+
         _passwordInput.onValueChanged.AddListener(CheckPassword);
         _confirmButton.onClick.AddListener(CreateLobby);
     }
@@ -40,7 +39,6 @@ public class LobbyCreator : MonoBehaviour
         _nameInput.text = "";
         _passwordInput.text = "";
         _icon.sprite = _publicSprite;
-        gameObject.SetActive(true);
     }
 
     public void CheckPassword(string value)

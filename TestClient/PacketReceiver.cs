@@ -14,6 +14,8 @@ public class PacketReceiver
     private int _readPos = 0;
     private int _writePos = 0;
 
+    public Action<string> OnRoomCreated;
+
     public async Task StartAsync(NetworkStream stream)
     {
         while (true)
@@ -69,12 +71,14 @@ public class PacketReceiver
             case PacketId.S_JoinRoom:
                 var joinRoomPacket = MemoryPackSerializer.Deserialize<JoinRoomPacket>(body);
                 Program.IsJoinedRoom = true;
+                OnRoomCreated?.Invoke(joinRoomPacket.RoomId);
                 Console.WriteLine($"You Joined Number {joinRoomPacket.RoomId} Room.");
                 break;
 
             case PacketId.S_ChatMessage:
                 var chatPacket = MemoryPackSerializer.Deserialize<ChatMessagePacket>(body);
                 Console.WriteLine($"{chatPacket.Sender} : {chatPacket.Message}");
+                //LoadTester.GetChat(chatPacket);
                 break;
 
             case PacketId.S_Notification:
