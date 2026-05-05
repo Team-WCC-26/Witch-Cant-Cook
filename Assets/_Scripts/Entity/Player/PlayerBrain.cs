@@ -4,6 +4,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerBrain : MonoBehaviour
 {
+    [Header("Network")]
+    [SerializeField] private string playerId = null;
+
     [Header("Core")]
     [SerializeField] private Camera playerCamera = null;
     [SerializeField] private Collider col = null;
@@ -23,6 +26,12 @@ public sealed class PlayerBrain : MonoBehaviour
     private PlayerActionController actionController = null;
 
     #region properties
+    public string PlayerId
+    {
+        get => playerId;
+        set => playerId = value;
+    }
+
     public Camera PlayerCam => playerCamera;
     public Collider Col => col;
     public Rigidbody Rb => rb;
