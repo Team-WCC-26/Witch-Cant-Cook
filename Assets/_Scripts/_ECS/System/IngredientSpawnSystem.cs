@@ -1,81 +1,92 @@
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class IngredientSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded)
-            return;
+        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
-        // 메인 스레드에서 엔티티 명령을 예약하기 위한 ECB 생성
+        if (!SystemAPI.TryGetSingletonBuffer<IngredientAddressBuffer>(out var addressBuffer)) return;
+
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        // 프리팹 정보를 담고 있는 싱글톤 데이터 가져오기 (미리 설정되어 있어야 함)
-        if (!SystemAPI.TryGetSingleton<IngredientSpawnConfig>(out var config))
-        { 
-            Debug.LogError("IngredientSpawnConfig 싱글톤이 존재하지 않습니다. 스폰 시스템이 작동하려면 프리팹 엔티티가 필요합니다.");
-            return;
-        }
-
-        // 4. 모든 스폰 요청 엔티티를 순회
-        foreach (var (request, requestEntity) in SystemAPI.Query<IngredientSpawnRequest>().WithEntityAccess())
+        foreach (var (request, requestEntity) in SystemAPI.Query<RefRO<IngredientSpawnRequest>>().WithEntityAccess())
         {
-            // [데이터 로드] 원본 클래스 데이터 가져오기
-            var ingredientRaw = DataManager.Instance.GetIngredient().Get(request.IngredientID);
+            int reqID = request.ValueRO.IngredientID;
+            Vector3 reqPos = request.ValueRO.Position;
 
-            // ingredientRaw.stat_id를 이용해 스탯 정보도 가져옴
-            int statId = int.Parse(ingredientRaw.statID);
-            var statRaw = DataManager.Instance.GetIngredientStat().Get(statId);
-
-            if (ingredientRaw != null && statRaw != null)
+            // 1. 버퍼에서 ID에 맞는 어드레서블 키 찾기
+            FixedString64Bytes targetKey = default;
+            foreach (var item in addressBuffer)
             {
-                // [엔티티 생성] 프리팹 복제
-                Entity newEntity = ecb.Instantiate(config.prefabEntity);
-
-                // [데이터 매핑] 클래스 데이터를 구조체 컴포넌트로 주입
-                // 1. 기본 정보
-                ecb.AddComponent(newEntity, new IngredientInfo
+                if (item.IngredientID == reqID)
                 {
-                    ID = ingredientRaw.id,
-                    Name = ingredientRaw.name
-                });
-
-                // 2. 체력 정보
-                ecb.AddComponent(newEntity, new Health
-                {
-                    Current = statRaw.hp,
-                    Max = statRaw.hp
-                });
-
-                // 3. 물리 정보
-                ecb.AddComponent(newEntity, new IngredientPhysics
-                {
-                    Weight = statRaw.weight,
-                    Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.parabola)
-                });
-
-                // 4. 전투 정보
-                ecb.AddComponent(newEntity, new IngredientCombat
-                {
-                    Damage = statRaw.damage,
-                    Tag = ingredientRaw.tag // 태그가 문자열이라면 변환 필요
-                });
-
-                // [위치 설정] 요청된 좌표로 이동
-                ecb.SetComponent(newEntity, LocalTransform.FromPosition(request.Position));
+                    targetKey = item.AddressKey;
+                    break;
+                }
             }
 
-            // [요청 삭제] 처리가 완료된 요청 엔티티는 파기
+            if (!targetKey.IsEmpty)
+            {
+                // 2. 어드레서블 비동기 소환 시작
+                var handle = Addressables.InstantiateAsync(targetKey.ToString(), reqPos, Quaternion.identity);
+
+                // 3. 소환 완료 시점(콜백)에 실행될 로직 정의
+                handle.Completed += (AsyncOperationHandle<GameObject> op) =>
+                {
+                    if (op.Status == AsyncOperationStatus.Succeeded)
+                    {
+                        GameObject spawnedObj = op.Result;
+                        InjectECSComponents(spawnedObj, reqID, reqPos); // 아래 분리된 함수 호출
+                    }
+                    else
+                    {
+                        Debug.LogError($"어드레서블 로드 실패: {targetKey}");
+                    }
+                };
+            }
+            else
+            {
+                Debug.LogWarning($"라이브러리에 ID {reqID}의 어드레서블 키가 없습니다.");
+            }
+
+            // 요청 처리가 끝났으니 (비동기 호출은 시작했으니) 요청 엔티티 삭제
             ecb.DestroyEntity(requestEntity);
         }
 
-        // 예약된 명령 실행 및 메모리 해제
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+
+    // 콜백 안에서 코드가 너무 길어지는 것을 방지하기 위해 밖으로 빼낸 데이터 주입 함수
+    private void InjectECSComponents(GameObject spawnedObj, int ingredientID, Vector3 position)
+    {
+        var ingredientRaw = DataManager.Instance.GetIngredient().Get(ingredientID);
+        if (ingredientRaw == null) return;
+
+        int statId = int.Parse(ingredientRaw.statID);
+        var statRaw = DataManager.Instance.GetIngredientStat().Get(statId);
+
+        if (statRaw != null)
+        {
+            // 하이브리드 연동: 게임 오브젝트에 연결될 새로운 엔티티 생성
+            Entity newEntity = EntityManager.CreateEntity();
+
+            // 기존 로직과 동일하게 ECS 데이터 세팅
+            EntityManager.AddComponentData(newEntity, new IngredientInfo { ID = ingredientRaw.id, Name = ingredientRaw.name });
+            EntityManager.AddComponentData(newEntity, new Health { Current = statRaw.hp, Max = statRaw.hp });
+            EntityManager.AddComponentData(newEntity, new IngredientPhysics { Weight = statRaw.weight, Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.parabola) });
+            EntityManager.AddComponentData(newEntity, new IngredientCombat { Damage = statRaw.damage, Tag = ingredientRaw.tag });
+
+            EntityManager.AddComponentData(newEntity, LocalTransform.FromPosition(position));
+
+            // [선택 사항] GameObject와 Entity를 양방향으로 연결하는 컴포넌트가 필요하다면 여기서 추가
+        }
     }
 }

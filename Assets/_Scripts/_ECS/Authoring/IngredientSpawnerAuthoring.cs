@@ -1,29 +1,42 @@
+using System.Collections.Generic;
+using Unity.Collections; // FixedString 사용을 위해 필요
 using Unity.Entities;
 using UnityEngine;
 
-// 1. Authoring 스크립트 (MonoBehaviour)
 public class IngredientSpawnerAuthoring : MonoBehaviour
 {
-    public GameObject ingredientPrefab; // 인스펙터에서 아까 만든 구 프리팹 할당
+    [System.Serializable]
+    public struct IngredientAddressMap
+    {
+        public int ingredientID;
+        public string addressableKey; // 어드레서블에 등록된 이름 (예: "Apple", "Carrot")
+    }
 
-    // 2. 베이킹 클래스
+    public List<IngredientAddressMap> library;
+
     public class Baker : Baker<IngredientSpawnerAuthoring>
     {
         public override void Bake(IngredientSpawnerAuthoring authoring)
         {
             var entity = GetEntity(TransformUsageFlags.None);
+            var buffer = AddBuffer<IngredientAddressBuffer>(entity);
 
-            // 3. GameObject 프리팹을 Entity 프리팹으로 변환
-            AddComponent(entity, new IngredientSpawnConfig
+            foreach (var item in authoring.library)
             {
-                prefabEntity = GetEntity(authoring.ingredientPrefab, TransformUsageFlags.Dynamic)
-            });
+                buffer.Add(new IngredientAddressBuffer
+                {
+                    IngredientID = item.ingredientID,
+                    // ECS 내부에서는 string 대신 FixedString을 사용해야 메모리 에러가 나지 않습니다.
+                    AddressKey = new FixedString64Bytes(item.addressableKey)
+                });
+            }
         }
     }
 }
 
-// 4. ECS 시스템에서 읽을 컴포넌트
-public struct IngredientSpawnConfig : IComponentData
+// ECS 데이터 구조체
+public struct IngredientAddressBuffer : IBufferElementData
 {
-    public Entity prefabEntity;
+    public int IngredientID;
+    public FixedString64Bytes AddressKey;
 }
