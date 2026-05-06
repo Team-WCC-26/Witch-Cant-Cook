@@ -6,6 +6,7 @@ namespace Server;
 // TODO => RoomPooling System
 public class RoomManager
 {
+    public ConcurrentDictionary<string, Room> Rooms => _rooms;
     private readonly ConcurrentDictionary<string, Room> _rooms = new();
 
     private readonly ShardManager _shardManager;
@@ -18,6 +19,19 @@ public class RoomManager
     public RoomManager(ShardManager shardManager)
     {
         _shardManager = shardManager;
+    }
+
+    public void Loop()
+    {
+        while (true)
+        {
+            foreach (var room in Rooms.Values)
+            {
+                room.Tick();
+            }
+
+            Thread.Sleep(50);
+        }
     }
 
     public Room CreateRoom(string roomName, string roomPassword)

@@ -61,6 +61,14 @@ class Program
 
             .Build();
 
+        var thread = new Thread(() =>
+        {
+            ServerContext.Instance.RoomManager.Loop();
+        });
+
+        thread.IsBackground = true;
+        thread.Start();
+
         await host.RunAsync();
     }
 }

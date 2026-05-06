@@ -32,7 +32,7 @@ namespace Server
         {
             _cts = new();
 
-            await _client.ConnectAsync("127.0.0.1", 4040);
+            await _client.ConnectAsync("villainouskirby.kro.kr", 4040);
 
             Debug.Log("Connected to server");
 

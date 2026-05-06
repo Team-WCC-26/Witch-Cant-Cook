@@ -11,6 +11,7 @@ public class Room
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
     private int _playerCnt = 0;
+    private int _tick = 0;
 
     private JobQueue _jobQueue = new();
     private Shard _shard;
@@ -20,6 +21,29 @@ public class Room
         Id = id;
         Name = name;
         Password = password;
+    }
+
+    public void Tick()
+    {
+        foreach (var player in _players)
+        {
+            WorldStatePacket packet = new()
+            {
+                Tick = _tick
+            };
+            packet.Players.Add(ToData(player));
+
+            foreach (var p in _players)
+            {
+                if (p == player) continue;
+
+                packet.Players.Add(ToData(p));
+            }
+
+            player.Send(PacketSerializer.Serialize(packet, true));
+        }
+
+        _tick++;
     }
 
     public bool IsEnable()
@@ -79,5 +103,18 @@ public class Room
         };
 
         BroadCast(PacketSerializer.Serialize(packet));
+    }
+
+    private PlayerMovementPacket ToData(Player player)
+    {
+        PlayerMovementPacket packet = new()
+        {
+            PlayerId = player.PlayerId,
+            Position = player.Pos,
+            Rotation = player.Rot,
+            CombinedState = player.State
+        };
+
+        return packet;
     }
 }

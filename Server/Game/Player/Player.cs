@@ -1,3 +1,4 @@
+using Protocol;
 using SuperSocket.Server;
 using SuperSocket.Server.Abstractions.Session;
 using System.Numerics;
@@ -10,6 +11,8 @@ public class Player
     public IAppSession Session { get; set; }
     public Room? Room { get; set; }
     public Vector3 Pos { get; set; }
+    public Vector3 Rot { get; set; }
+    public PlayerCombinedState State { get; set; }
 
     public void Send(byte[] packet)
     {
