@@ -52,23 +52,17 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
     }
 
-    public void ApplyRemotePacket(PlayerMovementPacket packet)
+    public override void ApplyRemotePacket(WorldStatePacket packet)
     {
-        if (packet == null)
-        {
-            return;
-        }
+        if (packet == null) return;
 
-        if (packet.PlayerId != brain.PlayerId)
-        {
-            return;
-        }
+        var player = packet.Players[1];
 
         ApplyRemoteState(
-            ProtocolPlayerStateConverter.ToClientCombinedState(packet.CombinedState)
+            ProtocolPlayerStateConverter.ToClientCombinedState(player.CombinedState)
         );
 
-        ApplyRemoteTransform(packet.Position, packet.Rotation);
+        ApplyRemoteTransform(player.Position, player.Rotation);
     }
 
     public void ApplyRemoteState(PlayerCombinedState remoteState)

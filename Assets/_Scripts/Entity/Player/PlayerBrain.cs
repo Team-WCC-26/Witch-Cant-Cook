@@ -34,7 +34,9 @@ public sealed class PlayerBrain : MonoBehaviour
     private PlayerActionController actionController = null;
     private bool isInitialized = false;
 
+    //Packet Ids
     private PacketId _joinMemberID => PacketId.S_PlayerEnter;
+    private PacketId _worldStateID => PacketId.S_WorldState;
 
     //cameras
     private Camera playerCamera = null;
@@ -85,11 +87,13 @@ public sealed class PlayerBrain : MonoBehaviour
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
+        ServerManager.Instance.RegisterHandler(_worldStateID, WorldStateReceived);
     }
 
     private void OnDisable()
     {
         ServerManager.Instance.UnRegisterHandler(_joinMemberID);
+        ServerManager.Instance.UnRegisterHandler(_worldStateID);
     }
 
     private void Update()
@@ -141,6 +145,14 @@ public sealed class PlayerBrain : MonoBehaviour
             PlayerSpawnManager.Instance.SpawnPlayer(playerId);
 
         UIManager.Hide<LobbyRouterUI>();
+    }
+
+    private void WorldStateReceived(ReadOnlyMemory<byte> data)
+    {
+        if (PlayerSpawnManager.Instance.IsMine(playerId)) return;
+        
+        var packet = MemoryPackSerializer.Deserialize<WorldStatePacket>(data.Span);
+        stateResolver.ApplyRemotePacket(packet);
     }
 
     private void SetLocalControlActive(bool isMine)
