@@ -68,12 +68,9 @@ public class Room
 
     public void Enter(Player player)
     {
-        PushJob(() =>
-        {
-            _players.Add(player);
-            player.Room = this;
-            _playerCnt++;
-        });
+        _players.Add(player);
+        player.Room = this;
+        _playerCnt++;
     }
 
     public void Leave(Player player)
