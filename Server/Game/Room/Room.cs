@@ -8,6 +8,7 @@ public class Room
     public string Name { get; }
     public string Password { get; }
 
+    public IReadOnlyList<Player> Players => _players;
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
 
