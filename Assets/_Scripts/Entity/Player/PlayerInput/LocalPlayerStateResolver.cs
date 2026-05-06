@@ -1,3 +1,5 @@
+using Protocol;
+using Server;
 using UnityEngine;
 
 public sealed class LocalPlayerStateResolver : PlayerStateResolver
@@ -68,10 +70,25 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             moveDir,
             isRun
         ));
+
+        SendMovementPacket();
     }
 
     public override void NotifyCollision(Collision collision)
     {
         physicalFSM.NotifyCollision(collision);
+    }
+
+    private void SendMovementPacket()
+    {
+        PlayerMovementPacket packet = new()
+        {
+            PlayerId = brain.PlayerId,
+            Position = ProtocolPlayerStateConverter.ToNumericsVector3(brain.transform.position),
+            Rotation = ProtocolPlayerStateConverter.ToNumericsVector3(brain.transform.eulerAngles),
+            CombinedState = ProtocolPlayerStateConverter.ToProtocolCombinedState(CurrentState)
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 }
