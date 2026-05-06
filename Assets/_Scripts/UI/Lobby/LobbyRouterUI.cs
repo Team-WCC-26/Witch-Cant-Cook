@@ -84,6 +84,8 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
 
     private void JoinRoom(ReadOnlyMemory<byte> data)
     {
+        var packet = MemoryPackSerializer.Deserialize<JoinRoomPacket>(data.Span);
+
         //_chat.gameObject.SetActive(true);
 
         PlayerSpawnManager.Instance.MyID = "0";
@@ -91,7 +93,10 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
         SpawnPlayerByIndex(0);
 
         //방에 2명 이상일 때만 이거 실행하도록 하기.
-        //SpawnPlayerByIndex(1);
+        if (packet.PlayerCnt >= 2)
+        {
+            SpawnPlayerByIndex(1);
+        }
 
         UIManager.Hide<LobbyRouterUI>();
     }

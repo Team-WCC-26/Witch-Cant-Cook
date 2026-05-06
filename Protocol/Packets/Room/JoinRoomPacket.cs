@@ -14,4 +14,5 @@ public partial class JoinRoomPacket
 {
     public string RoomId { get; set; }
     public string RoomPassword { get; set; }
+    public int PlayerCnt { get; set; }
 }

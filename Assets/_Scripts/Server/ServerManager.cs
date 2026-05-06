@@ -11,7 +11,10 @@ namespace Server
 {
     public class ServerManager : Singleton<ServerManager>
     {
-        [SerializeField] TMP_InputField _input;
+        [SerializeField] private string _hostIP = "villainouskirby.kro.kr";
+        [SerializeField] private bool _useLocalHost = false;
+
+        private string _localHost = "127.0.0.1";
 
         public bool IsEnterRoom = false;
         private TcpClient _client = new(); // 단순 Tcp가 아니라 Socket단위로 구조 수정해서 tcp/udp 모두 받을 수 있게 해야 함
@@ -32,7 +35,9 @@ namespace Server
         {
             _cts = new();
 
-            await _client.ConnectAsync("127.0.0.1", 4040);
+            string host = _useLocalHost ? _localHost : _hostIP;
+
+            await _client.ConnectAsync(host, 4040);
 
             Debug.Log("Connected to server");
 
@@ -75,50 +80,6 @@ namespace Server
         }
 
         #endregion
-
-        public void Input()
-        {
-            var input = _input.text;
-
-            if (string.IsNullOrEmpty(input)) return;
-
-            byte[] data;
-
-            if (input[0] == '/')
-            {
-                string[] command = input.Split(" ");
-
-                switch (command[0])
-                {
-                    case "/create":
-                        CreateRoom();
-                        break;
-
-                    case "/enter":
-                        EnterRoom(command[1]);
-                        break;
-
-                    case "/rooms":
-                        GetRooms();
-                        break;
-
-                    //case "/exit":
-                    //    data = new byte[1];
-                    //    break;
-
-                    default:
-                        return;
-                }
-            }
-            else if (_packetReceiver.IsEnterRoom)
-            {
-                ChatMessagePacket chatPacket = new()
-                {
-                    Message = input
-                };
-                data = PacketSerializer.Serialize(chatPacket);
-            }
-        }
 
         public void CreateRoom()
         {
