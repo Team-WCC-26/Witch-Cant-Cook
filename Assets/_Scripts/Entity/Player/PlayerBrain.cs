@@ -1,3 +1,7 @@
+using MemoryPack;
+using Protocol;
+using Server;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,6 +29,8 @@ public sealed class PlayerBrain : MonoBehaviour
     private PlayerStateResolver stateResolver = null;
     private PlayerActionController actionController = null;
     private bool isInitialized = false;
+
+    private PacketId _joinRoomID => PacketId.S_JoinRoom;
 
     #region properties
     public string PlayerId
@@ -68,6 +74,16 @@ public sealed class PlayerBrain : MonoBehaviour
         isInitialized = true;
     }
 
+    private void OnEnable()
+    {
+        ServerManager.Instance.RegisterHandler(_joinRoomID, MemberJoined);
+    }
+
+    private void OnDisable()
+    {
+        ServerManager.Instance.UnRegisterHandler(_joinRoomID);
+    }
+
     private void Update()
     {
         if (!isInitialized) return;
@@ -98,6 +114,28 @@ public sealed class PlayerBrain : MonoBehaviour
         if (PlayerSpawnManager.Instance == null) return;
 
         PlayerSpawnManager.Instance.UnregisterPlayer(this);
+    }
+
+    private void MemberJoined(ReadOnlyMemory<byte> data)
+    {
+        var packet = MemoryPackSerializer.Deserialize<JoinRoomPacket>(data.Span);
+
+        //방에 2명 이상일 때만 이거 실행하도록 하기.
+        if (packet.PlayerCnt >= 2)
+        {
+            SpawnPlayerByIndex(1);
+        }
+
+        UIManager.Hide<LobbyRouterUI>();
+    }
+
+    private void SpawnPlayerByIndex(int index)
+    {
+        string playerId = index.ToString();
+
+        if (PlayerSpawnManager.Instance.ContainsPlayer(playerId)) return;
+
+        PlayerSpawnManager.Instance.SpawnPlayer(playerId);
     }
 
     private void SetLocalControlActive(bool isMine)
