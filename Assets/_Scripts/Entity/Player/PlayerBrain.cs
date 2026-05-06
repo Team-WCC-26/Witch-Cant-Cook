@@ -57,6 +57,7 @@ public sealed class PlayerBrain : MonoBehaviour
         playerId = id;
 
         bool isMine = PlayerSpawnManager.Instance.IsMine(playerId);
+        SetLocalControlActive(isMine);
 
         stateResolver = isMine
             ? new LocalPlayerStateResolver(this)
@@ -97,5 +98,23 @@ public sealed class PlayerBrain : MonoBehaviour
         if (PlayerSpawnManager.Instance == null) return;
 
         PlayerSpawnManager.Instance.UnregisterPlayer(this);
+    }
+
+    private void SetLocalControlActive(bool isMine)
+    {
+        if (playerCamera != null)
+        {
+            playerCamera.gameObject.SetActive(isMine);
+        }
+
+        if (input != null)
+        {
+            input.enabled = isMine;
+        }
+
+        if (camController != null)
+        {
+            camController.enabled = isMine;
+        }
     }
 }
