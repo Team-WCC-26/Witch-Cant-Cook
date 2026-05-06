@@ -7,6 +7,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     private readonly PlayerInputFSM inputFSM;
     private readonly PlayerPhysicalFSM physicalFSM;
 
+    private const float SendInterval = 0.05f;
+    private float sendTimer = 0f;
     public LocalPlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         inputFSM = new PlayerInputFSM(brain);
@@ -71,6 +73,14 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             isRun
         ));
 
+        sendTimer += Time.fixedDeltaTime;
+
+        if (sendTimer < SendInterval)
+        {
+            return;
+        }
+
+        sendTimer = 0f;
         SendMovementPacket();
     }
 
