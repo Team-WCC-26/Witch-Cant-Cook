@@ -10,6 +10,8 @@ public class Room
 
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
+
+    public int PlayerCnt => _playerCnt;
     private int _playerCnt = 0;
     private int _tick = 0;
 

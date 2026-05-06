@@ -48,24 +48,27 @@ public class RoomHandler : PacketHandlerBase
 
     public static void JoinRoom(Session session, Room? room)
     {
-        if (room == null)
+        if (room == null) return;
+
+        room?.PushJob(() =>
         {
+            if (!room.IsEnable())
+            {
 
-            return;
-        }
-        else if (!room.IsEnable())
-        {
+                return;
+            }
 
-            return;
-        }
+            room.Enter(session.Player);
 
-        room.Enter(session.Player);
-        
-        JoinRoomPacket packet = new();
-        packet.RoomId = room.Id;
+            JoinRoomPacket packet = new()
+            {
+                RoomId = room.Id,
+                PlayerCnt = room.PlayerCnt
+            };
 
-        session.Player.Send(PacketSerializer.Serialize(packet, true));
+            session.Player.Send(PacketSerializer.Serialize(packet, true));
+        });
 
-        room.Notificate($"{session.Player.PlayerId} joined this Room.");
+        room?.Notificate($"{session.Player.PlayerId} joined this Room.");
     }
 }
