@@ -3,6 +3,7 @@ using Protocol;
 using Server;
 using System;
 using System.Collections.Generic;
+using Unity.Cinemachine;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -15,6 +16,11 @@ public sealed class PlayerBrain : MonoBehaviour
     [SerializeField] private Camera playerCamera = null;
     [SerializeField] private Collider col = null;
     [SerializeField] private Rigidbody rb = null;
+
+    [Header("Cinemachine")]
+    [SerializeField] private CinemachineCamera virtualCamera = null;
+    [SerializeField] private Transform cameraFollowTarget = null;
+    [SerializeField] private Transform cameraLookAtTarget = null;
 
     [Header("Ragdoll")]
     [SerializeField] private List<BodyPart> bodyParts = new();
@@ -30,7 +36,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private PlayerActionController actionController = null;
     private bool isInitialized = false;
 
-    private PacketId _joinRoomID => PacketId.S_JoinRoom;
+    private PacketId _joinMemberID => PacketId.S_PlayerEnter;
 
     #region properties
     public string PlayerId
@@ -76,12 +82,12 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void OnEnable()
     {
-        ServerManager.Instance.RegisterHandler(_joinRoomID, MemberJoined);
+        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
     }
 
     private void OnDisable()
     {
-        ServerManager.Instance.UnRegisterHandler(_joinRoomID);
+        ServerManager.Instance.UnRegisterHandler(_joinMemberID);
     }
 
     private void Update()
@@ -118,24 +124,13 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void MemberJoined(ReadOnlyMemory<byte> data)
     {
-        var packet = MemoryPackSerializer.Deserialize<JoinRoomPacket>(data.Span);
+        var packet = MemoryPackSerializer.Deserialize<PlayerEnterPacket>(data.Span);
+        string playerId = packet.NewPlayerID;
 
-        //방에 2명 이상일 때만 이거 실행하도록 하기.
-        if (packet.PlayerCnt >= 2)
-        {
-            SpawnPlayerByIndex(1);
-        }
+        if (!PlayerSpawnManager.Instance.ContainsPlayer(playerId))
+            PlayerSpawnManager.Instance.SpawnPlayer(playerId);
 
         UIManager.Hide<LobbyRouterUI>();
-    }
-
-    private void SpawnPlayerByIndex(int index)
-    {
-        string playerId = index.ToString();
-
-        if (PlayerSpawnManager.Instance.ContainsPlayer(playerId)) return;
-
-        PlayerSpawnManager.Instance.SpawnPlayer(playerId);
     }
 
     private void SetLocalControlActive(bool isMine)
