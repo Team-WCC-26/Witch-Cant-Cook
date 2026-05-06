@@ -754,6 +754,8 @@ MonoBehaviour:
   myID: 
   playerPrefab: {fileID: 8677191756071646582, guid: 41b2329d32f205648a34403629a2c746, type: 3}
   spawnRoot: {fileID: 0}
+  mainCamera: {fileID: 8944336656728804936}
+  virtualCamera: {fileID: 6211232419967245308}
 --- !u!1 &568550373
 GameObject:
   m_ObjectHideFlags: 0
@@ -6232,10 +6234,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 3553836231192102681, guid: 41b2329d32f205648a34403629a2c746, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 4609176003335714581, guid: 41b2329d32f205648a34403629a2c746, type: 3}
       propertyPath: animatedBody
       value: 
@@ -6280,10 +6278,6 @@ PrefabInstance:
       propertyPath: animatedBody
       value: 
       objectReference: {fileID: 1070398174}
-    - target: {fileID: 8677191756071646582, guid: 41b2329d32f205648a34403629a2c746, type: 3}
-      propertyPath: playerCamera
-      value: 
-      objectReference: {fileID: 8944336656728804936}
     - target: {fileID: 8816512585909321909, guid: 41b2329d32f205648a34403629a2c746, type: 3}
       propertyPath: animatedBody
       value: 

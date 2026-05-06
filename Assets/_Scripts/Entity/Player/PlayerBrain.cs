@@ -13,12 +13,10 @@ public sealed class PlayerBrain : MonoBehaviour
     [SerializeField] private string playerId = null;
 
     [Header("Core")]
-    [SerializeField] private Camera playerCamera = null;
     [SerializeField] private Collider col = null;
     [SerializeField] private Rigidbody rb = null;
 
-    [Header("Cinemachine")]
-    [SerializeField] private CinemachineCamera virtualCamera = null;
+    [Header("Camera Settings")]
     [SerializeField] private Transform cameraFollowTarget = null;
     [SerializeField] private Transform cameraLookAtTarget = null;
 
@@ -37,6 +35,10 @@ public sealed class PlayerBrain : MonoBehaviour
     private bool isInitialized = false;
 
     private PacketId _joinMemberID => PacketId.S_PlayerEnter;
+
+    //cameras
+    private Camera playerCamera = null;
+    private CinemachineCamera virtualCamera = null;
 
     #region properties
     public string PlayerId
@@ -120,6 +122,14 @@ public sealed class PlayerBrain : MonoBehaviour
         if (PlayerSpawnManager.Instance == null) return;
 
         PlayerSpawnManager.Instance.UnregisterPlayer(this);
+    }
+
+    public void BindCamera(Camera cam, CinemachineCamera virtualCam)
+    {
+        playerCamera = cam;
+        virtualCamera = virtualCam;
+        virtualCamera.Target.TrackingTarget = cameraFollowTarget;
+        virtualCamera.Target.LookAtTarget = cameraLookAtTarget;
     }
 
     private void MemberJoined(ReadOnlyMemory<byte> data)

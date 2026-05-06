@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Unity.Cinemachine;
 using UnityEngine;
 
 public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
@@ -9,6 +10,10 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     [Header("Spawn")]
     [SerializeField] private PlayerBrain playerPrefab = null;
     [SerializeField] private Transform spawnRoot = null;
+
+    [Header("Camera")]
+    [SerializeField] private Camera mainCamera = null;
+    [SerializeField] private CinemachineCamera virtualCamera = null;
 
     private readonly Dictionary<string, PlayerBrain> players = new();
 
@@ -35,6 +40,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
         PlayerBrain player = Instantiate(playerPrefab, position, rotation, spawnRoot);
         player.Initialize(playerId);
+        if (IsMine(playerId)) BindCamera(player); 
 
         return player;
     }
@@ -71,5 +77,10 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     public bool ContainsPlayer(string playerId)
     {
         return players.ContainsKey(playerId);
+    }
+
+    private void BindCamera(PlayerBrain player)
+    {
+        player.BindCamera(mainCamera, virtualCamera);
     }
 }
