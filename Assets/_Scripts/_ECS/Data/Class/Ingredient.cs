@@ -4,7 +4,7 @@ public class Ingredient : IData
 {
     public int id;
     public string name;
-    public string stat_id;
+    public string statID;
     public string throwing;
     public string tag;
     public string exp;
