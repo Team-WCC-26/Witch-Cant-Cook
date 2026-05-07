@@ -29,6 +29,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_JoinRoom = 204,
     S_JoinRoom = 205,
 
+    S_PlayerEnter = 207,
+
     C_ChatMessage = 210,
     S_ChatMessage = 211,
 

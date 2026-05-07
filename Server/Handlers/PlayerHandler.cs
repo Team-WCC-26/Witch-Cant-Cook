@@ -5,7 +5,7 @@ namespace Server;
 public class PlayerHandler : PacketHandlerBase
 {
     [PacketHandler(PacketId.C_PlayerMove)]
-    public void UpdateMove(Session session, PacketPackageInfo package)
+    public static void UpdateMove(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<PlayerMovementPacket>(package.Body);
 

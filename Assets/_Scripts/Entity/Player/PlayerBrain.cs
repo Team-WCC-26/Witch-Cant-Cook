@@ -1,4 +1,9 @@
+using MemoryPack;
+using Protocol;
+using Server;
+using System;
 using System.Collections.Generic;
+using Unity.Cinemachine;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -8,9 +13,12 @@ public sealed class PlayerBrain : MonoBehaviour
     [SerializeField] private string playerId = null;
 
     [Header("Core")]
-    [SerializeField] private Camera playerCamera = null;
     [SerializeField] private Collider col = null;
     [SerializeField] private Rigidbody rb = null;
+
+    [Header("Camera Settings")]
+    [SerializeField] private Transform cameraFollowTarget = null;
+    [SerializeField] private Transform cameraLookAtTarget = null;
 
     [Header("Ragdoll")]
     [SerializeField] private List<BodyPart> bodyParts = new();
@@ -25,6 +33,14 @@ public sealed class PlayerBrain : MonoBehaviour
     private PlayerStateResolver stateResolver = null;
     private PlayerActionController actionController = null;
     private bool isInitialized = false;
+
+    //Packet Ids
+    private PacketId _joinMemberID => PacketId.S_PlayerEnter;
+    private PacketId _worldStateID => PacketId.S_WorldState;
+
+    //cameras
+    private Camera playerCamera = null;
+    private CinemachineCamera virtualCamera = null;
 
     #region properties
     public string PlayerId
@@ -57,6 +73,7 @@ public sealed class PlayerBrain : MonoBehaviour
         playerId = id;
 
         bool isMine = PlayerSpawnManager.Instance.IsMine(playerId);
+        SetLocalControlActive(isMine);
 
         stateResolver = isMine
             ? new LocalPlayerStateResolver(this)
@@ -65,6 +82,18 @@ public sealed class PlayerBrain : MonoBehaviour
         PlayerSpawnManager.Instance.RegisterPlayer(this);
 
         isInitialized = true;
+    }
+
+    private void OnEnable()
+    {
+        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
+        ServerManager.Instance.RegisterHandler(_worldStateID, WorldStateReceived);
+    }
+
+    private void OnDisable()
+    {
+        ServerManager.Instance.UnRegisterHandler(_joinMemberID);
+        ServerManager.Instance.UnRegisterHandler(_worldStateID);
     }
 
     private void Update()
@@ -97,5 +126,50 @@ public sealed class PlayerBrain : MonoBehaviour
         if (PlayerSpawnManager.Instance == null) return;
 
         PlayerSpawnManager.Instance.UnregisterPlayer(this);
+    }
+
+    public void BindCamera(Camera cam, CinemachineCamera virtualCam)
+    {
+        playerCamera = cam;
+        virtualCamera = virtualCam;
+        virtualCamera.Target.TrackingTarget = cameraFollowTarget;
+        virtualCamera.Target.LookAtTarget = cameraLookAtTarget;
+    }
+
+    private void MemberJoined(ReadOnlyMemory<byte> data)
+    {
+        var packet = MemoryPackSerializer.Deserialize<PlayerEnterPacket>(data.Span);
+        string playerId = packet.NewPlayerID;
+
+        if (!PlayerSpawnManager.Instance.ContainsPlayer(playerId))
+            PlayerSpawnManager.Instance.SpawnPlayer(playerId);
+
+        UIManager.Hide<LobbyRouterUI>();
+    }
+
+    private void WorldStateReceived(ReadOnlyMemory<byte> data)
+    {
+        if (PlayerSpawnManager.Instance.IsMine(playerId)) return;
+        
+        var packet = MemoryPackSerializer.Deserialize<WorldStatePacket>(data.Span);
+        stateResolver.ApplyRemotePacket(packet);
+    }
+
+    private void SetLocalControlActive(bool isMine)
+    {
+        if (playerCamera != null)
+        {
+            playerCamera.gameObject.SetActive(isMine);
+        }
+
+        if (input != null)
+        {
+            input.enabled = isMine;
+        }
+
+        if (camController != null)
+        {
+            camController.enabled = isMine;
+        }
     }
 }

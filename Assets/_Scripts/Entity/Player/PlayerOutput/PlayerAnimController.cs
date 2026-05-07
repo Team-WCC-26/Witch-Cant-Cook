@@ -2,17 +2,17 @@ using UnityEngine;
 
 public class PlayerAnimController
 {
-    private readonly PlayerBrain brain;
     private readonly Animator animator;
 
     private readonly int speedHash = Animator.StringToHash("Speed");
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
 
-    private readonly float idleSpeed = 0.1f;
+    private const float IdleSpeed = 0f;
+    private const float WalkSpeed = 4f;
+    private const float RunSpeed = 7f;
 
     public PlayerAnimController(PlayerBrain brain)
     {
-        this.brain = brain;
         animator = brain.Animator;
     }
 
@@ -24,14 +24,11 @@ public class PlayerAnimController
             return;
         }
 
-        Vector3 velocity = brain.Rb.linearVelocity;
-        Vector3 horizontalVelocity = new(velocity.x, 0f, velocity.z);
+        float currentSpeed = IdleSpeed;
 
-        float currentSpeed = horizontalVelocity.magnitude;
-
-        if (currentSpeed < idleSpeed)
+        if (state.MoveDir.sqrMagnitude > 0.0001f)
         {
-            currentSpeed = 0f;
+            currentSpeed = state.IsRun ? RunSpeed : WalkSpeed;
         }
 
         animator.SetFloat(speedHash, currentSpeed);
@@ -39,7 +36,7 @@ public class PlayerAnimController
 
     public void ForceIdle()
     {
-        animator.SetFloat(speedHash, 0f);
+        animator.SetFloat(speedHash, IdleSpeed);
         animator.SetTrigger(toIdleHash);
         animator.Update(0f);
     }

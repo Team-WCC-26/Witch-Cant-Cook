@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using Protocol;
 public class PlayerStateResolver
 {
     protected readonly PlayerBrain brain;
@@ -27,6 +27,10 @@ public class PlayerStateResolver
     }
 
     public virtual void NotifyCollision(Collision collision)
+    {
+    }
+
+    public virtual void ApplyRemotePacket(WorldStatePacket packet)
     {
     }
 

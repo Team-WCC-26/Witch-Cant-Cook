@@ -1,3 +1,4 @@
+using Protocol;
 using UnityEngine;
 
 public sealed class RemotePlayerStateResolver : PlayerStateResolver
@@ -13,6 +14,14 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
         targetPosition = brain.transform.position;
         targetRotation = brain.transform.rotation;
+
+        if (brain.Rb != null)
+        {
+            brain.Rb.isKinematic = true;
+            brain.Rb.useGravity = false;
+            brain.Rb.linearVelocity = Vector3.zero;
+            brain.Rb.angularVelocity = Vector3.zero;
+        }
     }
 
     public override void UpdateTick()
@@ -43,15 +52,35 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
     }
 
+    public override void ApplyRemotePacket(WorldStatePacket packet)
+    {
+        if (packet == null) return;
+
+        var player = packet.Players[1];
+
+        ApplyRemoteState(
+            ProtocolPlayerStateConverter.ToClientCombinedState(player.CombinedState)
+        );
+
+        ApplyRemoteTransform(player.Position, player.Rotation);
+    }
+
     public void ApplyRemoteState(PlayerCombinedState remoteState)
     {
         SetCurrentState(remoteState);
     }
 
-    public void ApplyRemoteTransform(Vector3 position, Quaternion rotation)
+    public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Vector3 rotation)
+    {
+        targetPosition = ToUnityVector3(position);
+        targetRotation = Quaternion.Euler(ToUnityVector3(rotation));
+        hasRemoteTransform = true;
+    }
+
+    public void ApplyRemoteTransform(Vector3 position, Vector3 eulerAngles)
     {
         targetPosition = position;
-        targetRotation = rotation;
+        targetRotation = Quaternion.Euler(eulerAngles);
         hasRemoteTransform = true;
     }
 
@@ -59,5 +88,10 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
         positionLerpSpeed = positionSpeed;
         rotationLerpSpeed = rotationSpeed;
+    }
+
+    private static Vector3 ToUnityVector3(System.Numerics.Vector3 value)
+    {
+        return new Vector3(value.X, value.Y, value.Z);
     }
 }

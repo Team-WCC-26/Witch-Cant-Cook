@@ -58,15 +58,27 @@ public class RoomHandler : PacketHandlerBase
                 return;
             }
 
+            PlayerEnterPacket playerEnterPacket = new()
+            {
+                NewPlayerID = session.Player.PlayerId
+            };
+
+            var packet = PacketSerializer.Serialize(playerEnterPacket, true);
+
+            foreach (var player in room.Players)
+            {
+                player.Send(packet);
+            }
+
             room.Enter(session.Player);
 
-            JoinRoomPacket packet = new()
+            JoinRoomPacket joinRoomPacket = new()
             {
                 RoomId = room.Id,
                 PlayerCnt = room.PlayerCnt
             };
 
-            session.Player.Send(PacketSerializer.Serialize(packet, true));
+            session.Player.Send(PacketSerializer.Serialize(joinRoomPacket, true));
         });
 
         room?.Notificate($"{session.Player.PlayerId} joined this Room.");
