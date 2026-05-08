@@ -51,7 +51,7 @@ public class Room
 
     public bool IsEnable()
     {
-        return _playerCnt >= 0 && _playerCnt <= MaxPlayerCount;
+        return _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
     }
 
     public void PushJob(Action job) => _jobQueue.Push(job);
@@ -67,6 +67,10 @@ public class Room
         return _shard;
     }
 
+    /// <summary>
+    /// Room 접속
+    /// <para/> 사용시 PushJob안에 넣어줘야 함
+    /// </summary>
     public void Enter(Player player)
     {
         _players.Add(player);
@@ -74,35 +78,47 @@ public class Room
         _playerCnt++;
     }
 
+    /// <summary>
+    /// Room 접속 해제
+    /// <para/> 사용시 PushJob안에 넣어줘야 함
+    /// </summary>
     public void Leave(Player player)
     {
-        PushJob(() =>
+        _players.Remove(player);
+        player.Room = null;
+
+        if (--_playerCnt <= 0)
         {
-            _players.Remove(player);
-            player.Room = null;
-            _playerCnt--;
-        });
+            ServerContext.Instance.RoomManager.RemoveRoom(Id);
+        }
+
+        PlayerLeavePacket packet = new()
+        {
+            PlayerID = player.PlayerId
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
     public void BroadCast(byte[] packet)
     {
-        PushJob(() =>
+        foreach (var player in _players)
         {
-            foreach (var player in _players)
-            {
-                player.Send(packet);
-            }
-        });
+            player.Send(packet);
+        }
     }
     
     public void Notificate(string message)
     {
-        RoomNotificationPacket packet = new()
+        PushJob(() =>
         {
-            Message = message
-        };
+            RoomNotificationPacket packet = new()
+            {
+                Message = message
+            };
 
-        BroadCast(PacketSerializer.Serialize(packet));
+            BroadCast(PacketSerializer.Serialize(packet));
+        });
     }
 
     private PlayerMovementPacket ToData(Player player)

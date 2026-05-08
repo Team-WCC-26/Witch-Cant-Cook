@@ -3,9 +3,9 @@
 namespace Protocol;
 
 /// <summary>
-/// RoomId는 1번부터 시작
-/// 0은 방이 가득 찬 경우
-/// -1은 방이 존재하지 않음
+/// RoomId는 6자리 문자열(숫자, 영대문자 조합)
+/// <para/> RoomID가 F인 경우 방이 가득 참
+/// <para/> RoomID가 N인 경우 방이 없음
 /// </summary>
 [MemoryPackable]
 [PacketId(PacketId.C_JoinRoom)]

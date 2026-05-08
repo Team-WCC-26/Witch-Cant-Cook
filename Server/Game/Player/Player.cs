@@ -21,6 +21,9 @@ public class Player
 
     public void LeaveRoom()
     {
-        Room?.Leave(this);
+        Room?.PushJob(() =>
+        {
+            Room?.Leave(this);
+        });
     }
 }

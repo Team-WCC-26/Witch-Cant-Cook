@@ -27,10 +27,11 @@ class Program
 
             .UseSession<Session>()
             .UseSessionHandler(
-                onConnected: async (session) =>
+                onConnected: (session) =>
                 {
                     sessions[session.SessionID] = session;
                     Console.WriteLine($"Client connected: {session.SessionID}");
+                    return ValueTask.CompletedTask;
                 },
                 onClosed: (session, reason) =>
                 {
