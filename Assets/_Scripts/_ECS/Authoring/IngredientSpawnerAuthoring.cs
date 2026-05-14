@@ -26,7 +26,7 @@ public class IngredientSpawnerAuthoring : MonoBehaviour
                 buffer.Add(new IngredientAddressBuffer
                 {
                     IngredientID = item.ingredientID,
-                    // ECS 내부에서는 string 대신 FixedString을 사용해야 메모리 에러가 나지 않습니다.
+                    // ECS 내부에서는 string 대신 FixedString을 사용
                     AddressKey = new FixedString64Bytes(item.addressableKey)
                 });
             }
