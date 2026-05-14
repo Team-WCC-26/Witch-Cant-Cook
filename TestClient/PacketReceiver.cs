@@ -70,9 +70,32 @@ public class PacketReceiver
 
             case PacketId.S_JoinRoom:
                 var joinRoomPacket = MemoryPackSerializer.Deserialize<JoinRoomPacket>(body);
+
+                if (joinRoomPacket.RoomId == "F")
+                {
+                    Console.WriteLine($"Room Is Full");
+                    break;
+                }
+                
+                if (joinRoomPacket.RoomId == "N")
+                {
+                    Console.WriteLine($"Room Is Null");
+                    break;
+                }
+
                 Program.IsJoinedRoom = true;
                 OnRoomCreated?.Invoke(joinRoomPacket.RoomId);
                 Console.WriteLine($"You Joined Number {joinRoomPacket.RoomId} Room.");
+                break;
+
+            case PacketId.S_PlayerEnter:
+                var playerEnterPacket = MemoryPackSerializer.Deserialize<PlayerEnterPacket>(body);
+                Console.WriteLine($"{playerEnterPacket.NewPlayerID} Joined Room");
+                break;
+
+            case PacketId.S_PlayerLeave:
+                var playerLeavePacket = MemoryPackSerializer.Deserialize<PlayerLeavePacket>(body);
+                Console.WriteLine($"{playerLeavePacket.PlayerID} Leave Room");
                 break;
 
             case PacketId.S_ChatMessage:

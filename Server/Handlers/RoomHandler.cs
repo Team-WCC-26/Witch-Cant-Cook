@@ -40,21 +40,37 @@ public class RoomHandler : PacketHandlerBase
         var packet = DeSerialize<JoinRoomPacket>(package.Body);
         var room = ServerContext.Instance.RoomManager.GetRoom(packet.RoomId);
 
-        if (room != null && (string.IsNullOrEmpty(room.Password) || room.Password == packet?.RoomPassword))
+        if (room == null)
+        {
+            JoinFail(session);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(room.Password) || room.Password == packet?.RoomPassword)
         {
             JoinRoom(session, room);
         }
     }
 
-    public static void JoinRoom(Session session, Room? room)
+    [PacketHandler(PacketId.C_LeaveRoom)]
+    public static void LeaveRoom(Session session, PacketPackageInfo package)
     {
-        if (room == null) return;
+        session.Player.LeaveRoom();
+    }
+
+    public static void JoinRoom(Session session, Room room)
+    {
+        if (room == null)
+        {
+            JoinFail(session);
+            return;
+        }
 
         room?.PushJob(() =>
         {
             if (!room.IsEnable())
             {
-
+                JoinFail(session, false);
                 return;
             }
 
@@ -80,7 +96,15 @@ public class RoomHandler : PacketHandlerBase
 
             session.Player.Send(PacketSerializer.Serialize(joinRoomPacket, true));
         });
+    }
 
-        room?.Notificate($"{session.Player.PlayerId} joined this Room.");
+    private static void JoinFail(Session session, bool isRoomNull = true)
+    {
+        JoinRoomPacket packet = new()
+        {
+            RoomId = isRoomNull ? "N" : "F"
+        };
+
+        session.Player.Send(PacketSerializer.Serialize(packet, true));
     }
 }

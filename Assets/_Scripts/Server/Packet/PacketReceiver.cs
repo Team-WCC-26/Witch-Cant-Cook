@@ -72,33 +72,6 @@ namespace Server
             }
         }
 
-        private void HandlePacket(ushort id, ReadOnlySpan<byte> body)
-        {
-            switch ((PacketId)id)
-            {
-                case PacketId.S_GetRoom:
-                    var getRoomPacket = MemoryPackSerializer.Deserialize<GetRoomPacket>(body);
-                    //Debug.Log("Current Rooms : " + string.Join(", ", getRoomPacket.RoomIds));
-                    break;
-
-                case PacketId.S_JoinRoom:
-                    var joinRoomPacket = MemoryPackSerializer.Deserialize<JoinRoomPacket>(body);
-                    //_chatTxt.text = $"You Joined Number {joinRoomPacket.RoomId} Room.";
-                    _bEnterRoom = true;
-                    break;
-
-                case PacketId.S_ChatMessage:
-                    var chatPacket = MemoryPackSerializer.Deserialize<ChatMessagePacket>(body);
-                    //_chatTxt.text += $"\n{chatPacket.Sender} : {chatPacket.Message}";
-                    break;
-
-                case PacketId.S_Notification:
-                    var notificationPacket = MemoryPackSerializer.Deserialize<RoomNotificationPacket>(body);
-                    //_chatTxt.text += "\n" + notificationPacket.Message;
-                    break;
-            }
-        }
-
         private void EnsureCapacity(int requiredSize)
         {
             int freeSize = _buffer.Length - _writePos;

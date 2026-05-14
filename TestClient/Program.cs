@@ -73,9 +73,10 @@ class Program
 
                         break;
 
-                    //case "/exit":
-                    //    data = new byte[1];
-                    //    break;
+                    case "/exit":
+                        LeaveRoomPacket leaveRoomPacket = new();
+                        data = PacketSerializer.Serialize(leaveRoomPacket);
+                        break;
 
                     default:
                         continue;

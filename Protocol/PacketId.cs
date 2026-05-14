@@ -31,16 +31,31 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_PlayerEnter = 207,
 
+    C_LeaveRoom = 208,
+    S_PlayerLeave = 209,
+
     C_ChatMessage = 210,
     S_ChatMessage = 211,
 
     S_Notification = 213,
 
     // 게임 상태 패킷 (300~399) // TODO => 클라쪽 데이터 형식 요청 후 작성
-    C_PlayerMove = 300,
     S_WorldState = 301,
-    SpawnObject = 302,
-    PlayerAction = 305,
+
+    C_PlayerMove = 302,
+
+    C_IngredientSpawn = 332,
+    S_IngredientSpawn = 333,
+
+    C_IngredientDestroy = 334,
+    S_IngredientDestroy = 335,
+
+    C_IngredientPickup = 336,
+
+    C_IngredientThrow = 338,
+
+    C_IngredientState = 340,
+    S_IngredientState = 341,
 
     // 기타 패킷 (400~)
     // ...

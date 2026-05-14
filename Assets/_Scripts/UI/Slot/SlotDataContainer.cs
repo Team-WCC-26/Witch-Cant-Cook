@@ -17,8 +17,6 @@ namespace UI.Slot
 
         public virtual void Add(TData data)
         {
-            int index = Datas.Count;
-
             _datas.Add(data);
         }
 

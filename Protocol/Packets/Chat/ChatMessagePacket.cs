@@ -9,4 +9,3 @@ public partial class ChatMessagePacket
     public string Sender { get; set; }
     public string Message { get; set; }
 }
-

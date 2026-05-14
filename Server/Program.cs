@@ -1,15 +1,10 @@
-using SuperSocket;
-using SuperSocket.Server;
-using SuperSocket.ProtoBase;
 using Microsoft.Extensions.Hosting;
 using System.Collections.Concurrent;
 using SuperSocket.Server.Abstractions.Session;
 using SuperSocket.Server.Host;
 using SuperSocket.Server.Abstractions;
-using System.Text;
 using Protocol;
-using MemoryPack;
-using System.Buffers;
+using SuperSocket.Server;
 
 namespace Server;
 
@@ -27,10 +22,11 @@ class Program
 
             .UseSession<Session>()
             .UseSessionHandler(
-                onConnected: async (session) =>
+                onConnected: (session) =>
                 {
                     sessions[session.SessionID] = session;
                     Console.WriteLine($"Client connected: {session.SessionID}");
+                    return ValueTask.CompletedTask;
                 },
                 onClosed: (session, reason) =>
                 {
@@ -58,7 +54,7 @@ class Program
                 }
                 };
             })
-
+            //.UseUdp()
             .Build();
 
         var thread = new Thread(() =>
@@ -68,7 +64,7 @@ class Program
 
         thread.IsBackground = true;
         thread.Start();
-
+        
         await host.RunAsync();
     }
 }
