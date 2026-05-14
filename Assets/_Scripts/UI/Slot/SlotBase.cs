@@ -22,11 +22,6 @@ namespace UI.Slot
         {
             if (_name)
             {
-                if (name.Length > _maxNameLength)
-                {
-                    name = name[.._maxNameLength];
-                }
-
                 _name.text = data.Name;
             }
 
