@@ -1256,7 +1256,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1329e1e642f6cd743a73a6e049234ac2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlobalSpawnManager
-  testIngredientID: 10100
 --- !u!1 &190507435
 GameObject:
   m_ObjectHideFlags: 0
@@ -7856,6 +7855,54 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.00006324053, y: 0.97502244, z: -0.23946756}
     m_Extent: {x: 0.22290093, y: 0.2305229, z: 0.24642318}
   m_DirtyAABB: 0
+--- !u!1 &1189623505
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1189623507}
+  - component: {fileID: 1189623506}
+  m_Layer: 0
+  m_Name: ServerConnector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1189623506
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1189623505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9d6c6dd227c43f438b6ee75a5e7d945, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ServerConnector
+  isDestroyOnLoad: 0
+  _hostIP: villainouskirby.kro.kr
+  _useLocalHost: 1
+  IsEnterRoom: 0
+--- !u!4 &1189623507
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1189623505}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1374.9673, y: 451.53217, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1200341358
 GameObject:
   m_ObjectHideFlags: 0
@@ -9114,9 +9161,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerBrain
   playerId: 
-  playerCamera: {fileID: 8944336656728804936}
   col: {fileID: 1387082644}
   rb: {fileID: 1387082645}
+  cameraFollowTarget: {fileID: 0}
+  cameraLookAtTarget: {fileID: 0}
   bodyParts:
   - {fileID: 2003836018}
   - {fileID: 1100868816}
@@ -11604,9 +11652,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerBrain
   playerId: 
-  playerCamera: {fileID: 8944336656728804936}
   col: {fileID: 1628673157}
   rb: {fileID: 1628673158}
+  cameraFollowTarget: {fileID: 0}
+  cameraLookAtTarget: {fileID: 0}
   bodyParts:
   - {fileID: 1504437879}
   - {fileID: 96232394}
@@ -15455,5 +15504,6 @@ SceneRoots:
   - {fileID: 1628673163}
   - {fileID: 695133389}
   - {fileID: 945953377}
+  - {fileID: 1189623507}
   - {fileID: 1275790134}
   - {fileID: 1600216566}
