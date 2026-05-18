@@ -1,5 +1,7 @@
+using Cysharp.Threading.Tasks;
 using MemoryPack;
 using Protocol;
+using Server;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -16,14 +18,7 @@ public class GlobalSpawnManager : MonoBehaviour
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
             int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
-            SpawnTestIngredient(randomID);
-        }
-
-        // F2 키: 가짜 서버 패킷 수신 시뮬레이션 테스트
-        if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
-        {
-            int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
-            SimulateServerPacket(randomID);
+            SendSpawnPacketToServer(randomID);
         }
 
         // ESC 키: 마우스 커서 락 해제
@@ -54,33 +49,33 @@ public class GlobalSpawnManager : MonoBehaviour
         Debug.Log($"[Test] F1 입력 감지! 로컬 스폰 요청 생성. ID: {ingredientID}");
     }
 
-    // 가짜 서버 패킷 송신 시뮬레이션
-    private void SimulateServerPacket(int ingredientID)
+    public void SendSpawnPacketToServer(int ingredientID)
     {
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         float3 targetPosition = GetSpawnPosition();
 
-        // 서버가 보낼 직렬화 데이터 패킷 모사
-        var fakePacket = new IngredientSpawnPacket
+        var spawnPacket = new IngredientSpawnPacket
         {
+            EntityId = 0, // 클라이언트 요청 단계이므로 0 고정
             IngredientID = ingredientID,
-            NetworkID = fakeNetworkIdCounter++, // 누를 때마다 1, 2, 3... 증가
-            Position = targetPosition
+            Position = new System.Numerics.Vector3(targetPosition.x, targetPosition.y, targetPosition.z),
+            Quaternion = System.Numerics.Quaternion.Identity
         };
 
-        // 가짜 패킷 byte[] 직렬화
-        byte[] rawBuffer = MemoryPackSerializer.Serialize(fakePacket);
+        byte[] sendBuffer = PacketSerializer.Serialize(spawnPacket);
 
-        // 씬 내의 네트워크 핸들러를 찾아 강제로 패킷 데이터 주입
-        var networkHandler = FindFirstObjectByType<IngredientNetworkManager>();
-        if (networkHandler != null)
+        if (ServerManager.Instance != null)
         {
-            networkHandler.SendMessage("OnIngredientSpawnReceived", (System.ReadOnlyMemory<byte>)rawBuffer);
-            Debug.Log($"[Test] F2 입력 감지! 가짜 서버 패킷 핸들러로 전달 완료 (NetID: {fakePacket.NetworkID})");
+            ServerManager.Instance.SendData(sendBuffer).Forget();
+
+            Debug.Log($"[Network Test] 서버로 IngredientSpawnPacket 전송 완료! 재료 ID: {ingredientID}, 좌표: {targetPosition}");
+        }
+        else
+        {
+            Debug.LogError("[Network Test] ServerManager.Instance를 찾을 수 없습니다. 씬에 배치되었는지 확인하세요.");
         }
     }
-
     private float3 GetSpawnPosition()
     {
         GameObject spawnPointObj = GameObject.Find("SpawnPoint");
