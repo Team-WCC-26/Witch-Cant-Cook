@@ -38,13 +38,13 @@ public class IngredientNetworkManager : MonoBehaviour
         entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
         {
             IngredientID = packet.IngredientID,
-            NetworkID = packet.NetworkID, // 패킷의 EntityId와 매핑
+            NetworkID = packet.EntityId, // 패킷의 EntityId와 매핑
 
-            Position = new float3(packet.Position.x, packet.Position.y, packet.Position.z),
+            Position = new float3(packet.Position.X, packet.Position.Y, packet.Position.Z),
 
-            Rotation = new quaternion(packet.Quaternion.x, packet.Quaternion.y, packet.Quaternion.z, packet.Quaternion.w)
+            Rotation = new quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W)
         });
 
-        Debug.Log($"[Network] 서버 패킷 수신 - ID: {packet.IngredientID}, NetID: {packet.NetworkID}");
+        Debug.Log($"[Network] 서버 패킷 수신 - ID: {packet.IngredientID}, NetID: {packet.EntityId}");
     }
 }

@@ -10,7 +10,6 @@ using UnityEngine.InputSystem;
 public class GlobalSpawnManager : MonoBehaviour
 {
     private readonly int[] ingredientIDs = { 10900, 10300, 11900, 12000, 10600 };
-    private long fakeNetworkIdCounter = 1; // 테스트용 가짜 서버 ID 카운터
 
     private void Update()
     {
