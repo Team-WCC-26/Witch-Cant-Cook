@@ -1,8 +1,6 @@
 using Cysharp.Threading.Tasks;
-using MemoryPack;
 using Protocol;
 using Server;
-using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -13,7 +11,7 @@ public class GlobalSpawnManager : MonoBehaviour
 
     private void Update()
     {
-        // F1 키: 클라이언트 단독 스폰 테스트
+        // F1 키: 서버에 재료 스폰 요청 생성 패킷 송신
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
             int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
@@ -28,26 +26,6 @@ public class GlobalSpawnManager : MonoBehaviour
         }
     }
 
-    // 로컬 스폰 요청 생성
-    public void SpawnTestIngredient(int ingredientID)
-    {
-        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
-
-        float3 targetPosition = GetSpawnPosition();
-
-        var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-        Entity requestEntity = entityManager.CreateEntity(typeof(IngredientSpawnRequest));
-
-        entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
-        {
-            IngredientID = ingredientID,
-            NetworkID = 0, // 로컬 생성은 서버 ID가 없으므로 0 처리
-            Position = targetPosition,
-            Rotation = quaternion.identity 
-        });
-        Debug.Log($"[Test] F1 입력 감지! 로컬 스폰 요청 생성. ID: {ingredientID}");
-    }
-
     public void SendSpawnPacketToServer(int ingredientID)
     {
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
@@ -56,7 +34,7 @@ public class GlobalSpawnManager : MonoBehaviour
 
         var spawnPacket = new IngredientSpawnPacket
         {
-            EntityId = 0, // 클라이언트 요청 단계이므로 0 고정
+            EntityId = 0, // 클라이언트의 생성 요청 0 
             IngredientID = ingredientID,
             Position = new System.Numerics.Vector3(targetPosition.x, targetPosition.y, targetPosition.z),
             Quaternion = System.Numerics.Quaternion.Identity
@@ -66,15 +44,16 @@ public class GlobalSpawnManager : MonoBehaviour
 
         if (ServerManager.Instance != null)
         {
+            // 비동기로 서버에 패킷 전송
             ServerManager.Instance.SendData(sendBuffer).Forget();
-
-            Debug.Log($"[Network Test] 서버로 IngredientSpawnPacket 전송 완료! 재료 ID: {ingredientID}, 좌표: {targetPosition}");
+            Debug.Log($"[Network Send] 서버로 스폰 요청 전송 완료 ID: {ingredientID}, 좌표: {targetPosition}");
         }
         else
         {
-            Debug.LogError("[Network Test] ServerManager.Instance를 찾을 수 없습니다. 씬에 배치되었는지 확인하세요.");
+            Debug.LogError("[Network Error] ServerManager.Instance를 찾을 수 없습니다.");
         }
     }
+
     private float3 GetSpawnPosition()
     {
         GameObject spawnPointObj = GameObject.Find("SpawnPoint");

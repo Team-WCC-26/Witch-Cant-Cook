@@ -24,7 +24,7 @@ public class IngredientNetworkManager : MonoBehaviour
         }
     }
 
-    private void OnIngredientSpawnReceived(ReadOnlyMemory<byte> data)
+    public void OnIngredientSpawnReceived(ReadOnlyMemory<byte> data)
     {
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
