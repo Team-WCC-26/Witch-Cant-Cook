@@ -56,6 +56,17 @@ public partial class IngredientSpawnSystem : SystemBase
 
     private void InjectECSComponents(GameObject spawnedObj, int ingredientID, long networkID, Vector3 position, UnityEngine.Quaternion rotation)
     {
+        //TEST
+        CatchableObj catchable = spawnedObj.GetComponent<CatchableObj>();
+        if (catchable != null)
+        {
+            GameManager.Instance.catchableDics[networkID] = catchable;
+        }
+        else
+        {
+            Debug.LogWarning($"[SpawnSystem] CatchableObj ¾øÀ½. NetworkID: {networkID}, Object: {spawnedObj.name}");
+        }
+
         var ingredientRaw = DataManager.Instance.GetIngredient().Get(ingredientID);
         var statId = int.Parse(ingredientRaw.statID);
         var statRaw = DataManager.Instance.GetIngredientStat().Get(statId);

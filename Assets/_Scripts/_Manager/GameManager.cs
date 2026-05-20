@@ -1,7 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : Singleton<GameManager>
 {
+    public Dictionary<long, CatchableObj> catchableDics = new();
+
     public readonly string mainSceneName = "MainStage";
 
     #region Unity Life Cycles
