@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 public class GlobalSpawnManager : MonoBehaviour
 {
     private readonly int[] ingredientIDs = { 10900, 10300, 11900, 12000, 10600 };
+    [SerializeField] private GameObject spawnPointObj;
 
     private void Update()
     {
@@ -56,7 +57,6 @@ public class GlobalSpawnManager : MonoBehaviour
 
     private float3 GetSpawnPosition()
     {
-        GameObject spawnPointObj = GameObject.Find("SpawnPoint");
         return spawnPointObj != null ? (float3)spawnPointObj.transform.position : float3.zero;
     }
 }
