@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 2191469642156447257}
   - component: {fileID: 4390229893110300088}
   - component: {fileID: 5520676652034953291}
+  - component: {fileID: -3950667264815616381}
   m_Layer: 0
   m_Name: SFM_FVC_Corn
   m_TagString: Untagged
@@ -140,3 +141,21 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &-3950667264815616381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389937913496221644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  col: {fileID: 4390229893110300088}
+  rb: {fileID: 5520676652034953291}
+  canBePicked: 1
+  holdLocalPosition: {x: 0, y: 0, z: 0}
+  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  throwForce: 5

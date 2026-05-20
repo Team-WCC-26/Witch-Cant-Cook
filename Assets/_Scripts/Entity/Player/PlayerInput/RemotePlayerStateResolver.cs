@@ -1,4 +1,5 @@
 using Protocol;
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class RemotePlayerStateResolver : PlayerStateResolver
@@ -52,11 +53,10 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
     }
 
-    public override void ApplyRemotePacket(WorldStatePacket packet)
+    public override void ApplyRemotePacket(IReadOnlyList<PlayerMovementPacket> list)
     {
-        if (packet == null) return;
-
-        var player = packet.Players[1];
+        if (list == null || list.Count == 0) return;
+        var player = list[1];
 
         ApplyRemoteState(
             ProtocolPlayerStateConverter.ToClientCombinedState(player.CombinedState)

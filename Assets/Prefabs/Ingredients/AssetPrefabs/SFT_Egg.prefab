@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1144055124142224219}
   - component: {fileID: 7416831067980358062}
   - component: {fileID: -9012784190197821221}
+  - component: {fileID: 6408138329122547482}
   m_Layer: 0
   m_Name: SFT_Egg
   m_TagString: Untagged
@@ -140,3 +141,21 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &6408138329122547482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504339039570481806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  col: {fileID: 7416831067980358062}
+  rb: {fileID: -9012784190197821221}
+  canBePicked: 1
+  holdLocalPosition: {x: 0, y: 0, z: 0}
+  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  throwForce: 5

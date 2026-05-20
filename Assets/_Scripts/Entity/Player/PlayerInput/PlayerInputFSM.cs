@@ -96,24 +96,24 @@ public class PlayerInputFSM
 
     private PlayerInteraction ResolvePendingInteraction()
     {
-        //if ((pendingKeyInput & KeyInput.Primary) != 0)
-        //{
-        //    return brain.Interact.IsHolding
-        //        ? PlayerInteraction.Drop
-        //        : PlayerInteraction.Pick;
-        //}
+        if (pendingKeyInput == KeyInput.Primary)
+        {
+            return brain.Interact.IsHolding
+                ? PlayerInteraction.Drop
+                : PlayerInteraction.Pick;
+        }
 
-        //if ((pendingKeyInput & KeyInput.Secondary) != 0)
-        //{
-        //    return brain.Interact.IsHolding
-        //        ? PlayerInteraction.Throw
-        //        : PlayerInteraction.None;
-        //}
+        if (pendingKeyInput == KeyInput.Secondary)
+        {
+            return brain.Interact.IsHolding
+                ? PlayerInteraction.Throw
+                : PlayerInteraction.None;
+        }
 
-        //if ((pendingKeyInput & KeyInput.Interact) != 0)
-        //{
-        //    return PlayerInteraction.Use;
-        //}
+        if (pendingKeyInput == KeyInput.Interact)
+        {
+            return PlayerInteraction.Use;
+        }
 
         return PlayerInteraction.None;
     }

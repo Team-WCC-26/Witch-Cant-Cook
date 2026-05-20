@@ -32,6 +32,9 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [Header("Interaction")]
     [SerializeField] private Transform itemHoldParent = null;
+    [SerializeField] private float interactRayStartOffset = 0.3f;
+    [SerializeField] private float interactDistance = 3.0f;
+    private PlayerInteract interact;
 
     private PlayerStateResolver stateResolver = null;
     private PlayerActionController actionController = null;
@@ -51,24 +54,25 @@ public sealed class PlayerBrain : MonoBehaviour
         get => playerId;
         set => playerId = value;
     }
-
     public Camera PlayerCam => playerCamera;
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public IReadOnlyList<BodyPart> BodyParts => bodyParts;
-
     public PlayerInputHandler Input => input;
     public PlayerActionController ActionController => actionController;
     public PlayerCameraController CameraController => camController;
-
     public Animator Animator => animator;
-
+    public Transform ItemHoldParent => itemHoldParent;
+    public float InteractRayStartOffset => interactRayStartOffset;
+    public float InteractDistance => interactDistance;
+    public PlayerInteract Interact => interact;
     public PlayerStateResolver StateResolver => stateResolver;
     #endregion
 
     private void Awake()
     {
         actionController = new PlayerActionController(this);
+        interact = new PlayerInteract(this);
     }
 
     public void Initialize(string id)
@@ -90,7 +94,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
-        ServerManager.Instance.RegisterHandler(_worldStateID, WorldStateReceived);
+        ServerManager.Instance.Router.OnPlayer += WorldStateReceived;
     }
 
     private void OnDisable()
@@ -104,6 +108,7 @@ public sealed class PlayerBrain : MonoBehaviour
         if (!isInitialized) return;
 
         stateResolver.UpdateTick();
+        interact.Handle(stateResolver.CurrentState.Interaction);
         actionController.UpdateTick(stateResolver.CurrentState);
     }
 
@@ -150,12 +155,11 @@ public sealed class PlayerBrain : MonoBehaviour
         UIManager.Hide<LobbyRouterUI>();
     }
 
-    private void WorldStateReceived(ReadOnlyMemory<byte> data)
+    private void WorldStateReceived(IReadOnlyList<PlayerMovementPacket> list)
     {
         if (PlayerSpawnManager.Instance.IsMine(playerId)) return;
         
-        var packet = MemoryPackSerializer.Deserialize<WorldStatePacket>(data.Span);
-        stateResolver.ApplyRemotePacket(packet);
+        stateResolver.ApplyRemotePacket(list);
     }
 
     private void SetLocalControlActive(bool isMine)
