@@ -94,7 +94,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
-        ServerManager.Instance.RegisterHandler(_worldStateID, WorldStateReceived);
+        ServerManager.Instance.Router.OnPlayer += WorldStateReceived;
     }
 
     private void OnDisable()
@@ -155,12 +155,11 @@ public sealed class PlayerBrain : MonoBehaviour
         UIManager.Hide<LobbyRouterUI>();
     }
 
-    private void WorldStateReceived(ReadOnlyMemory<byte> data)
+    private void WorldStateReceived(IReadOnlyList<PlayerMovementPacket> list)
     {
         if (PlayerSpawnManager.Instance.IsMine(playerId)) return;
         
-        var packet = MemoryPackSerializer.Deserialize<WorldStatePacket>(data.Span);
-        stateResolver.ApplyRemotePacket(packet);
+        stateResolver.ApplyRemotePacket(list);
     }
 
     private void SetLocalControlActive(bool isMine)
