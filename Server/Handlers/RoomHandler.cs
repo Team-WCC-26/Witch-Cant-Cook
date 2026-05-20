@@ -90,6 +90,7 @@ public class RoomHandler : PacketHandlerBase
 
             JoinRoomPacket joinRoomPacket = new()
             {
+                PlayerId = session.Player.PlayerId,
                 RoomId = room.Id,
                 PlayerCnt = room.PlayerCnt
             };
