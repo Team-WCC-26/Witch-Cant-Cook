@@ -10,6 +10,8 @@ public class IngredientHandler : PacketHandlerBase
         var packet = DeSerialize<IngredientSpawnPacket>(package.Body);
         var room = session.Player.Room;
 
+        packet.EntityId = room.GenerateEntityId();
+
         room.PushJob(() =>
         {
             room.BroadCast(PacketSerializer.Serialize(packet, true));

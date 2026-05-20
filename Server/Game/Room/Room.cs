@@ -16,6 +16,8 @@ public class Room
     private int _playerCnt = 0;
     private int _tick = 0;
 
+    private long _nextEntityId = 0;
+
     private JobQueue _jobQueue = new();
     private Shard _shard;
 
@@ -67,6 +69,11 @@ public class Room
     public Shard GetShard()
     {
         return _shard;
+    }
+
+    public long GenerateEntityId()
+    {
+        return Interlocked.Increment(ref _nextEntityId);
     }
 
     /// <summary>

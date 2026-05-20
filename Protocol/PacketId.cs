@@ -56,8 +56,10 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     S_IngredientDestroy = 335,
 
     C_IngredientPickup = 336,
+    S_IngredientPickup = 337,
 
     C_IngredientThrow = 338,
+    S_IngredientThrow = 339,
 
     C_IngredientState = 340,
     S_IngredientState = 341,
