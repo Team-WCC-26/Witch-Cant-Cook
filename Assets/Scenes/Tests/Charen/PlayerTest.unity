@@ -1192,7 +1192,7 @@ GameObject:
   m_Component:
   - component: {fileID: 624137953}
   m_Layer: 0
-  m_Name: "Player \uC0AC\uC6A9\uC2DC \uD544\uC694\uD55C \uAC83\uB4E4---------------------------"
+  m_Name: Player----------------------------------
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6047,6 +6047,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1931824737}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2076751119
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2076751120}
+  m_Layer: 0
+  m_Name: Manager------------------------------
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2076751120
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2076751119}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -4.93716, y: -1, z: -9.03818}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2089991244
 GameObject:
   m_ObjectHideFlags: 0
@@ -6149,8 +6180,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2070925442996835095}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.13052614, y: -0, z: -0, w: 0.9914449}
-  m_LocalPosition: {x: 3, y: 2.5040083, z: -2.328324}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 3, y: 1.3, z: -2.7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6236,7 +6267,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3553836231192102681, guid: 41b2329d32f205648a34403629a2c746, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4609176003335714581, guid: 41b2329d32f205648a34403629a2c746, type: 3}
       propertyPath: animatedBody
@@ -6495,8 +6526,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8944336656728804938}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.13052614, y: 0, z: 0, w: 0.9914449}
-  m_LocalPosition: {x: 3, y: 2.5040083, z: -2.328324}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3, y: 1.3, z: -2.7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6552,6 +6583,7 @@ SceneRoots:
   - {fileID: 1403381023}
   - {fileID: 695133389}
   - {fileID: 1128177628}
+  - {fileID: 2076751120}
   - {fileID: 1614636612}
   - {fileID: 1804881478}
   - {fileID: 530655017}
