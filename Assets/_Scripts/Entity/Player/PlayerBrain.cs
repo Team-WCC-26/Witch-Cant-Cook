@@ -32,6 +32,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [Header("Interaction")]
     [SerializeField] private Transform itemHoldParent = null;
+    private PlayerInteract interact;
 
     private PlayerStateResolver stateResolver = null;
     private PlayerActionController actionController = null;
@@ -51,24 +52,23 @@ public sealed class PlayerBrain : MonoBehaviour
         get => playerId;
         set => playerId = value;
     }
-
     public Camera PlayerCam => playerCamera;
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public IReadOnlyList<BodyPart> BodyParts => bodyParts;
-
     public PlayerInputHandler Input => input;
     public PlayerActionController ActionController => actionController;
     public PlayerCameraController CameraController => camController;
-
     public Animator Animator => animator;
-
+    public Transform ItemHoldParent => itemHoldParent;
+    public PlayerInteract Interact => interact;
     public PlayerStateResolver StateResolver => stateResolver;
     #endregion
 
     private void Awake()
     {
         actionController = new PlayerActionController(this);
+        interact = new PlayerInteract(this);
     }
 
     public void Initialize(string id)
