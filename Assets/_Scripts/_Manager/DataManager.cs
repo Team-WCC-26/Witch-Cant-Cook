@@ -269,25 +269,25 @@ public class DataManager : Singleton<DataManager>
         return true;
     }
 
-    // 1. 개별 바인딩 함수 (각각의 역할만 수행)
-    public void BindIngredient(List<Ingredient> data)
-    {
-        ingredient.SetData(data);
-    }
+    //// 1. 개별 바인딩 함수 (각각의 역할만 수행)
+    //public void BindIngredient(List<Ingredient> data)
+    //{
+    //    ingredient.SetData(data);
+    //}
 
-    public void BindIngredientStat(List<IngredientStat> data)
-    {
-        ingredientStat.SetData(data);
-    }
+    //public void BindIngredientStat(List<IngredientStat> data)
+    //{
+    //    ingredientStat.SetData(data);
+    //}
 
-    // 2. 일괄 처리 함수 (구글 시트 로드가 끝났을 때 한 번에 호출)
-    public void BindAllIngredientData(List<Ingredient> attributes, List<IngredientStat> stats)
-    {
-        BindIngredient(attributes);
-        BindIngredientStat(stats);
+    //// 2. 일괄 처리 함수 (구글 시트 로드가 끝났을 때 한 번에 호출)
+    //public void BindAllIngredientData(List<Ingredient> attributes, List<IngredientStat> stats)
+    //{
+    //    BindIngredient(attributes);
+    //    BindIngredientStat(stats);
 
-        Debug.Log("[DataManager] 재료 관련 모든 데이터 바인딩 완료!");
-    }
+    //    Debug.Log("[DataManager] 재료 관련 모든 데이터 바인딩 완료!");
+    //}
 
     public static T ParseEnum<T>(string value, T defaultValue) where T : struct, Enum
     {

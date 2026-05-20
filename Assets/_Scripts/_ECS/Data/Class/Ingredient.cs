@@ -4,6 +4,7 @@ public class Ingredient : IData
 {
     public int id;
     public string name;
+    public string prefabName;
     public string statID;
     public string throwing;
     public string tag;
