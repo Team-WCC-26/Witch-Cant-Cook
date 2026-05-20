@@ -14,9 +14,11 @@ namespace Server
         [SerializeField] private string _hostIP = "villainouskirby.kro.kr";
         [SerializeField] private bool _useLocalHost = false;
 
+        public WorldStateRouter Router { get; } = new();
+        public bool IsEnterRoom = false;
+
         private string _localHost = "127.0.0.1";
 
-        public bool IsEnterRoom = false;
         private TcpClient _client = new(); // 단순 Tcp가 아니라 Socket단위로 구조 수정해서 tcp/udp 모두 받을 수 있게 해야 함
         private NetworkStream _stream;
 
@@ -48,6 +50,8 @@ namespace Server
                 _ = _packetReceiver.StartAsync(_stream, _cts.Token);
             });
 
+            _packetDispatcher.Initialize();
+            Router.Initialize();
             _jobWorker.Initialize();
             _ = _jobWorker.StartProcess(_cts.Token);
         }
