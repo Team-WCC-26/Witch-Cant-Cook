@@ -90,21 +90,19 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
 
         PlayerSpawnManager.Instance.MyID = "0";
 
-        SpawnPlayerByIndex(0);
+        SpawnPlayerByIndex(0, packet.PlayerId);
 
         //방에 2명 이상일 때만 이거 실행하도록 하기.
         if (packet.PlayerCnt >= 2)
         {
-            SpawnPlayerByIndex(1);
+            SpawnPlayerByIndex(1, packet.PlayerId);
         }
 
         UIManager.Hide<LobbyRouterUI>();
     }
 
-    private void SpawnPlayerByIndex(int index)
+    private void SpawnPlayerByIndex(int index, string playerId)
     {
-        string playerId = index.ToString();
-
         if (PlayerSpawnManager.Instance.ContainsPlayer(playerId)) return;
 
         PlayerSpawnManager.Instance.SpawnPlayer(playerId);

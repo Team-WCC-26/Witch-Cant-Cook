@@ -12,6 +12,7 @@ namespace Protocol;
 [PacketId(PacketId.S_JoinRoom)]
 public partial class JoinRoomPacket
 {
+    public string PlayerId { get; set; }
     public string RoomId { get; set; }
     public string RoomPassword { get; set; }
     public int PlayerCnt { get; set; }
