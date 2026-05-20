@@ -15,13 +15,11 @@ public class PlayerInteract
     public bool IsHolding => HeldObj != null;
 
     private PacketId _pickId => PacketId.S_IngredientPickup;
-    private PacketId _throwId => PacketId.S_IngredientThrow;
 
     public PlayerInteract(PlayerBrain brain)
     {
         this.brain = brain;
         ServerManager.Instance.RegisterHandler(_pickId, OnPicked);
-        ServerManager.Instance.RegisterHandler(_throwId, OnThrown);
     }
 
     public void Handle(PlayerInteraction interaction)
@@ -80,14 +78,18 @@ public class PlayerInteract
     {
         if (!IsHolding) return;
 
-        Vector3 velocity = GetAimDirection() * GetThrowForce(HeldObj);
+        CatchableObj target = HeldObj;
+
+        Vector3 velocity = GetAimDirection() * GetThrowForce(target);
 
         IngredientThrowPacket packet = new()
         {
-            EntityId = HeldObj.EntityId,
+            EntityId = target.EntityId,
             Position = ToNumericsVector3(brain.ItemHoldParent.position),
             Velocity = ToNumericsVector3(velocity)
         };
+
+        HeldObj = null;
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
@@ -100,42 +102,13 @@ public class PlayerInteract
         if (!GameManager.Instance.catchableDics.TryGetValue(packet.EntityId, out CatchableObj target))
             return;
 
-        if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerID, out PlayerBrain owner))
-            return;
+        if (packet.PlayerID != brain.PlayerId) return;
 
         target.OnPick();
-        target.transform.SetParent(owner.ItemHoldParent, false);
+        target.transform.SetParent(brain.ItemHoldParent, false);
         target.transform.localPosition = target.HoldLocalPosition;
         target.transform.localRotation = Quaternion.Euler(target.HoldLocalEulerAngles);
-
-        if (owner == brain)
-        {
-            HeldObj = target;
-        }
-    }
-
-    private void OnThrown(ReadOnlyMemory<byte> data)
-    {
-        IngredientThrowPacket packet =
-            MemoryPackSerializer.Deserialize<IngredientThrowPacket>(data.Span);
-
-        if (!GameManager.Instance.catchableDics.TryGetValue(packet.EntityId, out CatchableObj target))
-            return;
-
-        target.transform.SetParent(null, true);
-        target.transform.position = ToUnityVector3(packet.Position);
-        target.OnThrow();
-
-        Rigidbody rb = target.Rb;
-        if (rb == null) return;
-
-        rb.linearVelocity = ToUnityVector3(packet.Velocity);
-        rb.angularVelocity = Vector3.zero;
-
-        if (HeldObj == target)
-        {
-            HeldObj = null;
-        }
+        HeldObj = target;
     }
 
     private Ray BuildInteractRay()
@@ -204,8 +177,4 @@ public class PlayerInteract
         return new System.Numerics.Vector3(value.x, value.y, value.z);
     }
 
-    private static Vector3 ToUnityVector3(System.Numerics.Vector3 value)
-    {
-        return new Vector3(value.X, value.Y, value.Z);
-    }
 }

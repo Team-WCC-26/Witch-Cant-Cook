@@ -1,8 +1,13 @@
+using MemoryPack;
+using Protocol;
+using Server;
+using System;
 using UnityEngine;
 
 public class CatchableObj : MonoBehaviour
 {
     public long EntityId { get; set; }
+    private PacketId _throwId => PacketId.S_IngredientThrow;
 
     [SerializeField] private Collider col;
     [SerializeField] private Rigidbody rb;
@@ -20,6 +25,16 @@ public class CatchableObj : MonoBehaviour
     public float ThrowForce => throwForce;
 
     public bool IsHold { get; private set; } = false;
+
+    private void OnEnable()
+    {
+        ServerManager.Instance.RegisterHandler(_throwId, OnThrowReceived);
+    }
+
+    private void OnDisable()
+    {
+        ServerManager.Instance.UnRegisterHandler(_throwId);
+    }
 
     public void OnPick()
     {
@@ -55,5 +70,33 @@ public class CatchableObj : MonoBehaviour
 
         rb.isKinematic = !enablePhysics;
         rb.useGravity = enablePhysics;
+    }
+
+    private void OnThrowReceived(ReadOnlyMemory<byte> data)
+    {
+        IngredientThrowPacket packet =
+            MemoryPackSerializer.Deserialize<IngredientThrowPacket>(data.Span);
+
+        if (packet.EntityId != EntityId) return;
+
+        ApplyThrow(packet);
+    }
+
+    private void ApplyThrow(IngredientThrowPacket packet)
+    {
+        transform.SetParent(null, true);
+        transform.position = ToUnityVector3(packet.Position);
+
+        OnThrow();
+
+        if (rb == null) return;
+
+        rb.linearVelocity = ToUnityVector3(packet.Velocity);
+        rb.angularVelocity = Vector3.zero;
+    }
+
+    private static Vector3 ToUnityVector3(System.Numerics.Vector3 value)
+    {
+        return new Vector3(value.X, value.Y, value.Z);
     }
 }
