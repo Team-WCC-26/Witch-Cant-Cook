@@ -92,7 +92,8 @@ public class RoomHandler : PacketHandlerBase
             {
                 PlayerId = session.Player.PlayerId,
                 RoomId = room.Id,
-                PlayerCnt = room.PlayerCnt
+                PlayerCnt = room.PlayerCnt,
+                OtherPlayerId = room.PlayerCnt >= 2 ? room.Players[0].PlayerId : ""
             };
 
             session.Player.Send(PacketSerializer.Serialize(joinRoomPacket, true));
