@@ -8,6 +8,8 @@ using UnityEngine;
 
 public class Ping : MonoBehaviour
 {
+    [SerializeField] private PingUI _pingUI;
+
     private PacketId _pongId => PacketId.S_Pong;
 
     private float _pingDelay = 1f;
@@ -40,7 +42,7 @@ public class Ping : MonoBehaviour
         var pongPacket = MemoryPackSerializer.Deserialize<PingPongPacket>(data.Span);
         var ping = TimeUtil.NowMs() - pongPacket.TimeMs; // 외부 UI로 연결해주면 될듯
 
-        PingUI.Instance?.UpdatePing(ping);
+        _pingUI?.UpdatePing(ping);
 
         PingResultPacket packet = new()
         {
