@@ -178,7 +178,7 @@ class LoadTester
         string key = packet.Message;
 
         // 내가 보낸 메시지만 측정
-        if (!pending.TryRemove(key, out long start))  return;
+        if (!pending.TryRemove(key, out long start)) return;
 
         long end = Stopwatch.GetTimestamp();
 

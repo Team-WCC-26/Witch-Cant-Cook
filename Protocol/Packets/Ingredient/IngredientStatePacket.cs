@@ -4,11 +4,13 @@ using System.Numerics;
 namespace Protocol;
 
 [MemoryPackable]
+[PacketId(PacketId.C_IngredientState)]
+[PacketId(PacketId.S_IngredientState)]
 public partial class IngredientStatePacket
 {
     public long EntityID { get; set; }
     public int CurrentHP { get; set; }
-    public byte State { get; set; }
+    public byte[] State { get; set; }
 }
 
 [MemoryPackable]
