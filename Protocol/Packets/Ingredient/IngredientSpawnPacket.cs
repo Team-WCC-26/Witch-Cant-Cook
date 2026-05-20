@@ -4,6 +4,7 @@ using System.Numerics;
 namespace Protocol;
 
 [MemoryPackable]
+[PacketId(PacketId.C_IngredientSpawn)]
 [PacketId(PacketId.S_IngredientSpawn)]
 public partial class IngredientSpawnPacket
 {
