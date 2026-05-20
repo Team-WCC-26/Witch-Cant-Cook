@@ -34,13 +34,15 @@ public class Room
             {
                 Tick = _tick
             };
-            packet.Players.Add(ToData(player));
+            packet.Players.Add(GetMovementData(player));
 
             foreach (var p in _players)
             {
                 if (p == player) continue;
 
-                packet.Players.Add(ToData(p));
+                packet.Pings.Add(GetPingData(p));
+                packet.Players.Add(GetMovementData(p));
+                // Room의 재료 업데이트 상태 보내기
             }
 
             player.Send(PacketSerializer.Serialize(packet, true));
@@ -121,7 +123,7 @@ public class Room
         });
     }
 
-    private PlayerMovementPacket ToData(Player player)
+    private PlayerMovementPacket GetMovementData(Player player)
     {
         PlayerMovementPacket packet = new()
         {
@@ -129,6 +131,17 @@ public class Room
             Position = player.Pos,
             Rotation = player.Rot,
             CombinedState = player.State
+        };
+
+        return packet;
+    }
+
+    private PingResultPacket GetPingData(Player player)
+    {
+        PingResultPacket packet = new()
+        {
+            PlayerId = player.PlayerId,
+            Ping = player.Ping
         };
 
         return packet;
