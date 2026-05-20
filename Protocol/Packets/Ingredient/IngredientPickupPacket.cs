@@ -5,6 +5,7 @@ namespace Protocol;
 
 [MemoryPackable]
 [PacketId(PacketId.C_IngredientPickup)]
+[PacketId(PacketId.S_IngredientPickup)]
 public partial class IngredientPickupPacket
 {
     public long EntityId { get; set; }

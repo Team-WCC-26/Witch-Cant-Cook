@@ -5,6 +5,7 @@ namespace Protocol;
 
 [MemoryPackable]
 [PacketId(PacketId.C_IngredientThrow)]
+[PacketId(PacketId.S_IngredientThrow)]
 public partial class IngredientThrowPacket
 {
     public long EntityId;

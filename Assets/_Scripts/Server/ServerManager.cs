@@ -36,6 +36,9 @@ namespace Server
         public async void Initialize()
         {
             _cts = new();
+            //_packetDispatcher.Initialize();
+            Router.Initialize();
+            _jobWorker.Initialize();
 
             string host = _useLocalHost ? _localHost : _hostIP;
 
@@ -50,9 +53,6 @@ namespace Server
                 _ = _packetReceiver.StartAsync(_stream, _cts.Token);
             });
 
-            //_packetDispatcher.Initialize();
-            //Router.Initialize();
-            _jobWorker.Initialize();
             _ = _jobWorker.StartProcess(_cts.Token);
         }
 
