@@ -5,6 +5,7 @@ using Protocol;
 using Cysharp.Threading.Tasks;
 using System.Threading;
 using System.Buffers;
+using UnityEngine;
 
 namespace Server
 {
@@ -66,6 +67,7 @@ namespace Server
                 Array.Copy(_buffer, _readPos + HEADER_SIZE, packet, 0, length);
                 var body = new ReadOnlyMemory<byte>(packet);
 
+                Debug.Log($"[Network Receive] Packet Received ID: {id}, Size: {length} bytes");
                 ServerManager.Instance.DispatchPacket((PacketId)id, body);
 
                 _readPos += length + 6;

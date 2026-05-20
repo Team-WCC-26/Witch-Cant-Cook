@@ -8,13 +8,25 @@ using UnityEngine;
 
 public class IngredientNetworkManager : MonoBehaviour
 {
-    private void OnEnable()
+    private void Start()
     {
         if (ServerManager.Instance != null)
         {
             ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSpawn, OnIngredientSpawnReceived);
+            Debug.Log("[Network] S_IngredientSpawn 핸들러가 ServerManager에 정상 등록되었습니다.");
+        }
+        else
+        {
+            Debug.LogError("[Network] ServerManager 인스턴스를 찾을 수 없어 핸들러 등록에 실패했습니다.");
         }
     }
+    //private void OnEnable()
+    //{
+    //    if (ServerManager.Instance != null)
+    //    {
+    //        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSpawn, OnIngredientSpawnReceived);
+    //    }
+    //}
 
     private void OnDisable()
     {
