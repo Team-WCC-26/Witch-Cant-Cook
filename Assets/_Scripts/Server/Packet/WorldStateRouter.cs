@@ -17,9 +17,9 @@ namespace Server
         {
             ServerManager.Instance.RegisterHandler(_worldStateId, Handle);
 
-            OnPing = null;
-            OnPlayer = null;
-            OnIngredient = null;
+            //OnPing = null;
+            //OnPlayer = null;
+            //OnIngredient = null;
         }
 
         private void Handle(ReadOnlyMemory<byte> data)
