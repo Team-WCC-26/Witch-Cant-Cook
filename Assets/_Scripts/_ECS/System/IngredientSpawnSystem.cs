@@ -19,7 +19,7 @@ public partial class IngredientSpawnSystem : SystemBase
             int reqID = request.ValueRO.IngredientID;
             long netID = request.ValueRO.NetworkID;
             Vector3 reqPos = request.ValueRO.Position;
-            Quaternion reqRot = request.ValueRO.Rotation; // 쿼터니언 꺼내기
+            Quaternion reqRot = request.ValueRO.Rotation;
 
             var ingredientRaw = DataManager.Instance.GetIngredient().Get(reqID);
             if (ingredientRaw == null)
@@ -31,7 +31,7 @@ public partial class IngredientSpawnSystem : SystemBase
 
             string targetKey = ingredientRaw.prefabName;
 
-            // 회전값(reqRot)을 적용하여 프리팹 생성 요청
+            // 프리팹 생성 요청
             var handle = Addressables.InstantiateAsync(targetKey, reqPos, reqRot);
 
             handle.Completed += (op) =>
@@ -39,7 +39,6 @@ public partial class IngredientSpawnSystem : SystemBase
                 if (op.Status == AsyncOperationStatus.Succeeded)
                 {
                     GameObject spawnedObj = op.Result;
-                    // 인젝션 함수에 회전값도 같이 전달
                     InjectECSComponents(spawnedObj, reqID, netID, reqPos, reqRot);
                 }
                 else
