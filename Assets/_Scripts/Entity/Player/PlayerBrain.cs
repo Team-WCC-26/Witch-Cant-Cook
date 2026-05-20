@@ -30,6 +30,9 @@ public sealed class PlayerBrain : MonoBehaviour
     [Header("Animated Body")]
     [SerializeField] private Animator animator = null;
 
+    [Header("Interaction")]
+    [SerializeField] private Transform itemHoldParent = null;
+
     private PlayerStateResolver stateResolver = null;
     private PlayerActionController actionController = null;
     private bool isInitialized = false;

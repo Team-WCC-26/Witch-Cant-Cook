@@ -38,7 +38,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         Vector3 position = Vector3.zero;
         Quaternion rotation = Quaternion.identity;
 
-        PlayerBrain player = Instantiate(playerPrefab, position, rotation, spawnRoot);
+        PlayerBrain player = Instantiate(playerPrefab, spawnRoot.position, spawnRoot.rotation, spawnRoot);
         player.Initialize(playerId);
         if (IsMine(playerId)) BindCamera(player); 
 

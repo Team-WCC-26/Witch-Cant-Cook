@@ -1,22 +1,25 @@
-using Unity.Entities;
+using Cysharp.Threading.Tasks;
+using Protocol;
+using Server;
 using Unity.Mathematics;
 using UnityEngine;
-// 새로운 입력 시스템 네임스페이스 추가
 using UnityEngine.InputSystem;
 
 public class GlobalSpawnManager : MonoBehaviour
 {
-    public int testIngredientID = 10100;
+    private readonly int[] ingredientIDs = { 10900, 10300, 11900, 12000, 10600 };
+    [SerializeField] private GameObject spawnPointObj;
 
     private void Update()
     {
-        // Keyboard.current를 사용하여 입력 확인
+        // F1 키: 서버에 재료 스폰 요청 생성 패킷 송신
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
-            SpawnTestIngredient();
+            int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
+            SendSpawnPacketToServer(randomID);
         }
 
-        // ESC 키로 커서 복구 (필요시)
+        // ESC 키: 마우스 커서 락 해제
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             Cursor.lockState = CursorLockMode.None;
@@ -24,22 +27,36 @@ public class GlobalSpawnManager : MonoBehaviour
         }
     }
 
-    public void SpawnTestIngredient()
+    public void SendSpawnPacketToServer(int ingredientID)
     {
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
-        GameObject spawnPointObj = GameObject.Find("SpawnPoint");
-        float3 targetPosition = spawnPointObj != null ? (float3)spawnPointObj.transform.position : float3.zero;
+        float3 targetPosition = GetSpawnPosition();
 
-        var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-        Entity requestEntity = entityManager.CreateEntity(typeof(IngredientSpawnRequest));
-
-        entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
+        var spawnPacket = new IngredientSpawnPacket
         {
-            IngredientID = testIngredientID,
-            Position = targetPosition
-        });
+            EntityId = 0, // 클라이언트의 생성 요청 0 
+            IngredientID = ingredientID,
+            Position = new System.Numerics.Vector3(targetPosition.x, targetPosition.y, targetPosition.z),
+            Quaternion = System.Numerics.Quaternion.Identity
+        };
 
-        Debug.Log($"[Test] InputSystem 감지! ID {testIngredientID} 스폰.");
+        byte[] sendBuffer = PacketSerializer.Serialize(spawnPacket);
+
+        if (ServerManager.Instance != null)
+        {
+            // 비동기로 서버에 패킷 전송
+            ServerManager.Instance.SendData(sendBuffer).Forget();
+            Debug.Log($"[Network Send] 서버로 스폰 요청 전송 완료 ID: {ingredientID}, 좌표: {targetPosition}");
+        }
+        else
+        {
+            Debug.LogError("[Network Error] ServerManager.Instance를 찾을 수 없습니다.");
+        }
+    }
+
+    private float3 GetSpawnPosition()
+    {
+        return spawnPointObj != null ? (float3)spawnPointObj.transform.position : float3.zero;
     }
 }
