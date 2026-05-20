@@ -24,6 +24,10 @@ namespace Server
 
         public async UniTaskVoid StartAsync(NetworkStream stream, CancellationToken token)
         {
+            _buffer = new byte[DEFAULT_SIZE];
+            _readPos = 0;
+            _writePos = 0;
+
             try
             {
                 while (true)
