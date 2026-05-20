@@ -40,21 +40,24 @@ public class Ping : MonoBehaviour
         var pongPacket = MemoryPackSerializer.Deserialize<PingPongPacket>(data.Span);
         var ping = TimeUtil.NowMs() - pongPacket.TimeMs; // 외부 UI로 연결해주면 될듯
 
+        PingUI.Instance?.UpdatePing(ping);
+
         PingResultPacket packet = new()
         {
             Ping = ping
         };
 
-        _ = ServerManager.Instance.SendData(MemoryPackSerializer.Serialize(packet));
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     private void SendPing()
     {
         PingPongPacket packet = new()
         {
+
             TimeMs = TimeUtil.NowMs()
         };
 
-        _ = ServerManager.Instance.SendData(MemoryPackSerializer.Serialize(packet));
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 }
