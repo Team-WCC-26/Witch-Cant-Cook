@@ -32,6 +32,8 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [Header("Interaction")]
     [SerializeField] private Transform itemHoldParent = null;
+    [SerializeField] private float interactRayStartOffset = 0.3f;
+    [SerializeField] private float interactDistance = 3.0f;
     private PlayerInteract interact;
 
     private PlayerStateResolver stateResolver = null;
@@ -61,6 +63,8 @@ public sealed class PlayerBrain : MonoBehaviour
     public PlayerCameraController CameraController => camController;
     public Animator Animator => animator;
     public Transform ItemHoldParent => itemHoldParent;
+    public float InteractRayStartOffset => interactRayStartOffset;
+    public float InteractDistance => interactDistance;
     public PlayerInteract Interact => interact;
     public PlayerStateResolver StateResolver => stateResolver;
     #endregion
@@ -104,6 +108,7 @@ public sealed class PlayerBrain : MonoBehaviour
         if (!isInitialized) return;
 
         stateResolver.UpdateTick();
+        interact.Handle(stateResolver.CurrentState.Interaction);
         actionController.UpdateTick(stateResolver.CurrentState);
     }
 

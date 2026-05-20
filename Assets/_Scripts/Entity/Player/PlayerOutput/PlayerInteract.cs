@@ -1,151 +1,156 @@
-using System.Collections;
+using System;
 using UnityEngine;
 
 public class PlayerInteract
 {
-    //[Header("Refs")]
-    //[SerializeField] private PlayerBrain brain;
+    private readonly PlayerBrain brain;
 
-    //[Header("Hand Pos")]
-    //[SerializeField] private Transform leftHandPos;
-    //[SerializeField] private Transform rightHandPos;
+    private const float DefaultThrowForce = 8.0f;
+    private const bool DebugInteraction = true;
 
-    //[Header("Interact Settings")]
-    //[SerializeField] private LayerMask interactLayer;
-    //[SerializeField] private float rayStartOffset = 0.3f;
-    //[SerializeField] private float interactDistance = 3.0f;
+    public CatchableObj HeldObj { get; private set; }
+    public bool IsHolding => HeldObj != null;
 
-    //[Header("Throw Settings")]
-    //[SerializeField] private float defaultThrowForce = 8.0f;
-    //[SerializeField] private float throwStartOffset = 2.0f;
+    public PlayerInteract(PlayerBrain brain)
+    {
+        this.brain = brain;
+    }
 
-    //public CatchableObj HeldObj { get; private set; }
-    //public bool IsHolding => HeldObj != null;
+    public void Handle(PlayerInteraction interaction)
+    {
+        DrawDebugInteractRay();
 
-    //private void Update()
-    //{
-    //    DrawDebugInteractRay();
-    //}
+        switch (interaction)
+        {
+            case PlayerInteraction.Pick:
+                DebugLog("Primary clicked. Try pick.");
+                TryPick();
+                break;
+            case PlayerInteraction.Drop:
+                DebugLog("Primary clicked. Drop held object.");
+                Drop();
+                break;
+            case PlayerInteraction.Throw:
+                DebugLog("Secondary clicked. Throw held object.");
+                Throw();
+                break;
+        }
+    }
 
-    //#region public methods
-    //public void TryPick()
-    //{
-    //    if (IsHolding) return;
+    private void TryPick()
+    {
+        if (IsHolding) return;
+        if (brain.ItemHoldParent == null) return;
 
-    //    Ray ray = BuildInteractRay();
-    //    if (!Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactLayer))
-    //        return;
+        CatchableObj obj = FindCatchable();
+        if (obj == null)
+        {
+            DebugLog("No catchable object on interact ray.");
+            return;
+        }
+        if (obj.IsHold) return;
+        if (!obj.CanBePicked) return;
 
-    //    CatchableObj obj = hit.collider.GetComponent<CatchableObj>();
-    //    if (obj == null) return;
-    //    if (obj.IsHold) return;
-    //    if (!obj.CanBePicked) return;
+        HeldObj = obj;
+        Pick();
+    }
 
-    //    HeldObj = obj;
-    //    Pick();
-    //}
+    private void Drop()
+    {
+        if (!IsHolding) return;
 
-    //public void Drop()
-    //{
-    //    if (!IsHolding) return;
+        CatchableObj target = HeldObj;
+        HeldObj = null;
 
-    //    CatchableObj target = HeldObj;
-    //    HeldObj = null;
+        target.transform.SetParent(null, true);
+        target.OnDrop();
+    }
 
-    //    target.OnDrop();
-    //    target.transform.SetParent(null, true);
+    private void Throw()
+    {
+        if (!IsHolding) return;
 
-    //    IgnoreCollisionWithPlayer(target, false);
-    //}
+        CatchableObj target = HeldObj;
+        HeldObj = null;
 
-    //public void TryThrow()
-    //{
-    //    if (!IsHolding) return;
+        target.transform.SetParent(null, true);
+        target.transform.position = brain.ItemHoldParent != null
+            ? brain.ItemHoldParent.position
+            : target.transform.position;
+        target.OnThrow();
 
-    //    CatchableObj target = HeldObj;
-    //    HeldObj = null;
+        Rigidbody targetRb = target.Rb;
+        if (targetRb == null) return;
 
-    //    target.OnThrow();
-    //    target.transform.SetParent(null, true);
+        Vector3 throwDir = GetAimDirection();
+        float throwForce = target.ThrowForce > 0.0f ? target.ThrowForce : DefaultThrowForce;
 
-    //    Transform cam = brain.PlayerCam.transform;
-    //    Vector3 throwDir = cam.forward.normalized;
-    //    target.transform.position = cam.position + throwDir * throwStartOffset;
+        targetRb.linearVelocity = Vector3.zero;
+        targetRb.angularVelocity = Vector3.zero;
+        targetRb.AddForce(throwDir * throwForce, ForceMode.Impulse);
+    }
 
-    //    Rigidbody targetRb = target.Rb;
-    //    if (targetRb == null) return;
+    private void Pick()
+    {
+        HeldObj.OnPick();
+        HeldObj.transform.SetParent(brain.ItemHoldParent, false);
+        HeldObj.transform.localPosition = HeldObj.HoldLocalPosition;
+        HeldObj.transform.localRotation = Quaternion.Euler(HeldObj.HoldLocalEulerAngles);
+    }
 
-    //    float throwForce = target.ThrowForce > 0.0f ? target.ThrowForce : defaultThrowForce;
+    private Ray BuildInteractRay()
+    {
+        Transform origin = brain.PlayerCam != null
+            ? brain.PlayerCam.transform
+            : brain.transform;
 
-    //    targetRb.linearVelocity = Vector3.zero;
-    //    targetRb.angularVelocity = Vector3.zero;
-    //    targetRb.AddForce(throwDir * throwForce, ForceMode.Impulse);
+        Vector3 start = origin.position + origin.forward * brain.InteractRayStartOffset;
+        return new Ray(start, origin.forward);
+    }
 
-    //    StartCoroutine(IgnoreCollisionDelay(target, false, 0.2f));
-    //}
-    //#endregion
+    private CatchableObj FindCatchable()
+    {
+        RaycastHit[] hits = Physics.RaycastAll(BuildInteractRay(), brain.InteractDistance);
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-    //#region interact 보조
-    //private void Pick()
-    //{
-    //    HeldObj.OnPick();
-        
-    //    IgnoreCollisionWithPlayer(HeldObj, true);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
 
-    //    HeldObj.transform.SetParent(leftHandPos, false);
-    //    HeldObj.transform.localPosition = HeldObj.HoldLocalPosition;
-    //    HeldObj.transform.localRotation = Quaternion.Euler(HeldObj.HoldLocalEulerAngles);
-    //}
+            CatchableObj obj = hitCollider.GetComponentInParent<CatchableObj>();
+            DebugLog(obj != null
+                ? $"Hit catchable object: {obj.name}"
+                : $"Hit non-catchable object: {hitCollider.name}");
 
-    //private IEnumerator IgnoreCollisionDelay(CatchableObj target, bool ignore, float delay = 1f)
-    //{
-    //    yield return new WaitForSeconds(delay);
+            return obj;
+        }
 
-    //    if (target != null) IgnoreCollisionWithPlayer(target, ignore);
-    //}
-    //#endregion
+        return null;
+    }
 
-    //#region Ray
-    //private Ray BuildInteractRay()
-    //{
-    //    Transform cam = brain.PlayerCam.transform;
+    private void DrawDebugInteractRay()
+    {
+        if (!DebugInteraction) return;
 
-    //    Vector3 start = cam.position + cam.forward * rayStartOffset;
-    //    Vector3 direction = cam.forward;
+        Ray ray = BuildInteractRay();
+        Debug.DrawLine(ray.origin, ray.origin + ray.direction * brain.InteractDistance, Color.red);
+    }
 
-    //    return new Ray(start, direction);
-    //}
+    private static void DebugLog(string message)
+    {
+        if (!DebugInteraction) return;
 
-    //private void DrawDebugInteractRay()
-    //{
-    //    Transform cam = brain.PlayerCam.transform;
+        Debug.Log($"[PlayerInteract] {message}");
+    }
 
-    //    Vector3 start = cam.position + cam.forward * rayStartOffset;
-    //    Vector3 direction = cam.forward;
+    private Vector3 GetAimDirection()
+    {
+        Transform origin = brain.PlayerCam != null
+            ? brain.PlayerCam.transform
+            : brain.transform;
 
-    //    Vector3 end = start + direction * interactDistance;
-
-    //    Debug.DrawLine(start, end, Color.red);
-    //}
-    //#endregion
-
-    //#region 기타
-    //private Vector3 GetAimDirection()
-    //{
-    //    Transform origin = brain.PlayerCam.transform;
-    //    return origin.forward.normalized;
-    //}
-
-    //private void IgnoreCollisionWithPlayer(CatchableObj target, bool ignore)
-    //{
-    //    if (brain.Col == null) return;
-
-    //    Collider[] targetCols = target.GetComponentsInChildren<Collider>();
-    //    for (int i = 0; i < targetCols.Length; i++)
-    //    {
-    //        if (targetCols[i] == null) continue;
-    //        Physics.IgnoreCollision(brain.Col, targetCols[i], ignore);
-    //    }
-    //}
-    //#endregion
+        return origin.forward.normalized;
+    }
 }
