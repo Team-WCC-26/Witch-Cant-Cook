@@ -15,6 +15,11 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_Heartbeat = 6,
     S_Heartbeat = 7,
 
+    C_Ping = 8,
+    S_Pong = 9,
+
+    C_PingResult = 10,
+
     // 인증 관련 패킷 (100~199)
     C_LoginRequest = 100,
     S_LoginResponse = 101,

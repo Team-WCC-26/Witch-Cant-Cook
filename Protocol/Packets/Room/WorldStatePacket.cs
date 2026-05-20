@@ -7,6 +7,7 @@ namespace Protocol;
 public partial class WorldStatePacket
 {
     public int Tick { get; set; }
+    public List<PingResultPacket> Pings { get; set; } = new();
     public List<PlayerMovementPacket> Players { get; set; } = new();
-    public List<IngredientSpawnPacket> Ingredients { get; set; } = new();
+    public List<IngredientMovementStatePacket> Ingredients { get; set; } = new();
 }
