@@ -10,7 +10,7 @@ public class Ping : MonoBehaviour
 {
     private PacketId _pongId => PacketId.S_Pong;
 
-    private float _pingDelay = 0.5f;
+    private float _pingDelay = 1f;
     private float _pingTimer = 0;
 
     private void OnEnable()

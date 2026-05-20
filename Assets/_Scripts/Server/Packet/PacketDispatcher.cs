@@ -18,6 +18,11 @@ namespace Server
             _packetHandlers.Remove(id);
         }
 
+        public void Initialize()
+        {
+            _packetHandlers.Clear();
+        }
+
         public void Dispatch(PacketId id, ReadOnlyMemory<byte> data)
         {
             ServerManager.Instance.PushJob(() => InvokeJob(id, data));
