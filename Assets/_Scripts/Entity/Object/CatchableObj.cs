@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class CatchableObj : MonoBehaviour
 {
+    public long EntityId { get; set; }
+
     [SerializeField] private Collider col;
     [SerializeField] private Rigidbody rb;
 

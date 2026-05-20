@@ -42,7 +42,6 @@ public sealed class PlayerBrain : MonoBehaviour
 
     //Packet Ids
     private PacketId _joinMemberID => PacketId.S_PlayerEnter;
-    private PacketId _worldStateID => PacketId.S_WorldState;
 
     //cameras
     private Camera playerCamera = null;
@@ -100,7 +99,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private void OnDisable()
     {
         ServerManager.Instance.UnRegisterHandler(_joinMemberID);
-        ServerManager.Instance.UnRegisterHandler(_worldStateID);
+        ServerManager.Instance.Router.OnPlayer -= WorldStateReceived;
     }
 
     private void Update()
