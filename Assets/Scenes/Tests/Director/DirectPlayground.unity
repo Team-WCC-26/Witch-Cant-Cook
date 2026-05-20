@@ -5675,6 +5675,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 943476076}
+  - component: {fileID: 943476078}
   - component: {fileID: 943476077}
   m_Layer: 5
   m_Name: PingUI
@@ -5712,10 +5713,23 @@ MonoBehaviour:
   m_GameObject: {fileID: 943476075}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aff2f97f8a3fa3847b5cf374e263df2d, type: 3}
+  m_Script: {fileID: 11500000, guid: 4e2952a20878c264fbfe3aa3c06ad034, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PingUI
-  pingText: {fileID: 683828566}
+  _pingText: {fileID: 683828566}
+--- !u!114 &943476078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 943476075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698644b05fc60ad4f871679248a87de2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Ping
+  _pingUI: {fileID: 943476077}
 --- !u!1001 &953193880
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11085,6 +11099,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a0d70e493bc8914b8918459f730ecdf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ping
+  _pingUI: {fileID: 0}
 --- !u!4 &1673329307
 Transform:
   m_ObjectHideFlags: 0
