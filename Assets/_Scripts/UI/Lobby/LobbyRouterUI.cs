@@ -88,7 +88,7 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
 
         //_chat.gameObject.SetActive(true);
 
-        PlayerSpawnManager.Instance.MyID = "0";
+        PlayerSpawnManager.Instance.MyID = packet.PlayerId;
 
         SpawnPlayerByIndex(0, packet.PlayerId);
 
