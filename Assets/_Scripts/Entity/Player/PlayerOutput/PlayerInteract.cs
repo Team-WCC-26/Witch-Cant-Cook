@@ -102,6 +102,7 @@ public class PlayerInteract
         if (!GameManager.Instance.catchableDics.TryGetValue(packet.EntityId, out CatchableObj target))
             return;
 
+        Debug.LogError($"packetID : {packet.PlayerID}, brainID : {brain.PlayerId}");
         if (packet.PlayerID != brain.PlayerId) return;
 
         target.OnPick();
