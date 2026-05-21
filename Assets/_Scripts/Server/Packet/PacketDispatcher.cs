@@ -10,7 +10,14 @@ namespace Server
 
         public void Register(PacketId id, Action<ReadOnlyMemory<byte>> action)
         {
-            _packetHandlers[id] = action;
+            if (_packetHandlers.ContainsKey(id))
+            {
+                _packetHandlers[id] += action;
+            }
+            else
+            {
+                _packetHandlers.Add(id, action);
+            }
         }
 
         public void UnRegister(PacketId id)
