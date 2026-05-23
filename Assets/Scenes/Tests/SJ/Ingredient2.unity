@@ -182,50 +182,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1151622320}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &35510016
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 35510017}
-  - component: {fileID: 35510018}
-  m_Layer: 0
-  m_Name: GlobalSpawnManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &35510017
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 35510016}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1528723315}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &35510018
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 35510016}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1329e1e642f6cd743a73a6e049234ac2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GlobalSpawnManager
 --- !u!1 &94664874
 GameObject:
   m_ObjectHideFlags: 0
@@ -1929,7 +1885,7 @@ GameObject:
   - component: {fileID: 797844315}
   - component: {fileID: 797844316}
   m_Layer: 0
-  m_Name: IngredientNetworkManager
+  m_Name: IngredientNetwork
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1959,9 +1915,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 797844314}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25de98baaf156eb4aa6d6d4cc1358b8d, type: 3}
+  m_Script: {fileID: 11500000, guid: f785930b4f9c943428611485ffeb018d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IngredientNetworkManager
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientNetworkBridge
+  spawnPointObj: {fileID: 456419626}
 --- !u!1 &822640154
 GameObject:
   m_ObjectHideFlags: 0
@@ -4931,7 +4888,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 797844315}
-  - {fileID: 35510017}
   - {fileID: 156782014}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
