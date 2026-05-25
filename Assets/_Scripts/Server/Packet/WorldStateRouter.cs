@@ -28,7 +28,7 @@ namespace Server
 
             OnPing?.Invoke(packet.Pings);
             OnPlayer?.Invoke(packet.Players);
-            OnIngredient?.Invoke(packet.Ingredients);
+            OnIngredient?.Invoke(packet.IngredientMovements);
         }
 
         ~WorldStateRouter()
