@@ -105,9 +105,7 @@ public class PlayerInputFSM
 
         if (pendingKeyInput == KeyInput.Secondary)
         {
-            return brain.Interact.IsHolding
-                ? PlayerInteraction.Throw
-                : PlayerInteraction.None;
+            return PlayerInteraction.Throw;
         }
 
         if (pendingKeyInput == KeyInput.Interact)

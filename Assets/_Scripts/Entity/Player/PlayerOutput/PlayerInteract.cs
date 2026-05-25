@@ -39,8 +39,12 @@ public class PlayerInteract
                 //Drop();
                 break;
             case PlayerInteraction.Throw:
-                DebugLog("Secondary clicked. Throw held object.");
-                RequestThrow();
+                DebugLog("Secondary clicked. Use held object.");
+                RequestSecondaryAction();
+                break;
+            case PlayerInteraction.Use:
+                DebugLog("Interact key pressed. Use held object.");
+                RequestUseAction();
                 break;
         }
     }
@@ -92,6 +96,78 @@ public class PlayerInteract
         HeldObj = null;
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    private void RequestSecondaryAction()
+    {
+        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+
+        switch (objType)
+        {
+            case CatchableObjType.Default:
+                //TODO : 빈손 우클릭 주먹질 처리 필요
+                RequestThrow();
+                Debug.Log("Interact : 주먹질");
+                break;
+            case CatchableObjType.Ingredient:
+                RequestThrow();
+                Debug.Log("Interact : 던지기");
+                break;
+            case CatchableObjType.Pan:
+                //TODO : 프라이팬 우클릭 휘두르기 처리 필요
+                RequestThrow();
+                Debug.Log("Interact : 프라이팬");
+                break;
+            case CatchableObjType.Knife:
+                //TODO : 칼 우클릭 휘두르기 처리 필요
+                RequestThrow();
+                Debug.Log("Interact : 칼");
+                break;
+            case CatchableObjType.Plate:
+                RequestThrow();
+                Debug.Log("Interact : 그릇");
+                break;
+            case CatchableObjType.Broom:
+                //TODO : 빗자루 우클릭 도구 행동 처리 필요
+                RequestThrow();
+                Debug.Log("Interact : 빗자루");
+                break;
+            case CatchableObjType.Bucket:
+                //TODO : 양동이 우클릭 도구 행동 처리 필요
+                RequestThrow();
+                Debug.Log("Interact : 양동이");
+                break;
+        }
+    }
+
+    private void RequestUseAction()
+    {
+        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+
+        switch (objType)
+        {
+            case CatchableObjType.Default:
+                //TODO : 빈손 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Ingredient:
+                //TODO : 재료 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Pan:
+                //TODO : 프라이팬 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Knife:
+                //TODO : 칼 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Plate:
+                //TODO : 그릇 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Broom:
+                //TODO : 빗자루 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Bucket:
+                //TODO : 양동이 F키 상호작용 처리 필요
+                break;
+        }
     }
 
     private void OnPicked(ReadOnlyMemory<byte> data)

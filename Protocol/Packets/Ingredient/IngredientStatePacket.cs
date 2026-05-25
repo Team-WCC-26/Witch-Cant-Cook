@@ -4,13 +4,46 @@ using System.Numerics;
 namespace Protocol;
 
 [MemoryPackable]
-[PacketId(PacketId.C_IngredientState)]
-[PacketId(PacketId.S_IngredientState)]
 public partial class IngredientStatePacket
 {
     public long EntityID { get; set; }
     public int CurrentHP { get; set; }
-    public byte[] State { get; set; }
+    public byte State { get; set; }
+}
+
+[MemoryPackable]
+[PacketId(PacketId.C_IngredientCut)]
+public partial class CutIngredientPacket
+{
+    public long EntityID { get; set; }
+}
+
+[MemoryPackable]
+[PacketId(PacketId.C_IngredientGrill)]
+public partial class GrillIngredientPacket
+{
+    public long EntityID { get; set; }
+}
+
+[MemoryPackable]
+[PacketId(PacketId.C_IngredientBoil)]
+public partial class BoilIngredientPacket
+{
+    public long EntityID { get; set; }
+}
+
+[MemoryPackable]
+[PacketId(PacketId.C_IngredientRoast)]
+public partial class RoastIngredientPacket
+{
+    public long EntityID { get; set; }
+}
+
+[MemoryPackable]
+[PacketId(PacketId.C_IngredientCancelGrill)]
+public partial class CancelGrillIngredientPacket
+{
+    public long EntityID { get; set; }
 }
 
 [MemoryPackable]
