@@ -9,5 +9,6 @@ public partial class WorldStatePacket
     public int Tick { get; set; }
     public List<PingResultPacket> Pings { get; set; } = new();
     public List<PlayerMovementPacket> Players { get; set; } = new();
-    public List<IngredientMovementStatePacket> Ingredients { get; set; } = new();
+    public List<IngredientStatePacket> IngredientStates { get; set; } = new();
+    public List<IngredientMovementStatePacket> IngredientMovements { get; set; } = new();
 }
