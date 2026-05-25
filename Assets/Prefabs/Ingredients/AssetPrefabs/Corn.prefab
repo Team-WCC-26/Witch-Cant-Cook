@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2274349369809703162
+--- !u!1 &389937913496221644
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,49 +8,49 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1503019334980880960}
-  - component: {fileID: 2554692772080338405}
-  - component: {fileID: 329009903539302703}
-  - component: {fileID: 2379227833340331114}
-  - component: {fileID: -8294466810255185304}
-  - component: {fileID: 3525218091698516734}
+  - component: {fileID: 1018524745069915510}
+  - component: {fileID: 4147073424668844755}
+  - component: {fileID: 2191469642156447257}
+  - component: {fileID: 4390229893110300088}
+  - component: {fileID: 5520676652034953291}
+  - component: {fileID: -3950667264815616381}
   m_Layer: 0
-  m_Name: SFM_FVC_Tomato
+  m_Name: Corn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1503019334980880960
+--- !u!4 &1018524745069915510
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2274349369809703162}
+  m_GameObject: {fileID: 389937913496221644}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0, y: 0, z: 0}
-  m_LocalScale: {x: 6, y: 6, z: 6}
+  m_LocalScale: {x: 5, y: 5, z: 5}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &2554692772080338405
+--- !u!33 &4147073424668844755
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2274349369809703162}
-  m_Mesh: {fileID: -1550271240043946642, guid: f2a76b8bb82842b41acf9ddc7eff32f9, type: 3}
---- !u!23 &329009903539302703
+  m_GameObject: {fileID: 389937913496221644}
+  m_Mesh: {fileID: -4191331470173962938, guid: 5b92ba4f31cbf8c408ce782f98ccf0f4, type: 3}
+--- !u!23 &2191469642156447257
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2274349369809703162}
+  m_GameObject: {fileID: 389937913496221644}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -93,13 +93,13 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &2379227833340331114
+--- !u!65 &4390229893110300088
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2274349369809703162}
+  m_GameObject: {fileID: 389937913496221644}
   m_Material: {fileID: 13400000, guid: 99276927dbd00e847a8a3125c1833c3e, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
@@ -112,15 +112,15 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.09863749, y: 0.0954027, z: 0.09869191}
-  m_Center: {x: 0, y: 0.04770135, z: 0}
---- !u!54 &-8294466810255185304
+  m_Size: {x: 0.06402658, y: 0.1712265, z: 0.063822635}
+  m_Center: {x: 0, y: 0.08561325, z: 0}
+--- !u!54 &5520676652034953291
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2274349369809703162}
+  m_GameObject: {fileID: 389937913496221644}
   serializedVersion: 5
   m_Mass: 1
   m_LinearDamping: 0
@@ -141,20 +141,20 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &3525218091698516734
+--- !u!114 &-3950667264815616381
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2274349369809703162}
+  m_GameObject: {fileID: 389937913496221644}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
-  col: {fileID: 2379227833340331114}
-  rb: {fileID: -8294466810255185304}
+  col: {fileID: 4390229893110300088}
+  rb: {fileID: 5520676652034953291}
   canBePicked: 1
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}

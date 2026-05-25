@@ -40,6 +40,7 @@ public class IngredientNetworkBridge : MonoBehaviour
         // F1 키: 서버에 재료 스폰 요청 생성 패킷 송신
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
+            Debug.LogWarning("[TEST] F1 키 입력 감지 - 서버에 스폰 요청 패킷 전송 시도");
             int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
             SendSpawnPacketToServer(randomID);
         }
@@ -89,6 +90,8 @@ public class IngredientNetworkBridge : MonoBehaviour
     // Server -> Client
     public void OnIngredientSpawnReceived(ReadOnlyMemory<byte> data)
     {
+        Debug.Log(World.DefaultGameObjectInjectionWorld);
+        Debug.Log("[TEST] OnIngredientSpawnReceived 호출됨");
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         var packet = MemoryPackSerializer.Deserialize<IngredientSpawnPacket>(data.Span);
@@ -96,6 +99,7 @@ public class IngredientNetworkBridge : MonoBehaviour
         // 스폰 요청 엔티티 생성
         var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
         Entity requestEntity = entityManager.CreateEntity(typeof(IngredientSpawnRequest));
+        Debug.Log($"[TEST] Request Entity 생성 완료 : {requestEntity.Index}");
 
         entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
         {

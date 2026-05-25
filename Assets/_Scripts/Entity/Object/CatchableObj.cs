@@ -54,6 +54,11 @@ public class CatchableObj : MonoBehaviour
     private void OnDisable()
     {
         ServerManager.Instance.UnRegisterHandler(_throwId);
+
+        if (ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) && registered == this)
+        {
+            ObjectPoolManager.Instance.activeObjDict.Remove(NetworkId);
+        }
     }
 
     private void OnDestroy()

@@ -1,15 +1,22 @@
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
+using Unity.Entities;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 public class ObjectPoolManager : Singleton<ObjectPoolManager>
 {
+    public Dictionary<long, UnityEngine.Object> activeObjDict = new();
     private readonly Dictionary<string, Queue<GameObject>> _poolDic = new();
 
     // 풀 관리용 루트 트랜스폼
     private Transform _poolRoot;
 
+    private void Start()
+    {
+        InitRoot();
+    }
     public void InitRoot()
     {
         if (_poolRoot == null)
@@ -37,6 +44,16 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         return go;
     }
 
+    public GameObject Pop(string key, Vector3 position, Quaternion rotation, Transform parent = null)
+    {
+        GameObject go = Pop(key, parent);
+        if (go != null)
+        {
+            go.transform.SetPositionAndRotation(position, rotation);
+        }
+        return go;
+    }
+
     public void Push(GameObject go)
     {
         if (go == null) return;
@@ -48,7 +65,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
             InitRoot(); // 반납할 때 루트가 있는지 확인
 
             go.SetActive(false);
-            go.transform.SetParent(_poolRoot); // @ObjectPool_Root 밑으로 깔끔하게 수납!
+            go.transform.SetParent(_poolRoot);
             queue.Enqueue(go);
         }
         else
@@ -74,6 +91,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         GameObject prefab = ResourceManager.Instance.GetAsset<GameObject>(key);
         if (prefab == null)
         {
+            Debug.Log($"[Pool Create] key : {key}");
             Debug.LogError($"[Pool] 리소스 매니저에 '{key}' 에셋이 로드되어 있지 않습니다.");
             return null;
         }
@@ -86,4 +104,55 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         return go;
     }
 
+    /// <summary>
+    /// 지정한 개수만큼 미리 인스턴스를 생성해서 풀에 저장한다.
+    /// </summary>
+    public void PrewarmPool(string key, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            GameObject go = CreateNewInstance(key);
+            if (go != null)
+            {
+                Push(go); // 생성 후 바로 큐에 넣음
+            }
+        }
+        Debug.Log($"[Pool] {key} 풀이 {count}개만큼 프리웜되었습니다.");
+    }
+
+    /// <summary>
+    /// 어드레서블 라벨에 해당하는 모든 프리팹을 찾아 일괄 프리웜
+    /// </summary>
+    public async UniTask PrewarmPoolByLabel(string label, int count)
+    {
+        //var handle = Addressables.LoadAssetsAsync<GameObject>(label, null);
+
+        //await handle.Task;
+
+        //if (handle.Status != UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
+        //{
+        //    Debug.LogError($"[Pool] '{label}' 라벨 프리웜 실패");
+        //    return;
+        //}
+
+        var prefabs = await ResourceManager.Instance.LoadAssetsByLabelAsync<GameObject>(label);
+        if (prefabs == null || prefabs.Count == 0)
+        {
+            Debug.LogError($"[Pool] '{label}' 라벨 프리웜 실패");
+            return;
+        }
+
+        //foreach (var prefab in handle.Result)
+        //{
+        //    PrewarmPool(prefab.name, count);
+        //}
+
+        //Addressables.Release(handle);
+        foreach (var prefab in prefabs)
+        {
+            PrewarmPool(prefab.name, count);
+        }
+
+        Debug.Log($"[Pool] '{label}' 라벨 프리웜 완료");    
+    }
 }

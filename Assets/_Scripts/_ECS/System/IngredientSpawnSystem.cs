@@ -2,10 +2,8 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
 
-[UpdateInGroup(typeof(InitializationSystemGroup))]
+//[UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class IngredientSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -16,6 +14,7 @@ public partial class IngredientSpawnSystem : SystemBase
 
         foreach (var (request, requestEntity) in SystemAPI.Query<RefRO<IngredientSpawnRequest>>().WithEntityAccess())
         {
+            Debug.Log("[TEST] SpawnRequest Query 진입");
             int reqID = request.ValueRO.IngredientID;
             long netID = request.ValueRO.NetworkID;
             Vector3 reqPos = request.ValueRO.Position;
@@ -32,15 +31,21 @@ public partial class IngredientSpawnSystem : SystemBase
             string targetKey = ingredientRaw.prefabName;
 
             // 프리팹 생성 요청
-            GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey);
+            GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey, reqPos, reqRot);
+            Debug.Log($"[TEST] Spawned Object: {spawnedObj}");
+
             if (spawnedObj != null)
             {
-                // 2. 위치 및 회전 즉시 적용
-                spawnedObj.transform.position = reqPos;
-                spawnedObj.transform.rotation = reqRot;
-
-                // 3. ECS 컴포넌트 주입 및 딕셔너리 세팅 로직 호출 (기존 코드 활용)
-                InjectECSComponents(spawnedObj, reqID, netID, reqPos, reqRot);
+                // 3. ECS 컴포넌트 주입 및 딕셔너리 세팅 로직 호출
+                InjectECSComponents(
+                ecb,
+                spawnedObj,
+                reqID,
+                netID,
+                reqPos,
+                reqRot
+            );
+                ObjectPoolManager.Instance.activeObjDict.Add(netID, spawnedObj);
             }
             else
             {
@@ -54,7 +59,7 @@ public partial class IngredientSpawnSystem : SystemBase
         ecb.Dispose();
     }
 
-    private void InjectECSComponents(GameObject spawnedObj, int ingredientID, long networkID, Vector3 position, UnityEngine.Quaternion rotation)
+    private void InjectECSComponents(EntityCommandBuffer ecb,GameObject spawnedObj, int ingredientID, long networkID, Vector3 position, UnityEngine.Quaternion rotation)
     {
         //TEST
         CatchableObj catchable = spawnedObj.GetComponent<CatchableObj>();
@@ -74,22 +79,21 @@ public partial class IngredientSpawnSystem : SystemBase
 
         if (statRaw != null)
         {
-            Entity newEntity = EntityManager.CreateEntity();
+            Entity newEntity = ecb.CreateEntity();
 
             // 기획 데이터 및 트랜스폼 설정 (위치와 회전을 동시에 설정)
-            EntityManager.AddComponentData(newEntity, new IngredientInfo { ID = ingredientRaw.id, Name = ingredientRaw.name });
-            EntityManager.AddComponentData(newEntity, new Health { Current = statRaw.hp, Max = statRaw.hp });
-            EntityManager.AddComponentData(newEntity, new IngredientPhysics { Weight = statRaw.weight, Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.parabola) });
-            EntityManager.AddComponentData(newEntity, new IngredientCombat { Damage = statRaw.damage, Tag = ingredientRaw.tag });
+            ecb.AddComponent(newEntity, new IngredientInfo { ID = ingredientRaw.id, Name = ingredientRaw.name });
+            ecb.AddComponent(newEntity, new Health { Current = statRaw.hp, Max = statRaw.hp });
+            ecb.AddComponent(newEntity, new IngredientPhysics { Weight = statRaw.weight, Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.parabola) });
+            ecb.AddComponent(newEntity, new IngredientCombat { Damage = statRaw.damage, Tag = ingredientRaw.tag });
 
             // 위치와 회전값 동시 주입
-            EntityManager.AddComponentData(newEntity, LocalTransform.FromPositionRotation(position, rotation));
-
+            ecb.AddComponent(newEntity, LocalTransform.FromPositionRotation(position, rotation));
             // 멀티플레이 식별 ID 주입
-            EntityManager.AddComponentData(newEntity, new NetworkID { Value = networkID });
+            ecb.AddComponent(newEntity, new NetworkID { Value = networkID });
 
             // 원격 동기화 초기값 세팅
-            EntityManager.AddComponentData(newEntity, new NetworkRemoteSync
+            ecb.AddComponent(newEntity, new NetworkRemoteSync
             {
                 TargetPosition = position,
                 TargetRotation = rotation,

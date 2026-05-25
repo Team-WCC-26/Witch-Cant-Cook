@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &7684211704048314985
+--- !u!1 &8605597158806646235
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,49 +8,47 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7054921224421552339}
-  - component: {fileID: 6217156531181174646}
-  - component: {fileID: 8188443133036284860}
-  - component: {fileID: 4126795806365919038}
-  - component: {fileID: -341929741550271498}
-  - component: {fileID: -2636729341739224782}
+  - component: {fileID: 8946094622287312737}
+  - component: {fileID: 5442936859518351556}
+  - component: {fileID: 7813118037886258190}
+  - component: {fileID: 119735840452378300}
   m_Layer: 0
-  m_Name: SFM_FVC_Potato
+  m_Name: Pumpkin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &7054921224421552339
+--- !u!4 &8946094622287312737
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7684211704048314985}
+  m_GameObject: {fileID: 8605597158806646235}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0, y: 0, z: 0}
-  m_LocalScale: {x: 6, y: 6, z: 6}
-  m_ConstrainProportionsScale: 1
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &6217156531181174646
+--- !u!33 &5442936859518351556
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7684211704048314985}
-  m_Mesh: {fileID: -953564686093839086, guid: daf8c0c1674aaa94abee71e202d0efc2, type: 3}
---- !u!23 &8188443133036284860
+  m_GameObject: {fileID: 8605597158806646235}
+  m_Mesh: {fileID: -7619273295840013705, guid: 047da3acea4b46a488e3a79d0b6c54f0, type: 3}
+--- !u!23 &7813118037886258190
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7684211704048314985}
+  m_GameObject: {fileID: 8605597158806646235}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -93,13 +91,13 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &4126795806365919038
+--- !u!65 &119735840452378300
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7684211704048314985}
+  m_GameObject: {fileID: 8605597158806646235}
   m_Material: {fileID: 13400000, guid: 99276927dbd00e847a8a3125c1833c3e, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
@@ -112,50 +110,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.0699569, y: 0.059161067, z: 0.102782264}
-  m_Center: {x: 0, y: 0.029580534, z: 0}
---- !u!54 &-341929741550271498
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7684211704048314985}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!114 &-2636729341739224782
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7684211704048314985}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
-  col: {fileID: 4126795806365919038}
-  rb: {fileID: -341929741550271498}
-  canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
-  throwForce: 5
+  m_Size: {x: 0.60894746, y: 0.49152732, z: 0.6152122}
+  m_Center: {x: -0.00000014901161, y: 0.24576366, z: 0}

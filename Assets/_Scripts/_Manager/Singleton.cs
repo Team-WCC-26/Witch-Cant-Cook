@@ -8,7 +8,7 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 
 
     [Tooltip("Scene 이동 시 파괴 여부")]
-    [SerializeField] protected bool isDestroyOnLoad = true;
+    [SerializeField] protected bool isDestroyOnLoad = false;
     public static bool IsInitialized = false;
 
     public static T Instance

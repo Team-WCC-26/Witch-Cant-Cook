@@ -1,8 +1,7 @@
 using Cysharp.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -18,9 +17,14 @@ public class TitleScene : MonoBehaviour
 
     [Header("Scene & Asset Settings")]
     [SerializeField] private string mainSceneName = "DirectPlayground";
-    [SerializeField] private string addressableLabelToPreload = "Ingredients";
 
     private bool isLoggingIn = false;
+
+    private readonly Dictionary<string, int> _prewarmCounts = new()
+    {
+        { "Ingredients", 50 },
+        { "Tools", 5 }
+    };
 
     void Start()
     {
@@ -39,8 +43,6 @@ public class TitleScene : MonoBehaviour
 
     void OnClickStartBTN()
     {
-        // TODO: 리소스 로드 하고 나서 씬 전환
-        
         StartGameSequence().Forget();
     }
 
@@ -50,8 +52,12 @@ public class TitleScene : MonoBehaviour
         BTN_start.interactable = false;
         loadingPanel.SetActive(true);
 
+        while (!DataManager.Instance.IsDataLoaded)
+        {
+            await UniTask.Yield();
+        }
 
-        // 1. addressable asset preload
+        // 1. addressable asset preload --------------------------------------
         bool isLoadSuccess = await ResourceManager.Instance.LoadAddressableAsync();
 
         if (!isLoadSuccess)
@@ -65,7 +71,7 @@ public class TitleScene : MonoBehaviour
             return;
         }
 
-        // 2. map scene preload
+        // 2. map scene preload --------------------------------------
         bool isSceneLoadSuccess = await LoadSceneAsync(mainSceneName);
 
         if (!isSceneLoadSuccess)
@@ -78,6 +84,15 @@ public class TitleScene : MonoBehaviour
 
             // TODO : 실패 팝업
             return;
+        }
+
+        // 3. prewarm ---------------------------------------
+        foreach (var label in ResourceManager.Instance.AddressableLabelToPreload)
+        {
+            if (_prewarmCounts.TryGetValue(label, out int count))
+            {
+                await ObjectPoolManager.Instance.PrewarmPoolByLabel(label, count);
+            }
         }
 
         isLoggingIn = false;

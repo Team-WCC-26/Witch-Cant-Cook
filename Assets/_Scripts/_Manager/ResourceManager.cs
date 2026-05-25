@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.SceneManagement;
 
 public class ResourceManager : Singleton<ResourceManager>
 {
@@ -14,11 +13,9 @@ public class ResourceManager : Singleton<ResourceManager>
     // 로드된 에셋을 관리하는 캐시 딕셔너리
     private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
 
-    // 싱글톤 혹은 필요한 곳에서 호출할 수 있도록 초기화
-    public void Init()
-    {
-        
-    }
+    [SerializeField] private List<string> addressableLabelToPreload = new List<string> { "Ingredients", "Tools" };
+    public List<string> AddressableLabelToPreload => addressableLabelToPreload;
+
     public T GetAsset<T>(string key) where T : UnityEngine.Object
     {
         if (_assetCache.TryGetValue(key, out var asset))
@@ -76,19 +73,43 @@ public class ResourceManager : Singleton<ResourceManager>
     // 1. 에셋 로드 함수
     public async UniTask<bool> LoadAddressableAsync()
     {
-        var handle = Addressables.InitializeAsync();
-        await handle.ToUniTask();
-
-        if (handle.Status == AsyncOperationStatus.Failed)
+        foreach (var label in addressableLabelToPreload)
         {
-            Debug.LogError("[ResourceManager] Addressables 로드 및 초기화 실패");
-            return false;
+            var assets = await LoadAssetsByLabelAsync<UnityEngine.GameObject>(label);
+
+            if (assets.Count == 0)
+            {
+                Debug.LogError($"[ResourceManager] Addressables 로드 실패 - Label : {label}");
+                return false;
+            }
         }
+
 
         Debug.Log("[ResourceManager] Addressables 시스템 초기화 완료");
         return true;
     }
+    public async UniTask<IList<T>> LoadAssetsByLabelAsync<T>(string label) where T : UnityEngine.Object
+    {
+        // 라벨로 모든 에셋 로드
+        var handle = Addressables.LoadAssetsAsync<T>(label, (asset) =>
+        {
+            Debug.Log($"[Cache Register] {asset.name}");
 
+            // 로드된 에셋들을 캐시에 등록 (이미 있으면 무시)
+            if (!_assetCache.ContainsKey(asset.name))
+            {
+                _assetCache[asset.name] = asset;
+            }
 
+        });
+
+        if (!_handleCache.ContainsKey(label))
+        {
+            _handleCache[label] = handle;
+        }
+        await handle.ToUniTask();
+
+        return handle.Result;
+    }
 
 }
