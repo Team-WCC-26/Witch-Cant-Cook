@@ -16,14 +16,14 @@ public enum CatchableObjType
 }
 public class CatchableObj : MonoBehaviour
 {
-    [SerializeField] private long entityId;
-    public long EntityId
+    [SerializeField] private long networkId;
+    public long NetworkId
     {
-        get => entityId;
-        set => entityId = value;
+        get => networkId;
+        set => networkId = value;
     }
 
-    
+    public CatchableData Data { get; set; }
 
     private PacketId _throwId => PacketId.S_IngredientThrow;
 
@@ -61,10 +61,10 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (GameManager.Instance == null) return;
 
-        if (GameManager.Instance.catchableDics.TryGetValue(EntityId, out CatchableObj registered) &&
+        if (GameManager.Instance.catchableDics.TryGetValue(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            GameManager.Instance.catchableDics.Remove(EntityId);
+            GameManager.Instance.catchableDics.Remove(NetworkId);
         }
     }
 
@@ -109,7 +109,7 @@ public class CatchableObj : MonoBehaviour
         IngredientThrowPacket packet =
             MemoryPackSerializer.Deserialize<IngredientThrowPacket>(data.Span);
 
-        if (packet.EntityId != EntityId) return;
+        if (packet.EntityId != NetworkId) return;
 
         ApplyThrow(packet);
     }
