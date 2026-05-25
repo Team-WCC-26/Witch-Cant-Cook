@@ -60,7 +60,7 @@ public partial class IngredientSpawnSystem : SystemBase
         CatchableObj catchable = spawnedObj.GetComponent<CatchableObj>();
         if (catchable != null)
         {
-            catchable.EntityId = networkID;
+            catchable.NetworkId = networkID;
             GameManager.Instance.catchableDics[networkID] = catchable;
         }
         else

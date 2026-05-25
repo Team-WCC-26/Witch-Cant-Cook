@@ -59,7 +59,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         var player = list[1];
 
         ApplyRemoteState(
-            ProtocolPlayerStateConverter.ToClientCombinedState(player.CombinedState)
+            ProtocolTypeConverter.ToClientCombinedState(player.CombinedState)
         );
 
         ApplyRemoteTransform(player.Position, player.Rotation);
@@ -72,8 +72,8 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
     public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Vector3 rotation)
     {
-        targetPosition = ToUnityVector3(position);
-        targetRotation = Quaternion.Euler(ToUnityVector3(rotation));
+        targetPosition = ProtocolTypeConverter.ToUnityVector3(position);
+        targetRotation = Quaternion.Euler(ProtocolTypeConverter.ToUnityVector3(rotation));
         hasRemoteTransform = true;
     }
 
@@ -88,10 +88,5 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
         positionLerpSpeed = positionSpeed;
         rotationLerpSpeed = rotationSpeed;
-    }
-
-    private static Vector3 ToUnityVector3(System.Numerics.Vector3 value)
-    {
-        return new Vector3(value.X, value.Y, value.Z);
     }
 }

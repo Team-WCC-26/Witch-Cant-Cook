@@ -253,6 +253,8 @@ public class GSpreadReader : Singleton<GSpreadReader>
             if (targetType == typeof(long)) return 0L;
             if (targetType == typeof(float)) return 0f;
             if (targetType == typeof(double)) return 0d;
+            if (targetType == typeof(ushort)) return (ushort)0;
+            if (targetType == typeof(byte)) return (byte)0;
             if (targetType == typeof(bool)) return false;
 
             if (targetType == typeof(Vector2)) return Vector2.zero;
@@ -288,6 +290,12 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
         if (targetType == typeof(long))
             return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l) ? l : 0L;
+
+        if (targetType == typeof(ushort))
+            return ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ushort us) ? us : (ushort)0;
+
+        if (targetType == typeof(byte))
+            return byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out byte b) ? b : (byte)0;
 
         if (targetType == typeof(Vector3))
             return value.ToVector3();

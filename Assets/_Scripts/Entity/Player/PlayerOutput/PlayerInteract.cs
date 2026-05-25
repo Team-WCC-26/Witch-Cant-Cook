@@ -89,8 +89,8 @@ public class PlayerInteract
         IngredientThrowPacket packet = new()
         {
             EntityId = target.EntityId,
-            Position = ToNumericsVector3(brain.ItemHoldParent.position),
-            Velocity = ToNumericsVector3(velocity)
+            Position = ProtocolTypeConverter.ToNumericsVector3(brain.ItemHoldParent.position),
+            Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
         };
 
         HeldObj = null;
@@ -247,10 +247,4 @@ public class PlayerInteract
     {
         return target.ThrowForce > 0.0f ? target.ThrowForce : DefaultThrowForce;
     }
-
-    private static System.Numerics.Vector3 ToNumericsVector3(Vector3 value)
-    {
-        return new System.Numerics.Vector3(value.x, value.y, value.z);
-    }
-
 }
