@@ -99,9 +99,9 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         PlayerMovementPacket packet = new()
         {
             PlayerId = brain.PlayerId,
-            Position = ProtocolPlayerStateConverter.ToNumericsVector3(brain.transform.position),
-            Rotation = ProtocolPlayerStateConverter.ToNumericsVector3(brain.transform.eulerAngles),
-            CombinedState = ProtocolPlayerStateConverter.ToProtocolCombinedState(CurrentState)
+            Position = ProtocolTypeConverter.ToNumericsVector3(brain.transform.position),
+            Rotation = ProtocolTypeConverter.ToNumericsVector3(brain.transform.eulerAngles),
+            CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(CurrentState)
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
