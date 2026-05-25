@@ -16,14 +16,14 @@ public enum CatchableObjType
 }
 public class CatchableObj : MonoBehaviour
 {
-    private static long nextLocalToolEntityId = -1;
-
     [SerializeField] private long entityId;
     public long EntityId
     {
         get => entityId;
         set => entityId = value;
     }
+
+    
 
     private PacketId _throwId => PacketId.S_IngredientThrow;
 
@@ -46,11 +46,6 @@ public class CatchableObj : MonoBehaviour
 
     public bool IsHold { get; private set; } = false;
 
-    private void Awake()
-    {
-        TryRegisterSceneTool();
-    }
-
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(_throwId, OnThrowReceived);
@@ -59,11 +54,6 @@ public class CatchableObj : MonoBehaviour
     private void OnDisable()
     {
         ServerManager.Instance.UnRegisterHandler(_throwId);
-    }
-
-    private void Start()
-    {
-        if (EntityId < 100) GameManager.Instance.catchableDics[EntityId] = this;
     }
 
     private void OnDestroy()
@@ -127,30 +117,13 @@ public class CatchableObj : MonoBehaviour
     private void ApplyThrow(IngredientThrowPacket packet)
     {
         transform.SetParent(null, true);
-        transform.position = ToUnityVector3(packet.Position);
+        transform.position = ProtocolTypeConverter.ToUnityVector3(packet.Position);
 
         OnThrow();
 
         if (rb == null) return;
 
-        rb.linearVelocity = ToUnityVector3(packet.Velocity);
+        rb.linearVelocity = ProtocolTypeConverter.ToUnityVector3(packet.Velocity);
         rb.angularVelocity = Vector3.zero;
-    }
-
-    private static Vector3 ToUnityVector3(System.Numerics.Vector3 value)
-    {
-        return new Vector3(value.X, value.Y, value.Z);
-    }
-
-    private void TryRegisterSceneTool()
-    {
-        if (objType == CatchableObjType.Ingredient) return;
-        if (GameManager.Instance == null) return;
-        if (EntityId == 0)
-        {
-            EntityId = nextLocalToolEntityId--;
-        }
-
-        GameManager.Instance.catchableDics[EntityId] = this;
     }
 }
