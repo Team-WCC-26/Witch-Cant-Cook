@@ -32,20 +32,20 @@ public partial class IngredientSpawnSystem : SystemBase
             string targetKey = ingredientRaw.prefabName;
 
             // 프리팹 생성 요청
-            var handle = Addressables.InstantiateAsync(targetKey, reqPos, reqRot);
-
-            handle.Completed += (op) =>
+            GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey);
+            if (spawnedObj != null)
             {
-                if (op.Status == AsyncOperationStatus.Succeeded)
-                {
-                    GameObject spawnedObj = op.Result;
-                    InjectECSComponents(spawnedObj, reqID, netID, reqPos, reqRot);
-                }
-                else
-                {
-                    Debug.LogError($"[SpawnSystem] 어드레서블 프리팹 로드 실패: {targetKey}");
-                }
-            };
+                // 2. 위치 및 회전 즉시 적용
+                spawnedObj.transform.position = reqPos;
+                spawnedObj.transform.rotation = reqRot;
+
+                // 3. ECS 컴포넌트 주입 및 딕셔너리 세팅 로직 호출 (기존 코드 활용)
+                InjectECSComponents(spawnedObj, reqID, netID, reqPos, reqRot);
+            }
+            else
+            {
+                Debug.LogError($"[SpawnSystem] 풀링 스폰 실패. 리소스가 로드되지 않았습니다: {targetKey}");
+            }
 
             ecb.DestroyEntity(requestEntity);
         }

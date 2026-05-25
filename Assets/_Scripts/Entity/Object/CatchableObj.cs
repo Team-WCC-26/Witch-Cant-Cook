@@ -59,7 +59,7 @@ public class CatchableObj : MonoBehaviour
     private void OnDestroy()
     {
         if (objType == CatchableObjType.Ingredient) return;
-        if (GameManager.Instance == null) return;
+        if (ObjectPoolManager.Instance == null) return;
 
         if (GameManager.Instance.catchableDics.TryGetValue(NetworkId, out CatchableObj registered) &&
             registered == this)

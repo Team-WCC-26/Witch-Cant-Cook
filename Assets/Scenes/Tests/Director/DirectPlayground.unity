@@ -3153,50 +3153,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &363860742
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 363860744}
-  - component: {fileID: 363860743}
-  m_Layer: 0
-  m_Name: IngredientNetworkManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &363860743
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 363860742}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25de98baaf156eb4aa6d6d4cc1358b8d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IngredientNetworkManager
---- !u!4 &363860744
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 363860742}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &390503201
 GameObject:
   m_ObjectHideFlags: 0
@@ -5856,7 +5812,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 943476076}
-  - component: {fileID: 943476078}
   - component: {fileID: 943476077}
   m_Layer: 5
   m_Name: PingUI
@@ -5898,19 +5853,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PingUI
   _pingText: {fileID: 683828566}
---- !u!114 &943476078
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 943476075}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 698644b05fc60ad4f871679248a87de2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Ping
-  _pingUI: {fileID: 943476077}
 --- !u!1001 &953193880
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8047,51 +7989,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8467564671359211363, guid: 23e270a79ecda7c4d9141b577520d962, type: 3}
   m_PrefabInstance: {fileID: 1179255890}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1225266128
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1225266130}
-  - component: {fileID: 1225266129}
-  m_Layer: 0
-  m_Name: GlobalSpawnManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1225266129
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1225266128}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1329e1e642f6cd743a73a6e049234ac2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GlobalSpawnManager
-  spawnPointObj: {fileID: 2044028448}
---- !u!4 &1225266130
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1225266128}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1.05111, y: 0.01564, z: 1.8}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1232478940
 GameObject:
   m_ObjectHideFlags: 0
@@ -11454,10 +11351,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1673329305}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a0d70e493bc8914b8918459f730ecdf, type: 3}
+  m_Script: {fileID: 11500000, guid: 698644b05fc60ad4f871679248a87de2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ping
-  _pingUI: {fileID: 0}
+  _pingUI: {fileID: 943476077}
 --- !u!4 &1673329307
 Transform:
   m_ObjectHideFlags: 0
@@ -15783,8 +15680,6 @@ SceneRoots:
   - {fileID: 1564020126}
   - {fileID: 68979395}
   - {fileID: 354768091}
-  - {fileID: 1225266130}
-  - {fileID: 363860744}
   - {fileID: 1033405974}
   - {fileID: 2049393159}
   - {fileID: 1540242324}

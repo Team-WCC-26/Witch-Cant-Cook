@@ -1,3 +1,4 @@
+using Server;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,7 +19,8 @@ public class GameManager : Singleton<GameManager>
     #region Main Methods
     public void StartGame()
     {
-        //게임 시작 버튼시 호출
+        // TODO : 게임 시작 버튼시 호출
+
     }
 
     public void InitManager<T>() where T : Singleton<T>
@@ -34,7 +36,11 @@ public class GameManager : Singleton<GameManager>
     #region Sub Methods
     private void InitBaseManagers()
     {
+        // 아직 다 추가한 것 아님
+        InitManager<ServerManager>();
         InitManager<DataManager>();
+        InitManager<ResourceManager>();
+        InitManager<ObjectPoolManager>();
         InitManager<UIManager>();
         InitManager<StageManager>();
     }

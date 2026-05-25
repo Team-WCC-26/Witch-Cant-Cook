@@ -1,70 +1,94 @@
+using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.SceneManagement;
 
 public class ResourceManager : Singleton<ResourceManager>
 {
-    // 캐싱
-    private readonly Dictionary<string, Object> resourceCache = new();
+    // 알맹이
+    private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
 
-    // Addressable 사용
-    private readonly Dictionary<string, Object> addressableCache = new();
     // 로드된 에셋을 관리하는 캐시 딕셔너리
-    private Dictionary<string, AsyncOperationHandle> _resources = new Dictionary<string, AsyncOperationHandle>();
+    private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
 
     // 싱글톤 혹은 필요한 곳에서 호출할 수 있도록 초기화
     public void Init()
     {
         
     }
-
-    // 1. 에셋 로드 함수
-    public void LoadAsync<T>(string key, System.Action<T> callback = null) where T : UnityEngine.Object
+    public T GetAsset<T>(string key) where T : UnityEngine.Object
     {
-        // 이미 캐싱되어 있다면 바로 콜백 반환
-        if (_resources.TryGetValue(key, out AsyncOperationHandle handle))
+        if (_assetCache.TryGetValue(key, out var asset))
         {
-            callback?.Invoke(handle.Result as T);
-            return;
+            return asset as T;
         }
 
-        // 어드레서블 로드 실행
-        var asyncOperation = Addressables.LoadAssetAsync<T>(key);
-        asyncOperation.Completed += (op) =>
-        {
-            if (op.Status == AsyncOperationStatus.Succeeded)
-            {
-                _resources.Add(key, op);
-                callback?.Invoke(op.Result);
-            }
-            else
-            {
-                Debug.LogError($"에셋 로드 실패: {key}");
-            }
-        };
+        Debug.Log($"[ResourceManager] Object 요청: {key}");
+        return null;
     }
 
-    // 2. 프리팹 생성 함수 (Instantiate)
-    public void InstantiateAsync(string key, System.Action<GameObject> callback = null)
+    public async UniTask<T> LoadAsync<T>(string key) where T : UnityEngine.Object
     {
-        Addressables.InstantiateAsync(key).Completed += (op) =>
+        // 1. 오브젝트 캐시에 있으면 
+        if (_assetCache.TryGetValue(key, out var cachedAsset))
         {
-            if (op.Status == AsyncOperationStatus.Succeeded)
+            return cachedAsset as T;
+        }
+
+        var asyncOperation = Addressables.LoadAssetAsync<T>(key);
+        try
+        {
+            await asyncOperation.ToUniTask();
+            if (asyncOperation.Status == AsyncOperationStatus.Succeeded)
             {
-                callback?.Invoke(op.Result);
+                // 두 dict 상태 동기화
+                _handleCache.Add(key, asyncOperation);
+                _assetCache.Add(key, asyncOperation.Result);
+
+                return asyncOperation.Result;
             }
-        };
+            return null;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ResourceManager] 에셋 로드 예외: {key} - {e.Message}");
+            return null;
+        }
     }
 
-    // 3. 에셋 해제 (Release)
     public void Release(string key)
     {
-        if (_resources.TryGetValue(key, out AsyncOperationHandle handle))
+        // 핸들 확인
+        if (_handleCache.TryGetValue(key, out AsyncOperationHandle handle))
         {
-            Addressables.Release(handle);
-            _resources.Remove(key);
-            Debug.Log($"에셋 해제 완료: {key}");
+            Addressables.Release(handle); // 어드레서블 메모리 해제
+
+            _handleCache.Remove(key);     
+            _assetCache.Remove(key);      
+
+            Debug.Log($"[ResourceManager] 에셋 캐시 및 메모리 완전 해제: {key}");
         }
     }
+
+    // 1. 에셋 로드 함수
+    public async UniTask<bool> LoadAddressableAsync()
+    {
+        var handle = Addressables.InitializeAsync();
+        await handle.ToUniTask();
+
+        if (handle.Status == AsyncOperationStatus.Failed)
+        {
+            Debug.LogError("[ResourceManager] Addressables 로드 및 초기화 실패");
+            return false;
+        }
+
+        Debug.Log("[ResourceManager] Addressables 시스템 초기화 완료");
+        return true;
+    }
+
+
+
 }
