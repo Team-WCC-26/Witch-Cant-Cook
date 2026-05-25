@@ -55,7 +55,7 @@ public class IngredientHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_IngredientState)]
+    //[PacketHandler(PacketId.C_IngredientState)]
     public static void UpdateIngredientState(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<IngredientStatePacket>(package.Body);
