@@ -60,7 +60,7 @@ public class PlayerInteract
 
         IngredientPickupPacket packet = new()
         {
-            EntityId = obj.EntityId,
+            EntityId = obj.NetworkId,
             PlayerID = brain.PlayerId
         };
 
@@ -88,7 +88,7 @@ public class PlayerInteract
 
         IngredientThrowPacket packet = new()
         {
-            EntityId = target.EntityId,
+            EntityId = target.NetworkId,
             Position = ProtocolTypeConverter.ToNumericsVector3(brain.ItemHoldParent.position),
             Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
         };
@@ -119,9 +119,17 @@ public class PlayerInteract
                 Debug.Log("Interact : 프라이팬");
                 break;
             case CatchableObjType.Knife:
-                //TODO : 칼 우클릭 휘두르기 처리 필요
-                RequestThrow();
                 Debug.Log("Interact : 칼");
+
+                //TODO : 칼 우클릭 휘두르기 모션 필요
+
+                //재료 자르기
+                CatchableObj target = FindCatchable();
+                if (target == null) break;
+                if (!target.TryGetComponent(out IngredientReaction ingredientReaction))
+                    break;
+
+                ingredientReaction.Interact(IngredientAction.Cut);
                 break;
             case CatchableObjType.Plate:
                 RequestThrow();
@@ -208,7 +216,7 @@ public class PlayerInteract
             if (hitCollider == null) continue;
             if (hitCollider.transform.IsChildOf(brain.transform)) continue;
 
-            CatchableObj obj = hitCollider.GetComponentInParent<CatchableObj>();
+            CatchableObj obj = hitCollider.GetComponent<CatchableObj>();
             DebugLog(obj != null
                 ? $"Hit catchable object: {obj.name}"
                 : $"Hit non-catchable object: {hitCollider.name}");
