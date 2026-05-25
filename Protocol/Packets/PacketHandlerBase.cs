@@ -7,6 +7,6 @@ public class PacketHandlerBase
 {
     public static T DeSerialize<T>(ReadOnlySequence<byte> buffer) where T : class
     {
-        return MemoryPackSerializer.Deserialize<T>(buffer);
+        return PacketSerializer.Deserialize<T>(buffer);
     }
 }

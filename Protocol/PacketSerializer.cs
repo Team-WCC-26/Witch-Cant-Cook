@@ -22,4 +22,24 @@ public static class PacketSerializer
 
         return ms.ToArray();
     }
+
+    public static T Deserialize<T>(byte[] buffer)
+    {
+        return MemoryPackSerializer.Deserialize<T>(buffer);
+    }
+
+    public static T Deserialize<T>(ReadOnlySpan<byte> buffer)
+    {
+        return MemoryPackSerializer.Deserialize<T>(buffer);
+    }
+
+    public static T Deserialize<T>(ReadOnlyMemory<byte> buffer)
+    {
+        return MemoryPackSerializer.Deserialize<T>(buffer.Span);
+    }
+
+    public static T Deserialize<T>(ReadOnlySequence<byte> buffer)
+    {
+        return MemoryPackSerializer.Deserialize<T>(buffer);
+    }
 }

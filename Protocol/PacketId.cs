@@ -64,6 +64,11 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_IngredientState = 340,
     S_IngredientState = 341,
 
-    // 기타 패킷 (400~)
+    S_AddDish = 401,
+
+    C_ServeDish = 402,
+    S_ServeDish = 403,
+
+    // 기타 패킷 (00~)
     // ...
 }
