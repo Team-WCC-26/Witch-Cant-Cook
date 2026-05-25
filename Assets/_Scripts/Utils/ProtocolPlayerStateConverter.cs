@@ -8,7 +8,9 @@ public static class ProtocolPlayerStateConverter
             ToClientPhysicalMode(state.PhysicalMode),
             ToUnityVector2(state.MoveDir),
             state.IsRun,
-            ToClientInteraction(state.Interaction)
+            ToClientInteraction(state.Interaction),
+            //TODO : Protocol.PlayerCombinedState에 HeldObjType 필드 추가 후 패킷 값을 변환하도록 수정 필요
+            CatchableObjType.Default
         );
     }
 
@@ -54,6 +56,7 @@ public static class ProtocolPlayerStateConverter
             ToNumericsVector2(state.MoveDir),
             state.IsRun,
             ToProtocolInteraction(state.Interaction)
+            //TODO : Protocol.PlayerCombinedState 생성자에 HeldObjType 인자 추가 후 state.HeldObjType 전달 필요
         );
     }
 

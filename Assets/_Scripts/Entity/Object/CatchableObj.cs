@@ -4,15 +4,34 @@ using Server;
 using System;
 using UnityEngine;
 
+public enum CatchableObjType
+{
+    Default,
+    Ingredient,
+    Pan,
+    Knife,
+    Plate,
+    Broom,
+    Bucket
+}
 public class CatchableObj : MonoBehaviour
 {
-    public long EntityId { get; set; }
+    private static long nextLocalToolEntityId = -1;
+
+    [SerializeField] private long entityId;
+    public long EntityId
+    {
+        get => entityId;
+        set => entityId = value;
+    }
+
     private PacketId _throwId => PacketId.S_IngredientThrow;
 
     [SerializeField] private Collider col;
     [SerializeField] private Rigidbody rb;
 
     [Header("Obj Settings")]
+    [SerializeField] private CatchableObjType objType = CatchableObjType.Ingredient;
     [SerializeField] private bool canBePicked = true;
     [SerializeField] private Vector3 holdLocalPosition = Vector3.zero;
     [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
@@ -20,11 +39,17 @@ public class CatchableObj : MonoBehaviour
 
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
+    public CatchableObjType ObjType => objType;
     public Vector3 HoldLocalPosition => holdLocalPosition;
     public Vector3 HoldLocalEulerAngles => holdLocalEulerAngles;
     public float ThrowForce => throwForce;
 
     public bool IsHold { get; private set; } = false;
+
+    private void Awake()
+    {
+        TryRegisterSceneTool();
+    }
 
     private void OnEnable()
     {
@@ -34,6 +59,23 @@ public class CatchableObj : MonoBehaviour
     private void OnDisable()
     {
         ServerManager.Instance.UnRegisterHandler(_throwId);
+    }
+
+    private void Start()
+    {
+        if (EntityId < 100) GameManager.Instance.catchableDics[EntityId] = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (objType == CatchableObjType.Ingredient) return;
+        if (GameManager.Instance == null) return;
+
+        if (GameManager.Instance.catchableDics.TryGetValue(EntityId, out CatchableObj registered) &&
+            registered == this)
+        {
+            GameManager.Instance.catchableDics.Remove(EntityId);
+        }
     }
 
     public void OnPick()
@@ -98,5 +140,17 @@ public class CatchableObj : MonoBehaviour
     private static Vector3 ToUnityVector3(System.Numerics.Vector3 value)
     {
         return new Vector3(value.X, value.Y, value.Z);
+    }
+
+    private void TryRegisterSceneTool()
+    {
+        if (objType == CatchableObjType.Ingredient) return;
+        if (GameManager.Instance == null) return;
+        if (EntityId == 0)
+        {
+            EntityId = nextLocalToolEntityId--;
+        }
+
+        GameManager.Instance.catchableDics[EntityId] = this;
     }
 }

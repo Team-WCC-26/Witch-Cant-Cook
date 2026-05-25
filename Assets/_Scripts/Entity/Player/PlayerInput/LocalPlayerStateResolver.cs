@@ -21,6 +21,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
 
         PlayerPhysicalMode physicalMode = CurrentState.PhysicalMode;
         PlayerInteraction interaction = inputFSM.CurrentInteraction;
+        CatchableObjType heldObjType = ResolveHeldObjType();
 
         Vector2 moveDir = brain.Input.RawMoveDir;
         bool isRun = brain.Input.RawIsRunning;
@@ -42,7 +43,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             physicalMode,
             moveDir,
             isRun,
-            interaction
+            interaction,
+            heldObjType
         ));
     }
 
@@ -54,6 +56,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
 
         Vector2 moveDir = CurrentState.MoveDir;
         bool isRun = CurrentState.IsRun;
+        CatchableObjType heldObjType = ResolveHeldObjType();
 
         if (physicalMode != PlayerPhysicalMode.Default)
         {
@@ -70,7 +73,9 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         SetCurrentState(new PlayerCombinedState(
             physicalMode,
             moveDir,
-            isRun
+            isRun,
+            PlayerInteraction.None,
+            heldObjType
         ));
 
         sendTimer += Time.fixedDeltaTime;
@@ -100,5 +105,12 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    private CatchableObjType ResolveHeldObjType()
+    {
+        return brain.Interact.IsHolding
+            ? brain.Interact.HeldObj.ObjType
+            : CatchableObjType.Default;
     }
 }

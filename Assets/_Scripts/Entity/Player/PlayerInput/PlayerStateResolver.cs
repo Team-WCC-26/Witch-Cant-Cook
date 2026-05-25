@@ -15,7 +15,8 @@ public class PlayerStateResolver
             PlayerPhysicalMode.Default,
             Vector2.zero,
             false,
-            PlayerInteraction.None
+            PlayerInteraction.None,
+            CatchableObjType.Default
         );
     }
 
