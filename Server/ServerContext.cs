@@ -9,8 +9,10 @@ public class ServerContext
     {
         ShardManager = new();
         RoomManager = new(ShardManager);
+        DataBase = new();
     }
 
     public RoomManager RoomManager { get; }
     public ShardManager ShardManager { get; }
+    public DataBase DataBase { get; }
 }

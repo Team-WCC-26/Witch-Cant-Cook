@@ -16,6 +16,7 @@ public partial class IngredientStatePacket
 public partial class CutIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -23,6 +24,7 @@ public partial class CutIngredientPacket
 public partial class GrillIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -30,6 +32,7 @@ public partial class GrillIngredientPacket
 public partial class BoilIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -37,6 +40,7 @@ public partial class BoilIngredientPacket
 public partial class RoastIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
