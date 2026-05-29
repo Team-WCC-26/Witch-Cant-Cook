@@ -11,7 +11,9 @@ using UnityEngine.InputSystem;
 public class IngredientNetworkBridge : MonoBehaviour
 {
     [Header("Spawn Settings")]
-    private readonly int[] ingredientIDs = { 10900, 10300, 11900, 12000, 10600 };
+    private readonly int[] ingredientIDs = { 
+        //10900, 10300, 11900, 12000, 10600, 
+        12100 };
     [SerializeField] private GameObject spawnPointObj;
 
     private void Start()
