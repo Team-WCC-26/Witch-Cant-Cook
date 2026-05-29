@@ -4,7 +4,6 @@ using SuperSocket.Server.Abstractions.Session;
 using SuperSocket.Server.Host;
 using SuperSocket.Server.Abstractions;
 using Protocol;
-using Newtonsoft.Json;
 
 namespace Server;
 
@@ -17,24 +16,7 @@ class Program
     {
         PacketDispatcher.RegisterAll();
 
-        using (HttpClient client = new())
-        {
-            string url = "https://script.google.com/macros/s/AKfycbzTL3tVHIradyC9ZqIlz5agPNYQIhtxsQUYsWCxlvweYUPtpdaZEPfMzL8budqDN-t4/exec";
-            string export = "?exportSheet=";
-            string ingredient = "Ingredient";
-            string ingredientCombination = "IngredientCombination";
-            string dish = "Recipe";
-            var DB = ServerContext.Instance.DataBase;
-
-            string json = await client.GetStringAsync(url + export + ingredient);
-            DB.Ingredients = JsonConvert.DeserializeObject<List<IngredientData>>(json).ToDictionary(x => x.Id);
-
-            json = await client.GetStringAsync(url + export + ingredientCombination);
-            DB.IngredientsCombination = JsonConvert.DeserializeObject<List<IngredientCombinationData>>(json).ToDictionary(x => x.Id);
-
-            json = await client.GetStringAsync(url + export + dish);
-            DB.DishData = JsonConvert.DeserializeObject<List<DishData>>(json).ToDictionary(x => x.Id);
-        };
+        await ServerContext.Instance.DataBase.Init();
 
         var host = SuperSocketHostBuilder
             .Create<PacketPackageInfo, PacketPipelineFilter>()

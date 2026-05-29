@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Protocol;
 
 namespace Server;
 
@@ -8,11 +9,11 @@ public class IngredientCombinationData
     public int Id;
 
     [JsonProperty("ingID")]
-    public int IngId;
+    public int ResultId;
 
     [JsonProperty("comID1")]
-    public int ComId;
+    public int IngredientId;
 
     [JsonProperty("conditionFlag")]
-    public byte ConditionFlag;
+    public IngredientState ConditionFlag;
 }

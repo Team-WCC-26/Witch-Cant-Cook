@@ -4,13 +4,18 @@ namespace Server;
 
 public class IngredientHandler : PacketHandlerBase
 {
+    public static DataBase DB => ServerContext.Instance.DataBase;
+
     [PacketHandler(PacketId.C_IngredientSpawn)]
     public static void SpawnIngredient(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<IngredientSpawnPacket>(package.Body);
         var room = session.Player.Room;
+        var ingredient = room.GenerateIngredient(packet.IngredientID);
 
-        packet.EntityId = room.GenerateEntityId();
+        packet.EntityId = ingredient.EntityId;
+        ingredient.Position = packet.Position;
+        ingredient.Rotation = packet.Quaternion;
 
         room.PushJob(() =>
         {
@@ -23,6 +28,8 @@ public class IngredientHandler : PacketHandlerBase
     {
         var packet = DeSerialize<IngredientDestroyPacket>(package.Body);
         var room = session.Player.Room;
+
+        room.DestroyIngredient(packet.EntityId);
 
         room.PushJob(() =>
         {
@@ -53,6 +60,35 @@ public class IngredientHandler : PacketHandlerBase
         {
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
+    }
+
+    [PacketHandler(PacketId.C_IngredientCut)]
+    public static void CutIngredient(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<CutIngredientPacket>(package.Body);
+        var room = session.Player.Room;
+
+        if (room.Entityes[packet.EntityID] is not Ingredient ingredient) return;
+
+        if ((DB.Ingredients[ingredient.IngredientId].ConditionFlag & IngredientState.Cut) != 0) return;
+    }
+
+    [PacketHandler(PacketId.C_IngredientGrill)]
+    public static void GrillIngredient(Session session, PacketPackageInfo package)
+    {
+        
+    }
+
+    [PacketHandler(PacketId.C_IngredientCancelGrill)]
+    public static void CancelGrillIngredient(Session session, PacketPackageInfo package)
+    {
+
+    }
+
+    [PacketHandler(PacketId.C_IngredientRoast)]
+    public static void RoastIngredient(Session session, PacketPackageInfo package)
+    {
+
     }
 
     //[PacketHandler(PacketId.C_IngredientState)]

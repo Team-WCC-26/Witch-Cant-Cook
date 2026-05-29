@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Protocol;
 
 namespace Server;
 
@@ -17,5 +18,5 @@ public class DishData
     public string StatId;
 
     [JsonProperty("conditionFlag")]
-    public byte ConditionFlag;
+    public IngredientState ConditionFlag;
 }

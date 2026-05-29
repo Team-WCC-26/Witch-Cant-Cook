@@ -4,15 +4,18 @@ using System.Numerics;
 
 namespace Server;
 
-public class Player
+public class Player : Entity
 {
+    public Player() : base(-1)
+    {
+
+    }
+
     public string PlayerId { get; set; }
     public IAppSession Session { get; set; }
     public float LastPingTime { get; set; }
     public float Ping { get; set; }
     public Room? Room { get; set; }
-    public Vector3 Pos { get; set; }
-    public Vector3 Rot { get; set; }
     public PlayerCombinedState State { get; set; }
 
     public ValueTask Send(ReadOnlyMemory<byte> packet)

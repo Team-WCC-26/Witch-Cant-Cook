@@ -9,7 +9,7 @@ public partial class PlayerMovementPacket
 {
     public string? PlayerId { get; set; }
     public Vector3 Position { get; set; }
-    public Vector3 Rotation { get; set; }
+    public Quaternion Rotation { get; set; }
     public PlayerCombinedState CombinedState { get; set; }
 }
 

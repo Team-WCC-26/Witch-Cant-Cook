@@ -8,7 +8,7 @@ public partial class IngredientStatePacket
 {
     public long EntityID { get; set; }
     public int CurrentHP { get; set; }
-    public byte State { get; set; }
+    public IngredientState State { get; set; }
 }
 
 [MemoryPackable]
@@ -58,6 +58,16 @@ public partial class IngredientMovementStatePacket
     public Quaternion Rotation { get; set; }
     public Vector3 Velocity { get; set; }
     public IngredientMovementState State { get; set; }
+}
+
+[Flags]
+public enum IngredientState : byte
+{
+    None = 0,
+    Cut = 1 << 0,
+    Fried = 1 << 1,
+    Boiled = 1 << 2,
+    Burned = 1 << 3
 }
 
 public enum IngredientMovementState
