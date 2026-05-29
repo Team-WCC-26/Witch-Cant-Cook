@@ -49,6 +49,7 @@ public class CatchableObj : MonoBehaviour
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(_throwId, OnThrowReceived);
+        ResetObj();
     }
 
     private void OnDisable()
@@ -73,6 +74,10 @@ public class CatchableObj : MonoBehaviour
         }
     }
 
+    private void ResetObj()
+    {
+        canBePicked = true;
+    }
     public void OnPick()
     {
         IsHold = true;
@@ -107,6 +112,11 @@ public class CatchableObj : MonoBehaviour
 
         rb.isKinematic = !enablePhysics;
         rb.useGravity = enablePhysics;
+    }
+
+    public void ChangePickState(bool isPick)
+    {
+        canBePicked = isPick;
     }
 
     private void OnThrowReceived(ReadOnlyMemory<byte> data)
