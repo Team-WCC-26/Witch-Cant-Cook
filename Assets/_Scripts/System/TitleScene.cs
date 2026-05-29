@@ -18,25 +18,30 @@ public class TitleScene : MonoBehaviour
     [Header("Scene & Asset Settings")]
     [SerializeField] private string mainSceneName = "DirectPlayground";
 
-    private bool isLoggingIn = false;
-
-    private readonly Dictionary<string, int> _prewarmCounts = new()
+    /// <summary>
+    /// Pool prewarm 대상 - 임시
+    /// Key = Addressable Key
+    /// Value = 생성 개수
+    /// </summary>
+    private readonly Dictionary<string, int> _prewarmTargets = new()
     {
         { "Ingredients", 50 },
         { "Tools", 5 }
     };
 
+    private bool isLoading = false;
+
     void Start()
     {
         BTN_start.onClick.AddListener(OnClickStartBTN);
+
         loadingPanel.SetActive(false);
     }
 
     private void Update()
     {
-        if (isLoggingIn && spinner != null)
+        if (isLoading && spinner != null)
         {
-            // 이거 왜 돌다가 말까..
             spinner.Rotate(0, 0, -rotateSpeed * Time.deltaTime);
         }
     }
@@ -48,37 +53,21 @@ public class TitleScene : MonoBehaviour
 
     private async UniTaskVoid StartGameSequence()
     {
-        isLoggingIn = true;
+        isLoading = true;
         BTN_start.interactable = false;
         loadingPanel.SetActive(true);
 
-        while (!DataManager.Instance.IsDataLoaded)
-        {
-            await UniTask.Yield();
-        }
+        await UniTask.WaitUntil(() => DataManager.Instance.IsDataLoaded);
 
-        // 1. addressable asset preload --------------------------------------
-        bool isLoadSuccess = await ResourceManager.Instance.LoadAddressableAsync();
 
-        if (!isLoadSuccess)
-        {
-            Debug.LogError("[Preload Error] 어드레서블 다운로드 실패");
-            isLoggingIn = false;
-            BTN_start.interactable = true;
-            loadingPanel.SetActive(false);
-
-            // TODO : 다운로드 실패 안내 팝업 띄울듯
-            return;
-        }
-
-        // 2. map scene preload --------------------------------------
+        // 1. map scene preload --------------------------------------
         bool isSceneLoadSuccess = await LoadSceneAsync(mainSceneName);
 
         if (!isSceneLoadSuccess)
         {
             Debug.LogError("[Preload Error] 씬 로드 실패");
 
-            isLoggingIn = false;
+            isLoading = false;
             BTN_start.interactable = true;
             loadingPanel.SetActive(false);
 
@@ -87,18 +76,23 @@ public class TitleScene : MonoBehaviour
         }
 
         // 3. prewarm ---------------------------------------
-        foreach (var label in ResourceManager.Instance.AddressableLabelToPreload)
+        foreach (var pair in _prewarmTargets)
         {
-            if (_prewarmCounts.TryGetValue(label, out int count))
-            {
-                await ObjectPoolManager.Instance.PrewarmPoolByLabel(label, count);
-            }
+            string key = pair.Key;
+            int count = pair.Value;
+
+            ObjectPoolManager.Instance.PrewarmPool(key, count);
         }
 
-        isLoggingIn = false;
+        isLoading = false;
     }
-
     // 어디다 둘지 몰라서 일단 여기다 둠..
+
+    /// <summary>
+    /// Scene 비동기 로드 
+    /// </summary>
+    /// <param name="sceneName"></param>
+    /// <returns></returns>
     public async UniTask<bool> LoadSceneAsync(string sceneName)
     {
         AsyncOperation loadOp = SceneManager.LoadSceneAsync(sceneName);

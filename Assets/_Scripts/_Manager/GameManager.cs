@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using Server;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,13 +7,16 @@ public class GameManager : Singleton<GameManager>
 {
     public Dictionary<long, CatchableObj> catchableDics = new();
 
-    public readonly string mainSceneName = "MainStage";
-
     #region Unity Life Cycles
     protected override void Awake()
     {
         base.Awake();
         InitBaseManagers();
+    }
+
+    private async void Start()
+    {
+        await ResourceManager.Instance.Init();
     }
     #endregion
 

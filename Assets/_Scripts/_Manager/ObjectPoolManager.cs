@@ -120,39 +120,4 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         Debug.Log($"[Pool] {key} 풀이 {count}개만큼 프리웜되었습니다.");
     }
 
-    /// <summary>
-    /// 어드레서블 라벨에 해당하는 모든 프리팹을 찾아 일괄 프리웜
-    /// </summary>
-    public async UniTask PrewarmPoolByLabel(string label, int count)
-    {
-        //var handle = Addressables.LoadAssetsAsync<GameObject>(label, null);
-
-        //await handle.Task;
-
-        //if (handle.Status != UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
-        //{
-        //    Debug.LogError($"[Pool] '{label}' 라벨 프리웜 실패");
-        //    return;
-        //}
-
-        var prefabs = await ResourceManager.Instance.LoadAssetsByLabelAsync<GameObject>(label);
-        if (prefabs == null || prefabs.Count == 0)
-        {
-            Debug.LogError($"[Pool] '{label}' 라벨 프리웜 실패");
-            return;
-        }
-
-        //foreach (var prefab in handle.Result)
-        //{
-        //    PrewarmPool(prefab.name, count);
-        //}
-
-        //Addressables.Release(handle);
-        foreach (var prefab in prefabs)
-        {
-            PrewarmPool(prefab.name, count);
-        }
-
-        Debug.Log($"[Pool] '{label}' 라벨 프리웜 완료");    
-    }
 }
