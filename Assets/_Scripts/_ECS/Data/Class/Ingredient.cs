@@ -2,7 +2,7 @@ using System;
 
 public class Ingredient : CatchableData
 {
-    public string statID;
+    public int statID;
     public string throwing;
     public string tag;
     public byte conditionFlag;

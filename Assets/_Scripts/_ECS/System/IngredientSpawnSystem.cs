@@ -74,7 +74,7 @@ public partial class IngredientSpawnSystem : SystemBase
         }
 
         var ingredientRaw = DataManager.Instance.GetIngredient().Get(ingredientID);
-        var statId = int.Parse(ingredientRaw.statID);
+        var statId = ingredientRaw.statID;
         var statRaw = DataManager.Instance.GetIngredientStat().Get(statId);
 
         if (statRaw != null)
