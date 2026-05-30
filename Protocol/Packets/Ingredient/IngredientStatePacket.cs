@@ -65,9 +65,9 @@ public enum IngredientState : byte
 {
     None = 0,
     Cut = 1 << 0,
-    Fried = 1 << 1,
+    Grilled = 1 << 1,
     Boiled = 1 << 2,
-    Burned = 1 << 3
+    Roasted = 1 << 3
 }
 
 public enum IngredientMovementState
