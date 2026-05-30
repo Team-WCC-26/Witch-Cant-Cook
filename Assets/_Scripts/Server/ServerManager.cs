@@ -12,7 +12,7 @@ namespace Server
     public class ServerManager : Singleton<ServerManager>
     {
         [SerializeField] private string _hostIP = "villainouskirby.kro.kr";
-        [SerializeField] private bool _useLocalHost = false;
+        [SerializeField] private bool _useLocalHost = true;
 
         public WorldStateRouter Router { get; } = new();
         public bool IsEnterRoom = false;

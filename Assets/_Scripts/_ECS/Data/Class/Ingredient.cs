@@ -1,15 +1,11 @@
 using System;
 
-public class Ingredient : IData
+public class Ingredient : CatchableData
 {
-    public int id;
-    public string name;
-    public string prefabName;
-    public string statID;
+    public int statID;
     public string throwing;
     public string tag;
-    public string exp;
+    public byte conditionFlag;
 
-    public int GetKey() => id;
-    public Ingredient() { } 
+    public Ingredient() : base() { } 
 }

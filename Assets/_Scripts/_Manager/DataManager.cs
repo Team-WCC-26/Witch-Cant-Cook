@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Events;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 public class DataManager : Singleton<DataManager>
 {
@@ -269,26 +271,6 @@ public class DataManager : Singleton<DataManager>
         return true;
     }
 
-    //// 1. 개별 바인딩 함수 (각각의 역할만 수행)
-    //public void BindIngredient(List<Ingredient> data)
-    //{
-    //    ingredient.SetData(data);
-    //}
-
-    //public void BindIngredientStat(List<IngredientStat> data)
-    //{
-    //    ingredientStat.SetData(data);
-    //}
-
-    //// 2. 일괄 처리 함수 (구글 시트 로드가 끝났을 때 한 번에 호출)
-    //public void BindAllIngredientData(List<Ingredient> attributes, List<IngredientStat> stats)
-    //{
-    //    BindIngredient(attributes);
-    //    BindIngredientStat(stats);
-
-    //    Debug.Log("[DataManager] 재료 관련 모든 데이터 바인딩 완료!");
-    //}
-
     public static T ParseEnum<T>(string value, T defaultValue) where T : struct, Enum
     {
         if (string.IsNullOrEmpty(value))
@@ -304,4 +286,5 @@ public class DataManager : Singleton<DataManager>
         Debug.LogWarning($"[EnumParse] '{value}'는 {typeof(T).Name}에 정의되지 않은 값입니다. 기본값({defaultValue})으로 설정합니다.");
         return defaultValue;
     }
+
 }
