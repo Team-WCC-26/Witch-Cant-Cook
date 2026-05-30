@@ -22,8 +22,17 @@ public sealed class PlayerCameraController : MonoBehaviour
     private float yawDeg = 0f;
     private float pitchDeg = 0f;
 
+    private static bool isCursorApplied = false;
+
     private void Awake()
     {
+        bool isMine = PlayerSpawnManager.Instance.IsMine(brain.PlayerId);
+        if (!isMine) 
+        {
+            enabled = false;
+            return;
+        }
+
         if (brain == null && !TryGetComponent(out brain))
         {
             Debug.LogWarning("PlayerBrain is not assigned.");
@@ -86,6 +95,14 @@ public sealed class PlayerCameraController : MonoBehaviour
         pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
     }
 
+    private void OnApplicationFocus(bool focus)
+    {
+        if (isCursorApplied)
+        {
+            ApplyCursor(focus);
+        }
+    }
+
     private static float NormalizeAngle(float euler)
     {
         float value = euler;
@@ -101,5 +118,6 @@ public sealed class PlayerCameraController : MonoBehaviour
     {
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !locked;
+        isCursorApplied = locked;
     }
 }
