@@ -8,7 +8,7 @@ public partial class IngredientStatePacket
 {
     public long EntityID { get; set; }
     public int CurrentHP { get; set; }
-    public byte State { get; set; }
+    public IngredientState State { get; set; }
 }
 
 [MemoryPackable]
@@ -16,6 +16,7 @@ public partial class IngredientStatePacket
 public partial class CutIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -23,6 +24,7 @@ public partial class CutIngredientPacket
 public partial class GrillIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -30,6 +32,7 @@ public partial class GrillIngredientPacket
 public partial class BoilIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -37,6 +40,7 @@ public partial class BoilIngredientPacket
 public partial class RoastIngredientPacket
 {
     public long EntityID { get; set; }
+    public string PlayerID { get; set; }
 }
 
 [MemoryPackable]
@@ -54,6 +58,16 @@ public partial class IngredientMovementStatePacket
     public Quaternion Rotation { get; set; }
     public Vector3 Velocity { get; set; }
     public IngredientMovementState State { get; set; }
+}
+
+[Flags]
+public enum IngredientState : byte
+{
+    None = 0,
+    Cut = 1 << 0,
+    Grilled = 1 << 1,
+    Boiled = 1 << 2,
+    Roasted = 1 << 3
 }
 
 public enum IngredientMovementState

@@ -25,7 +25,7 @@ public class CatchableObj : MonoBehaviour
 
     public CatchableData Data { get; set; }
 
-    private PacketId _throwId => PacketId.S_IngredientThrow;
+    private PacketId _throwId => PacketId.S_EntityThrow;
 
     [SerializeField] private Collider col;
     [SerializeField] private Rigidbody rb;
@@ -121,15 +121,15 @@ public class CatchableObj : MonoBehaviour
 
     private void OnThrowReceived(ReadOnlyMemory<byte> data)
     {
-        IngredientThrowPacket packet =
-            MemoryPackSerializer.Deserialize<IngredientThrowPacket>(data.Span);
+        EntityThrowPacket packet =
+            PacketSerializer.Deserialize<EntityThrowPacket>(data.Span);
 
         if (packet.EntityId != NetworkId) return;
 
         ApplyThrow(packet);
     }
 
-    private void ApplyThrow(IngredientThrowPacket packet)
+    private void ApplyThrow(EntityThrowPacket packet)
     {
         transform.SetParent(null, true);
         transform.position = ProtocolTypeConverter.ToUnityVector3(packet.Position);

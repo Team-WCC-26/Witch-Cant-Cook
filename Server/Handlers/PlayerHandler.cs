@@ -9,8 +9,8 @@ public class PlayerHandler : PacketHandlerBase
     {
         var packet = DeSerialize<PlayerMovementPacket>(package.Body);
 
-        session.Player.Pos = packet.Position;
-        session.Player.Rot = packet.Rotation;
+        session.Player.Position = packet.Position;
+        session.Player.Rotation = packet.Rotation;
         session.Player.State = packet.CombinedState;
     }
 }

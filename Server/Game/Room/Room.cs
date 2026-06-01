@@ -12,6 +12,9 @@ public class Room
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
 
+    public IReadOnlyDictionary<long, Entity> Entityes => _entities;
+    private readonly Dictionary<long, Entity> _entities = new();
+
     public int PlayerCnt => _playerCnt;
     private int _playerCnt = 0;
     private int _tick = 0;
@@ -71,9 +74,25 @@ public class Room
         return _shard;
     }
 
-    public long GenerateEntityId()
+    public Ingredient GenerateIngredient(int id)
     {
-        return Interlocked.Increment(ref _nextEntityId);
+        Ingredient ingredient = new(GenerateEntityId(), id);
+
+        _entities[ingredient.EntityId] = ingredient;
+
+        return ingredient;
+    }
+
+    public void DestroyIngredient(long id)
+    {
+        _entities.Remove(id);
+    }
+
+    private long GenerateEntityId()
+    {
+        long newId = Interlocked.Increment(ref _nextEntityId);
+
+        return newId;
     }
 
     /// <summary>
@@ -135,8 +154,8 @@ public class Room
         PlayerMovementPacket packet = new()
         {
             PlayerId = player.PlayerId,
-            Position = player.Pos,
-            Rotation = player.Rot,
+            Position = player.Position,
+            Rotation = player.Rotation,
             CombinedState = player.State
         };
 

@@ -99,8 +99,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         PlayerMovementPacket packet = new()
         {
             PlayerId = brain.PlayerId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(brain.transform.position),
-            Rotation = ProtocolTypeConverter.ToNumericsVector3(brain.transform.eulerAngles),
+            Position = DataConverter.UnityToNumerics(brain.transform.position),
+            Rotation = DataConverter.UnityToNumerics(brain.transform.rotation),
             CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(CurrentState)
         };
 

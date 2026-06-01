@@ -4,7 +4,6 @@ using SuperSocket.Server.Abstractions.Session;
 using SuperSocket.Server.Host;
 using SuperSocket.Server.Abstractions;
 using Protocol;
-using SuperSocket.Server;
 
 namespace Server;
 
@@ -16,6 +15,8 @@ class Program
     static async Task Main(string[] args)
     {
         PacketDispatcher.RegisterAll();
+
+        await ServerContext.Instance.DataBase.Init();
 
         var host = SuperSocketHostBuilder
             .Create<PacketPackageInfo, PacketPipelineFilter>()
@@ -64,7 +65,7 @@ class Program
 
         thread.IsBackground = true;
         thread.Start();
-        
+
         await host.RunAsync();
     }
 }

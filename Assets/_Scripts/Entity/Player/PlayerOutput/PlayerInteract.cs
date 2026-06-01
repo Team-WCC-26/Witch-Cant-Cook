@@ -14,7 +14,7 @@ public class PlayerInteract
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
 
-    private PacketId _pickId => PacketId.S_IngredientPickup;
+    private PacketId _pickId => PacketId.S_EntityPickup;
 
     public PlayerInteract(PlayerBrain brain)
     {
@@ -58,7 +58,7 @@ public class PlayerInteract
         if (obj.IsHold) return;
         if (!obj.CanBePicked) return;
 
-        IngredientPickupPacket packet = new()
+        EntityPickupPacket packet = new()
         {
             EntityId = obj.NetworkId,
             PlayerID = brain.PlayerId
@@ -86,7 +86,7 @@ public class PlayerInteract
 
         Vector3 velocity = GetAimDirection() * GetThrowForce(target);
 
-        IngredientThrowPacket packet = new()
+        EntityThrowPacket packet = new()
         {
             EntityId = target.NetworkId,
             Position = ProtocolTypeConverter.ToNumericsVector3(brain.ItemHoldParent.position),
@@ -180,8 +180,8 @@ public class PlayerInteract
 
     private void OnPicked(ReadOnlyMemory<byte> data)
     {
-        IngredientPickupPacket packet =
-            MemoryPackSerializer.Deserialize<IngredientPickupPacket>(data.Span);
+        EntityPickupPacket packet =
+            PacketSerializer.Deserialize<EntityPickupPacket>(data.Span);
 
         if (!GameManager.Instance.catchableDics.TryGetValue(packet.EntityId, out CatchableObj target))
             return;
