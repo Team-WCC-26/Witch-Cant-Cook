@@ -72,8 +72,15 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
     public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Vector3 rotation)
     {
-        targetPosition = ProtocolTypeConverter.ToUnityVector3(position);
+        targetPosition = DataConverter.NumericsToUnity(position);
         targetRotation = Quaternion.Euler(ProtocolTypeConverter.ToUnityVector3(rotation));
+        hasRemoteTransform = true;
+    }
+
+    public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Quaternion rotation)
+    {
+        targetPosition = DataConverter.NumericsToUnity(position);
+        targetRotation = DataConverter.NumericsToUnity(rotation);
         hasRemoteTransform = true;
     }
 

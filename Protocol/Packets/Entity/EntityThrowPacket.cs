@@ -4,9 +4,9 @@ using System.Numerics;
 namespace Protocol;
 
 [MemoryPackable]
-[PacketId(PacketId.C_IngredientThrow)]
-[PacketId(PacketId.S_IngredientThrow)]
-public partial class IngredientThrowPacket
+[PacketId(PacketId.C_EntityThrow)]
+[PacketId(PacketId.S_EntityThrow)]
+public partial class EntityThrowPacket
 {
     public long EntityId;
     public Vector3 Position;
