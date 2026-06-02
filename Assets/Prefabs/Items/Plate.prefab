@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 5269289123558471248}
   - component: {fileID: 2856905927471024075}
   - component: {fileID: 7490860222993719298}
+  - component: {fileID: 4484934115489188919}
   m_Layer: 7
   m_Name: Plate
   m_TagString: Untagged
@@ -29,7 +30,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3164666988225984397}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.69811785, z: -0, w: 0.7159829}
+  m_LocalRotation: {x: 0, y: -0.6981154, z: 0, w: 0.71598524}
   m_LocalPosition: {x: 41.183243, y: 0.577, z: -27.982166}
   m_LocalScale: {x: 2.7, y: 2.7, z: 2.7}
   m_ConstrainProportionsScale: 1
@@ -153,6 +154,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  networkId: 0
   col: {fileID: 5269289123558471248}
   rb: {fileID: 2856905927471024075}
   objType: 4
@@ -160,3 +162,15 @@ MonoBehaviour:
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
+--- !u!114 &4484934115489188919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3164666988225984397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 681e2d1071740c34d8dfbee8a364a5f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlateInteraction
