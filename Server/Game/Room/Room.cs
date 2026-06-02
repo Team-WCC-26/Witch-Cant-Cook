@@ -83,6 +83,15 @@ public class Room
         return ingredient;
     }
 
+    public Tool GenerateTool(int id)
+    {
+        Tool tool = new(GenerateEntityId(), id);
+
+        _entities[tool.EntityId] = tool;
+
+        return tool;
+    }
+
     public void DestroyIngredient(long id)
     {
         _entities.Remove(id);

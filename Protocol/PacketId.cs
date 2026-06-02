@@ -49,14 +49,17 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_PlayerMove = 302,
 
-    C_EntityDestroy = 330,
-    S_EntityDestroy = 331,
+    C_EntityRegister = 330,
+    S_EntityRegister = 331,
 
-    C_EntityPickup = 332,
-    S_EntityPickup = 333,
+    C_EntityDestroy = 332,
+    S_EntityDestroy = 333,
 
-    C_EntityThrow = 334,
-    S_EntityThrow = 335,
+    C_EntityPickup = 334,
+    S_EntityPickup = 335,
+
+    C_EntityThrow = 336,
+    S_EntityThrow = 337,
 
     C_IngredientSpawn = 340,
     S_IngredientSpawn = 341,
@@ -73,6 +76,9 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_IngredientCombine = 352,
     S_IngredientCombine = 353,
+
+    C_ToolSpawn = 370,
+    S_ToolSpawn = 371,
 
     S_AddDish = 401,
 
