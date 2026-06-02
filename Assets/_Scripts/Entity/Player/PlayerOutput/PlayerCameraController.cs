@@ -22,17 +22,10 @@ public sealed class PlayerCameraController : MonoBehaviour
     private float yawDeg = 0f;
     private float pitchDeg = 0f;
 
-    private static bool isCursorApplied = false;
+    private bool canControlCursor = false;
 
     private void Awake()
     {
-        bool isMine = PlayerSpawnManager.Instance.IsMine(brain.PlayerId);
-        if (!isMine) 
-        {
-            enabled = false;
-            return;
-        }
-
         if (brain == null && !TryGetComponent(out brain))
         {
             Debug.LogWarning("PlayerBrain is not assigned.");
@@ -64,12 +57,41 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!canControlCursor)
+        {
+            return;
+        }
+
         ApplyCursor(lockCursor);
     }
 
     private void OnDisable()
     {
+        if (!canControlCursor)
+        {
+            return;
+        }
+
         ApplyCursor(false);
+    }
+
+    public void SetLocalControlActive(bool isActive)
+    {
+        if (!isActive)
+        {
+            if (canControlCursor)
+            {
+                ApplyCursor(false);
+            }
+
+            canControlCursor = false;
+            enabled = false;
+            return;
+        }
+
+        canControlCursor = true;
+        enabled = true;
+        ApplyCursor(lockCursor);
     }
 
     private void Update()
@@ -97,9 +119,9 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void OnApplicationFocus(bool focus)
     {
-        if (isCursorApplied)
+        if (canControlCursor)
         {
-            ApplyCursor(focus);
+            ApplyCursor(focus && lockCursor);
         }
     }
 
@@ -118,6 +140,5 @@ public sealed class PlayerCameraController : MonoBehaviour
     {
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !locked;
-        isCursorApplied = locked;
     }
 }

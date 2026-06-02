@@ -142,7 +142,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
         if (camController != null)
         {
-            camController.enabled = isMine;
+            camController.SetLocalControlActive(isMine);
         }
     }
 }
