@@ -40,9 +40,6 @@ public sealed class PlayerBrain : MonoBehaviour
     private PlayerActionController actionController = null;
     private bool isInitialized = false;
 
-    //Packet Ids
-    private PacketId _joinMemberID => PacketId.S_PlayerEnter;
-
     //cameras
     private Camera playerCamera = null;
     private CinemachineCamera virtualCamera = null;
@@ -90,18 +87,6 @@ public sealed class PlayerBrain : MonoBehaviour
         isInitialized = true;
     }
 
-    private void OnEnable()
-    {
-        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
-        ServerManager.Instance.Router.OnPlayer += WorldStateReceived;
-    }
-
-    private void OnDisable()
-    {
-        ServerManager.Instance.UnRegisterHandler(_joinMemberID);
-        ServerManager.Instance.Router.OnPlayer -= WorldStateReceived;
-    }
-
     private void Update()
     {
         if (!isInitialized) return;
@@ -141,24 +126,6 @@ public sealed class PlayerBrain : MonoBehaviour
         virtualCamera = virtualCam;
         virtualCamera.Target.TrackingTarget = cameraFollowTarget;
         virtualCamera.Target.LookAtTarget = cameraLookAtTarget;
-    }
-
-    private void MemberJoined(ReadOnlyMemory<byte> data)
-    {
-        var packet = MemoryPackSerializer.Deserialize<PlayerEnterPacket>(data.Span);
-        string playerId = packet.NewPlayerID;
-
-        if (!PlayerSpawnManager.Instance.ContainsPlayer(playerId))
-            PlayerSpawnManager.Instance.SpawnPlayer(playerId);
-
-        UIManager.Hide<LobbyRouterUI>();
-    }
-
-    private void WorldStateReceived(IReadOnlyList<PlayerMovementPacket> list)
-    {
-        if (PlayerSpawnManager.Instance.IsMine(playerId)) return;
-        
-        stateResolver.ApplyRemotePacket(list);
     }
 
     private void SetLocalControlActive(bool isMine)

@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using MemoryPack;
+using Protocol;
+using Server;
+using System;
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -16,6 +20,26 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     [SerializeField] private CinemachineCamera virtualCamera = null;
 
     private readonly Dictionary<string, PlayerBrain> players = new();
+
+    //Packet Ids
+    private PacketId _joinMemberID => PacketId.S_PlayerEnter;
+
+    protected override void Awake()
+    {
+        base.Awake();
+    }
+
+    private void OnEnable()
+    {
+        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
+        ServerManager.Instance.Router.OnPlayer += WorldStateReceived;
+    }
+
+    private void OnDisable()
+    {
+        ServerManager.Instance.UnRegisterHandler(_joinMemberID);
+        ServerManager.Instance.Router.OnPlayer -= WorldStateReceived;
+    }
 
     public string MyID
     {
@@ -82,5 +106,24 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     private void BindCamera(PlayerBrain player)
     {
         player.BindCamera(mainCamera, virtualCamera);
+    }
+
+    private void MemberJoined(ReadOnlyMemory<byte> data)
+    {
+        var packet = MemoryPackSerializer.Deserialize<PlayerEnterPacket>(data.Span);
+        string playerId = packet.NewPlayerID;
+
+        if (!ContainsPlayer(playerId))
+            SpawnPlayer(playerId);
+
+        UIManager.Hide<LobbyRouterUI>();
+    }
+
+    private void WorldStateReceived(IReadOnlyList<PlayerMovementPacket> list)
+    {
+        foreach (var kvp in players)
+        {
+            kvp.Value.StateResolver.ApplyRemotePacket(list);
+        }
     }
 }
