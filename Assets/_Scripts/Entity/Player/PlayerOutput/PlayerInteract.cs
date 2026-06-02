@@ -183,7 +183,7 @@ public class PlayerInteract
         EntityPickupPacket packet =
             PacketSerializer.Deserialize<EntityPickupPacket>(data.Span);
 
-        if (!GameManager.Instance.catchableDics.TryGetValue(packet.EntityId, out CatchableObj target))
+        if (!NetworkObjectRegistry.Instance.TryGet(packet.EntityId, out CatchableObj target))
             return;
 
         if (packet.PlayerID != brain.PlayerId) return;

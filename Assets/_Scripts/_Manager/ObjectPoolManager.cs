@@ -21,6 +21,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
     {
         if (_poolRoot == null)
         {
+            // 여기 DontDestroyOnLoad일 필요가 없지않나
             _poolRoot = new GameObject("@ObjectPool_Root").transform;
             DontDestroyOnLoad(_poolRoot);
         }

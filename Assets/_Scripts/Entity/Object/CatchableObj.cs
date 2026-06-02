@@ -64,10 +64,10 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
-        if (GameManager.Instance.catchableDics.TryGetValue(NetworkId, out CatchableObj registered) &&
+        if (NetworkObjectRegistry.Instance.TryGet(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            GameManager.Instance.catchableDics.Remove(NetworkId);
+            NetworkObjectRegistry.Instance.Remove(NetworkId);
         }
     }
 

@@ -14,18 +14,18 @@ public class AnythingSpawner : MonoBehaviour
     {
         yield return new WaitForSeconds(1.0f);
 
-        for (int i = 0; i < spawnableObjects.Count; i++)
-        {
-            GameObject go = Instantiate(spawnableObjects[i], SpawnPos.transform.position, SpawnPos.transform.rotation);
-            if (!go.TryGetComponent(out CatchableObj catchable))
-            {
-                continue;
-            }
+        //for (int i = 0; i < spawnableObjects.Count; i++)
+        //{
+        //    GameObject go = Instantiate(spawnableObjects[i], SpawnPos.transform.position, SpawnPos.transform.rotation);
+        //    if (!go.TryGetComponent(out CatchableObj catchable))
+        //    {
+        //        continue;
+        //    }
 
-            catchable.NetworkId = i;
-            GameManager.Instance.catchableDics.Add(catchable.NetworkId, catchable);
-            Debug.Log($"Spawned object with NetworkId: {catchable.NetworkId}");
-        }
+        //    catchable.NetworkId = i;
+        //    NetworkObjectRegistry.Instance.Register(catchable.NetworkId, catchable);
+        //    Debug.Log($"Spawned object with NetworkId: {catchable.NetworkId}");
+        //}
     }
 
     private void Update()
@@ -37,6 +37,7 @@ public class AnythingSpawner : MonoBehaviour
             if (go.TryGetComponent(out CatchableObj catchable))
             {
                 catchable.NetworkId = Time.frameCount;
+                NetworkObjectRegistry.Instance.Add(catchable.NetworkId, catchable);
                 ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
             }
         }
