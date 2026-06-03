@@ -217,10 +217,13 @@ public class PlayerInteract
             if (hitCollider.transform.IsChildOf(brain.transform)) continue;
 
             CatchableObj obj = hitCollider.GetComponent<CatchableObj>();
-            DebugLog(obj != null
-                ? $"Hit catchable object: {obj.name}"
-                : $"Hit non-catchable object: {hitCollider.name}");
+            if (obj == null)
+            {
+                DebugLog($"Hit non-catchable object: {hitCollider.name}");
+                continue;
+            }
 
+            DebugLog($"Hit catchable object: {obj.name}");
             return obj;
         }
 

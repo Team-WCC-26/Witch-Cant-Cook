@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class GameManager : Singleton<GameManager>
 {
-    //public Dictionary<long, CatchableObj> catchableDics = new();
-
     #region Unity Life Cycles
     protected override void Awake()
     {

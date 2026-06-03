@@ -37,6 +37,7 @@ public class CatchableObj : MonoBehaviour
     [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
     [SerializeField] private float throwForce = 0;
 
+    public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
     public CatchableObjType ObjType => objType;
