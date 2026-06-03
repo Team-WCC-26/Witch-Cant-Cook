@@ -25,4 +25,16 @@ public class NetworkObjectRegistry : Singleton<NetworkObjectRegistry>
     {
         return catchableDics.TryGetValue(networkId, out obj);
     }
+
+    //private void RegisterSceneObjects()
+    //{
+    //    CatchableObj[] objs =
+    //        FindObjectsByType<CatchableObj>(
+    //            FindObjectsSortMode.None);
+
+    //    foreach (var obj in objs)
+    //    {
+    //        Add(obj.NetworkId, obj);
+    //    }
+    //}
 }
