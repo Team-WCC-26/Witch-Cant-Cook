@@ -11,10 +11,10 @@ public enum PlayerPhysicalMode
 public enum PlayerInteraction
 {
     None,
-    Pick,
-    Drop,
-    Throw,
-    Use,
+    DefaultPrimary,
+    HeldPrimary,
+    Secondary,
+    KeyInteract,
     SpecialInteract
 }
 
