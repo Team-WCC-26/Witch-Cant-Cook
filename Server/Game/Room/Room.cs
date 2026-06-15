@@ -24,6 +24,12 @@ public class Room
     private JobQueue _jobQueue = new();
     private Shard _shard;
 
+    private readonly Dictionary<DoorId, Door> _doors = new()
+    {
+        [DoorId.Lobby] = new(2, 3000),
+        [DoorId.Kitchen] = new(2, 3000)
+    };
+
     public Room(string id, string name, string password)
     {
         Id = id;
@@ -31,7 +37,7 @@ public class Room
         Password = password;
     }
 
-    public void Tick()
+    public void Tick(long deltaTime)
     {
         foreach (var player in _players)
         {
@@ -51,6 +57,32 @@ public class Room
             }
 
             player.Send(PacketSerializer.Serialize(packet, true));
+        }
+
+        // Open Door
+        foreach (var doorPair in _doors)
+        {
+            if (doorPair.Value.Tick())
+            {
+                foreach (var door in _doors.Values)
+                {
+                    door.IsOpen = false;
+                }
+
+                doorPair.Value.IsOpen = true;
+
+                PushJob(() =>
+                {
+                    OpenDoorPacket packet = new()
+                    {
+                        DoorId = doorPair.Key
+                    };
+
+                    BroadCast(PacketSerializer.Serialize(packet, true));
+                });
+
+                break;
+            }
         }
 
         _tick++;
@@ -156,6 +188,16 @@ public class Room
 
             BroadCast(PacketSerializer.Serialize(packet));
         });
+    }
+
+    public void InteractDoor(DoorId doorId, string playerId)
+    {
+        _doors[doorId].BeginInteract(playerId);
+    }
+
+    public void StopInteractDoor(DoorId doorId, string playerId)
+    {
+        _doors[doorId].EndInteract(playerId);
     }
 
     private PlayerMovementPacket GetMovementData(Player player)

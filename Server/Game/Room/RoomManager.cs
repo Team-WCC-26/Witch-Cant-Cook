@@ -21,19 +21,6 @@ public class RoomManager
         _shardManager = shardManager;
     }
 
-    public void Loop()
-    {
-        while (true)
-        {
-            foreach (var room in Rooms.Values)
-            {
-                room.Tick();
-            }
-
-            Thread.Sleep(50);
-        }
-    }
-
     public Room CreateRoom(string roomName, string roomPassword)
     {
         Room room;
