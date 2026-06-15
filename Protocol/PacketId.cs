@@ -83,8 +83,14 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_IngredientCombine = 352,
     S_IngredientCombine = 353,
 
-    C_ToolSpawn = 370,
-    S_ToolSpawn = 371,
+    C_IngredientPut = 354,
+    S_IngredientPut = 355,
+
+    C_ToolRegister = 370,
+    S_ToolRegister = 371,
+
+    C_ToolSpawn = 372,
+    S_ToolSpawn = 373,
 
     S_AddDish = 401,
 

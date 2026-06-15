@@ -103,6 +103,18 @@ public class IngredientHandler : PacketHandlerBase
         var packet = DeSerialize<IngredientCombinePacket>(package.Body);
     }
 
+    [PacketHandler(PacketId.C_IngredientPut)]
+    public static void PutIngredient(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<IngredientPutPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            room.BroadCast(PacketSerializer.Serialize(packet, true));
+        });
+    }
+
     //[PacketHandler(PacketId.C_IngredientState)]
     public static void UpdateIngredientState(Session session, PacketPackageInfo package)
     {
