@@ -8,7 +8,7 @@ namespace Protocol;
 [PacketId(PacketId.S_EntityThrow)]
 public partial class EntityThrowPacket
 {
-    public long EntityId;
-    public Vector3 Position;
-    public Vector3 Velocity;
+    public long EntityId { get; set; }
+    public Vector3 Position { get; set; }
+    public Vector3 Velocity { get; set; }
 }

@@ -2,7 +2,7 @@
 
 namespace Server;
 
-public class IngredientStatePair : IComparable<IngredientStatePair>, IEquatable<IngredientStatePair>
+public struct IngredientStatePair : IComparable<IngredientStatePair>, IEquatable<IngredientStatePair>
 {
     public readonly int IngredientId;
     public readonly IngredientState ProcessState;
@@ -13,7 +13,7 @@ public class IngredientStatePair : IComparable<IngredientStatePair>, IEquatable<
         ProcessState = processState;
     }
 
-    public int CompareTo(IngredientStatePair? other)
+    public int CompareTo(IngredientStatePair other)
     {
         int cmp = IngredientId.CompareTo(other.IngredientId);
 
@@ -22,7 +22,7 @@ public class IngredientStatePair : IComparable<IngredientStatePair>, IEquatable<
         return ProcessState.CompareTo(other.ProcessState);
     }
 
-    public bool Equals(IngredientStatePair? other)
+    public bool Equals(IngredientStatePair other)
     {
         return IngredientId == other.IngredientId && ProcessState == other.ProcessState;
     }

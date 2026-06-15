@@ -44,6 +44,12 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_Notification = 213,
 
+    C_InteractLobbyDoor = 250,
+    S_OpenLobbyDoor = 251,
+
+    C_InteractKitchenDoor = 252,
+    S_OpenKitchenDoor = 253,
+
     // 게임 상태 패킷 (300~399) // TODO => 클라쪽 데이터 형식 요청 후 작성
     S_WorldState = 301,
 
@@ -77,8 +83,14 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_IngredientCombine = 352,
     S_IngredientCombine = 353,
 
-    C_ToolSpawn = 370,
-    S_ToolSpawn = 371,
+    C_IngredientPut = 354,
+    S_IngredientPut = 355,
+
+    C_ToolRegister = 370,
+    S_ToolRegister = 371,
+
+    C_ToolSpawn = 372,
+    S_ToolSpawn = 373,
 
     S_AddDish = 401,
 

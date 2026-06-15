@@ -30,7 +30,7 @@ public class IngredientHandler : PacketHandlerBase
         var room = session.Player.Room;
 
         if (room.Entityes[packet.EntityID] is not Ingredient ingredient) return;
-        if (ingredient.IngredientIds.Count == 1 && (DB.Ingredients[ingredient.IngredientIds.First()].ConditionFlag & IngredientState.Cut) != 0) return;
+        if ((DB.Ingredients[ingredient.IngredientId].ConditionFlag & IngredientState.Cut) != 0) return;
 
         ingredient.ProcessState |= IngredientState.Cut;
 
@@ -47,7 +47,7 @@ public class IngredientHandler : PacketHandlerBase
         var room = session.Player.Room;
 
         if (room.Entityes[packet.EntityID] is not Ingredient ingredient) return;
-        if (ingredient.IngredientIds.Count == 1 && (DB.Ingredients[ingredient.IngredientIds.First()].ConditionFlag & IngredientState.Grilled) != 0) return;
+        if ((DB.Ingredients[ingredient.IngredientId].ConditionFlag & IngredientState.Grilled) != 0) return;
 
         ingredient.ProcessState |= IngredientState.Grilled;
 
@@ -70,7 +70,7 @@ public class IngredientHandler : PacketHandlerBase
         var room = session.Player.Room;
 
         if (room.Entityes[packet.EntityID] is not Ingredient ingredient) return;
-        if (ingredient.IngredientIds.Count == 1 && (DB.Ingredients[ingredient.IngredientIds.First()].ConditionFlag & IngredientState.Boiled) != 0) return;
+        if ((DB.Ingredients[ingredient.IngredientId].ConditionFlag & IngredientState.Boiled) != 0) return;
 
         ingredient.ProcessState |= IngredientState.Boiled;
 
@@ -87,7 +87,7 @@ public class IngredientHandler : PacketHandlerBase
         var room = session.Player.Room;
 
         if (room.Entityes[packet.EntityID] is not Ingredient ingredient) return;
-        if (ingredient.IngredientIds.Count == 1 && (DB.Ingredients[ingredient.IngredientIds.First()].ConditionFlag & IngredientState.Roasted) != 0) return;
+        if ((DB.Ingredients[ingredient.IngredientId].ConditionFlag & IngredientState.Roasted) != 0) return;
 
         ingredient.ProcessState |= IngredientState.Roasted;
 
@@ -101,6 +101,18 @@ public class IngredientHandler : PacketHandlerBase
     public static void CombineIngredient(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<IngredientCombinePacket>(package.Body);
+    }
+
+    [PacketHandler(PacketId.C_IngredientPut)]
+    public static void PutIngredient(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<IngredientPutPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            room.BroadCast(PacketSerializer.Serialize(packet, true));
+        });
     }
 
     //[PacketHandler(PacketId.C_IngredientState)]

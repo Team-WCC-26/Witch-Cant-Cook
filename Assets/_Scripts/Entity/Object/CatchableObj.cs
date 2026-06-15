@@ -37,6 +37,7 @@ public class CatchableObj : MonoBehaviour
     [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
     [SerializeField] private float throwForce = 0;
 
+    public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
     public CatchableObjType ObjType => objType;
@@ -64,10 +65,10 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
-        if (GameManager.Instance.catchableDics.TryGetValue(NetworkId, out CatchableObj registered) &&
+        if (NetworkObjectRegistry.Instance.TryGet(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            GameManager.Instance.catchableDics.Remove(NetworkId);
+            NetworkObjectRegistry.Instance.Remove(NetworkId);
         }
     }
 

@@ -6,9 +6,9 @@ public class Ingredient : Entity
 {
     public Ingredient(long entityId, int ingredientId) : base(entityId)
     {
-        IngredientIds.Add(ingredientId);
+        IngredientId = ingredientId;
     }
 
-    public readonly HashSet<int> IngredientIds = new();
+    public readonly int IngredientId ;
     public IngredientState ProcessState { get; set; } = 0;
 }

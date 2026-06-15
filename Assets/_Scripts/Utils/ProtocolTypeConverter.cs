@@ -52,10 +52,10 @@ public static class ProtocolTypeConverter
         return interaction switch
         {
             Protocol.PlayerInteraction.None => PlayerInteraction.None,
-            Protocol.PlayerInteraction.Pick => PlayerInteraction.Pick,
-            Protocol.PlayerInteraction.Drop => PlayerInteraction.Drop,
-            Protocol.PlayerInteraction.Throw => PlayerInteraction.Throw,
-            Protocol.PlayerInteraction.Use => PlayerInteraction.Use,
+            Protocol.PlayerInteraction.Pick => PlayerInteraction.DefaultPrimary,
+            Protocol.PlayerInteraction.Drop => PlayerInteraction.HeldPrimary,
+            Protocol.PlayerInteraction.Throw => PlayerInteraction.Secondary,
+            Protocol.PlayerInteraction.Use => PlayerInteraction.KeyInteract,
             Protocol.PlayerInteraction.SpecialInteract => PlayerInteraction.SpecialInteract,
             _ => PlayerInteraction.None
         };
@@ -66,10 +66,10 @@ public static class ProtocolTypeConverter
         return interaction switch
         {
             PlayerInteraction.None => Protocol.PlayerInteraction.None,
-            PlayerInteraction.Pick => Protocol.PlayerInteraction.Pick,
-            PlayerInteraction.Drop => Protocol.PlayerInteraction.Drop,
-            PlayerInteraction.Throw => Protocol.PlayerInteraction.Throw,
-            PlayerInteraction.Use => Protocol.PlayerInteraction.Use,
+            PlayerInteraction.DefaultPrimary => Protocol.PlayerInteraction.Pick,
+            PlayerInteraction.HeldPrimary => Protocol.PlayerInteraction.Drop,
+            PlayerInteraction.Secondary => Protocol.PlayerInteraction.Throw,
+            PlayerInteraction.KeyInteract => Protocol.PlayerInteraction.Use,
             PlayerInteraction.SpecialInteract => Protocol.PlayerInteraction.SpecialInteract,
             _ => Protocol.PlayerInteraction.None
         };

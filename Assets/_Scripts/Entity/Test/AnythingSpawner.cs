@@ -8,38 +8,35 @@ using UnityEngine.InputSystem;
 public class AnythingSpawner : MonoBehaviour
 {
     [SerializeField] private GameObject SpawnPos;
-    [SerializeField] private List<GameObject> spawnableObjects;
 
-    private IEnumerator Start()
-    {
-        yield return new WaitForSeconds(1.0f);
-
-        for (int i = 0; i < spawnableObjects.Count; i++)
-        {
-            GameObject go = Instantiate(spawnableObjects[i], SpawnPos.transform.position, SpawnPos.transform.rotation);
-            if (!go.TryGetComponent(out CatchableObj catchable))
-            {
-                continue;
-            }
-
-            catchable.NetworkId = i;
-            GameManager.Instance.catchableDics.Add(catchable.NetworkId, catchable);
-            Debug.Log($"Spawned object with NetworkId: {catchable.NetworkId}");
-        }
-    }
-
+    //private void Start()
+    //{        
+    //    SpawnTool("Knife");
+    //    SpawnTool("Plate"); // 동시에 스폰하면 같은 프레임카운트 가져가게됨.. 아귀찮아
+    //}
     private void Update()
     {
+        // 너무 임시임
         if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
         {
-            GameObject go = ObjectPoolManager.Instance.Pop("Knife", SpawnPos.transform.position, SpawnPos.transform.rotation);
-            Debug.Log(go);
-            if (go.TryGetComponent(out CatchableObj catchable))
-            {
-                catchable.NetworkId = Time.frameCount;
-                ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
-            }
+            SpawnTool("Knife");
+        }
+        if (Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame)
+        {
+            SpawnTool("Plate");
         }
 
+    }
+
+    private void SpawnTool(string tool)
+    {
+        GameObject go = ObjectPoolManager.Instance.Pop(tool, SpawnPos.transform.position, SpawnPos.transform.rotation);
+        Debug.Log(go);
+        if (go.TryGetComponent(out CatchableObj catchable))
+        {
+            catchable.NetworkId = Time.frameCount;
+            NetworkObjectRegistry.Instance.Add(catchable.NetworkId, catchable);
+            ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
+        }
     }
 }
