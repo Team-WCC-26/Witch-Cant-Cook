@@ -44,6 +44,12 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_Notification = 213,
 
+    C_InteractLobbyDoor = 250,
+    S_OpenLobbyDoor = 251,
+
+    C_InteractKitchenDoor = 252,
+    S_OpenKitchenDoor = 253,
+
     // 게임 상태 패킷 (300~399) // TODO => 클라쪽 데이터 형식 요청 후 작성
     S_WorldState = 301,
 
