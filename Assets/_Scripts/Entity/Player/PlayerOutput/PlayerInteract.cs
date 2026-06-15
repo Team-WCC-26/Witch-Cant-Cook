@@ -204,10 +204,13 @@ public class PlayerInteract
             if (hitCollider == null) continue;
             if (hitCollider.transform.IsChildOf(brain.transform)) continue;
 
-            if (!hitCollider.TryGetComponent(out CatchableObj catchable)) {
-                continue;   
+            if (!hitCollider.TryGetComponent(out CatchableObj catchable))
+            {
+                DebugLog($"Hit non-catchable object: {hitCollider.name}");
+                continue;
             }
 
+            DebugLog($"Hit catchable object: {catchable.name}");
             return catchable;
         }
 
@@ -230,6 +233,13 @@ public class PlayerInteract
 
         Ray ray = BuildInteractRay();
         Debug.DrawLine(ray.origin, ray.origin + ray.direction * brain.InteractDistance, Color.red);
+    }
+
+    private static void DebugLog(string message)
+    {
+        if (!DebugInteraction) return;
+
+        Debug.Log($"[PlayerInteract] {message}");
     }
     #endregion
 }
