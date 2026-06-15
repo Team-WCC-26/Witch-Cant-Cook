@@ -25,8 +25,6 @@ public class CatchableObj : MonoBehaviour
 
     public CatchableData Data { get; set; }
 
-    private PacketId _throwId => PacketId.S_EntityThrow;
-
     [SerializeField] private Collider col;
     [SerializeField] private Rigidbody rb;
 
@@ -76,24 +74,27 @@ public class CatchableObj : MonoBehaviour
     {
         canBePicked = true;
     }
+
     public void OnPick()
     {
+        releaseFromPrep?.Invoke(this);
+        releaseFromPrep = null;
+
         IsHold = true;
-        
         SetPhysicsState(false);
     }
 
     public void OnDrop()
     {
         IsHold = false;
-        
+
         SetPhysicsState(true);
     }
 
     public void OnThrow()
     {
         IsHold = false;
-        
+
         SetPhysicsState(true);
     }
 
@@ -129,4 +130,25 @@ public class CatchableObj : MonoBehaviour
         rb.linearVelocity = ProtocolTypeConverter.ToUnityVector3(packet.Velocity);
         rb.angularVelocity = Vector3.zero;
     }
+
+    #region PrepInteraction
+    private Action<CatchableObj> releaseFromPrep;
+
+    public void OnPlacedOnPrep(Action<CatchableObj> releaseCallback)
+    {
+        releaseFromPrep = releaseCallback;
+
+        IsHold = false;
+        canBePicked = true;
+
+        if (rb == null) return;
+        if (col == null) return;
+
+        col.enabled = true;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.isKinematic = true;
+        rb.useGravity = false;
+    }
+    #endregion
 }
