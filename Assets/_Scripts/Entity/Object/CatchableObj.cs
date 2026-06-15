@@ -37,6 +37,7 @@ public class CatchableObj : MonoBehaviour
     [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
     [SerializeField] private float throwForce = 0;
 
+    public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
     public CatchableObjType ObjType => objType;
@@ -48,14 +49,11 @@ public class CatchableObj : MonoBehaviour
 
     private void OnEnable()
     {
-        ServerManager.Instance.RegisterHandler(_throwId, OnThrowReceived);
         ResetObj();
     }
 
     private void OnDisable()
     {
-        ServerManager.Instance.UnRegisterHandler(_throwId);
-
         if (ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) && registered == this)
         {
             ObjectPoolManager.Instance.activeObjDict.Remove(NetworkId);
@@ -67,10 +65,10 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
-        if (GameManager.Instance.catchableDics.TryGetValue(NetworkId, out CatchableObj registered) &&
+        if (NetworkObjectRegistry.Instance.TryGet(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            GameManager.Instance.catchableDics.Remove(NetworkId);
+            NetworkObjectRegistry.Instance.Remove(NetworkId);
         }
     }
 
@@ -119,17 +117,7 @@ public class CatchableObj : MonoBehaviour
         canBePicked = isPick;
     }
 
-    private void OnThrowReceived(ReadOnlyMemory<byte> data)
-    {
-        EntityThrowPacket packet =
-            PacketSerializer.Deserialize<EntityThrowPacket>(data.Span);
-
-        if (packet.EntityId != NetworkId) return;
-
-        ApplyThrow(packet);
-    }
-
-    private void ApplyThrow(EntityThrowPacket packet)
+    public void ApplyThrow(EntityThrowPacket packet)
     {
         transform.SetParent(null, true);
         transform.position = ProtocolTypeConverter.ToUnityVector3(packet.Position);

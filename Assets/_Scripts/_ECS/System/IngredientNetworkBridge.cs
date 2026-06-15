@@ -15,17 +15,18 @@ public class IngredientNetworkBridge : MonoBehaviour
         //10900, 10300, 11900, 12000, 10600, 
         12100 };
     [SerializeField] private GameObject spawnPointObj;
-
-    private void Start()
+    private void OnEnable()
     {
         if (ServerManager.Instance != null)
         {
             ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSpawn, OnIngredientSpawnReceived);
-            Debug.Log("[Network] S_IngredientSpawn 핸들러가 ServerManager에 정상 등록되었습니다.");
+            ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, OnThrowReceived);
+
+            Debug.Log("[Network] 패킷 핸들러 등록 완료");
         }
         else
         {
-            Debug.LogError("[Network Error] ServerManager 인스턴스를 찾을 수 없어 핸들러 등록에 실패했습니다.");
+            Debug.LogError("[Network Error] ServerManager 없음");
         }
     }
 
@@ -33,7 +34,11 @@ public class IngredientNetworkBridge : MonoBehaviour
     {
         if (ServerManager.Instance != null)
         {
-            ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSpawn);
+            ServerManager.Instance.UnRegisterHandler(
+                PacketId.S_IngredientSpawn);
+
+            ServerManager.Instance.UnRegisterHandler(
+                PacketId.S_EntityThrow);
         }
     }
 
@@ -114,4 +119,18 @@ public class IngredientNetworkBridge : MonoBehaviour
 
         Debug.Log($"[Network Recv] 서버 패킷 수신 성공 - ID: {packet.IngredientID}, NetID: {packet.EntityId}");
     }
+
+    private void OnThrowReceived(ReadOnlyMemory<byte> data)
+    {
+        var packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
+
+        if (!NetworkObjectRegistry.Instance.TryGet(packet.EntityId, out var catchable))
+        {
+            Debug.LogWarning($"NetworkID {packet.EntityId} 찾기 실패");
+            return;
+        }
+
+        catchable.ApplyThrow(packet);
+    }
+
 }

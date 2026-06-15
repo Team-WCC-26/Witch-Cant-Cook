@@ -66,7 +66,7 @@ public partial class IngredientSpawnSystem : SystemBase
         if (catchable != null)
         {
             catchable.NetworkId = networkID;
-            GameManager.Instance.catchableDics[networkID] = catchable;
+            NetworkObjectRegistry.Instance.Add(networkID, catchable);
         }
         else
         {

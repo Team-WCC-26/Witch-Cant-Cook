@@ -1,4 +1,3 @@
-using MemoryPack;
 using Protocol;
 using Server;
 using System;
@@ -14,12 +13,9 @@ public class PlayerInteract
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
 
-    private PacketId _pickId => PacketId.S_EntityPickup;
-
     public PlayerInteract(PlayerBrain brain)
     {
         this.brain = brain;
-        ServerManager.Instance.RegisterHandler(_pickId, OnPicked);
     }
 
     public void Handle(PlayerInteraction interaction)
@@ -30,26 +26,23 @@ public class PlayerInteract
 
         switch (interaction)
         {
-            case PlayerInteraction.Pick:
-                DebugLog("Primary clicked. Try pick.");
-                RequestPick();
+            case PlayerInteraction.DefaultPrimary:
+                RequestDefaultPrimaryAction();
                 break;
-            case PlayerInteraction.Drop:
-                //DebugLog("Primary clicked. Drop held object.");
-                //Drop();
+            case PlayerInteraction.HeldPrimary:
+                RequestHeldPrimaryAction();
                 break;
-            case PlayerInteraction.Throw:
-                DebugLog("Secondary clicked. Use held object.");
+            case PlayerInteraction.Secondary:
                 RequestSecondaryAction();
                 break;
-            case PlayerInteraction.Use:
-                DebugLog("Interact key pressed. Use held object.");
-                RequestUseAction();
+            case PlayerInteraction.KeyInteract:
+                RequestKeyInteract();
                 break;
         }
     }
 
-    private void RequestPick()
+    #region Request User Input Action
+    private void RequestDefaultPrimaryAction()
     {
         if (IsHolding) return;
 
@@ -67,7 +60,78 @@ public class PlayerInteract
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    private void Drop()
+    private void RequestHeldPrimaryAction()
+    {
+        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+
+        switch (objType)
+        {
+            case CatchableObjType.Default:
+                Debug.Log("주먹질");
+                break;
+            case CatchableObjType.Knife:
+                //재료 자르기
+                CatchableObj target = FindCatchable();
+                if (target == null) break;
+                if (!target.TryGetComponent(out IngredientReaction ingredientReaction))
+                    break;
+
+                ingredientReaction.Interact(IngredientAction.Cut);
+                break;
+            default:
+                RequestDrop();
+                break;
+        }
+    }
+    
+    private void RequestSecondaryAction()
+    {
+        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+
+        switch (objType)
+        {
+            case CatchableObjType.Default:
+                Debug.Log("아무일도... 없었다!");
+                break;
+            default:
+                RequestThrow();
+                break;
+        }
+    }
+
+    private void RequestKeyInteract()
+    {
+        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+
+        switch (objType)
+        {
+            case CatchableObjType.Default:
+                //TODO : 빈손 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Ingredient:
+                //TODO : 재료 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Pan:
+                //TODO : 프라이팬 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Knife:
+                //TODO : 칼 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Plate:
+                //TODO : 그릇 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Broom:
+                //TODO : 빗자루 F키 상호작용 처리 필요
+                break;
+            case CatchableObjType.Bucket:
+                //TODO : 양동이 F키 상호작용 처리 필요
+                break;
+        }
+    }
+    #endregion
+
+    #region User Input Helper
+    private void RequestDrop()
     {
         if (!IsHolding) return;
 
@@ -97,96 +161,12 @@ public class PlayerInteract
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
+    #endregion
 
-    private void RequestSecondaryAction()
+    #region Actual Interaction
+    public void ApplyPicked(CatchableObj target)
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
-
-        switch (objType)
-        {
-            case CatchableObjType.Default:
-                //TODO : 빈손 우클릭 주먹질 처리 필요
-                RequestThrow();
-                Debug.Log("Interact : 주먹질");
-                break;
-            case CatchableObjType.Ingredient:
-                RequestThrow();
-                Debug.Log("Interact : 던지기");
-                break;
-            case CatchableObjType.Pan:
-                //TODO : 프라이팬 우클릭 휘두르기 처리 필요
-                RequestThrow();
-                Debug.Log("Interact : 프라이팬");
-                break;
-            case CatchableObjType.Knife:
-                Debug.Log("Interact : 칼");
-
-                //TODO : 칼 우클릭 휘두르기 모션 필요
-
-                //재료 자르기
-                CatchableObj target = FindCatchable();
-                if (target == null) break;
-                if (!target.TryGetComponent(out IngredientReaction ingredientReaction))
-                    break;
-
-                ingredientReaction.Interact(IngredientAction.Cut);
-                break;
-            case CatchableObjType.Plate:
-                RequestThrow();
-                Debug.Log("Interact : 그릇");
-                break;
-            case CatchableObjType.Broom:
-                //TODO : 빗자루 우클릭 도구 행동 처리 필요
-                RequestThrow();
-                Debug.Log("Interact : 빗자루");
-                break;
-            case CatchableObjType.Bucket:
-                //TODO : 양동이 우클릭 도구 행동 처리 필요
-                RequestThrow();
-                Debug.Log("Interact : 양동이");
-                break;
-        }
-    }
-
-    private void RequestUseAction()
-    {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
-
-        switch (objType)
-        {
-            case CatchableObjType.Default:
-                //TODO : 빈손 F키 상호작용 처리 필요
-                break;
-            case CatchableObjType.Ingredient:
-                //TODO : 재료 F키 상호작용 처리 필요
-                break;
-            case CatchableObjType.Pan:
-                //TODO : 프라이팬 F키 상호작용 처리 필요
-                break;
-            case CatchableObjType.Knife:
-                //TODO : 칼 F키 상호작용 처리 필요
-                break;
-            case CatchableObjType.Plate:
-                //TODO : 그릇 F키 상호작용 처리 필요
-                break;
-            case CatchableObjType.Broom:
-                //TODO : 빗자루 F키 상호작용 처리 필요
-                break;
-            case CatchableObjType.Bucket:
-                //TODO : 양동이 F키 상호작용 처리 필요
-                break;
-        }
-    }
-
-    private void OnPicked(ReadOnlyMemory<byte> data)
-    {
-        EntityPickupPacket packet =
-            PacketSerializer.Deserialize<EntityPickupPacket>(data.Span);
-
-        if (!GameManager.Instance.catchableDics.TryGetValue(packet.EntityId, out CatchableObj target))
-            return;
-
-        if (packet.PlayerID != brain.PlayerId) return;
+        if (target == null) return;
 
         target.OnPick();
         target.transform.SetParent(brain.ItemHoldParent, false);
@@ -194,54 +174,9 @@ public class PlayerInteract
         target.transform.localRotation = Quaternion.Euler(target.HoldLocalEulerAngles);
         HeldObj = target;
     }
+    #endregion
 
-    private Ray BuildInteractRay()
-    {
-        Transform origin = brain.PlayerCam != null
-            ? brain.PlayerCam.transform
-            : brain.transform;
-
-        Vector3 start = origin.position + origin.forward * brain.InteractRayStartOffset;
-        return new Ray(start, origin.forward);
-    }
-
-    private CatchableObj FindCatchable()
-    {
-        RaycastHit[] hits = Physics.RaycastAll(BuildInteractRay(), brain.InteractDistance);
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            Collider hitCollider = hits[i].collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
-
-            CatchableObj obj = hitCollider.GetComponent<CatchableObj>();
-            DebugLog(obj != null
-                ? $"Hit catchable object: {obj.name}"
-                : $"Hit non-catchable object: {hitCollider.name}");
-
-            return obj;
-        }
-
-        return null;
-    }
-
-    private void DrawDebugInteractRay()
-    {
-        if (!DebugInteraction) return;
-
-        Ray ray = BuildInteractRay();
-        Debug.DrawLine(ray.origin, ray.origin + ray.direction * brain.InteractDistance, Color.red);
-    }
-
-    private static void DebugLog(string message)
-    {
-        if (!DebugInteraction) return;
-
-        Debug.Log($"[PlayerInteract] {message}");
-    }
-
+    #region Throw Action Helper
     private Vector3 GetAimDirection()
     {
         Transform origin = brain.PlayerCam != null
@@ -255,4 +190,46 @@ public class PlayerInteract
     {
         return target.ThrowForce > 0.0f ? target.ThrowForce : DefaultThrowForce;
     }
+    #endregion
+
+    #region Interact Ray
+    private CatchableObj FindCatchable()
+    {
+        RaycastHit[] hits = Physics.RaycastAll(BuildInteractRay(), brain.InteractDistance);
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
+
+            if (!hitCollider.TryGetComponent(out CatchableObj catchable)) {
+                continue;   
+            }
+
+            return catchable;
+        }
+
+        return null;
+    }
+
+    private Ray BuildInteractRay()
+    {
+        Transform origin = brain.PlayerCam != null
+            ? brain.PlayerCam.transform
+            : brain.transform;
+
+        Vector3 start = origin.position + origin.forward * brain.InteractRayStartOffset;
+        return new Ray(start, origin.forward);
+    }
+
+    private void DrawDebugInteractRay()
+    {
+        if (!DebugInteraction) return;
+
+        Ray ray = BuildInteractRay();
+        Debug.DrawLine(ray.origin, ray.origin + ray.direction * brain.InteractDistance, Color.red);
+    }
+    #endregion
 }

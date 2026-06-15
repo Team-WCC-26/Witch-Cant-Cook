@@ -27,6 +27,12 @@ public class IngredientReaction : MonoBehaviour
     private int maxHP;
     public float CurGuage => 1 - (float)curHP / maxHP;
 
+    [Header("Plate Offset")]
+    [SerializeField] private Vector3 plateOffsetPos = Vector3.zero;
+    [SerializeField] private Vector3 plateOffsetEuler = Vector3.zero;
+    public Vector3 PlateOffsetPos => plateOffsetPos;
+    public Vector3 PlateOffsetEuler => plateOffsetEuler;
+
     #region 재료 변화 캐싱
     [SerializeField] private Mesh defaultMesh;
     [SerializeField] private Mesh cutMesh;

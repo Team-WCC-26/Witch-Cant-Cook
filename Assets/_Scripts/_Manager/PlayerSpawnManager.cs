@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using MemoryPack;
+using Protocol;
+using Server;
+using System;
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -17,11 +21,31 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
     private readonly Dictionary<string, PlayerBrain> players = new();
 
+    //Packet Ids
+    private PacketId _joinMemberID => PacketId.S_PlayerEnter;
+
+    protected override void Awake()
+    {
+        base.Awake();
+    }
+
+    private void OnEnable()
+    {
+        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
+    }
+
+    private void OnDisable()
+    {
+        ServerManager.Instance.UnRegisterHandler(_joinMemberID);
+    }
+
     public string MyID
     {
         get => myID;
         set => myID = value;
     }
+
+    public IEnumerable<PlayerBrain> Players => players.Values;
 
     public bool IsMine(string playerId)
     {
@@ -83,4 +107,16 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     {
         player.BindCamera(mainCamera, virtualCamera);
     }
+
+    private void MemberJoined(ReadOnlyMemory<byte> data)
+    {
+        var packet = MemoryPackSerializer.Deserialize<PlayerEnterPacket>(data.Span);
+        string playerId = packet.NewPlayerID;
+
+        if (!ContainsPlayer(playerId))
+            SpawnPlayer(playerId);
+
+        UIManager.Hide<LobbyRouterUI>();
+    }
+
 }

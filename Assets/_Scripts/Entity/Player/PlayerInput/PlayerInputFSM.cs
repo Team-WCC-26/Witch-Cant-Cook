@@ -99,18 +99,18 @@ public class PlayerInputFSM
         if (pendingKeyInput == KeyInput.Primary)
         {
             return brain.Interact.IsHolding
-                ? PlayerInteraction.Drop
-                : PlayerInteraction.Pick;
+                ? PlayerInteraction.HeldPrimary
+                : PlayerInteraction.DefaultPrimary;
         }
 
         if (pendingKeyInput == KeyInput.Secondary)
         {
-            return PlayerInteraction.Throw;
+            return PlayerInteraction.Secondary;
         }
 
         if (pendingKeyInput == KeyInput.Interact)
         {
-            return PlayerInteraction.Use;
+            return PlayerInteraction.KeyInteract;
         }
 
         return PlayerInteraction.None;
