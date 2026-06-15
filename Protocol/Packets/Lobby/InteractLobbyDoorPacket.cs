@@ -6,5 +6,5 @@ namespace Protocol;
 [PacketId(PacketId.C_InteractLobbyDoor)]
 public partial class InteractLobbyDoorPacket
 {
-    public string PlayerId;
+    public string PlayerId { get; set; }
 }

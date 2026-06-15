@@ -6,5 +6,5 @@ namespace Protocol;
 [PacketId(PacketId.C_InteractKitchenDoor)]
 public partial class InteractKitchenDoorPacket
 {
-    public string PlayerId;
+    public string PlayerId { get; set; }
 }
