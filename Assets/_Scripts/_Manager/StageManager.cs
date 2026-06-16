@@ -1,17 +1,23 @@
+using Protocol;
+using Server;
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 public class StageManager : Singleton<StageManager>
 {
-    // 임시 > 디테일화 필요
+    // 열어야 하는 문 정보
+    [SerializeField] private Door lobbyDoor;
+    [SerializeField] private Door kitchenDoor;
+    // 폐기된 내용, 삭제 필요 -----------------------------
     public float happiness = 0f; // 0.0 ~ 1.0 (100%)
     public int lives = 3;
 
     // 판정 조건 수치
     private readonly float HAPPINESS_STANDARD = 0.7f;
     private readonly int TARGET_STAGE_COUNT = 7;
-
+    // --------------------------------------------------
 
     private PhaseBase currentPhase = null;
     public PhaseBase CurrentPhase => currentPhase;
@@ -35,22 +41,30 @@ public class StageManager : Singleton<StageManager>
 
     void Start()
     {
+        ServerManager.Instance.RegisterHandler(PacketId.S_OpenDoor,OnOpenDoor);
         //config = Resources.Load<StageConfig>("StageConfig");
+
         // 페이즈 초기화
         prepPhase = new PrepPhase(this);
         cookingPhase = new CookingPhase(this);
         judgePhase = new JudgePhase(this);
 
-
-        // TODO : 게임 시작 버튼을 누르면 시작하도록 변경
-        // 첫 라운드 시작: 준비 페이즈로
-        //ChangePhase(prepPhase);
+        lobbyDoor = GameObject.Find("LobbyDoor").GetComponent<Door>();
+        kitchenDoor = GameObject.Find("KitchenDoor").GetComponent<Door>();
+        lobbyDoor.OpenImmediate();
+        kitchenDoor.CloseImmediate();
     }
 
     void Update()
     {
         currentPhase?.OnUpdate();
     }
+
+    private void OnDestroy()
+    {
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_OpenDoor);
+    }
+
 
     public void ChangePhase(PhaseBase newPhase)
     {
@@ -123,4 +137,22 @@ public class StageManager : Singleton<StageManager>
         else if (currentPhase is JudgePhase) FinishStage();
     }
 
+    private void OnOpenDoor(ReadOnlyMemory<byte> data)
+    {
+        OpenDoorPacket packet =
+            PacketSerializer.Deserialize<OpenDoorPacket>(data);
+
+        switch (packet.DoorId)
+        {
+            case DoorId.Lobby:
+                lobbyDoor.Open();
+                break;
+
+            case DoorId.Kitchen:
+                lobbyDoor.Close();
+                kitchenDoor.Open();
+                StartCooking();
+                break;
+        }
+    }
 }
