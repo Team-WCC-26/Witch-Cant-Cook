@@ -124,7 +124,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     {
         var packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
 
-        if (!NetworkObjectRegistry.Instance.TryGet(packet.EntityId, out var catchable))
+        if (!ObjectRouter.Instance.TryGet(packet.EntityId, out var catchable))
         {
             Debug.LogWarning($"NetworkID {packet.EntityId} 찾기 실패");
             return;
