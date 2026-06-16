@@ -97,6 +97,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     // Server -> Client
     public void OnIngredientSpawnReceived(ReadOnlyMemory<byte> data)
     {
+        Debug.Log("[TEST] Ingredient Packet Received");
         Debug.Log(World.DefaultGameObjectInjectionWorld);
         Debug.Log("[TEST] OnIngredientSpawnReceived 호출됨");
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
@@ -124,7 +125,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     {
         var packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
 
-        if (!ObjectRouter.Instance.TryGet(packet.EntityId, out var catchable))
+        if (!ObjectNetworkRouter.Instance.TryGet(packet.EntityId, out var catchable))
         {
             Debug.LogWarning($"NetworkID {packet.EntityId} 찾기 실패");
             return;

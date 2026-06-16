@@ -51,15 +51,16 @@ public class CatchableObj : MonoBehaviour
     }
     private void Start()
     {
+
         if (ServerManager.Instance == null)
             return;
 
         // 재료는 서버 등록 안 함
-        if (objType == CatchableObjType.Ingredient)
-            return;
+        //if (objType == CatchableObjType.Ingredient)
+        //    return;
 
         // 등록 대기열에 넣기
-        ObjectRouter.Instance.EnqueueRegister(this);
+        ObjectNetworkRouter.Instance.EnqueueRegister(this);
 
         ToolRegisterPacket packet = new()
         {
@@ -70,6 +71,7 @@ public class CatchableObj : MonoBehaviour
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        Debug.Log($"Tool Register Request : {name}");
     }
     private void OnDisable()
     {
@@ -84,10 +86,10 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
-        if (ObjectRouter.Instance.TryGet(NetworkId, out CatchableObj registered) &&
+        if (ObjectNetworkRouter.Instance.TryGet(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            ObjectRouter.Instance.Remove(NetworkId);
+            ObjectNetworkRouter.Instance.Remove(NetworkId);
         }
     }
 

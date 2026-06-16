@@ -8,6 +8,7 @@ public partial class IngredientSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        Debug.Log("[TEST] IngredientSpawnSystem Update");
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
@@ -66,7 +67,7 @@ public partial class IngredientSpawnSystem : SystemBase
         if (catchable != null)
         {
             catchable.NetworkId = networkID;
-            ObjectRouter.Instance.Add(networkID, catchable);
+            ObjectNetworkRouter.Instance.Add(networkID, catchable);
         }
         else
         {
