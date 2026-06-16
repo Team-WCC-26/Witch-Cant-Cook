@@ -6,48 +6,35 @@ namespace Protocol;
 [MemoryPackable]
 public partial class IngredientStatePacket
 {
-    public long EntityID { get; set; }
+    public long EntityId { get; set; }
     public int CurrentHP { get; set; }
     public IngredientState State { get; set; }
 }
 
 [MemoryPackable]
-[PacketId(PacketId.C_IngredientCut)]
-public partial class CutIngredientPacket
+[PacketId(PacketId.C_CookStart)]
+[PacketId(PacketId.S_CookStart)]
+public partial class CookStartPacket
 {
-    public long EntityID { get; set; }
-    public string PlayerID { get; set; }
+    public long EntityId { get; set; }
+    public IngredientState CookType { get; set; }
 }
 
 [MemoryPackable]
-[PacketId(PacketId.C_IngredientGrill)]
-public partial class GrillIngredientPacket
+[PacketId(PacketId.C_CookCancel)]
+[PacketId(PacketId.S_CookCancel)]
+public partial class CookCancelPacket
 {
-    public long EntityID { get; set; }
-    public string PlayerID { get; set; }
+    public long EntityId { get; set; }
 }
 
 [MemoryPackable]
-[PacketId(PacketId.C_IngredientBoil)]
-public partial class BoilIngredientPacket
+[PacketId(PacketId.S_CookComplete)]
+public partial class CookCompletePacket
 {
-    public long EntityID { get; set; }
-    public string PlayerID { get; set; }
-}
-
-[MemoryPackable]
-[PacketId(PacketId.C_IngredientRoast)]
-public partial class RoastIngredientPacket
-{
-    public long EntityID { get; set; }
-    public string PlayerID { get; set; }
-}
-
-[MemoryPackable]
-[PacketId(PacketId.C_IngredientCancelGrill)]
-public partial class CancelGrillIngredientPacket
-{
-    public long EntityID { get; set; }
+    public long EntityId { get; set; }
+    public int IngredientId { get; set; }
+    public IngredientState CookType { get; set; }
 }
 
 [MemoryPackable]

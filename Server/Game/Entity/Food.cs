@@ -1,6 +1,8 @@
-﻿namespace Server;
+﻿using Protocol;
 
-public class Food : Entity, ICombinable
+namespace Server;
+
+public class Food : Entity, ICombinable, ICookable
 {
     public readonly HashSet<IngredientStatePair> Ingredients = new();
 
@@ -34,5 +36,19 @@ public class Food : Entity, ICombinable
         food.Ingredients.Add(new(b.IngredientId, b.ProcessState));
 
         return food;
+    }
+
+    public bool TryCook(IngredientState state, out Ingredient ingredient)
+    {
+        ingredient = null;
+        var DB = ServerContext.Instance.DataBase;
+
+        if (!DB.RecipeDict.TryGetValue(new(Ingredients), out var ingredientId)) return false;
+        if ((DB.Ingredients[ingredientId].InvalidProcessFlag & state) != 0) return false;
+
+        ingredient = new(ingredientId);
+        ingredient.ProcessState |= state;
+
+        return true;
     }
 }
