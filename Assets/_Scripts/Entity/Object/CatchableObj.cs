@@ -49,7 +49,28 @@ public class CatchableObj : MonoBehaviour
     {
         ResetObj();
     }
+    private void Start()
+    {
+        if (ServerManager.Instance == null)
+            return;
 
+        // 재료는 서버 등록 안 함
+        if (objType == CatchableObjType.Ingredient)
+            return;
+
+        // 등록 대기열에 넣기
+        ObjectRouter.Instance.EnqueueRegister(this);
+
+        ToolRegisterPacket packet = new()
+        {
+            EntityId = 0, // 서버가 발급
+            ToolId = (int)objType,
+            Position = new System.Numerics.Vector3(transform.position.x, transform.position.y, transform.position.z),
+            Quaternion = new System.Numerics.Quaternion(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w)
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
     private void OnDisable()
     {
         if (ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) && registered == this)
@@ -63,10 +84,10 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
-        if (NetworkObjectRegistry.Instance.TryGet(NetworkId, out CatchableObj registered) &&
+        if (ObjectRouter.Instance.TryGet(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            NetworkObjectRegistry.Instance.Remove(NetworkId);
+            ObjectRouter.Instance.Remove(NetworkId);
         }
     }
 

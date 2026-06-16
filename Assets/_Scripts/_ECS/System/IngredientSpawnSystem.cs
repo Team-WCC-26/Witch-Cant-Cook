@@ -66,7 +66,7 @@ public partial class IngredientSpawnSystem : SystemBase
         if (catchable != null)
         {
             catchable.NetworkId = networkID;
-            NetworkObjectRegistry.Instance.Add(networkID, catchable);
+            ObjectRouter.Instance.Add(networkID, catchable);
         }
         else
         {

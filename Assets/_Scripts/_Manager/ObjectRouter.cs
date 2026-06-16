@@ -5,10 +5,23 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class NetworkObjectRegistry : Singleton<NetworkObjectRegistry>
+public class ObjectRouter : Singleton<ObjectRouter>
 {
 
     public Dictionary<long, CatchableObj> catchableDics = new();
+    private readonly Queue<CatchableObj> registerQueue = new();
+
+    public void EnqueueRegister(CatchableObj obj)
+    {
+        registerQueue.Enqueue(obj);
+    }
+
+    public CatchableObj DequeueRegister()
+    {
+        return registerQueue.Dequeue();
+    }
+
+    public int RegisterQueueCount => registerQueue.Count;
 
     // 일단 catchableObj만 관리
     // 나중에 다른 컴포넌트 생기면 그때 추가
