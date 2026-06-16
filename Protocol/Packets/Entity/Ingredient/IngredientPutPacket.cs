@@ -3,8 +3,8 @@
 namespace Protocol;
 
 [MemoryPackable]
-[PacketId(PacketId.C_ToolRegister)]
-[PacketId(PacketId.S_ToolRegister)]
+[PacketId(PacketId.C_IngredientPut)]
+[PacketId(PacketId.S_IngredientPut)]
 public partial class IngredientPutPacket
 {
     public long IngredientId { get; set; }
