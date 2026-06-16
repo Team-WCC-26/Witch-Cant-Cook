@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 2237058926956923182}
   - component: {fileID: 6759346957777197216}
   m_Layer: 0
-  m_Name: FishChopped
+  m_Name: Fish_Cutted
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -129,6 +129,8 @@ MonoBehaviour:
   catchable: {fileID: 794051182029012901}
   meshFilter: {fileID: 3593641534192768740}
   targetRenderer: {fileID: 214937756810208386}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
   defaultMesh: {fileID: -4265218631000980587, guid: c84ec2126e17716408376eca0cb20d79, type: 3}
   cutMesh: {fileID: -1906858854181764153, guid: 9ba4a249574d33642b0a44063cc517dd, type: 3}
   defaultMaterial: {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
