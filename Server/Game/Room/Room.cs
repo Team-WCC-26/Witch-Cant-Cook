@@ -12,7 +12,7 @@ public class Room
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
 
-    public IReadOnlyDictionary<long, Entity> Entityes => _entities;
+    public IReadOnlyDictionary<long, Entity> Entities => _entities;
     private readonly Dictionary<long, Entity> _entities = new();
 
     public int PlayerCnt => _playerCnt;
@@ -106,22 +106,31 @@ public class Room
         return _shard;
     }
 
-    public Ingredient GenerateIngredient(int id)
+    public Ingredient GenerateIngredient(int id, out long entityId)
     {
-        Ingredient ingredient = new(GenerateEntityId(), id);
+        Ingredient ingredient = new(id);
+        entityId = GenerateEntityId();
 
-        _entities[ingredient.EntityId] = ingredient;
+        _entities[entityId] = ingredient;
 
         return ingredient;
     }
 
-    public Tool GenerateTool(int id)
+    public Tool GenerateTool(int id, out long entityId)
     {
-        Tool tool = new(GenerateEntityId(), id);
+        Tool tool = new(id);
+        entityId = GenerateEntityId();
 
-        _entities[tool.EntityId] = tool;
+        _entities[entityId] = tool;
 
         return tool;
+    }
+
+    public void CombineIngredient(long resultId, long removeId, Food food)
+    {
+        _entities.Remove(removeId);
+
+        _entities[resultId] = food;
     }
 
     public void DestroyIngredient(long id)

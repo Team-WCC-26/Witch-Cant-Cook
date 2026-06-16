@@ -9,9 +9,9 @@ public class ToolHandler : PacketHandlerBase
     {
         var packet = DeSerialize<ToolSpawnPacket>(package.Body);
         var room = session.Player.Room;
-        var tool = room.GenerateTool(packet.ToolId);
+        var tool = room.GenerateTool(packet.ToolId, out var entityId);
 
-        packet.EntityId = tool.EntityId;
+        packet.EntityId = entityId;
         tool.Position = packet.Position;
         tool.Rotation = packet.Quaternion;
 
@@ -26,9 +26,9 @@ public class ToolHandler : PacketHandlerBase
     {
         var packet = DeSerialize<ToolRegisterPacket>(package.Body);
         var room = session.Player.Room;
-        var tool = room.GenerateTool(packet.ToolId);
+        var tool = room.GenerateTool(packet.ToolId, out var entityId);
 
-        packet.EntityId = tool.EntityId;
+        packet.EntityId = entityId;
         tool.Position = packet.Position;
         tool.Rotation = packet.Quaternion;
 

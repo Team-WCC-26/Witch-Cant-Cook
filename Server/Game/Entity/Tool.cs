@@ -1,11 +1,6 @@
 ﻿namespace Server;
 
-public class Tool : Entity
+public class Tool(int toolId) : Entity
 {
-    public Tool(long id, int toolId) : base(id)
-    {
-        ToolId = toolId;
-    }
-
-    public readonly int ToolId;
+    public readonly int ToolId = toolId;
 }
