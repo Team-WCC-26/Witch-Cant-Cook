@@ -41,7 +41,10 @@ public class StageManager : Singleton<StageManager>
 
     void Start()
     {
-        ServerManager.Instance.RegisterHandler(PacketId.S_OpenDoor,OnOpenDoor);
+        Debug.Log("1");
+        ServerManager.Instance.RegisterHandler(
+            PacketId.S_OpenDoor,
+            data => OnOpenDoor(data));        
         //config = Resources.Load<StageConfig>("StageConfig");
 
         // 페이즈 초기화
@@ -49,10 +52,12 @@ public class StageManager : Singleton<StageManager>
         cookingPhase = new CookingPhase(this);
         judgePhase = new JudgePhase(this);
 
+        Debug.Log("2");
         lobbyDoor = GameObject.Find("LobbyDoor").GetComponent<Door>();
         kitchenDoor = GameObject.Find("KitchenDoor").GetComponent<Door>();
         lobbyDoor.OpenImmediate();
         kitchenDoor.CloseImmediate();
+        Debug.Log("3");
     }
 
     void Update()
@@ -62,7 +67,7 @@ public class StageManager : Singleton<StageManager>
 
     private void OnDestroy()
     {
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_OpenDoor);
+        //ServerManager.Instance.UnRegisterHandler(PacketId.S_OpenDoor);
     }
 
 
@@ -139,8 +144,8 @@ public class StageManager : Singleton<StageManager>
 
     private void OnOpenDoor(ReadOnlyMemory<byte> data)
     {
-        OpenDoorPacket packet =
-            PacketSerializer.Deserialize<OpenDoorPacket>(data);
+        Debug.Log("문 열기 패킷 수신");
+        OpenDoorPacket packet = PacketSerializer.Deserialize<OpenDoorPacket>(data);
 
         switch (packet.DoorId)
         {
