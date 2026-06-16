@@ -12,7 +12,7 @@ public class Room
     private readonly List<Player> _players = new();
     public readonly int MaxPlayerCount = 2;
 
-    public IReadOnlyDictionary<long, Entity> Entityes => _entities;
+    public IReadOnlyDictionary<long, Entity> Entities => _entities;
     private readonly Dictionary<long, Entity> _entities = new();
 
     public int PlayerCnt => _playerCnt;
@@ -24,6 +24,12 @@ public class Room
     private JobQueue _jobQueue = new();
     private Shard _shard;
 
+    private readonly Dictionary<DoorId, Door> _doors = new()
+    {
+        [DoorId.Lobby] = new(2, 3000),
+        [DoorId.Kitchen] = new(2, 3000)
+    };
+
     public Room(string id, string name, string password)
     {
         Id = id;
@@ -31,7 +37,7 @@ public class Room
         Password = password;
     }
 
-    public void Tick()
+    public void Tick(long deltaTime)
     {
         foreach (var player in _players)
         {
@@ -51,6 +57,32 @@ public class Room
             }
 
             player.Send(PacketSerializer.Serialize(packet, true));
+        }
+
+        // Open Door
+        foreach (var doorPair in _doors)
+        {
+            if (doorPair.Value.Tick())
+            {
+                foreach (var door in _doors.Values)
+                {
+                    door.IsOpen = false;
+                }
+
+                doorPair.Value.IsOpen = true;
+
+                PushJob(() =>
+                {
+                    OpenDoorPacket packet = new()
+                    {
+                        DoorId = doorPair.Key
+                    };
+
+                    BroadCast(PacketSerializer.Serialize(packet, true));
+                });
+
+                break;
+            }
         }
 
         _tick++;
@@ -74,22 +106,31 @@ public class Room
         return _shard;
     }
 
-    public Ingredient GenerateIngredient(int id)
+    public Ingredient GenerateIngredient(int id, out long entityId)
     {
-        Ingredient ingredient = new(GenerateEntityId(), id);
+        Ingredient ingredient = new(id);
+        entityId = GenerateEntityId();
 
-        _entities[ingredient.EntityId] = ingredient;
+        _entities[entityId] = ingredient;
 
         return ingredient;
     }
 
-    public Tool GenerateTool(int id)
+    public Tool GenerateTool(int id, out long entityId)
     {
-        Tool tool = new(GenerateEntityId(), id);
+        Tool tool = new(id);
+        entityId = GenerateEntityId();
 
-        _entities[tool.EntityId] = tool;
+        _entities[entityId] = tool;
 
         return tool;
+    }
+
+    public void CombineIngredient(long resultId, long removeId, Food food)
+    {
+        _entities.Remove(removeId);
+
+        _entities[resultId] = food;
     }
 
     public void DestroyIngredient(long id)
@@ -156,6 +197,16 @@ public class Room
 
             BroadCast(PacketSerializer.Serialize(packet));
         });
+    }
+
+    public void InteractDoor(DoorId doorId, string playerId)
+    {
+        _doors[doorId].BeginInteract(playerId);
+    }
+
+    public void StopInteractDoor(DoorId doorId, string playerId)
+    {
+        _doors[doorId].EndInteract(playerId);
     }
 
     private PlayerMovementPacket GetMovementData(Player player)
