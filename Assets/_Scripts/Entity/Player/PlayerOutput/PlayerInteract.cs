@@ -7,7 +7,6 @@ public class PlayerInteract
 {
     private readonly PlayerBrain brain;
 
-    private const float DefaultThrowForce = 8.0f;
     private const bool DebugInteraction = true;
 
     public CatchableObj HeldObj { get; private set; }
@@ -148,12 +147,14 @@ public class PlayerInteract
 
         CatchableObj target = HeldObj;
 
-        Vector3 velocity = GetAimDirection() * GetThrowForce(target);
+        Transform throwOrigin = GetThrowOrigin();
+        Vector3 throwPosition = GetThrowPosition(throwOrigin);
+        Vector3 velocity = GetThrowDirection(throwOrigin) * GetThrowForce();
 
         EntityThrowPacket packet = new()
         {
             EntityId = target.NetworkId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(brain.ItemHoldParent.position),
+            Position = ProtocolTypeConverter.ToNumericsVector3(throwPosition),
             Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
         };
 
@@ -177,18 +178,27 @@ public class PlayerInteract
     #endregion
 
     #region Throw Action Helper
-    private Vector3 GetAimDirection()
+    private Transform GetThrowOrigin()
     {
-        Transform origin = brain.PlayerCam != null
+        return brain.PlayerCam != null
             ? brain.PlayerCam.transform
             : brain.transform;
-
-        return origin.forward.normalized;
     }
 
-    private float GetThrowForce(CatchableObj target)
+    private Vector3 GetThrowPosition(Transform origin)
     {
-        return target.ThrowForce > 0.0f ? target.ThrowForce : DefaultThrowForce;
+        return origin.TransformPoint(brain.ThrowCameraOffset);
+    }
+
+    private Vector3 GetThrowDirection(Transform origin)
+    {
+        Quaternion angleOffset = Quaternion.AngleAxis(-brain.ThrowAngle, origin.right);
+        return (angleOffset * origin.forward).normalized;
+    }
+
+    private float GetThrowForce()
+    {
+        return brain.ThrowForce;
     }
     #endregion
 

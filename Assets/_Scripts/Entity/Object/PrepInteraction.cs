@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class PrepInteraction : MapObjInteraction
 {
-    [SerializeField] private Transform itemSlot;   // µµ¸¶ Áß¾Ó
-    [SerializeField] private Transform knifeSlot;  // µµ¸¶ ¿·
+    [SerializeField] private Transform itemSlot;
+    [SerializeField] private Transform knifeSlot;
 
     private CatchableObj currentItem;
     private CatchableObj currentKnife;
@@ -15,6 +15,14 @@ public class PrepInteraction : MapObjInteraction
             return;
         }
         if (catchable.IsHold) return;
+        if (!IsRegistered) return;
+
+        Router?.RequestPut(this, catchable);
+    }
+
+    public void ApplyPut(CatchableObj catchable)
+    {
+        if (catchable == null) return;
 
         if (catchable.ObjType == CatchableObjType.Knife)
         {

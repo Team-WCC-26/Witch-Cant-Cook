@@ -18,10 +18,13 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     {
         yield return new WaitForSeconds(0.3f);
 
+        yield return new WaitUntil(IsReadyToRegister);
+
         if (ServerManager.Instance == null)
             yield break;
 
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientPut, OnIngredientPut);
         BeginRegister();
     }
 
@@ -30,6 +33,31 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         if (ServerManager.Instance == null) return;
 
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolRegister);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientPut);
+    }
+
+    private bool IsReadyToRegister()
+    {
+        if (ServerManager.Instance == null) return false;
+        if (PlayerSpawnManager.Instance == null) return false;
+
+        return !string.IsNullOrEmpty(PlayerSpawnManager.Instance.MyID);
+    }
+
+    public void RequestPut(PrepInteraction prep, CatchableObj catchable)
+    {
+        if (prep == null) return;
+        if (catchable == null) return;
+        if (!prep.IsRegistered) return;
+        if (ServerManager.Instance == null) return;
+
+        IngredientPutPacket packet = new()
+        {
+            IngredientId = catchable.NetworkId,
+            CountertopId = prep.NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     #region Map Object Getters
@@ -59,6 +87,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         foreach (PrepInteraction prep in prepInteractions)
         {
             if (prep == null) continue;
+            prep.InitializeRouter(this);
             if (prep.IsRegistered) continue;
 
             registerQueue.Enqueue(prep);
@@ -99,5 +128,18 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         mapObjects[packet.EntityId] = currentRegisterTarget;
 
         RegisterNext();
+    }
+
+    private void OnIngredientPut(ReadOnlyMemory<byte> data)
+    {
+        IngredientPutPacket packet = PacketSerializer.Deserialize<IngredientPutPacket>(data.Span);
+
+        if (!TryGetMapObject(packet.CountertopId, out PrepInteraction prep))
+            return;
+
+        if (!NetworkObjectRegistry.Instance.TryGet(packet.IngredientId, out CatchableObj catchable))
+            return;
+
+        prep.ApplyPut(catchable);
     }
 }

@@ -17,10 +17,17 @@ public abstract class MapObjInteraction : MonoBehaviour
 
     private long networkId;
 
+    protected MapObjNetworkRouter Router { get; private set; }
+
     public int ToolId => (int)toolId;
     public ToolId ToolType => toolId;
     public long NetworkId => networkId;
     public bool IsRegistered => networkId != 0;
+
+    public virtual void InitializeRouter(MapObjNetworkRouter router)
+    {
+        Router = router;
+    }
 
     public virtual void SetNetworkId(long entityId)
     {
