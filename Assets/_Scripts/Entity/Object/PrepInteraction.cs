@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PrepInteraction : MonoBehaviour
+public class PrepInteraction : MapObjInteraction
 {
     [SerializeField] private Transform itemSlot;   // µµ¸¶ Áß¾Ó
     [SerializeField] private Transform knifeSlot;  // µµ¸¶ ¿·
