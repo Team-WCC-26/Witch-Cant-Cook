@@ -21,7 +21,7 @@ public class PlayerAnimController
 
     public void UpdateTick(PlayerCombinedState state)
     {
-        animator.SetBool(onHoldHash, brain.Interact != null && brain.Interact.IsHolding);
+        animator.SetBool(onHoldHash, state.HeldObjType != CatchableObjType.Default);
 
         if (state.PhysicalMode != PlayerPhysicalMode.Default)
         {
