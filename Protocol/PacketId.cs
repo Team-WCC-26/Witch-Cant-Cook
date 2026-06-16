@@ -69,21 +69,19 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_IngredientSpawn = 340,
     S_IngredientSpawn = 341,
 
-    C_IngredientCut = 342,
+    C_IngredientPut = 342,
+    S_IngredientPut = 353,
 
-    C_IngredientGrill = 344,
+    C_CookStart = 344,
+    S_CookStart = 345,
 
-    C_IngredientBoil = 346,
+    C_CookCancel = 346,
+    S_CookCancel = 347,
 
-    C_IngredientRoast = 348,
+    S_CookComplete = 349,
 
-    C_IngredientCancelGrill = 350,
-
-    C_IngredientCombine = 352,
-    S_IngredientCombine = 353,
-
-    C_IngredientPut = 354,
-    S_IngredientPut = 355,
+    C_IngredientCombine = 348,
+    S_IngredientCombine = 349,
 
     C_ToolRegister = 370,
     S_ToolRegister = 371,

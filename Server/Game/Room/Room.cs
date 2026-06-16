@@ -126,6 +126,11 @@ public class Room
         return tool;
     }
 
+    public void DestroyIngredient(long id)
+    {
+        _entities.Remove(id);
+    }
+
     public void CombineIngredient(long resultId, long removeId, Food food)
     {
         _entities.Remove(removeId);
@@ -133,9 +138,9 @@ public class Room
         _entities[resultId] = food;
     }
 
-    public void DestroyIngredient(long id)
+    public void UpdateEntity(long entityId, Entity entity)
     {
-        _entities.Remove(id);
+        _entities[entityId] = entity;
     }
 
     private long GenerateEntityId()
