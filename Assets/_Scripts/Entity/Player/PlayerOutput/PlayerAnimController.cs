@@ -2,10 +2,12 @@ using UnityEngine;
 
 public class PlayerAnimController
 {
+    private readonly PlayerBrain brain;
     private readonly Animator animator;
 
     private readonly int speedHash = Animator.StringToHash("Speed");
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
+    private readonly int onHoldHash = Animator.StringToHash("OnHold");
 
     private const float IdleSpeed = 0f;
     private const float WalkSpeed = 4f;
@@ -13,11 +15,14 @@ public class PlayerAnimController
 
     public PlayerAnimController(PlayerBrain brain)
     {
+        this.brain = brain;
         animator = brain.Animator;
     }
 
     public void UpdateTick(PlayerCombinedState state)
     {
+        animator.SetBool(onHoldHash, brain.Interact != null && brain.Interact.IsHolding);
+
         if (state.PhysicalMode != PlayerPhysicalMode.Default)
         {
             ForceIdle();
