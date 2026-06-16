@@ -6,11 +6,6 @@ namespace Server;
 
 public class Player : Entity
 {
-    public Player() : base(-1)
-    {
-
-    }
-
     public string PlayerId { get; set; }
     public IAppSession Session { get; set; }
     public float LastPingTime { get; set; }
