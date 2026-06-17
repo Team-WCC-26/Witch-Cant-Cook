@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3883366835955713611}
   - component: {fileID: 7084931450169209163}
   - component: {fileID: 3754346785235192577}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Meat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -206,9 +206,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 6795053574455325792}
     m_Modifications:
+    - target: {fileID: 1901243038791556662, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_Name
       value: GuageUI
+      objectReference: {fileID: 0}
+    - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 7671558560243445453, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_Pivot.x
@@ -301,6 +309,10 @@ PrefabInstance:
     - target: {fileID: 7671558560243445453, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7739679005483659272, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

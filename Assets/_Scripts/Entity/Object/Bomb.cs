@@ -46,30 +46,19 @@ public class Bomb : MonoBehaviour
     private void OnEnable()
     {
         exploded = false;
-
-        if (ServerManager.Instance != null)
-        {
-            ServerManager.Instance.RegisterHandler(PacketId.S_EntityPickup, OnEntityPickup);
-        }
+        GameEvents.OnEntityPicked += OnEntityPickup;
     }
 
     private void OnDisable()
     {
         StopFuse();
-
-        if (ServerManager.Instance != null)
-        {
-            ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityPickup);
-        }
+        GameEvents.OnEntityPicked -= OnEntityPickup;
     }
 
-    private void OnEntityPickup(ReadOnlyMemory<byte> data)
+    private void OnEntityPickup(EntityPickedEvent evt)
     {
-        //EntityPickupPacket packet =
-        //    MemoryPackSerializer.Deserialize<EntityPickupPacket>(data.Span)!; // 직접 이걸 deserialize하면 안되남 일단 주석처리해봄 ㅋㅋ
-
-        //if (packet.EntityId != catchable.NetworkId)
-        //    return;
+        if (evt.EntityId != catchable.NetworkId)
+            return;
 
         StartFuse();
     }
@@ -131,32 +120,53 @@ public class Bomb : MonoBehaviour
             if (hit.gameObject == gameObject)
                 continue;
 
-            Rigidbody rb = null;
+            Rigidbody rb =
+                        hit.attachedRigidbody != null
+                            ? hit.attachedRigidbody
+                            : hit.GetComponentInParent<Rigidbody>();
+            if (rb == null)  continue;
 
-            if (hit.TryGetComponent<PlayerBrain>(out var player))
+            if (hit.TryGetComponent(out CatchableObj catchable))
             {
-                rb = player.Rb;
-            }
-            else if (hit.TryGetComponent<CatchableObj>(out var obj))
-            {
-                rb = obj.Rb;
-
-                if (obj.IsHold)
+                if (catchable.IsHold)
                 {
-                    obj.SetPhysicsState(true);
+                    catchable.SetPhysicsState(true);
                 }
             }
+            Vector3 dir = rb.position - origin;
+            dir.y *= 0.3f;
+            Vector3 backDir = -transform.forward;
 
-            if (rb == null)
-                continue;
+            Vector3 finalDir = (dir + backDir).normalized;
+            Vector3 force =
+            finalDir * blastForce +
+            Vector3.up * (blastForce * 0.4f);
 
-            rb.AddExplosionForce(
-                blastForce,
-                origin,
-                blastRadius,
-                upwardModifier,
-                ForceMode.Impulse
-            );
+            rb.AddForce(force, ForceMode.Impulse);
+            //    if (hit.TryGetComponent<PlayerBrain>(out var player))
+            //    {
+            //        rb = player.Rb;
+            //    }
+            //    else if (hit.TryGetComponent<CatchableObj>(out var obj))
+            //    {
+            //        rb = obj.Rb;
+
+            //        if (obj.IsHold)
+            //        {
+            //            obj.SetPhysicsState(true);
+            //        }
+            //    }
+
+            //    if (rb == null)
+            //        continue;
+
+            //    rb.AddExplosionForce(
+            //        blastForce,
+            //        origin,
+            //        blastRadius,
+            //        upwardModifier,
+            //        ForceMode.Impulse
+            //    );
         }
     }
 
@@ -190,17 +200,8 @@ public class Bomb : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = new Color(
-            1f,
-            0.2f,
-            0f,
-            0.25f
-        );
-
-        Gizmos.DrawSphere(
-            transform.position,
-            blastRadius
-        );
+        Gizmos.color = new Color(1f, 0f, 0f, 0.25f);
+        Gizmos.DrawSphere(transform.position, blastRadius);
     }
 #endif
 }

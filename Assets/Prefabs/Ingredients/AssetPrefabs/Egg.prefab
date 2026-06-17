@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7416831067980358062}
   - component: {fileID: -9012784190197821221}
   - component: {fileID: 6408138329122547482}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Egg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -153,8 +153,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  networkId: 0
   col: {fileID: 7416831067980358062}
   rb: {fileID: -9012784190197821221}
+  objType: 1
   canBePicked: 1
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}

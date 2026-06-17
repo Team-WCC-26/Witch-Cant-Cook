@@ -49,23 +49,6 @@ public class CatchableObj : MonoBehaviour
     {
         ResetObj();
     }
-    //private void Start()
-    //{
-
-    //    if (ServerManager.Instance == null)
-    //        return;
-
-    //    ToolRegisterPacket packet = new()
-    //    {
-    //        EntityId = 0, // 서버가 발급
-    //        ToolId = (int)objType,
-    //        Position = new System.Numerics.Vector3(transform.position.x, transform.position.y, transform.position.z),
-    //        Quaternion = new System.Numerics.Quaternion(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w)
-    //    };
-
-    //    _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-    //    Debug.Log($"Tool Register Request : {name}");
-    //}
     private void OnDisable()
     {
         if (ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) && registered == this)
