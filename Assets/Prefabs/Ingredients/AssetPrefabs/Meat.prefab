@@ -12,6 +12,9 @@ GameObject:
   - component: {fileID: 7080171971600033277}
   - component: {fileID: 7645356873443844550}
   - component: {fileID: 2453357955370223614}
+  - component: {fileID: -2923294978887556101}
+  - component: {fileID: -3372566855361488528}
+  - component: {fileID: -9221687344796529368}
   m_Layer: 0
   m_Name: Meat
   m_TagString: Untagged
@@ -112,3 +115,71 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.5571097, y: 0.2404825, z: 0.46037635}
   m_Center: {x: 0, y: 0.12024125, z: 0}
+--- !u!54 &-2923294978887556101
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5393613222406266558}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &-3372566855361488528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5393613222406266558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  networkId: 0
+  col: {fileID: 2453357955370223614}
+  rb: {fileID: -2923294978887556101}
+  objType: 1
+  canBePicked: 1
+  holdLocalPosition: {x: 0, y: 0, z: 0}
+  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  throwForce: 0
+--- !u!114 &-9221687344796529368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5393613222406266558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
+  catchable: {fileID: -3372566855361488528}
+  meshFilter: {fileID: 7080171971600033277}
+  targetRenderer: {fileID: 7645356873443844550}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
+  defaultMesh: {fileID: 8969138290134644396, guid: 702db1e05ecfb974ea0b943069ec7004, type: 3}
+  cutMesh: {fileID: 7444200561883379566, guid: 8ce063e19ce6bd248ad2397fc41c2b4f, type: 3}
+  defaultMaterial: {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+  cookedMaterial: {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
