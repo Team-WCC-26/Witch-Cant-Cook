@@ -6,14 +6,10 @@ namespace Protocol;
 [PacketId(PacketId.S_EntityCombine)]
 public partial class EntityCombineResultPacket
 {
-    public long FoodEntityId { get; set; }
+    public bool Success { get; set; }
+    public long SubjectEntityId { get; set; }
+    public long TargetEntityId { get; set; }
+    public long RemainingEntityId { get; set; }
     public long RemovedEntityId { get; set; }
-    public IngredientStateData[] Ingredients { get; set; }
-}
-
-[MemoryPackable]
-public partial struct IngredientStateData
-{
-    public int Id { get; set; }
-    public IngredientState StateFlag { get; set; }
+    public int ResultIngredientId { get; set; }
 }
