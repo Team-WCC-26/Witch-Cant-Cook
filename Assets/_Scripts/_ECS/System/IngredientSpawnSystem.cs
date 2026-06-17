@@ -39,14 +39,19 @@ public partial class IngredientSpawnSystem : SystemBase
             {
                 // 3. ECS 컴포넌트 주입 및 딕셔너리 세팅 로직 호출
                 InjectECSComponents(
-                ecb,
-                spawnedObj,
-                reqID,
-                netID,
-                reqPos,
-                reqRot
-            );
+                    ecb,
+                    spawnedObj,
+                    reqID,
+                    netID,
+                    reqPos,
+                    reqRot
+                );
                 ObjectPoolManager.Instance.activeObjDict.Add(netID, spawnedObj);
+
+                if (spawnedObj.TryGetComponent(out CatchableObj catchObj))
+                {
+                    catchObj.Data = ingredientRaw;
+                }
             }
             else
             {

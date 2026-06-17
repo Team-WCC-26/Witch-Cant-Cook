@@ -41,8 +41,6 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
     private void RouteEntityPickup(ReadOnlyMemory<byte> data)
     {
-        Debug.Log("a");
-
         EntityPickupPacket packet =
             PacketSerializer.Deserialize<EntityPickupPacket>(data.Span);
 
@@ -59,6 +57,8 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
             Debug.Log("Catch Target ∫Œ¿Á");
             return;
         }
+
+        GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
 
         player.Interact.ApplyPicked(target);
     }

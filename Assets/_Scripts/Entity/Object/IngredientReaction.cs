@@ -6,10 +6,22 @@ public enum IngredientAction : byte
 {
     None = 0,
 
-    Cut = 1,        // 자르기 
-    Grill = 2,      // 굽기 
-    Boil = 4,       // 삶기 
-    Cook = 8        // 익히기
+    Cut = 1,
+    Grill = 2,
+    Boil = 4,
+    Cook = 8
+}
+
+[Serializable]
+public class IngredientActionVisual
+{
+    [SerializeField] private IngredientAction action;
+    [SerializeField] private Mesh mesh;
+    [SerializeField] private Material[] materials;
+
+    public IngredientAction Action => action;
+    public Mesh Mesh => mesh;
+    public Material[] Materials => materials;
 }
 
 public class IngredientReaction : MonoBehaviour
@@ -20,12 +32,16 @@ public class IngredientReaction : MonoBehaviour
     [Header("Components")]
     [SerializeField] private MeshFilter meshFilter;
     [SerializeField] private Renderer targetRenderer;
+    [SerializeField] private ParticleSystem cutParticle;
 
     [Header("Interact Gauge")]
+    [SerializeField] private InteractionGaugeUI gaugeUI;
     private IngredientAction lastAction = IngredientAction.None;
+    private IngredientAction completedActions = IngredientAction.None;
     private int curHP;
     private int maxHP;
     public float CurGuage => 1 - (float)curHP / maxHP;
+    public InteractionGaugeUI GaugeUI => gaugeUI;
 
     [Header("Plate Offset")]
     [SerializeField] private Vector3 plateOffsetPos = Vector3.zero;
@@ -33,23 +49,23 @@ public class IngredientReaction : MonoBehaviour
     public Vector3 PlateOffsetPos => plateOffsetPos;
     public Vector3 PlateOffsetEuler => plateOffsetEuler;
 
-    #region 재료 변화 캐싱
-    [SerializeField] private Mesh defaultMesh;
-    [SerializeField] private Mesh cutMesh;
-    [SerializeField] private Material defaultMaterial;
-    [SerializeField] private Material cookedMaterial;
-    #endregion
+    [Header("Action Visuals")]
+    [SerializeField] private IngredientActionVisual[] actionVisuals;
 
     private void Awake()
     {
-        maxHP = GetMaxHP();
-        curHP = maxHP;
+        InitializeGauge();
 
-        //TODO : ResourceManager에서 Mesh, Shader 불러오기
-        //defaultMesh = ResourceManager.Instance.GetAsset<Mesh>("IngredientMesh");
-        //cutMesh = ResourceManager.Instance.GetAsset<Mesh>("CutIngredientMesh");
-        //defaultShader = ResourceManager.Instance.GetAsset<Shader>("DefaultShader");
-        //cookedShader = ResourceManager.Instance.GetAsset<Shader>("CookedShader");
+        // TODO: Load mesh and shader data from ResourceManager.
+    }
+
+    private void OnEnable()
+    {
+        InitializeGauge();
+        lastAction = IngredientAction.None;
+        completedActions = IngredientAction.None;
+
+        ApplyVisual(IngredientAction.None);
     }
 
     public bool Interact(IngredientAction action, int dmg = 0)
@@ -73,16 +89,19 @@ public class IngredientReaction : MonoBehaviour
 
         // Apply damage and check for completion
         curHP = (int)MathF.Max(0, curHP - dmg);
+        if (action == IngredientAction.Cut)
+        {
+            PlayCutParticle();
+        }
 
-        //TODO : HP 감소에 따른 Mesh, Shader 변화 구현하기
-        //TODO : 완료된 플래그 표시해주기
+        // TODO: Apply mesh and shader changes based on HP progress.
+        // TODO: Show completed state flag.
         if (curHP <= 0)
         {
             switch (action)
             {
                 case IngredientAction.Cut:
                     Debug.Log("Cutting Completed.");
-                    ApplyMesh(cutMesh); //TODO : dmg 반영하기
                     break;
                 case IngredientAction.Grill:
                     Debug.Log("Grilling Completed.");
@@ -91,14 +110,16 @@ public class IngredientReaction : MonoBehaviour
                     Debug.Log("Boiling Completed.");
                     break;
                 case IngredientAction.Cook:
-                    ApplyMaterial(cookedMaterial);
+                    Debug.Log("Cooking Completed.");
                     break;
                 default:
                     Debug.Log("Unknown action.");
                     break;
             }
 
-            return true; //Action 완료 시 Interact 호출 금지용
+            completedActions |= action;
+            ApplyVisual(completedActions);
+            return true;
         }
 
         return false;
@@ -112,32 +133,54 @@ public class IngredientReaction : MonoBehaviour
         return ((IngredientAction)ingredient.conditionFlag & action) != 0;
     }
 
-    #region 재료 변화 적용
-    private void ApplyMesh(Mesh mesh = null)
+    #region Visual Apply
+    private void ApplyVisual(IngredientAction action)
     {
-        if (mesh == null)
-        {
-            meshFilter.mesh = defaultMesh;
-            return;
-        }
+        IngredientActionVisual visual = FindActionVisual(action);
+        if (visual == null) return;
 
-        meshFilter.mesh = mesh;
+        ApplyMesh(visual.Mesh);
+        ApplyMaterials(visual.Materials);
     }
 
-    private void ApplyMaterial(Material material = null)
+    private IngredientActionVisual FindActionVisual(IngredientAction action)
     {
-        //default shader
-         if (material == null)
+        if (actionVisuals == null) return null;
+
+        foreach (IngredientActionVisual visual in actionVisuals)
         {
-            targetRenderer.material = defaultMaterial;
-            return;
+            if (visual == null) continue;
+            if (visual.Action == action) return visual;
         }
 
-        targetRenderer.material = material;
+        return null;
+    }
+
+    private void ApplyMesh(Mesh mesh)
+    {
+        if (mesh == null) return;
+        if (meshFilter == null) return;
+
+        meshFilter.sharedMesh = mesh;
+    }
+
+    private void ApplyMaterials(Material[] materials)
+    {
+        if (materials == null) return;
+        if (materials.Length == 0) return;
+        if (targetRenderer == null) return;
+
+        targetRenderer.sharedMaterials = materials;
     }
     #endregion
 
     #region helper methods
+    private void InitializeGauge()
+    {
+        maxHP = GetMaxHP();
+        curHP = maxHP;
+    }
+
     private int GetMaxHP()
     {
         if (catchable.Data is Ingredient ingredient)
@@ -148,6 +191,13 @@ public class IngredientReaction : MonoBehaviour
         }
 
         return 0;
+    }
+
+    private void PlayCutParticle()
+    {
+        if (cutParticle == null) return;
+        cutParticle.Clear(true);
+        cutParticle.Play(true);
     }
     #endregion
 }

@@ -9,46 +9,17 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
 {
 
     public Dictionary<long, CatchableObj> catchableDics = new();
-    private readonly Queue<CatchableObj> registerQueue = new();
-    public int RegisterQueueCount => registerQueue.Count;
 
     private void OnEnable()
     {
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, HandleToolRegister);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
     }
 
-
-    #region Object Register
-    public void EnqueueRegister(CatchableObj obj)
-    {
-        registerQueue.Enqueue(obj);
-    }
-
-    private void HandleToolRegister(ReadOnlyMemory<byte> data)
-    {
-        Debug.Log($"Register Queue Count = {registerQueue.Count}");
-        ToolRegisterPacket packet = MemoryPackSerializer.Deserialize<ToolRegisterPacket>(data.Span)!;
-
-        if (registerQueue.Count == 0)
-        {
-            Debug.LogError($"µî·Ï ´ë±âÁßÀÎ CatchableObj ¾øÀ½. EntityId={packet.EntityId}");
-            return;
-        }
-
-        CatchableObj obj = registerQueue.Dequeue();
-
-        obj.NetworkId = packet.EntityId;
-
-        Add(packet.EntityId, obj);
-
-        Debug.Log($"Tool Registered : {obj.name} -> {packet.EntityId}");
-    }
     private void HandleToolSpawn(ReadOnlyMemory<byte> data)
     {
         ToolSpawnPacket packet = MemoryPackSerializer.Deserialize<ToolSpawnPacket>(data.Span)!;
 
-        string toolName = ((CatchableObjType)packet.ToolId).ToString(); // enum ÀÌ¸§ÀÌ prefab key¿Í ÀÏÄ¡ÇÑ´Ù°í °¡Á¤
+        string toolName = ((CatchableObjType)packet.ToolId).ToString(); // enum ï¿½Ì¸ï¿½ï¿½ï¿½ prefab keyï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Ñ´Ù°ï¿½ ï¿½ï¿½ï¿½ï¿½
         Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
         Quaternion rot = new Quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W);
 
@@ -62,16 +33,9 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
             ObjectPoolManager.Instance.activeObjDict[packet.EntityId] = go;
         }
     }
-    public CatchableObj DequeueRegister()
-    {
-        return registerQueue.Dequeue();
-    }
 
-    #endregion
-
-
-    // ÀÏ´Ü catchableObj¸¸ °ü¸®
-    // ³ªÁß¿¡ ´Ù¸¥ ÄÄÆ÷³ÍÆ® »ý±â¸é ±×¶§ Ãß°¡
+    // ï¿½Ï´ï¿½ catchableObjï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ß¿ï¿½ ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½×¶ï¿½ ï¿½ß°ï¿½
     public void Add(long networkId, CatchableObj obj)
     {
         catchableDics[networkId] = obj;
@@ -86,15 +50,4 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
         return catchableDics.TryGetValue(networkId, out obj);
     }
 
-    //private void RegisterSceneObjects()
-    //{
-    //    CatchableObj[] objs =
-    //        FindObjectsByType<CatchableObj>(
-    //            FindObjectsSortMode.None);
-
-    //    foreach (var obj in objs)
-    //    {
-    //        Add(obj.NetworkId, obj);
-    //    }
-    //}
 }
