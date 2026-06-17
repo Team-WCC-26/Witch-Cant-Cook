@@ -137,7 +137,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         if (!TryGetMapObject(packet.CountertopId, out PrepInteraction prep))
             return;
 
-        if (!NetworkObjectRegistry.Instance.TryGet(packet.IngredientId, out CatchableObj catchable))
+        if (!ObjectNetworkRouter.Instance.TryGet(packet.IngredientId, out CatchableObj catchable))
             return;
 
         prep.ApplyPut(catchable);
