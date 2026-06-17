@@ -158,7 +158,7 @@ public class StageManager : Singleton<StageManager>
             case DoorId.Kitchen:
                 lobbyDoor.Close();
                 kitchenDoor.Open();
-                StartCooking();
+                //StartCooking();
                 break;
         }
         DoorOpened?.Invoke(packet.DoorId);
