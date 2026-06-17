@@ -63,6 +63,11 @@ namespace Server
 
         public async UniTask SendData(byte[] data)
         {
+            if (_stream == null)
+            {
+                Debug.LogError($"STREAM = {_stream}.");
+                return;
+            }
             await _stream.WriteAsync(data);
         }
 
