@@ -2,9 +2,14 @@
 
 namespace Server;
 
+/* 
+ * Discarded
+ */
 public class Food : Entity, ICombinable, ICookable
 {
     public readonly HashSet<IngredientStatePair> Ingredients = new();
+
+    public int IngredientId => throw new NotImplementedException();
 
     public static Food Create(Ingredient a, Ingredient b)
     {
@@ -15,15 +20,6 @@ public class Food : Entity, ICombinable, ICookable
         food.Ingredients.Add(new(b.IngredientId, b.ProcessState));
 
         return food;
-    }
-
-    public IngredientStateData[] GetIngredients()
-    {
-        return Ingredients.Select(x => new IngredientStateData
-        {
-            Id = x.IngredientId,
-            StateFlag = x.ProcessState
-        }).ToArray();
     }
 
     public bool TryCombine(ICombinable other, out ICombinable combinable)

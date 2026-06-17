@@ -11,7 +11,7 @@ public class DataBase
     private readonly Dictionary<int, IngredientData> _ingredients = new();
     private readonly Dictionary<int, DishData> _dishes = new();
     private readonly Dictionary<RecipeKey, int> _recipeDict = new();
-    private readonly Dictionary<IngredientStatePair, HashSet<RecipeKey>> _recipeCandidate = new();
+    //private readonly Dictionary<IngredientStatePair, HashSet<RecipeKey>> _recipeCandidate = new();
 
     public async Task Init()
     {
@@ -53,6 +53,7 @@ public class DataBase
         Console.WriteLine("DataBase Initilizing Complete!");
     }
 
+    /*
     public bool TryGetRecipeCandiates(IngredientStatePair ingredient, out IReadOnlySet<RecipeKey> candidates)
     {
         if (_recipeCandidate.TryGetValue(ingredient, out var set))
@@ -64,6 +65,7 @@ public class DataBase
         candidates = null!;
         return false;
     }
+    
 
     public bool CheckRecipeValid(IEnumerable<IngredientStatePair> ingredients)
     {
@@ -93,12 +95,12 @@ public class DataBase
 
         return result.Count > 0;
     }
+    */
 
     private void BuildRecipeData(List<IngredientCombinationData> combinationList)
     {
         _recipeDict.Clear();
-        _recipeCandidate.Clear();
-
+        //_recipeCandidate.Clear();
 
         var grouped = combinationList.GroupBy(x => x.ResultId);
 
@@ -111,6 +113,7 @@ public class DataBase
 
             _recipeDict[recipeKey] = resuldId;
 
+            /*
             foreach (var ingredient in ingredients)
             {
                 if (!_recipeCandidate.TryGetValue(ingredient, out var candidateSet))
@@ -121,6 +124,7 @@ public class DataBase
 
                 candidateSet.Add(recipeKey);
             }
+            */
         }
     }
 }

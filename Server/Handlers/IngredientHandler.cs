@@ -76,16 +76,33 @@ public class IngredientHandler : PacketHandlerBase
             if (!entities.TryGetValue(packet.TargetEntityId, out var target)) return;
             if (target is not ICombinable tc) return;
 
-            if (!tc.TryCombine(sc, out var combinable)) return;
-
-            room.CombineEntity(packet.TargetEntityId, packet.SubjectEntityId, combinable as Entity);
-
             EntityCombineResultPacket combineResultPacket = new()
             {
-                FoodEntityId = packet.TargetEntityId,
-                RemovedEntityId = packet.SubjectEntityId,
-                Ingredients = combinable.GetIngredients()
+                TargetEntityId = packet.TargetEntityId,
+                SubjectEntityId = packet.SubjectEntityId
             };
+
+            if (combineResultPacket.Success = tc.TryCombine(sc, out var combinable))
+            {
+                long remainId, removedId;
+
+                if (subject is Dish)
+                {
+                    remainId = packet.SubjectEntityId;
+                    removedId = packet.TargetEntityId;
+                }
+                else
+                {
+                    remainId = packet.TargetEntityId;
+                    removedId = packet.SubjectEntityId;
+                }
+
+                room.CombineEntity(remainId, removedId, combinable as Entity);
+
+                combineResultPacket.RemainingEntityId = remainId;
+                combineResultPacket.RemovedEntityId = removedId;
+                combineResultPacket.ResultIngredientId = combinable.IngredientId;
+            }
 
             room.BroadCast(PacketSerializer.Serialize(combineResultPacket, true));
         });

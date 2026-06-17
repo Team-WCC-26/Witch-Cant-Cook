@@ -11,6 +11,9 @@ public readonly struct RecipeKey : IEquatable<RecipeKey>
         Ingredients = ingredients.Order().ToArray();
     }
 
+    public RecipeKey(Ingredient a, Ingredient b)
+        : this([new(a.IngredientId, a.ProcessState), new(b.IngredientId, b.ProcessState)]) { }
+
     public bool Equals(RecipeKey other)
     {
         if (Ingredients.Length != other.Ingredients.Length) return false;
