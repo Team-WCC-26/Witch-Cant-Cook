@@ -126,16 +126,21 @@ public class Room
         return tool;
     }
 
-    public void CombineIngredient(long resultId, long removeId, Food food)
-    {
-        _entities.Remove(removeId);
-
-        _entities[resultId] = food;
-    }
-
     public void DestroyIngredient(long id)
     {
         _entities.Remove(id);
+    }
+
+    public void CombineEntity(long resultId, long removeId, Entity eentity)
+    {
+        _entities.Remove(removeId);
+
+        _entities[resultId] = eentity;
+    }
+
+    public void UpdateEntity(long entityId, Entity entity)
+    {
+        _entities[entityId] = entity;
     }
 
     private long GenerateEntityId()
@@ -178,7 +183,7 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
-    public void BroadCast(byte[] packet)
+    public void BroadCast(byte[] packet) // 병목된다 싶으면 batching으로 바꾸기
     {
         foreach (var player in _players)
         {

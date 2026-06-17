@@ -18,5 +18,5 @@ public class IngredientData
     public string StatId;
 
     [JsonProperty("conditionFlag")]
-    public IngredientState ConditionFlag; 
+    public IngredientState InvalidProcessFlag; 
 }

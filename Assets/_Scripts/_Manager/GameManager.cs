@@ -30,7 +30,7 @@ public class GameManager : Singleton<GameManager>
         if (Singleton<T>.IsInitialized) return;
 
         GameObject mngObj = new(typeof(T).Name);
-        mngObj.transform.SetParent(transform, false);
+        //mngObj.transform.SetParent(transform, false);
         mngObj.AddComponent<T>();
     }
     #endregion
@@ -44,7 +44,7 @@ public class GameManager : Singleton<GameManager>
         InitManager<ResourceManager>();
         InitManager<ObjectPoolManager>();
         InitManager<UIManager>();
-        InitManager<StageManager>();
+        //InitManager<StageManager>();
 
         InitManager<ObjectNetworkRouter>();
     }

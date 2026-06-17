@@ -1,12 +1,30 @@
-﻿namespace Server;
+﻿using Protocol;
 
-public class Food : Entity, ICombinable
+namespace Server;
+
+/* 
+ * Discarded
+ */
+public class Food : Entity, ICombinable, ICookable
 {
     public readonly HashSet<IngredientStatePair> Ingredients = new();
 
-    public bool TryCombine(ICombinable other, out Food food)
+    public int IngredientId => throw new NotImplementedException();
+
+    public static Food Create(Ingredient a, Ingredient b)
     {
-        food = this;
+        Food food = new();
+
+        food.Ingredients.Add(new(a.IngredientId, a.ProcessState));
+
+        food.Ingredients.Add(new(b.IngredientId, b.ProcessState));
+
+        return food;
+    }
+
+    public bool TryCombine(ICombinable other, out ICombinable combinable)
+    {
+        combinable = this;
 
         switch (other)
         {
@@ -18,6 +36,10 @@ public class Food : Entity, ICombinable
                 Ingredients.UnionWith(f.Ingredients);
                 break;
 
+            case Dish d:
+                d.TryCombine(this, out combinable);
+                break;
+
             default:
                 return false;
         }
@@ -25,14 +47,17 @@ public class Food : Entity, ICombinable
         return true;
     }
 
-    public static Food Create(Ingredient a, Ingredient b)
+    public bool TryCook(IngredientState state, out Ingredient ingredient)
     {
-        Food food = new();
+        ingredient = null;
+        var DB = ServerContext.Instance.DataBase;
 
-        food.Ingredients.Add(new(a.IngredientId, a.ProcessState));
+        if (!DB.RecipeDict.TryGetValue(new(Ingredients), out var ingredientId)) return false;
+        if ((DB.Ingredients[ingredientId].InvalidProcessFlag & state) != 0) return false;
 
-        food.Ingredients.Add(new(b.IngredientId, b.ProcessState));
+        ingredient = new(ingredientId);
+        ingredient.ProcessState |= state;
 
-        return food;
+        return true;
     }
 }

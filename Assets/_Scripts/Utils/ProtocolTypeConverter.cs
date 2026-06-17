@@ -80,6 +80,7 @@ public static class ProtocolTypeConverter
         return objType switch
         {
             Protocol.CatchableObjType.Default => CatchableObjType.Default,
+            Protocol.CatchableObjType.Ingredient => CatchableObjType.Ingredient,
             Protocol.CatchableObjType.Plate => CatchableObjType.Plate,
             Protocol.CatchableObjType.Knife => CatchableObjType.Knife,
             Protocol.CatchableObjType.Pan => CatchableObjType.Pan,
@@ -94,6 +95,7 @@ public static class ProtocolTypeConverter
         return objType switch
         {
             CatchableObjType.Default => Protocol.CatchableObjType.Default,
+            CatchableObjType.Ingredient => Protocol.CatchableObjType.Ingredient,
             CatchableObjType.Plate => Protocol.CatchableObjType.Plate,
             CatchableObjType.Knife => Protocol.CatchableObjType.Knife,
             CatchableObjType.Pan => Protocol.CatchableObjType.Pan,
@@ -123,6 +125,11 @@ public static class ProtocolTypeConverter
     public static System.Numerics.Vector3 ToNumericsVector3(Vector3 value)
     {
         return new System.Numerics.Vector3(value.x, value.y, value.z);
+    }
+
+    public static System.Numerics.Quaternion ToNumericsQuaternion(Quaternion value)
+    {
+        return new System.Numerics.Quaternion(value.x, value.y, value.z, value.w);
     }
     #endregion
 }
