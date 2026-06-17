@@ -16,48 +16,25 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
     private IEnumerator Start()
     {
-        yield return new WaitForSeconds(0.3f);
-
-        yield return new WaitUntil(IsReadyToRegister);
-
-        if (ServerManager.Instance == null)
-            yield break;
+        yield return new WaitUntil(() => ServerManager.Instance != null);
 
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientPut, OnIngredientPut);
-        BeginRegister();
+    }
+
+    private void OnEnable()
+    {
+        StageManager.DoorOpened += OnDoorOpened;
     }
 
     private void OnDisable()
     {
+        StageManager.DoorOpened -= OnDoorOpened;
+
         if (ServerManager.Instance == null) return;
 
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolRegister);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientPut);
-    }
-
-    private bool IsReadyToRegister()
-    {
-        if (ServerManager.Instance == null) return false;
-        if (PlayerSpawnManager.Instance == null) return false;
-
-        return !string.IsNullOrEmpty(PlayerSpawnManager.Instance.MyID);
-    }
-
-    public void RequestPut(PrepInteraction prep, CatchableObj catchable)
-    {
-        if (prep == null) return;
-        if (catchable == null) return;
-        if (!prep.IsRegistered) return;
-        if (ServerManager.Instance == null) return;
-
-        IngredientPutPacket packet = new()
-        {
-            IngredientId = catchable.NetworkId,
-            CountertopId = prep.NetworkId
-        };
-
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     #region Map Object Getters
@@ -77,6 +54,13 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         return obj != null;
     }
     #endregion
+
+    #region Map Object Register
+    private void OnDoorOpened(DoorId door)
+    {
+        if (door == DoorId.Kitchen)
+            BeginRegister();
+    }
 
     private void BeginRegister()
     {
@@ -129,6 +113,24 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
         RegisterNext();
     }
+    #endregion
+
+    #region Prep Interaction - Ingredient Put
+    public void RequestPut(PrepInteraction prep, CatchableObj catchable)
+    {
+        if (prep == null) return;
+        if (catchable == null) return;
+        if (!prep.IsRegistered) return;
+        if (ServerManager.Instance == null) return;
+
+        IngredientPutPacket packet = new()
+        {
+            IngredientId = catchable.NetworkId,
+            CountertopId = prep.NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
 
     private void OnIngredientPut(ReadOnlyMemory<byte> data)
     {
@@ -142,4 +144,5 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
         prep.ApplyPut(catchable);
     }
+    #endregion
 }
