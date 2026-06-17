@@ -12,6 +12,11 @@ public class DoorTrigger : MonoBehaviour
         if (!other.CompareTag("Player"))
             return;
 
+        PlayerBrain player = other.GetComponent<PlayerBrain>();
+
+        if (player == null || player.PlayerId != PlayerSpawnManager.Instance.MyID)
+            return;
+
         InteractDoorPacket packet = new()
         {
             DoorId = DoorId.Kitchen,
@@ -19,6 +24,8 @@ public class DoorTrigger : MonoBehaviour
         };
         var data = PacketSerializer.Serialize(packet);
         _ = ServerManager.Instance.SendData(data);
+        
+        Debug.Log($"DoorTrigger: Player entered trigger for door {PlayerSpawnManager.Instance.MyID} ismine? {PlayerSpawnManager.Instance.IsMine(PlayerSpawnManager.Instance.MyID)}");
     }
 
     private void OnTriggerExit(Collider other)

@@ -54,7 +54,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
             return;
         }
 
-        if (!ObjectRouter.Instance.TryGet(packet.EntityId, out CatchableObj target))
+        if (!ObjectNetworkRouter.Instance.TryGet(packet.EntityId, out CatchableObj target))
         {
             Debug.Log("Catch Target ∫Œ¿Á");
             return;

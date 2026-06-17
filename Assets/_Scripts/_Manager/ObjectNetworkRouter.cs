@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ObjectRouter : Singleton<ObjectRouter>
+public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
 {
 
     public Dictionary<long, CatchableObj> catchableDics = new();
@@ -17,12 +17,8 @@ public class ObjectRouter : Singleton<ObjectRouter>
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, HandleToolRegister);
     }
 
-    private void OnDestroy()
-    {
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolRegister);
-    }
-    #region Object Register
 
+    #region Object Register
     public void EnqueueRegister(CatchableObj obj)
     {
         registerQueue.Enqueue(obj);
@@ -30,6 +26,7 @@ public class ObjectRouter : Singleton<ObjectRouter>
 
     private void HandleToolRegister(ReadOnlyMemory<byte> data)
     {
+        Debug.Log($"Register Queue Count = {registerQueue.Count}");
         ToolRegisterPacket packet = MemoryPackSerializer.Deserialize<ToolRegisterPacket>(data.Span)!;
 
         if (registerQueue.Count == 0)

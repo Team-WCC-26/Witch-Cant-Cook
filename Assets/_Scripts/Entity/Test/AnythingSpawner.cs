@@ -31,7 +31,7 @@ public class AnythingSpawner : MonoBehaviour
         if (go.TryGetComponent(out CatchableObj catchable))
         {
             catchable.NetworkId = Time.frameCount;
-            ObjectRouter.Instance.Add(catchable.NetworkId, catchable);
+            ObjectNetworkRouter.Instance.Add(catchable.NetworkId, catchable);
             ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
         }
 
