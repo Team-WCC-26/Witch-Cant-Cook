@@ -14,6 +14,7 @@ public class IngredientNetworkBridge : MonoBehaviour
 
     [Header("Spawn Settings")]
     private readonly int[] ingredientIDs = {
+        10600,
         10900,
         12100,
         12300
