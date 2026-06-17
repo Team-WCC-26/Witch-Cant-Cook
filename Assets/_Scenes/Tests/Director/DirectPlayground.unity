@@ -2555,6 +2555,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 292531589}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!1 &299339686
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 299339687}
+  - component: {fileID: 299339688}
+  m_Layer: 0
+  m_Name: MapNetworkRouter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &299339687
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 299339686}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &299339688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 299339686}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c99173fdf8eeb6a45825bcb8a5304aba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MapObjNetworkRouter
+  mapInteractions:
+  - {fileID: 479685200110228639}
+  - {fileID: 581608422}
+  - {fileID: 4813455580786287394}
 --- !u!1 &303609628
 GameObject:
   m_ObjectHideFlags: 0
@@ -4836,6 +4884,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3327193816171274479, guid: c6a1cca7a3d13704ab7f184ea51b0c77, type: 3}
   m_PrefabInstance: {fileID: 581608420}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &581608422 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2032395783637801122, guid: c6a1cca7a3d13704ab7f184ea51b0c77, type: 3}
+  m_PrefabInstance: {fileID: 581608420}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7372ade095b600e49bb5d9648259909b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PrepInteraction
 --- !u!1 &595472316
 GameObject:
   m_ObjectHideFlags: 0
@@ -8935,6 +8994,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8467564671359211363, guid: 23e270a79ecda7c4d9141b577520d962, type: 3}
   m_PrefabInstance: {fileID: 1179255890}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1182091346
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1182091347}
+  m_Layer: 0
+  m_Name: -Network---------------------------------------------------------- (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1182091347
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1182091346}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 35.99094, y: -0, z: -24.57656}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1185330315 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7373804967036992498, guid: f6bfb93d9ade6a14db3cf5226dcbb419, type: 3}
@@ -14861,7 +14951,7 @@ GameObject:
   - component: {fileID: 1911288650}
   - component: {fileID: 1911288651}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: AnythingSpawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17169,18 +17259,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 672621867}
     m_Modifications:
-    - target: {fileID: 2995711588621659922, guid: 03ece2c2a07340247a276143a0ac7d02, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4082797671916835553, guid: 03ece2c2a07340247a276143a0ac7d02, type: 3}
-      propertyPath: m_Mesh
-      value: 
-      objectReference: {fileID: -1831071541684709063, guid: 78fb6149bff3e004eb0c804712fec7cb, type: 3}
-    - target: {fileID: 5318631864665430067, guid: 03ece2c2a07340247a276143a0ac7d02, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 5437606039824466767, guid: 03ece2c2a07340247a276143a0ac7d02, type: 3}
       propertyPath: m_Name
       value: Pot
@@ -17230,6 +17308,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 03ece2c2a07340247a276143a0ac7d02, type: 3}
+--- !u!114 &479685200110228639 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2615120775473699540, guid: 03ece2c2a07340247a276143a0ac7d02, type: 3}
+  m_PrefabInstance: {fileID: 479685200110228638}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09c3c9097683a9040b6cf796c1696dae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PotInteraction
 --- !u!4 &874244347661195661
 Transform:
   m_ObjectHideFlags: 0
@@ -17706,6 +17795,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 139768c2068b8b4468fe9d4498756684, type: 3}
+--- !u!114 &4813455580786287394 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3034988289111059848, guid: 139768c2068b8b4468fe9d4498756684, type: 3}
+  m_PrefabInstance: {fileID: 4813455580786287393}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88f1ebc388d25d1448b855ed3806018a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OvenInteraction
 --- !u!1001 &4985683796380568784
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18119,16 +18219,18 @@ SceneRoots:
   - {fileID: 2044028449}
   - {fileID: 1302476899}
   - {fileID: 68979395}
-  - {fileID: 1971299937}
   - {fileID: 2049393159}
   - {fileID: 8008030405150916123}
   - {fileID: 6879903784153858143}
-  - {fileID: 1540242324}
+  - {fileID: 1182091347}
+  - {fileID: 299339687}
+  - {fileID: 1971299937}
   - {fileID: 2063400643}
+  - {fileID: 1911288650}
+  - {fileID: 1540242324}
   - {fileID: 2106267562}
   - {fileID: 149292822}
   - {fileID: 646517398}
-  - {fileID: 1911288650}
   - {fileID: 287654255}
   - {fileID: 1673329307}
   - {fileID: 8573698284378154771}

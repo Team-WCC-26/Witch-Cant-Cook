@@ -47,7 +47,7 @@ public class PotVisualController : MonoBehaviour
         else SetSoupVisual(visualData);
     }
 
-    private void HideAll()
+    public void HideAll()
     {
         soupContainer.gameObject.SetActive(false);
         stewContainer.gameObject.SetActive(false);

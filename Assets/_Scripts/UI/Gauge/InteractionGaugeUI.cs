@@ -62,6 +62,7 @@ public class InteractionGaugeUI : MonoBehaviour
         SetProgress(1f);
         fillCoroutine = null;
         onComplete?.Invoke();
+        gameObject.SetActive(false);
     }
 
     public void SetProgress(float normalizedValue)

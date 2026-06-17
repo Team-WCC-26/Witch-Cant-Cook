@@ -5,8 +5,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PotInteraction : MonoBehaviour
+public class PotInteraction : MapObjInteraction
 {
+    private const int TemporaryFishMeatIngredientId = 20003;
+
     [SerializeField] private PotVisualController visualController;
     [SerializeField] private InteractionGaugeUI gaugeUI;
     [SerializeField] private float cookDuration = 2f;
@@ -25,17 +27,20 @@ public class PotInteraction : MonoBehaviour
 
     private IEnumerator Start()
     {
-        yield return new WaitUntil(() => ServerManager.Instance != null);
-        TryRegisterCombineHandler();
+        yield return null;
+
+        // yield return new WaitUntil(() => ServerManager.Instance != null);
+        // TryRegisterCombineHandler();
     }
 
     private void OnEnable()
     {
         activePots.Add(this);
-        IngredientNetworkBridge.CookCompleted += OnCookComplete;
+        
+        // IngredientNetworkBridge.CookCompleted += OnCookComplete;
 
-        if (ServerManager.Instance != null)
-            TryRegisterCombineHandler();
+        // if (ServerManager.Instance != null)
+        //     TryRegisterCombineHandler();
 
         gaugeUI.gameObject.SetActive(false);
     }
@@ -43,8 +48,9 @@ public class PotInteraction : MonoBehaviour
     private void OnDisable()
     {
         activePots.Remove(this);
-        IngredientNetworkBridge.CookCompleted -= OnCookComplete;
-        TryUnregisterCombineHandler();
+        
+        // IngredientNetworkBridge.CookCompleted -= OnCookComplete;
+        // TryUnregisterCombineHandler();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -79,6 +85,16 @@ public class PotInteraction : MonoBehaviour
 
         gaugeUI.gameObject.SetActive(false);
         visualController.UpdateVisual(currentIngredientId, true);
+    }
+
+    public bool TryServeToPlate(PlateInteraction plate)
+    {
+        if (plate == null) return false;
+        if (!hasIngredient) return false;
+
+        plate.ShowTempFood();
+        ClearPot();
+        return true;
     }
 
     #region Combine Handler
@@ -144,28 +160,31 @@ public class PotInteraction : MonoBehaviour
         visualController.UpdateVisual(currentIngredientId);
         gaugeUI.gameObject.SetActive(true);
         gaugeUI?.StartFill(cookDuration);
-        IngredientNetworkBridge.RequestCookStart(cookStartedEntityId, IngredientState.Boiled);
+
+        // IngredientNetworkBridge.RequestCookStart(cookStartedEntityId, IngredientState.Boiled);
     }
 
     private bool RequestCombine(CatchableObj catchable)
     {
-        if (ServerManager.Instance == null)
-        {
-            Debug.LogWarning("Cannot request pot combine because ServerManager.Instance is null.");
-            return false;
-        }
+        ApplyTempCombineResult(catchable);
 
-        pendingSubjectEntityId = catchable.NetworkId;
-        pendingTargetEntityId = currentEntityId;
-        isWaitingCombine = true;
-
-        EntityCombinePacket packet = new()
-        {
-            SubjectEntityId = pendingSubjectEntityId,
-            TargetEntityId = pendingTargetEntityId
-        };
-
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        // if (ServerManager.Instance == null)
+        // {
+        //     Debug.LogWarning("Cannot request pot combine because ServerManager.Instance is null.");
+        //     return false;
+        // }
+        //
+        // pendingSubjectEntityId = catchable.NetworkId;
+        // pendingTargetEntityId = currentEntityId;
+        // isWaitingCombine = true;
+        //
+        // EntityCombinePacket packet = new()
+        // {
+        //     SubjectEntityId = pendingSubjectEntityId,
+        //     TargetEntityId = pendingTargetEntityId
+        // };
+        //
+        // _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
         return true;
     }
 
@@ -174,8 +193,7 @@ public class PotInteraction : MonoBehaviour
         catchable = null;
         ingredientId = 0;
 
-        IngredientReaction reaction = other.GetComponentInParent<IngredientReaction>();
-        if (reaction == null) return false;
+        if (!other.TryGetComponent(out IngredientReaction reaction)) return false;
 
         catchable = reaction.Catchable;
         if (catchable == null) return false;
@@ -198,4 +216,43 @@ public class PotInteraction : MonoBehaviour
 
         catchable.gameObject.SetActive(false);
     }
+
+    private void ClearPot()
+    {
+        hasIngredient = false;
+        isDone = false;
+        isWaitingCombine = false;
+        currentIngredientId = 0;
+        currentEntityId = 0;
+        cookStartedEntityId = 0;
+        pendingSubjectEntityId = 0;
+        pendingTargetEntityId = 0;
+
+        gaugeUI.gameObject.SetActive(false);
+        visualController.HideAll();
+    }
+
+    #region Test Code
+    private void ApplyTempCombineResult(CatchableObj catchable)
+    {
+        currentEntityId = catchable.NetworkId;
+        currentIngredientId = TemporaryFishMeatIngredientId;
+        cookStartedEntityId = catchable.NetworkId;
+        hasIngredient = true;
+        isWaitingCombine = false;
+
+        visualController.UpdateVisual(currentIngredientId);
+        gaugeUI.gameObject.SetActive(true);
+        gaugeUI?.StartFill(cookDuration, OnGaugeFull);
+    }
+
+    private void OnGaugeFull()
+    {
+        if (!hasIngredient) return;
+
+        isDone = true;
+        gaugeUI.gameObject.SetActive(false);
+        visualController.UpdateVisual(currentIngredientId, true);
+    }
+    #endregion
 }
