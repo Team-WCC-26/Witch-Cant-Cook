@@ -8,6 +8,8 @@ using UnityEngine;
 public class PotInteraction : MonoBehaviour
 {
     [SerializeField] private PotVisualController visualController;
+    [SerializeField] private InteractionGaugeUI gaugeUI;
+    [SerializeField] private float cookDuration = 2f;
 
     private static readonly List<PotInteraction> activePots = new();
     private static bool isCombineHandlerRegistered;
@@ -17,6 +19,7 @@ public class PotInteraction : MonoBehaviour
     private bool isWaitingCombine;
     private int currentIngredientId;
     private long currentEntityId;
+    private long cookStartedEntityId;
     private long pendingSubjectEntityId;
     private long pendingTargetEntityId;
 
@@ -29,14 +32,18 @@ public class PotInteraction : MonoBehaviour
     private void OnEnable()
     {
         activePots.Add(this);
+        IngredientNetworkBridge.CookCompleted += OnCookComplete;
 
         if (ServerManager.Instance != null)
             TryRegisterCombineHandler();
+
+        gaugeUI.gameObject.SetActive(false);
     }
 
     private void OnDisable()
     {
         activePots.Remove(this);
+        IngredientNetworkBridge.CookCompleted -= OnCookComplete;
         TryUnregisterCombineHandler();
     }
 
@@ -59,12 +66,18 @@ public class PotInteraction : MonoBehaviour
             ConsumeIngredient(catchable);
     }
 
-    public void CompleteCooking()
+    private void OnCookComplete(CookCompletePacket packet)
     {
         if (!hasIngredient) return;
+        if (isDone) return;
+        if (packet.CookType != IngredientState.Boiled) return;
+        if (packet.EntityId != cookStartedEntityId && packet.EntityId != currentEntityId) return;
 
         isDone = true;
         isWaitingCombine = false;
+        currentIngredientId = packet.IngredientId;
+
+        gaugeUI.gameObject.SetActive(false);
         visualController.UpdateVisual(currentIngredientId, true);
     }
 
@@ -126,8 +139,12 @@ public class PotInteraction : MonoBehaviour
         hasIngredient = true;
         currentEntityId = catchable.NetworkId;
         currentIngredientId = ingredientId;
+        cookStartedEntityId = catchable.NetworkId;
 
         visualController.UpdateVisual(currentIngredientId);
+        gaugeUI.gameObject.SetActive(true);
+        gaugeUI?.StartFill(cookDuration);
+        IngredientNetworkBridge.RequestCookStart(cookStartedEntityId, IngredientState.Boiled);
     }
 
     private bool RequestCombine(CatchableObj catchable)
@@ -157,7 +174,8 @@ public class PotInteraction : MonoBehaviour
         catchable = null;
         ingredientId = 0;
 
-        if (!other.TryGetComponent<IngredientReaction>(out var reaction)) return false;
+        IngredientReaction reaction = other.GetComponentInParent<IngredientReaction>();
+        if (reaction == null) return false;
 
         catchable = reaction.Catchable;
         if (catchable == null) return false;
