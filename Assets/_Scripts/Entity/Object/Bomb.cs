@@ -8,6 +8,9 @@ using UnityEngine;
 [RequireComponent(typeof(CatchableObj))]
 public class Bomb : MonoBehaviour
 {
+    [SerializeField] 
+    private GameObject explosionVFXPrefab;
+
     [Header("Fuse")]
     [SerializeField]
     private float fuseTime = 2f;
@@ -100,6 +103,7 @@ public class Bomb : MonoBehaviour
 
         //PlayVFX(origin);
         //PlaySFX();
+        SpawnExplosionParticle(origin);
 
         ApplyBlast(origin);
 
@@ -120,56 +124,80 @@ public class Bomb : MonoBehaviour
             if (hit.gameObject == gameObject)
                 continue;
 
-            Rigidbody rb =
-                        hit.attachedRigidbody != null
-                            ? hit.attachedRigidbody
-                            : hit.GetComponentInParent<Rigidbody>();
-            if (rb == null)  continue;
-
+            if (hit.TryGetComponent(out PlayerBrain player))
+            {
+                ApplyPlayerKnockback(player.Rb);
+                continue;
+            }
             if (hit.TryGetComponent(out CatchableObj catchable))
             {
                 if (catchable.IsHold)
-                {
                     catchable.SetPhysicsState(true);
-                }
+
+                Rigidbody rb = catchable.Rb ?? hit.attachedRigidbody;
+
+                if (rb == null)
+                    continue;
+
+                ApplyObjectKnockback(rb, origin);
             }
-            Vector3 dir = rb.position - origin;
-            dir.y *= 0.3f;
-            Vector3 backDir = -transform.forward;
-
-            Vector3 finalDir = (dir + backDir).normalized;
-            Vector3 force =
-            finalDir * blastForce +
-            Vector3.up * (blastForce * 0.4f);
-
-            rb.AddForce(force, ForceMode.Impulse);
-            //    if (hit.TryGetComponent<PlayerBrain>(out var player))
-            //    {
-            //        rb = player.Rb;
-            //    }
-            //    else if (hit.TryGetComponent<CatchableObj>(out var obj))
-            //    {
-            //        rb = obj.Rb;
-
-            //        if (obj.IsHold)
-            //        {
-            //            obj.SetPhysicsState(true);
-            //        }
-            //    }
-
-            //    if (rb == null)
-            //        continue;
-
-            //    rb.AddExplosionForce(
-            //        blastForce,
-            //        origin,
-            //        blastRadius,
-            //        upwardModifier,
-            //        ForceMode.Impulse
-            //    );
         }
+        
+    }
+    private void ApplyObjectKnockback(Rigidbody rb, Vector3 origin)
+    {
+        Vector3 dir = rb.position - origin;
+
+        // 수평 위주 퍼짐
+        dir.y = 0f;
+
+        if (dir.sqrMagnitude < 0.001f)
+            dir = UnityEngine.Random.insideUnitSphere;
+
+        dir.Normalize();
+
+        Vector3 force =
+            dir * blastForce +
+            Vector3.up * (blastForce * 0.3f);
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        rb.AddForce(force, ForceMode.Impulse);
+    }
+    private void ApplyPlayerKnockback(Rigidbody rb)
+    {
+        Vector3 backDir = -transform.forward;
+        backDir.y = 0f;
+        backDir.Normalize();
+
+        // 뒤 + 아주 약한 위로 (포물선 시작용)
+        Vector3 force =
+            backDir * blastForce * 2.2f +
+            Vector3.up * blastForce * 0.25f;
+
+        // 기존 속도 초기화
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        rb.AddForce(force, ForceMode.Impulse);
+
+        // 핵심: "위로 튐만 제한", 포물선은 유지
+        Vector3 vel = rb.linearVelocity;
+
+        if (vel.y > 2f)   // 너무 높게 뜨는 것만 컷
+            vel.y = 2f;
+
+        rb.linearVelocity = vel;
     }
 
+    private void SpawnExplosionParticle(Vector3 position)
+    {
+        if (explosionVFXPrefab == null)
+            return;
+
+        GameObject vfx = Instantiate(explosionVFXPrefab, position, Quaternion.identity);
+    }
     private void PlayVFX(Vector3 position)
     {
         if (explosionVFX == null)
