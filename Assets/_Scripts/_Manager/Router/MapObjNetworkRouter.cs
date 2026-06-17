@@ -7,12 +7,12 @@ using UnityEngine;
 
 public sealed class MapObjNetworkRouter : MonoBehaviour
 {
-    [SerializeField] private List<PrepInteraction> prepInteractions = new();
+    [SerializeField] private List<MapObjInteraction> mapInteractions = new();
 
-    private readonly Queue<PrepInteraction> registerQueue = new();
+    private readonly Queue<MapObjInteraction> registerQueue = new();
     private readonly Dictionary<long, MapObjInteraction> mapObjects = new();
 
-    private PrepInteraction currentRegisterTarget;
+    private MapObjInteraction currentRegisterTarget;
 
     private IEnumerator Start()
     {
@@ -68,13 +68,13 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         mapObjects.Clear();
         currentRegisterTarget = null;
 
-        foreach (PrepInteraction prep in prepInteractions)
+        foreach (var mapObj in mapInteractions)
         {
-            if (prep == null) continue;
-            prep.InitializeRouter(this);
-            if (prep.IsRegistered) continue;
+            if (mapObj == null) continue;
+            mapObj.InitializeRouter(this);
+            if (mapObj.IsRegistered) continue;
 
-            registerQueue.Enqueue(prep);
+            registerQueue.Enqueue(mapObj);
         }
 
         RegisterNext();

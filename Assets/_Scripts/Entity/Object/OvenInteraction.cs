@@ -1,10 +1,9 @@
 using Protocol;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class OvenInteraction : MonoBehaviour
+public class OvenInteraction : MapObjInteraction
 {
     [SerializeField] private float cookDuration = 2f;
 
