@@ -2,8 +2,6 @@ using Protocol;
 using Server;
 using System;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.UIElements;
 
 public class StageManager : Singleton<StageManager>
 {
@@ -38,6 +36,10 @@ public class StageManager : Singleton<StageManager>
     public void StartPrep() => ChangePhase(prepPhase);
     public void StartCooking() => ChangePhase(cookingPhase);
     public void StartJudging() => ChangePhase(judgePhase);
+
+    #region Stage Actions
+    public static event Action<DoorId> DoorOpened;
+    #endregion
 
     void Start()
     {
@@ -159,5 +161,6 @@ public class StageManager : Singleton<StageManager>
                 StartCooking();
                 break;
         }
+        DoorOpened?.Invoke(packet.DoorId);
     }
 }
