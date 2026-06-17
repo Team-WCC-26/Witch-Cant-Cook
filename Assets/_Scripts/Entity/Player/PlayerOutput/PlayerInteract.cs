@@ -7,7 +7,7 @@ public class PlayerInteract
 {
     private readonly PlayerBrain brain;
 
-    private const bool DebugInteraction = true;
+    private static readonly bool DebugInteraction = true;
 
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
@@ -205,7 +205,12 @@ public class PlayerInteract
     #region Interact Ray
     private CatchableObj FindCatchable()
     {
-        RaycastHit[] hits = Physics.RaycastAll(BuildInteractRay(), brain.InteractDistance);
+        Ray ray = BuildInteractRay();
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            GetInteractRadius(),
+            ray.direction,
+            brain.InteractDistance);
         Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         for (int i = 0; i < hits.Length; i++)
@@ -237,12 +242,60 @@ public class PlayerInteract
         return new Ray(start, origin.forward);
     }
 
+    private float GetInteractRadius()
+    {
+        return Mathf.Max(0.01f, brain.InteractRadius);
+    }
+
     private void DrawDebugInteractRay()
     {
         if (!DebugInteraction) return;
 
         Ray ray = BuildInteractRay();
-        Debug.DrawLine(ray.origin, ray.origin + ray.direction * brain.InteractDistance, Color.red);
+        float radius = GetInteractRadius();
+        Vector3 end = ray.origin + ray.direction * brain.InteractDistance;
+
+        DrawDebugCircle(ray.origin, ray.direction, radius, Color.red);
+        DrawDebugCircle(end, ray.direction, radius, Color.red);
+        DrawDebugSphereCastEdges(ray.origin, end, ray.direction, radius, Color.red);
+    }
+
+    private static void DrawDebugSphereCastEdges(Vector3 start, Vector3 end, Vector3 direction, float radius, Color color)
+    {
+        BuildCircleBasis(direction, out Vector3 right, out Vector3 up);
+
+        Debug.DrawLine(start + right * radius, end + right * radius, color);
+        Debug.DrawLine(start - right * radius, end - right * radius, color);
+        Debug.DrawLine(start + up * radius, end + up * radius, color);
+        Debug.DrawLine(start - up * radius, end - up * radius, color);
+    }
+
+    private static void DrawDebugCircle(Vector3 center, Vector3 direction, float radius, Color color)
+    {
+        const int SegmentCount = 24;
+
+        BuildCircleBasis(direction, out Vector3 right, out Vector3 up);
+        Vector3 previous = center + right * radius;
+
+        for (int i = 1; i <= SegmentCount; i++)
+        {
+            float angle = i * Mathf.PI * 2.0f / SegmentCount;
+            Vector3 next = center + (right * Mathf.Cos(angle) + up * Mathf.Sin(angle)) * radius;
+            Debug.DrawLine(previous, next, color);
+            previous = next;
+        }
+    }
+
+    private static void BuildCircleBasis(Vector3 direction, out Vector3 right, out Vector3 up)
+    {
+        right = Vector3.Cross(direction, Vector3.up);
+        if (right.sqrMagnitude < 0.001f)
+        {
+            right = Vector3.Cross(direction, Vector3.forward);
+        }
+
+        right.Normalize();
+        up = Vector3.Cross(right, direction).normalized;
     }
 
     private static void DebugLog(string message)
