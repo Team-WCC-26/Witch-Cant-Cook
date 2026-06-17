@@ -26,23 +26,37 @@ public class AnythingSpawner : MonoBehaviour
 
     private void SpawnTool(string tool)
     {
-        GameObject go = ObjectPoolManager.Instance.Pop(tool, SpawnPos.transform.position, SpawnPos.transform.rotation);
-        Debug.Log(go);
-        if (go.TryGetComponent(out CatchableObj catchable))
-        {
-            catchable.NetworkId = Time.frameCount;
-            ObjectNetworkRouter.Instance.Add(catchable.NetworkId, catchable);
-            ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
-        }
-
         ToolSpawnPacket packet = new()
         {
-            EntityId = go.GetComponent<CatchableObj>().NetworkId,
-            ToolId = (int)CatchableObjType.Knife,
-            Position = new System.Numerics.Vector3(go.transform.position.x, go.transform.position.y, go.transform.position.z),
-            Quaternion = new System.Numerics.Quaternion(go.transform.rotation.x, go.transform.rotation.y, go.transform.rotation.z, go.transform.rotation.w)
+            EntityId = 0, // 서버가 부여
+            ToolId = tool switch
+            {
+                "Knife" => (int)CatchableObjType.Knife,
+                "Plate" => (int)CatchableObjType.Plate,
+                _ => (int)CatchableObjType.Default
+            },
+            Position = new System.Numerics.Vector3(SpawnPos.transform.position.x, SpawnPos.transform.position.y, SpawnPos.transform.position.z),
+            Quaternion = new System.Numerics.Quaternion(SpawnPos.transform.rotation.x, SpawnPos.transform.rotation.y, SpawnPos.transform.rotation.z, SpawnPos.transform.rotation.w)
         };
-
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+
+        //GameObject go = ObjectPoolManager.Instance.Pop(tool, SpawnPos.transform.position, SpawnPos.transform.rotation);
+        //Debug.Log(go);
+        //if (go.TryGetComponent(out CatchableObj catchable))
+        //{
+        //    catchable.NetworkId = Time.frameCount;
+        //    ObjectNetworkRouter.Instance.Add(catchable.NetworkId, catchable);
+        //    ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
+        //}
+
+        //ToolSpawnPacket packet = new()
+        //{
+        //    EntityId = go.GetComponent<CatchableObj>().NetworkId,
+        //    ToolId = (int)CatchableObjType.Knife,
+        //    Position = new System.Numerics.Vector3(go.transform.position.x, go.transform.position.y, go.transform.position.z),
+        //    Quaternion = new System.Numerics.Quaternion(go.transform.rotation.x, go.transform.rotation.y, go.transform.rotation.z, go.transform.rotation.w)
+        //};
+
+        //_ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 }
