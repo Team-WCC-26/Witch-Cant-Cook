@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 2379227833340331114}
   - component: {fileID: -8294466810255185304}
   - component: {fileID: 3525218091698516734}
+  - component: {fileID: -34743592014512021}
   m_Layer: 0
   m_Name: Tomato
   m_TagString: Untagged
@@ -153,9 +154,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  networkId: 0
   col: {fileID: 2379227833340331114}
   rb: {fileID: -8294466810255185304}
+  objType: 1
   canBePicked: 1
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 5
+--- !u!114 &-34743592014512021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2274349369809703162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23d0d8f48e576a346885047af8b38011, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Tomato
+  fuseTime: 2
+  blastRadius: 4
+  blastForce: 12
+  upwardModifier: 2
+  blastMask:
+    serializedVersion: 2
+    m_Bits: 0
+  explosionVFX: {fileID: 0}
+  explosionSFX: {fileID: 0}

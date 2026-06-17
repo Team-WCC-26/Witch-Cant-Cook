@@ -12,7 +12,7 @@ public class AnythingSpawner : MonoBehaviour
 
     private void Update()
     {
-        // ³Ê¹« ÀÓ½ÃÀÓ
+        // ï¿½Ê¹ï¿½ ï¿½Ó½ï¿½ï¿½ï¿½
         if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
         {
             SpawnTool("Knife");
@@ -37,10 +37,14 @@ public class AnythingSpawner : MonoBehaviour
 
         ToolSpawnPacket packet = new()
         {
-            EntityId = go.GetComponent<CatchableObj>().NetworkId,
-            ToolId = (int)CatchableObjType.Knife,
-            Position = new System.Numerics.Vector3(go.transform.position.x, go.transform.position.y, go.transform.position.z),
-            Quaternion = new System.Numerics.Quaternion(go.transform.rotation.x, go.transform.rotation.y, go.transform.rotation.z, go.transform.rotation.w)
+            EntityId = 0, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Î¿ï¿½
+            ToolId = tool switch
+            {
+                "Knife" => (int)CatchableObjType.Knife,
+                "Plate" => (int)CatchableObjType.Plate
+            },
+            Position = new System.Numerics.Vector3(SpawnPos.transform.position.x, SpawnPos.transform.position.y, SpawnPos.transform.position.z),
+            Quaternion = new System.Numerics.Quaternion(SpawnPos.transform.rotation.x, SpawnPos.transform.rotation.y, SpawnPos.transform.rotation.z, SpawnPos.transform.rotation.w)
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
