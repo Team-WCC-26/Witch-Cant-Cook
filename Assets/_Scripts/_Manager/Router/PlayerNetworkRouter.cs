@@ -41,8 +41,6 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
     private void RouteEntityPickup(ReadOnlyMemory<byte> data)
     {
-        Debug.Log("a");
-
         EntityPickupPacket packet =
             PacketSerializer.Deserialize<EntityPickupPacket>(data.Span);
 
