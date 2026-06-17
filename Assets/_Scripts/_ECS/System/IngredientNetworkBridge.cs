@@ -13,7 +13,10 @@ public class IngredientNetworkBridge : MonoBehaviour
     [Header("Spawn Settings")]
     private readonly int[] ingredientIDs = { 
         //10900, 10300, 11900, 12000, 10600, 
-        12100 };
+        10900,
+        12100,
+        12300
+    };
     [SerializeField] private GameObject spawnPointObj;
     private void OnEnable()
     {
