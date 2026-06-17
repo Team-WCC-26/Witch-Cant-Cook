@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 131225913488260531}
   - component: {fileID: 1776075547789556096}
   - component: {fileID: 7541422509018648019}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Fish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -211,7 +211,7 @@ GameObject:
   - component: {fileID: 6952196969357087937}
   - component: {fileID: 63202316929662322}
   - component: {fileID: 1766117342703822864}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Particle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5276,9 +5276,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5506421855659119079}
     m_Modifications:
+    - target: {fileID: 1901243038791556662, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_Name
       value: GuageUI
+      objectReference: {fileID: 0}
+    - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_IsActive
@@ -5363,6 +5371,10 @@ PrefabInstance:
     - target: {fileID: 7671558560243445453, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7739679005483659272, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
