@@ -32,6 +32,7 @@ public class IngredientReaction : MonoBehaviour
     [Header("Components")]
     [SerializeField] private MeshFilter meshFilter;
     [SerializeField] private Renderer targetRenderer;
+    [SerializeField] private ParticleSystem cutParticle;
 
     [Header("Interact Gauge")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
@@ -88,6 +89,10 @@ public class IngredientReaction : MonoBehaviour
 
         // Apply damage and check for completion
         curHP = (int)MathF.Max(0, curHP - dmg);
+        if (action == IngredientAction.Cut)
+        {
+            PlayCutParticle();
+        }
 
         // TODO: Apply mesh and shader changes based on HP progress.
         // TODO: Show completed state flag.
@@ -186,6 +191,13 @@ public class IngredientReaction : MonoBehaviour
         }
 
         return 0;
+    }
+
+    private void PlayCutParticle()
+    {
+        if (cutParticle == null) return;
+        cutParticle.Clear(true);
+        cutParticle.Play(true);
     }
     #endregion
 }
