@@ -15,6 +15,7 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, HandleToolRegister);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
     }
 
 
@@ -42,6 +43,24 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
         Add(packet.EntityId, obj);
 
         Debug.Log($"Tool Registered : {obj.name} -> {packet.EntityId}");
+    }
+    private void HandleToolSpawn(ReadOnlyMemory<byte> data)
+    {
+        ToolSpawnPacket packet = MemoryPackSerializer.Deserialize<ToolSpawnPacket>(data.Span)!;
+
+        string toolName = ((CatchableObjType)packet.ToolId).ToString(); // enum 이름이 prefab key와 일치한다고 가정
+        Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
+        Quaternion rot = new Quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W);
+
+        GameObject go = ObjectPoolManager.Instance.Pop(toolName, pos, rot);
+        if (go == null) return;
+
+        if (go.TryGetComponent(out CatchableObj catchable))
+        {
+            catchable.NetworkId = packet.EntityId;
+            Add(packet.EntityId, catchable);
+            ObjectPoolManager.Instance.activeObjDict[packet.EntityId] = go;
+        }
     }
     public CatchableObj DequeueRegister()
     {

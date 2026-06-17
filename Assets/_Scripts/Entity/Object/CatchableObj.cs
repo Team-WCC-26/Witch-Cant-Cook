@@ -96,6 +96,7 @@ public class CatchableObj : MonoBehaviour
     private void ResetObj()
     {
         canBePicked = true;
+        networkId = 0;
     }
 
     public void OnPick()
