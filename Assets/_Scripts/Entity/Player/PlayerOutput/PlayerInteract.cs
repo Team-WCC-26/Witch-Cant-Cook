@@ -77,6 +77,11 @@ public class PlayerInteract
 
                 ingredientReaction.Interact(IngredientAction.Cut);
                 break;
+            case CatchableObjType.Plate:
+                if (TryServePotToPlate()) break;
+
+                RequestDrop();
+                break;
             default:
                 RequestDrop();
                 break;
@@ -162,6 +167,17 @@ public class PlayerInteract
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
+
+    private bool TryServePotToPlate()
+    {
+        if (!IsHolding) return false;
+        if (!HeldObj.TryGetComponent(out PlateInteraction plate)) return false;
+
+        PotInteraction pot = FindPotInteraction();
+        if (pot == null) return false;
+
+        return pot.TryServeToPlate(plate);
+    }
     #endregion
 
     #region Actual Interaction
@@ -227,6 +243,36 @@ public class PlayerInteract
 
             DebugLog($"Hit catchable object: {catchable.name}");
             return catchable;
+        }
+
+        return null;
+    }
+
+    private PotInteraction FindPotInteraction()
+    {
+        Ray ray = BuildInteractRay();
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            GetInteractRadius(),
+            ray.direction,
+            brain.InteractDistance);
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
+
+            PotInteraction pot = hitCollider.GetComponentInParent<PotInteraction>();
+            if (pot == null)
+            {
+                DebugLog($"Hit non-pot object: {hitCollider.name}");
+                continue;
+            }
+
+            DebugLog($"Hit pot object: {pot.name}");
+            return pot;
         }
 
         return null;

@@ -87,6 +87,16 @@ public class PotInteraction : MapObjInteraction
         visualController.UpdateVisual(currentIngredientId, true);
     }
 
+    public bool TryServeToPlate(PlateInteraction plate)
+    {
+        if (plate == null) return false;
+        if (!hasIngredient) return false;
+
+        plate.ShowTempFood();
+        ClearPot();
+        return true;
+    }
+
     #region Combine Handler
     private static void TryRegisterCombineHandler()
     {
@@ -207,6 +217,21 @@ public class PotInteraction : MapObjInteraction
         catchable.gameObject.SetActive(false);
     }
 
+    private void ClearPot()
+    {
+        hasIngredient = false;
+        isDone = false;
+        isWaitingCombine = false;
+        currentIngredientId = 0;
+        currentEntityId = 0;
+        cookStartedEntityId = 0;
+        pendingSubjectEntityId = 0;
+        pendingTargetEntityId = 0;
+
+        gaugeUI.gameObject.SetActive(false);
+        visualController.HideAll();
+    }
+
     #region Test Code
     private void ApplyTempCombineResult(CatchableObj catchable)
     {
@@ -223,6 +248,10 @@ public class PotInteraction : MapObjInteraction
 
     private void OnGaugeFull()
     {
+        if (!hasIngredient) return;
+
+        isDone = true;
+        gaugeUI.gameObject.SetActive(false);
         visualController.UpdateVisual(currentIngredientId, true);
     }
     #endregion
