@@ -1,0 +1,183 @@
+using Protocol;
+using Server;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PotInteraction : MonoBehaviour
+{
+    [SerializeField] private PotVisualController visualController;
+
+    private static readonly List<PotInteraction> activePots = new();
+    private static bool isCombineHandlerRegistered;
+
+    private bool hasIngredient;
+    private bool isDone;
+    private bool isWaitingCombine;
+    private int currentIngredientId;
+    private long currentEntityId;
+    private long pendingSubjectEntityId;
+    private long pendingTargetEntityId;
+
+    private IEnumerator Start()
+    {
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+        TryRegisterCombineHandler();
+    }
+
+    private void OnEnable()
+    {
+        activePots.Add(this);
+
+        if (ServerManager.Instance != null)
+            TryRegisterCombineHandler();
+    }
+
+    private void OnDisable()
+    {
+        activePots.Remove(this);
+        TryUnregisterCombineHandler();
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (isDone) return;
+        if (isWaitingCombine) return;
+
+        if (!TryGetIngredient(other, out CatchableObj catchable, out int ingredientId))
+            return;
+
+        if (!hasIngredient)
+        {
+            ApplyFirstIngredient(catchable, ingredientId);
+            ConsumeIngredient(catchable);
+            return;
+        }
+
+        if (RequestCombine(catchable))
+            ConsumeIngredient(catchable);
+    }
+
+    public void CompleteCooking()
+    {
+        if (!hasIngredient) return;
+
+        isDone = true;
+        isWaitingCombine = false;
+        visualController.UpdateVisual(currentIngredientId, true);
+    }
+
+    #region Combine Handler
+    private static void TryRegisterCombineHandler()
+    {
+        if (isCombineHandlerRegistered) return;
+        if (ServerManager.Instance == null) return;
+
+        ServerManager.Instance.RegisterHandler(PacketId.S_EntityCombine, OnEntityCombine);
+        isCombineHandlerRegistered = true;
+    }
+
+    private static void TryUnregisterCombineHandler()
+    {
+        if (!isCombineHandlerRegistered) return;
+        if (activePots.Count > 0) return;
+        if (ServerManager.Instance == null) return;
+
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityCombine);
+        isCombineHandlerRegistered = false;
+    }
+
+    private static void OnEntityCombine(ReadOnlyMemory<byte> data)
+    {
+        EntityCombineResultPacket packet = PacketSerializer.Deserialize<EntityCombineResultPacket>(data.Span);
+
+        foreach (PotInteraction pot in activePots)
+        {
+            if (pot.TryApplyCombineResult(packet))
+                return;
+        }
+    }
+
+    private bool TryApplyCombineResult(EntityCombineResultPacket packet)
+    {
+        if (!isWaitingCombine) return false;
+        if (packet.SubjectEntityId != pendingSubjectEntityId) return false;
+        if (packet.TargetEntityId != pendingTargetEntityId) return false;
+
+        isWaitingCombine = false;
+        pendingSubjectEntityId = 0;
+        pendingTargetEntityId = 0;
+
+        if (!packet.Success)
+            return true;
+
+        currentEntityId = packet.RemainingEntityId;
+        currentIngredientId = packet.ResultIngredientId;
+        hasIngredient = true;
+
+        visualController.UpdateVisual(currentIngredientId);
+        return true;
+    }
+    #endregion
+
+    private void ApplyFirstIngredient(CatchableObj catchable, int ingredientId)
+    {
+        hasIngredient = true;
+        currentEntityId = catchable.NetworkId;
+        currentIngredientId = ingredientId;
+
+        visualController.UpdateVisual(currentIngredientId);
+    }
+
+    private bool RequestCombine(CatchableObj catchable)
+    {
+        if (ServerManager.Instance == null)
+        {
+            Debug.LogWarning("Cannot request pot combine because ServerManager.Instance is null.");
+            return false;
+        }
+
+        pendingSubjectEntityId = catchable.NetworkId;
+        pendingTargetEntityId = currentEntityId;
+        isWaitingCombine = true;
+
+        EntityCombinePacket packet = new()
+        {
+            SubjectEntityId = pendingSubjectEntityId,
+            TargetEntityId = pendingTargetEntityId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        return true;
+    }
+
+    private bool TryGetIngredient(Collider other, out CatchableObj catchable, out int ingredientId)
+    {
+        catchable = null;
+        ingredientId = 0;
+
+        if (!other.TryGetComponent<IngredientReaction>(out var reaction)) return false;
+
+        catchable = reaction.Catchable;
+        if (catchable == null) return false;
+        if (catchable.Data is not Ingredient ingredient) return false;
+
+        ingredientId = ingredient.id;
+        return true;
+    }
+
+    private void ConsumeIngredient(CatchableObj catchable)
+    {
+        catchable.ChangePickState(false);
+        catchable.SetPhysicsState(false);
+
+        if (ObjectPoolManager.Instance != null)
+        {
+            ObjectPoolManager.Instance.Push(catchable.gameObject);
+            return;
+        }
+
+        catchable.gameObject.SetActive(false);
+    }
+}
