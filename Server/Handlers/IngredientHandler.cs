@@ -29,20 +29,20 @@ public class IngredientHandler : PacketHandlerBase
         var packet = DeSerialize<CookStartPacket>(package.Body);
         var room = session.Player.Room;
 
-        if (room.Entities[packet.EntityId] is not ICookable cookable) return;
-        if (!cookable.TryCook(packet.CookType, out var ingredient)) return;
-
-        room.UpdateEntity(packet.EntityId, ingredient);
-
-        CookCompletePacket completePacket = new() // 임시로 바로 완료 패킷 보냄 => 추후에 타입별로 다르게 처리해야함
-        {
-            EntityId = packet.EntityId,
-            IngredientId = ingredient.IngredientId,
-            CookType = packet.CookType
-        };
-
         room.PushJob(() =>
         {
+            if (room.Entities[packet.EntityId] is not ICookable cookable) return;
+            if (!cookable.TryCook(packet.CookType, out var ingredient)) return;
+
+            room.UpdateEntity(packet.EntityId, ingredient);
+
+            CookCompletePacket completePacket = new() // 임시로 바로 완료 패킷 보냄 => 추후에 타입별로 다르게 처리해야함
+            {
+                EntityId = packet.EntityId,
+                IngredientId = ingredient.IngredientId,
+                CookType = packet.CookType
+            };
+
             room.BroadCast(PacketSerializer.Serialize(completePacket, true));
         });
     }
@@ -59,38 +59,34 @@ public class IngredientHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_IngredientCombine)]
+    [PacketHandler(PacketId.C_EntityCombine)]
     public static void CombineIngredient(Session session, PacketPackageInfo package)
     {
-        var packet = DeSerialize<IngredientCombinePacket>(package.Body);
+        var packet = DeSerialize<EntityCombinePacket>(package.Body);
         var room = session.Player.Room;
         var entities = room.Entities;
 
-        if (packet.SubjectEntityId == packet.TargetEntityId) return;
-
-        if (!entities.TryGetValue(packet.SubjectEntityId, out var subject)) return;
-        if (subject is not ICombinable sc) return;
-
-        if (!entities.TryGetValue(packet.TargetEntityId, out var target)) return;
-        if (target is not ICombinable tc) return;
-
-        if (!tc.TryCombine(sc, out var resultFood)) return;
-
-        room.CombineIngredient(packet.TargetEntityId, packet.SubjectEntityId, resultFood);
-
-        IngredientCombineResultPacket combineResultPacket = new()
-        {
-            FoodEntityId = packet.TargetEntityId,
-            RemovedEntityId = packet.SubjectEntityId,
-            Ingredients = resultFood.Ingredients.Select(x => new IngredientStateData
-            {
-                Id = x.IngredientId,
-                StateFlag = x.ProcessState
-            }).ToArray()
-        };
-
         room.PushJob(() =>
         {
+            if (packet.SubjectEntityId == packet.TargetEntityId) return;
+
+            if (!entities.TryGetValue(packet.SubjectEntityId, out var subject)) return;
+            if (subject is not ICombinable sc) return;
+
+            if (!entities.TryGetValue(packet.TargetEntityId, out var target)) return;
+            if (target is not ICombinable tc) return;
+
+            if (!tc.TryCombine(sc, out var combinable)) return;
+
+            room.CombineEntity(packet.TargetEntityId, packet.SubjectEntityId, combinable as Entity);
+
+            EntityCombineResultPacket combineResultPacket = new()
+            {
+                FoodEntityId = packet.TargetEntityId,
+                RemovedEntityId = packet.SubjectEntityId,
+                Ingredients = combinable.GetIngredients()
+            };
+
             room.BroadCast(PacketSerializer.Serialize(combineResultPacket, true));
         });
     }

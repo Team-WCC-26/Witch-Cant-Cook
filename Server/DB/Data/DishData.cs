@@ -14,8 +14,8 @@ public class DishData
     [JsonProperty("prefabName")]
     public string PrefabName;
 
-    [JsonProperty("statID")]
-    public string StatId;
+    [JsonProperty("ingredientID")]
+    public string IngredientId;
 
     [JsonProperty("conditionFlag")]
     public IngredientState ConditionFlag;

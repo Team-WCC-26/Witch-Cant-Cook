@@ -7,25 +7,38 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
     public readonly int IngredientId = ingredientId;
     public IngredientState ProcessState { get; set; } = 0;
 
-    public bool TryCombine(ICombinable other, out Food food)
+    public bool TryCombine(ICombinable other, out ICombinable combinable)
     {
         switch (other)
         {
             case Ingredient ingredient:
-                food = Food.Create(this, ingredient);
+                combinable = Food.Create(this, ingredient);
                 break;
 
             case Food f:
-                food = f;
-                food.Ingredients.Add(new(IngredientId, ProcessState));
+                combinable = f;
+                f.Ingredients.Add(new(IngredientId, ProcessState));
+                break;
+
+            case Dish d:
+                d.TryCombine(this, out combinable);
                 break;
 
             default:
-                food = null;
+                combinable = null;
                 return false;
         }
 
         return true;
+    }
+
+    public IngredientStateData[] GetIngredients()
+    {
+        return [ new IngredientStateData
+        {
+            Id = IngredientId,
+            StateFlag = ProcessState
+        }];
     }
 
     public bool TryCook(IngredientState state, out Ingredient ingredient)

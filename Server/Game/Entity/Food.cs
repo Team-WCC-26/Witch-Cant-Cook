@@ -6,9 +6,29 @@ public class Food : Entity, ICombinable, ICookable
 {
     public readonly HashSet<IngredientStatePair> Ingredients = new();
 
-    public bool TryCombine(ICombinable other, out Food food)
+    public static Food Create(Ingredient a, Ingredient b)
     {
-        food = this;
+        Food food = new();
+
+        food.Ingredients.Add(new(a.IngredientId, a.ProcessState));
+
+        food.Ingredients.Add(new(b.IngredientId, b.ProcessState));
+
+        return food;
+    }
+
+    public IngredientStateData[] GetIngredients()
+    {
+        return Ingredients.Select(x => new IngredientStateData
+        {
+            Id = x.IngredientId,
+            StateFlag = x.ProcessState
+        }).ToArray();
+    }
+
+    public bool TryCombine(ICombinable other, out ICombinable combinable)
+    {
+        combinable = this;
 
         switch (other)
         {
@@ -20,22 +40,15 @@ public class Food : Entity, ICombinable, ICookable
                 Ingredients.UnionWith(f.Ingredients);
                 break;
 
+            case Dish d:
+                d.TryCombine(this, out combinable);
+                break;
+
             default:
                 return false;
         }
 
         return true;
-    }
-
-    public static Food Create(Ingredient a, Ingredient b)
-    {
-        Food food = new();
-
-        food.Ingredients.Add(new(a.IngredientId, a.ProcessState));
-
-        food.Ingredients.Add(new(b.IngredientId, b.ProcessState));
-
-        return food;
     }
 
     public bool TryCook(IngredientState state, out Ingredient ingredient)

@@ -131,11 +131,11 @@ public class Room
         _entities.Remove(id);
     }
 
-    public void CombineIngredient(long resultId, long removeId, Food food)
+    public void CombineEntity(long resultId, long removeId, Entity eentity)
     {
         _entities.Remove(removeId);
 
-        _entities[resultId] = food;
+        _entities[resultId] = eentity;
     }
 
     public void UpdateEntity(long entityId, Entity entity)
@@ -183,7 +183,7 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
-    public void BroadCast(byte[] packet)
+    public void BroadCast(byte[] packet) // 병목된다 싶으면 batching으로 바꾸기
     {
         foreach (var player in _players)
         {

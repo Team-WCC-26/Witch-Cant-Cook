@@ -3,8 +3,8 @@
 namespace Protocol;
 
 [MemoryPackable]
-[PacketId(PacketId.S_IngredientCombine)]
-public partial class IngredientCombineResultPacket
+[PacketId(PacketId.S_EntityCombine)]
+public partial class EntityCombineResultPacket
 {
     public long FoodEntityId { get; set; }
     public long RemovedEntityId { get; set; }
