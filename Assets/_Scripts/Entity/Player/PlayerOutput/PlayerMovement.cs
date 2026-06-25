@@ -35,6 +35,7 @@ public class PlayerMovement
             rb.linearVelocity.y,
             velocity.z
         );
+        rb.angularVelocity = Vector3.zero;
 
         CurrentSpeed = velocity.magnitude;
     }
@@ -46,6 +47,7 @@ public class PlayerMovement
             rb.linearVelocity.y,
             0f
         );
+        rb.angularVelocity = Vector3.zero;
 
         CurrentSpeed = 0f;
     }
