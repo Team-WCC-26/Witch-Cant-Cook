@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class SubmitTriggerZone : MonoBehaviour
 {
-    private readonly HashSet<PlateInteraction> _plates = new(); // 왜 사용? 
+    private readonly HashSet<PlateInteraction> _plates = new(); // 왜 사용? -> 중복 체크 방지
     
     void OnEnable()
     {
