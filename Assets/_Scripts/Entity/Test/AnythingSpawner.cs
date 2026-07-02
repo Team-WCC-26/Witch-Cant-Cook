@@ -12,39 +12,26 @@ public class AnythingSpawner : MonoBehaviour
 
     private void Update()
     {
-        // �ʹ� �ӽ���
         if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
         {
-            SpawnTool("Knife");
+            SpawnTool((int)CatchableObjType.Knife);
         }
         if (Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame)
         {
-            SpawnTool("Plate");
+            SpawnTool((int)CatchableObjType.Plate);
         }
 
     }
 
-    private void SpawnTool(string tool)
+    private void SpawnTool(int toolKey)
     {
         ToolSpawnPacket packet = new()
         {
-            EntityId = 0, // ������ �ο�
-            ToolId = tool switch
-            {
-                "Knife" => (int)CatchableObjType.Knife,
-                "Plate" => (int)CatchableObjType.Plate
-            },
+            EntityId = 0, 
+            ToolId = toolKey,
             Position = new System.Numerics.Vector3(SpawnPos.transform.position.x, SpawnPos.transform.position.y, SpawnPos.transform.position.z),
-            Quaternion = new System.Numerics.Quaternion(SpawnPos.transform.rotation.x, SpawnPos.transform.rotation.y, SpawnPos.transform.rotation.z, SpawnPos.transform.rotation.w)
+            Quaternion = System.Numerics.Quaternion.Identity
         };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-    }
-
-    public bool RespawnTool(CatchableObj tool, Transform spawnPoint)
-    {
-        if (tool == null || spawnPoint == null)
-            return false;
-
-        return true;
     }
 }

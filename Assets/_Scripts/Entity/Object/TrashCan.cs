@@ -1,4 +1,6 @@
 using Protocol;
+using Server;
+using System.Collections.Generic;
 using Unity.Transforms;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -8,8 +10,6 @@ using static UnityEditor.FilePathAttribute;
 
 public class TrashCan : MonoBehaviour
 {
-    // entity 동기화 작업 서버쪽에서 해야 양쪽 다 보일거같은데
-
     private int playerLayer;
     private  int catchableLayer;
 
@@ -56,25 +56,38 @@ public class TrashCan : MonoBehaviour
     }
     void HandleTool(CatchableObj catchable)
     {
-        // 일단 임시, tool 관리 매니저 생성 시 내용 옮기기
-        GameObject go = catchable.gameObject;
-        go.transform.SetPositionAndRotation(
-            kitchenSpawnPoint.position,
-            kitchenSpawnPoint.rotation);
+        if (catchable.IsRespawning) return;
 
-        if (go.TryGetComponent(out Rigidbody rb))
+        catchable.IsRespawning = true;
+
+        Debug.Log("HandleTool - Start");
+
+        EntityDestroyPacket packet = new()
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
+            EntityId = catchable.NetworkId
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
 
+        Debug.Log($"HandleTool - TrashCan: {catchable.ObjType} {catchable.NetworkId} is thrown into trash can.");
+
+        ToolSpawnPacket toolSpawnPacket = new()
+        {
+            EntityId = 0,
+            ToolId = (int)catchable.ObjType,
+            Position = new System.Numerics.Vector3(kitchenSpawnPoint.position.x, kitchenSpawnPoint.position.y, kitchenSpawnPoint.position.z),
+            Quaternion = new System.Numerics.Quaternion(kitchenSpawnPoint.rotation.x, kitchenSpawnPoint.rotation.y, kitchenSpawnPoint.rotation.z, kitchenSpawnPoint.rotation.w)
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(toolSpawnPacket));
+        Debug.Log("HandleTool - End");
     }
 
     void HandleIngredient(CatchableObj catchable)
     {
-        // push할 때 서버 연동 용으로 destroy했다는 패킷 보내야되는데
-        //EntityDestroyPacket packet = new EntityDestroyPacket();
-        ObjectPoolManager.Instance.Push(catchable.gameObject);
+        EntityDestroyPacket packet = new()
+        {
+            EntityId = catchable.NetworkId
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
 }

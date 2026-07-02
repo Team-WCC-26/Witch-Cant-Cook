@@ -12,7 +12,22 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
 
     private void OnEnable()
     {
+        ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
+    }
+
+    private void HandleEntityDestroy(ReadOnlyMemory<byte> data)
+    {
+        EntityDestroyPacket packet = MemoryPackSerializer.Deserialize<EntityDestroyPacket>(data.Span);
+
+        if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
+            return;
+
+        catchable.IsRespawning = false;
+
+        catchableDics.Remove(packet.EntityId);
+
+        ObjectPoolManager.Instance.Push(catchable.gameObject);
     }
 
     private void HandleToolSpawn(ReadOnlyMemory<byte> data)
@@ -21,7 +36,7 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
 
         string toolName = ((CatchableObjType)packet.ToolId).ToString(); // enum �̸��� prefab key�� ��ġ�Ѵٰ� ����
         Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
-        Quaternion rot = new Quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W);
+        Quaternion rot = Quaternion.identity;
 
         GameObject go = ObjectPoolManager.Instance.Pop(toolName, pos, rot);
         if (go == null) return;
@@ -31,11 +46,10 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
             catchable.NetworkId = packet.EntityId;
             Add(packet.EntityId, catchable);
             ObjectPoolManager.Instance.activeObjDict[packet.EntityId] = go;
+            Debug.Log($"새로 꺼낸 tool network ID: {catchable.NetworkId} entity ID: {packet.EntityId}");
         }
     }
 
-    // �ϴ� catchableObj�� ����
-    // ���߿� �ٸ� ������Ʈ ����� �׶� �߰�
     public void Add(long networkId, CatchableObj obj)
     {
         catchableDics[networkId] = obj;
