@@ -8,14 +8,12 @@ public partial class IngredientSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        Debug.Log("[TEST] IngredientSpawnSystem Update");
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (request, requestEntity) in SystemAPI.Query<RefRO<IngredientSpawnRequest>>().WithEntityAccess())
         {
-            Debug.Log("[TEST] SpawnRequest Query ¡¯¿‘");
             int reqID = request.ValueRO.IngredientID;
             long netID = request.ValueRO.NetworkID;
             Vector3 reqPos = request.ValueRO.Position;
