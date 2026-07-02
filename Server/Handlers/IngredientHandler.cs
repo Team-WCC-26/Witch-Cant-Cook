@@ -59,67 +59,6 @@ public class IngredientHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_EntityCombine)]
-    public static void CombineIngredient(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<EntityCombinePacket>(package.Body);
-        var room = session.Player.Room;
-        var entities = room.Entities;
-
-        room.PushJob(() =>
-        {
-            if (packet.SubjectEntityId == packet.TargetEntityId) return;
-
-            if (!entities.TryGetValue(packet.SubjectEntityId, out var subject)) return;
-            if (subject is not ICombinable sc) return;
-
-            if (!entities.TryGetValue(packet.TargetEntityId, out var target)) return;
-            if (target is not ICombinable tc) return;
-
-            EntityCombineResultPacket combineResultPacket = new()
-            {
-                TargetEntityId = packet.TargetEntityId,
-                SubjectEntityId = packet.SubjectEntityId
-            };
-
-            if (combineResultPacket.Success = tc.TryCombine(sc, out var combinable))
-            {
-                long remainId, removedId;
-
-                if (subject is Dish)
-                {
-                    remainId = packet.SubjectEntityId;
-                    removedId = packet.TargetEntityId;
-                }
-                else
-                {
-                    remainId = packet.TargetEntityId;
-                    removedId = packet.SubjectEntityId;
-                }
-
-                room.CombineEntity(remainId, removedId, combinable as Entity);
-
-                combineResultPacket.RemainingEntityId = remainId;
-                combineResultPacket.RemovedEntityId = removedId;
-                combineResultPacket.ResultIngredientId = combinable.IngredientId;
-            }
-
-            room.BroadCast(PacketSerializer.Serialize(combineResultPacket, true));
-        });
-    }
-
-    [PacketHandler(PacketId.C_IngredientPut)]
-    public static void PutIngredient(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<IngredientPutPacket>(package.Body);
-        var room = session.Player.Room;
-
-        room.PushJob(() =>
-        {
-            room.BroadCast(PacketSerializer.Serialize(packet, true));
-        });
-    }
-
     //[PacketHandler(PacketId.C_IngredientState)]
     public static void UpdateIngredientState(Session session, PacketPackageInfo package)
     {

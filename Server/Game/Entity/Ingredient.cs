@@ -8,6 +8,27 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
     private readonly int _ingredientId = ingredientId;
     public IngredientState ProcessState { get; set; } = 0;
 
+    private int _hp = -1;
+    public int Hp
+    {
+        get
+        {
+            if (_hp < 0)
+            {
+                if (ServerContext.Instance.DataBase.TryGetIngredientStatById(IngredientId, out var stat))
+                {
+                    _hp = stat.Hp;
+                }
+                else
+                {
+                    _hp = 10;
+                }
+            }
+
+            return _hp;
+        }
+    }
+
     public bool TryCombine(ICombinable other, out ICombinable combinable)
     {
         combinable = null;
@@ -17,7 +38,7 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
             case Ingredient ingredient:
                 var DB = ServerContext.Instance.DataBase;
 
-                if (!DB.RecipeDict.TryGetValue(new(this, ingredient), out var resId)) return false;
+                if (!DB.IngredientCombinations.TryGetValue(new(this, ingredient), out var resId)) return false;
 
                 combinable = new Ingredient(resId);
                 return true;

@@ -30,6 +30,8 @@ public class Room
         [DoorId.Kitchen] = new(2, 3000)
     };
 
+    private CookManager _cookManager = new();
+
     public Room(string id, string name, string password)
     {
         Id = id;
@@ -39,6 +41,8 @@ public class Room
 
     public void Tick(long deltaTime)
     {
+        _cookManager.Tick(deltaTime);
+
         foreach (var player in _players)
         {
             WorldStatePacket packet = new()
@@ -118,7 +122,26 @@ public class Room
 
     public Tool GenerateTool(int id, out long entityId)
     {
-        Tool tool = new(id);
+        Tool tool;
+        
+        switch (id)
+        {
+            case 20:
+            case 40:
+            case 80:
+                tool = new CookingTool(id);
+                _cookManager.RegisterCookingTool(id, tool as CookingTool);
+                break;
+
+            case 50:
+                tool = new Dish(id);
+                break;
+
+            default:
+                tool = new(id);
+                break;
+        }
+        
         entityId = GenerateEntityId();
 
         _entities[entityId] = tool;

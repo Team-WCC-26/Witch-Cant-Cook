@@ -1,9 +1,8 @@
 ﻿using Newtonsoft.Json;
-using Protocol;
 
 namespace Server;
 
-public class DishData
+public class ToolData
 {
     [JsonProperty("id")]
     public int Id { get; init; }
@@ -14,9 +13,6 @@ public class DishData
     [JsonProperty("prefabName")]
     public string PrefabName { get; init; }
 
-    [JsonProperty("ingredientID")]
-    public string IngredientId { get; init; }
-
-    [JsonProperty("conditionFlag")]
-    public IngredientState ConditionFlag { get; init; }
+    [JsonProperty("damage")]
+    public int Damage { get; init; }
 }

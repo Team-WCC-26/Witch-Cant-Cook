@@ -52,7 +52,7 @@ public class Food : Entity, ICombinable, ICookable
         ingredient = null;
         var DB = ServerContext.Instance.DataBase;
 
-        if (!DB.RecipeDict.TryGetValue(new(Ingredients), out var ingredientId)) return false;
+        if (!DB.IngredientCombinations.TryGetValue(new(Ingredients), out var ingredientId)) return false;
         if ((DB.Ingredients[ingredientId].InvalidProcessFlag & state) != 0) return false;
 
         ingredient = new(ingredientId);

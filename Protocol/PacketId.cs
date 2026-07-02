@@ -69,11 +69,11 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_EntityCombine = 338,
     S_EntityCombine = 339,
 
-    C_IngredientSpawn = 340,
-    S_IngredientSpawn = 341,
+    C_EntityPut = 340,
+    S_EntityPut = 341,
 
-    C_IngredientPut = 342,
-    S_IngredientPut = 343,
+    C_IngredientSpawn = 342,
+    S_IngredientSpawn = 343,
 
     C_CookStart = 344,
     S_CookStart = 345,

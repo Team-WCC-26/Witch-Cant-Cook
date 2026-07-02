@@ -1,16 +1,21 @@
 ﻿using Newtonsoft.Json;
+using Protocol;
 
 namespace Server;
 
 public class DataBase
 {
     public IReadOnlyDictionary<int, IngredientData> Ingredients => _ingredients;
+    public IReadOnlyDictionary<int, IngredientStatData> IngredientStats => _ingredientStats;
+    public IReadOnlyDictionary<RecipeKey, int> IngredientCombinations => _ingredientCombinations;
+    public IReadOnlyDictionary<int, ToolData> Tools => _tools;
     public IReadOnlyDictionary<int, DishData> Dishes => _dishes;
-    public IReadOnlyDictionary<RecipeKey, int> RecipeDict => _recipeDict;
 
     private readonly Dictionary<int, IngredientData> _ingredients = new();
+    private readonly Dictionary<int, IngredientStatData> _ingredientStats = new();
+    private readonly Dictionary<RecipeKey, int> _ingredientCombinations = new();
+    private readonly Dictionary<int, ToolData> _tools = new();
     private readonly Dictionary<int, DishData> _dishes = new();
-    private readonly Dictionary<RecipeKey, int> _recipeDict = new();
     //private readonly Dictionary<IngredientStatePair, HashSet<RecipeKey>> _recipeCandidate = new();
 
     public async Task Init()
@@ -22,7 +27,9 @@ public class DataBase
             string url = "https://script.google.com/macros/s/AKfycbzTL3tVHIradyC9ZqIlz5agPNYQIhtxsQUYsWCxlvweYUPtpdaZEPfMzL8budqDN-t4/exec";
             string export = "?exportSheet=";
             string ingredient = "Ingredient";
-            string ingredientCombination = "IngredientCombination";
+            string stat = "Stat";
+            string combination = "Combination";
+            string tool = "Tool";
             string dish = "Recipe";
 
             // 재료 데이터 파싱
@@ -35,6 +42,30 @@ public class DataBase
                 _ingredients[ingredientData.Id] = ingredientData;
             }
 
+            // 재료 스탯 데이터 파싱
+            json = await client.GetStringAsync(url + export + ingredient + stat);
+
+            _ingredientStats.Clear();
+
+            foreach (var ingredientStatData in JsonConvert.DeserializeObject<List<IngredientStatData>>(json))
+            {
+                _ingredientStats[ingredientStatData.Id] = ingredientStatData;
+            }
+
+            // 재료 조합 데이터 파싱
+            json = await client.GetStringAsync(url + export + ingredient + combination);
+            BuildRecipeData(JsonConvert.DeserializeObject<List<IngredientCombinationData>>(json));
+
+            // 도구 데이터 파싱
+            json = await client.GetStringAsync(url + export + tool);
+
+            _tools.Clear();
+
+            foreach (var tooData in JsonConvert.DeserializeObject<List<ToolData>>(json))
+            {
+                _tools[tooData.Id] = tooData;
+            }
+
             // 최종 요리 데이터 파싱
             json = await client.GetStringAsync(url + export + dish);
 
@@ -44,13 +75,24 @@ public class DataBase
             {
                 _dishes[dishData.Id] = dishData;
             }
-
-            // 재료 조합 데이터 파싱
-            json = await client.GetStringAsync(url + export + ingredientCombination);
-            BuildRecipeData(JsonConvert.DeserializeObject<List<IngredientCombinationData>>(json));
         };
 
         Console.WriteLine("DataBase Initilizing Complete!");
+    }
+
+    public bool TryGetIngredientStatById(int ingredientId, out IngredientStatData? statData)
+    {
+        statData = null;
+
+        if (!Ingredients.TryGetValue(ingredientId, out var ingredient)) return false;
+        if (!IngredientStats.TryGetValue(ingredient.StatId, out statData)) return false;
+
+        return true;
+    }
+
+    public bool CheckCookEnable(int ingredientId, IngredientState state)
+    {
+        return (Ingredients[ingredientId].InvalidProcessFlag & state) != 0;
     }
 
     /*
@@ -99,7 +141,7 @@ public class DataBase
 
     private void BuildRecipeData(List<IngredientCombinationData> combinationList)
     {
-        _recipeDict.Clear();
+        _ingredientCombinations.Clear();
         //_recipeCandidate.Clear();
 
         var grouped = combinationList.GroupBy(x => x.ResultId);
@@ -111,7 +153,7 @@ public class DataBase
 
             RecipeKey recipeKey = new RecipeKey(ingredients);
 
-            _recipeDict[recipeKey] = resuldId;
+            _ingredientCombinations[recipeKey] = resuldId;
 
             /*
             foreach (var ingredient in ingredients)
