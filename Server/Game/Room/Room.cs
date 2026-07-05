@@ -24,12 +24,9 @@ public class Room
     private JobQueue _jobQueue = new();
     private Shard _shard;
 
-    private readonly Dictionary<DoorId, Door> _doors = new()
-    {
-        [DoorId.Lobby] = new(2, 3000),
-        [DoorId.Kitchen] = new(2, 3000)
-    };
+    private readonly Dictionary<DoorId, Door> _doors = new();
 
+    private TimerManager _timerManager = new();
     private CookManager _cookManager = new();
 
     public Room(string id, string name, string password)
@@ -39,9 +36,23 @@ public class Room
         Password = password;
     }
 
+    public void Init()
+    {
+        _players.Clear();
+        _playerCnt = 0;
+        _tick = 0;
+        _nextEntityId = 0;
+        _jobQueue.Clear();
+        _doors.Clear();
+
+        _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
+        _doors[DoorId.Kitchen] = new(DoorId.Kitchen, 2, 3, _timerManager, HandleDoorOpened);
+    }
+
     public void Tick(long deltaTime)
     {
         _cookManager.Tick(deltaTime);
+        _timerManager.Tick(deltaTime);
 
         foreach (var player in _players)
         {
@@ -63,31 +74,6 @@ public class Room
             player.Send(PacketSerializer.Serialize(packet, true));
         }
 
-        // Open Door
-        foreach (var doorPair in _doors)
-        {
-            if (doorPair.Value.Tick())
-            {
-                foreach (var door in _doors.Values)
-                {
-                    door.IsOpen = false;
-                }
-
-                doorPair.Value.IsOpen = true;
-
-                PushJob(() =>
-                {
-                    OpenDoorPacket packet = new()
-                    {
-                        DoorId = doorPair.Key
-                    };
-
-                    BroadCast(PacketSerializer.Serialize(packet, true));
-                });
-
-                break;
-            }
-        }
 
         _tick++;
     }
@@ -259,5 +245,22 @@ public class Room
         };
 
         return packet;
+    }
+
+    private void HandleDoorOpened(Door door)
+    {
+        foreach (var d in _doors.Values)
+        {
+            d.IsOpen = false;
+        }
+
+        door.IsOpen = true;
+
+        OpenDoorPacket packet = new()
+        {
+            DoorId = door.DoorId
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
     }
 }
