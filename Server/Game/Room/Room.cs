@@ -21,7 +21,6 @@ public class Room
 
     private long _nextEntityId = 0;
 
-    private JobQueue _jobQueue = new();
     private Shard _shard;
 
     private readonly Dictionary<DoorId, Door> _doors = new();
@@ -42,7 +41,6 @@ public class Room
         _playerCnt = 0;
         _tick = 0;
         _nextEntityId = 0;
-        _jobQueue.Clear();
         _doors.Clear();
 
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
@@ -83,12 +81,11 @@ public class Room
         return _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
     }
 
-    public void PushJob(Action job) => _jobQueue.Push(job);
+    public void PushJob(Action job) => _shard.Push(job);
 
     public void InitShard(Shard shard)
     {
         _shard = shard;
-        _jobQueue.InitShard(shard);
     }
 
     public Shard GetShard()
