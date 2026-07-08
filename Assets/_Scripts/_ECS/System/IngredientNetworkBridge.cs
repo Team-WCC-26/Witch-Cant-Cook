@@ -13,11 +13,12 @@ public class IngredientNetworkBridge : MonoBehaviour
     public static event Action<CookCompletePacket> CookCompleted;
 
     [Header("Spawn Settings")]
-    private readonly int[] ingredientIDs = {
-        10600,
-        10900,
-        12100,
-        12300
+    private readonly Enum.eIngredient[] ingredientIDs = {
+        Enum.eIngredient.Mushroom,
+        Enum.eIngredient.Carrot,
+        Enum.eIngredient.Tomato,
+        Enum.eIngredient.Fish,
+        Enum.eIngredient.Meat
     };
 
     [SerializeField] private GameObject spawnPointObj;
@@ -52,7 +53,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
-            int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
+            int randomID = (int)ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
             SendSpawnPacketToServer(randomID);
         }
 

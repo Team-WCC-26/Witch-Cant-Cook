@@ -3,42 +3,40 @@ using Protocol;
 using Server;
 using System;
 using System.Collections;
+using Unity.Entities;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class Bomb : MonoBehaviour
+public class IngredientTraitExplode : IngredientTrait
 {
-    [SerializeField] 
-    private GameObject explosionVFXPrefab;
+    [SerializeField] private GameObject explosionVFXPrefab;
+    [SerializeField] private Prefab explosionFragment;
+
+    //[SerializeField] private float fuseTime = 3f;
 
     [Header("Fuse")]
-    [SerializeField]
-    private float fuseTime = 2f;
+    [SerializeField] private float holdFuseTime = 3f;
+    [SerializeField] private float groundFuseTime = 10f;
 
     [Header("Explosion")]
-    [SerializeField]
-    private float blastRadius = 4f;
+    [SerializeField] private float blastRadius = 4f;
 
-    [SerializeField]
-    private float blastForce = 12f;
+    [SerializeField] private float blastForce = 12f;
 
-    [SerializeField]
-    private float upwardModifier = 2f;
+    [SerializeField] private float upwardModifier = 2f;
 
-    [SerializeField]
-    private LayerMask blastMask;
+    [SerializeField] private LayerMask blastMask;
 
     [Header("VFX / SFX")]
-    [SerializeField]
-    private ParticleSystem explosionVFX;
+    [SerializeField] private ParticleSystem explosionVFX;
 
-    [SerializeField]
-    private AudioSource explosionSFX;
+    [SerializeField] private AudioSource explosionSFX;
 
     private CatchableObj catchable;
 
     private Coroutine fuseCoroutine;
 
+    private bool previousHoldState;
     private bool exploded;
 
     private void Awake()
@@ -49,31 +47,39 @@ public class Bomb : MonoBehaviour
     private void OnEnable()
     {
         exploded = false;
-        GameEvents.OnEntityPicked += OnEntityPickup;
-    }
 
+        previousHoldState = catchable.IsHold;
+
+        if (previousHoldState)
+            StartFuse(holdFuseTime);
+        else
+            StartFuse(groundFuseTime);
+    }
     private void OnDisable()
     {
         StopFuse();
-        GameEvents.OnEntityPicked -= OnEntityPickup;
     }
 
-    private void OnEntityPickup(EntityPickedEvent evt)
+    private void Update()
     {
-        if (evt.EntityId != catchable.NetworkId)
+        if (previousHoldState == catchable.IsHold)
             return;
 
-        StartFuse();
+        previousHoldState = catchable.IsHold;
+
+        // 상태가 바뀐 경우에만 타이머를 교체
+        if (catchable.IsHold)
+            StartFuse(holdFuseTime);
+        else
+            StartFuse(groundFuseTime);
     }
 
-    private void StartFuse()
+
+    private void StartFuse(float time)
     {
-        if (fuseCoroutine != null)
-            return;
-
-        fuseCoroutine = StartCoroutine(FuseRoutine());
+        StopFuse();
+        fuseCoroutine = StartCoroutine(FuseRoutine(time));
     }
-
     private void StopFuse()
     {
         if (fuseCoroutine == null)
@@ -83,10 +89,9 @@ public class Bomb : MonoBehaviour
         fuseCoroutine = null;
     }
 
-    private IEnumerator FuseRoutine()
+    private IEnumerator FuseRoutine(float time)
     {
-        yield return new WaitForSeconds(fuseTime);
-
+        yield return new WaitForSeconds(time);
         Explode();
     }
 
@@ -182,7 +187,6 @@ public class Bomb : MonoBehaviour
 
         rb.AddForce(force, ForceMode.Impulse);
 
-        // 핵심: "위로 튐만 제한", 포물선은 유지
         Vector3 vel = rb.linearVelocity;
 
         if (vel.y > 2f)   // 너무 높게 뜨는 것만 컷
@@ -198,6 +202,8 @@ public class Bomb : MonoBehaviour
 
         GameObject vfx = Instantiate(explosionVFXPrefab, position, Quaternion.identity);
     }
+
+    #region SFX & VFX
     private void PlayVFX(Vector3 position)
     {
         if (explosionVFX == null)
@@ -219,6 +225,7 @@ public class Bomb : MonoBehaviour
 
         explosionSFX.Play();
     }
+    #endregion
 
     private void ReturnToPool()
     {
