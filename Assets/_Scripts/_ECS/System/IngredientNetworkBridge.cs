@@ -13,12 +13,12 @@ public class IngredientNetworkBridge : MonoBehaviour
     public static event Action<CookCompletePacket> CookCompleted;
 
     [Header("Spawn Settings")]
-    private readonly Enum.eIngredient[] ingredientIDs = {
-        Enum.eIngredient.Mushroom,
-        Enum.eIngredient.Carrot,
-        Enum.eIngredient.Tomato,
-        Enum.eIngredient.Fish,
-        Enum.eIngredient.Meat
+    private readonly Define.eIngredient[] ingredientIDs = {
+        Define.eIngredient.Mushroom,
+        Define.eIngredient.Carrot,
+        Define.eIngredient.Tomato,
+        Define.eIngredient.Fish,
+        Define.eIngredient.Meat
     };
 
     [SerializeField] private GameObject spawnPointObj;

@@ -9,10 +9,11 @@ using UnityEngine;
 [RequireComponent(typeof(CatchableObj))]
 public class IngredientTraitExplode : IngredientTrait
 {
+    [Header("Fragments")]
     [SerializeField] private GameObject explosionVFXPrefab;
-    [SerializeField] private Prefab explosionFragment;
-
-    //[SerializeField] private float fuseTime = 3f;
+    [SerializeField] private GameObject explosionFragment;
+    [SerializeField] private int fragmentCount = 10;
+    [SerializeField] private float fragmentForce = 8f;
 
     [Header("Fuse")]
     [SerializeField] private float holdFuseTime = 3f;
@@ -20,16 +21,12 @@ public class IngredientTraitExplode : IngredientTrait
 
     [Header("Explosion")]
     [SerializeField] private float blastRadius = 4f;
-
     [SerializeField] private float blastForce = 12f;
-
     [SerializeField] private float upwardModifier = 2f;
-
     [SerializeField] private LayerMask blastMask;
 
     [Header("VFX / SFX")]
     [SerializeField] private ParticleSystem explosionVFX;
-
     [SerializeField] private AudioSource explosionSFX;
 
     private CatchableObj catchable;
@@ -111,6 +108,8 @@ public class IngredientTraitExplode : IngredientTrait
         SpawnExplosionParticle(origin);
 
         ApplyBlast(origin);
+
+        SpawnFragments(origin);
 
         ReturnToPool();
     }
@@ -201,6 +200,34 @@ public class IngredientTraitExplode : IngredientTrait
             return;
 
         GameObject vfx = Instantiate(explosionVFXPrefab, position, Quaternion.identity);
+    }
+    private void SpawnFragments(Vector3 origin)
+    {
+        for (int i = 0; i < fragmentCount; i++)
+        {
+            // 팝콘도 오브젝트 풀링 적용해야됨 -> 테이블에 팝콘 생기면?
+            //GameObject obj =
+            //    ObjectPoolManager.Instance.Pop(explosionFragment);
+
+            GameObject obj = Instantiate(explosionFragment, origin, Quaternion.identity);
+            obj.transform.position = origin;
+            obj.transform.rotation = UnityEngine.Random.rotation;
+
+            Rigidbody rb = obj.GetComponent<Rigidbody>();
+
+            if (rb == null)
+                continue;
+
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            Vector3 dir = UnityEngine.Random.onUnitSphere;
+
+            dir.y = Mathf.Abs(dir.y) + 0.3f;
+
+            rb.AddForce(dir.normalized * fragmentForce,
+                ForceMode.Impulse);
+        }
     }
 
     #region SFX & VFX

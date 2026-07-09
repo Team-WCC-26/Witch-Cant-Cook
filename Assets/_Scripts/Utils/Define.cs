@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Enum
+public class Define
 {
     public enum eIngredient
     {
