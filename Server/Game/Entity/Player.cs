@@ -1,6 +1,5 @@
 using Protocol;
 using SuperSocket.Server.Abstractions.Session;
-using System.Numerics;
 
 namespace Server;
 
@@ -13,6 +12,8 @@ public class Player : Entity
     public Room? Room { get; set; }
     public PlayerCombinedState State { get; set; }
 
+    private PacketBatch _batch = new();
+
     public ValueTask Send(ReadOnlyMemory<byte> packet)
     {
         return Session.SendAsync(packet);
@@ -24,5 +25,21 @@ public class Player : Entity
         {
             Room?.Leave(this);
         });
+    }
+
+    public void AddBatch(ReadOnlyMemory<byte> packet)
+    {
+        _batch.Add(packet);
+    }
+
+    public void Flush()
+    {
+        var sendBuffer = _batch.Build();
+
+        if (sendBuffer.IsEmpty) return;
+
+        _batch = new();
+
+        Send(sendBuffer);
     }
 }

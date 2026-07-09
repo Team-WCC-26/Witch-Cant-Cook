@@ -12,7 +12,7 @@ public class Session : AppSession
     {
         Player.PlayerId = SessionID;
         Player.Session = this;
-
+        
         return base.OnSessionConnectedAsync();
     }
 

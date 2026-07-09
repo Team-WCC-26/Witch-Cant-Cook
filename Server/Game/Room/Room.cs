@@ -69,9 +69,10 @@ public class Room
                 // Room의 재료 업데이트 상태 보내기
             }
 
-            player.Send(PacketSerializer.Serialize(packet, true));
+            player.AddBatch(PacketSerializer.Serialize(packet, true));
         }
 
+        FlushSend();
 
         _tick++;
     }
@@ -189,11 +190,19 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
-    public void BroadCast(byte[] packet) // 병목된다 싶으면 batching으로 바꾸기
+    public void BroadCastForce(byte[] packet)
     {
         foreach (var player in _players)
         {
             player.Send(packet);
+        }
+    }
+
+    public void BroadCast(byte[] packet)
+    {
+        foreach (var player in _players)
+        {
+            player.AddBatch(packet);
         }
     }
     
@@ -206,7 +215,7 @@ public class Room
                 Message = message
             };
 
-            BroadCast(PacketSerializer.Serialize(packet));
+            BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
 
@@ -218,6 +227,14 @@ public class Room
     public void StopInteractDoor(DoorId doorId, string playerId)
     {
         _doors[doorId].EndInteract(playerId);
+    }
+
+    private void FlushSend()
+    {
+        foreach (var player in _players)
+        {
+            player.Flush();
+        }
     }
 
     private PlayerMovementPacket GetMovementData(Player player)
