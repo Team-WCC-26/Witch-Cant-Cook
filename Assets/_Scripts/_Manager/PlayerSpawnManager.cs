@@ -119,4 +119,17 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         UIManager.Hide<LobbyRouterUI>();
     }
 
+    public bool RespawnPlayer(string playerId, Transform spawnPoint = null)
+    {
+        if (!players.TryGetValue(playerId, out PlayerBrain player))
+            return false;
+
+        Transform point = spawnPoint != null ? spawnPoint : spawnRoot;
+
+        player.transform.SetPositionAndRotation(
+            point.position,
+            point.rotation);
+
+        return true;
+    }
 }

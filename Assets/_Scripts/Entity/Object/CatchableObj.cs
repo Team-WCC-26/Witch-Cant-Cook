@@ -35,6 +35,7 @@ public class CatchableObj : MonoBehaviour
     [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
     [SerializeField] private float throwForce = 0;
 
+
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
@@ -44,7 +45,7 @@ public class CatchableObj : MonoBehaviour
     public float ThrowForce => throwForce;
 
     public bool IsHold { get; private set; } = false;
-
+    public bool IsRespawning { get; set; } = false; 
     private void OnEnable()
     {
         ResetObj();
