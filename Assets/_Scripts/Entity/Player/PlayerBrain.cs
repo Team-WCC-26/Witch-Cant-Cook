@@ -31,6 +31,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [SerializeField] private float interactRayStartOffset = 0.3f;
     [SerializeField] private float interactDistance = 3.0f;
     [SerializeField] private float interactRadius = 0.35f;
+    [SerializeField] private bool debugInteraction = false;
 
     [Header("Throw")]
     [SerializeField] private float throwForce = 8.0f;
@@ -64,6 +65,7 @@ public sealed class PlayerBrain : MonoBehaviour
     public float InteractRayStartOffset => interactRayStartOffset;
     public float InteractDistance => interactDistance;
     public float InteractRadius => interactRadius;
+    public bool DebugInteraction => debugInteraction;
     public float ThrowForce => throwForce;
     public float ThrowAngle => throwAngle;
     public Vector3 ThrowCameraOffset => throwCameraOffset;

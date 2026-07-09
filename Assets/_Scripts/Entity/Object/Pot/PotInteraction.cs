@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PotInteraction : MapObjInteraction
+public class PotInteraction : MapObjInteraction, IServePlate
 {
     private const int TemporaryFishMeatIngredientId = 20003;
 
@@ -87,7 +87,7 @@ public class PotInteraction : MapObjInteraction
         visualController.UpdateVisual(currentIngredientId, true);
     }
 
-    public bool TryServeToPlate(PlateInteraction plate)
+    public bool TryServePlate(PlateInteraction plate)
     {
         if (plate == null) return false;
         if (!hasIngredient) return false;

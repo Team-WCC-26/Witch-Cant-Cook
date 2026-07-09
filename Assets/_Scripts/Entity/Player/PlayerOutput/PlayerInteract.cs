@@ -7,8 +7,6 @@ public class PlayerInteract
 {
     private readonly PlayerBrain brain;
 
-    private static readonly bool DebugInteraction = true;
-
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
 
@@ -45,7 +43,7 @@ public class PlayerInteract
     {
         if (IsHolding) return;
 
-        CatchableObj obj = FindCatchable();
+        CatchableObj obj = FindInteractTarget<CatchableObj>();
         if (obj == null) return;
         if (obj.IsHold) return;
         if (!obj.CanBePicked) return;
@@ -61,31 +59,31 @@ public class PlayerInteract
 
     private void RequestHeldPrimaryAction()
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
-
-        switch (objType)
+        if (!IsHolding)
         {
-            case CatchableObjType.Default:
-                Debug.Log("주먹질");
-                break;
-            case CatchableObjType.Knife:
-                //재료 자르기
-                CatchableObj target = FindCatchable();
-                if (target == null) break;
-                if (!target.TryGetComponent(out IngredientReaction ingredientReaction))
-                    break;
-
-                ingredientReaction.Interact(IngredientAction.Cut);
-                break;
-            case CatchableObjType.Plate:
-                if (TryServePotToPlate()) break;
-
-                RequestDrop();
-                break;
-            default:
-                RequestDrop();
-                break;
+            return;
         }
+
+        if (TryUseHeldPrimaryAction()) return;
+        if (TryUseHeldObjectReceiver()) return;
+
+        RequestDrop();
+    }
+
+    private bool TryUseHeldPrimaryAction()
+    {
+        if (TryGetHeldComponent(out IHeldPrimaryAction action))
+            return action.TryUsePrimary(this);
+
+        return false;
+    }
+
+    private bool TryUseHeldObjectReceiver()
+    {
+        IHeldObjectReceiver receiver = FindInteractTarget<IHeldObjectReceiver>();
+        if (receiver == null) return false;
+
+        return receiver.TryReceiveHeldObject(HeldObj, this);
     }
     
     private void RequestSecondaryAction()
@@ -95,7 +93,6 @@ public class PlayerInteract
         switch (objType)
         {
             case CatchableObjType.Default:
-                Debug.Log("아무일도... 없었다!");
                 break;
             default:
                 RequestThrow();
@@ -168,15 +165,51 @@ public class PlayerInteract
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    private bool TryServePotToPlate()
+    public bool TryServePlate(PlateInteraction plate)
     {
+        if (plate == null) return false;
+
+        IServePlate target = FindInteractTarget<IServePlate>();
+        if (target == null) return false;
+
+        return target.TryServePlate(plate);
+    }
+
+    public bool TryCutTarget()
+    {
+        CatchableObj target = FindInteractTarget<CatchableObj>();
+        if (target == null) return false;
+        if (!target.TryGetComponent(out IngredientReaction ingredientReaction)) return false;
+
+        ingredientReaction.Interact(IngredientAction.Cut);
+        return true;
+    }
+
+    public bool TryReleaseHeld(CatchableObj target)
+    {
+        if (target == null) return false;
+        if (HeldObj != target) return false;
+
+        HeldObj = null;
+        target.transform.SetParent(null, true);
+        return true;
+    }
+
+    private bool TryGetHeldComponent<T>(out T component) where T : class
+    {
+        component = null;
+
         if (!IsHolding) return false;
-        if (!HeldObj.TryGetComponent(out PlateInteraction plate)) return false;
 
-        PotInteraction pot = FindPotInteraction();
-        if (pot == null) return false;
+        foreach (MonoBehaviour behaviour in HeldObj.GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is not T target) continue;
 
-        return pot.TryServeToPlate(plate);
+            component = target;
+            return true;
+        }
+
+        return false;
     }
     #endregion
 
@@ -218,66 +251,49 @@ public class PlayerInteract
     }
     #endregion
 
+    #region Find Interactable Target
+    public T FindInteractTarget<T>() where T : class
+    {
+        Ray ray = BuildInteractRay();
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            GetInteractRadius(),
+            ray.direction,
+            brain.InteractDistance);
+
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            Collider hitCollider = hit.collider;
+            if (hitCollider == null) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
+
+            T target = GetComponentInParent<T>(hitCollider);
+            if (target == null) continue;
+
+            return target;
+        }
+
+        return null;
+    }
+
+    private static T GetComponentInParent<T>(Collider collider) where T : class
+    {
+        if (typeof(Component).IsAssignableFrom(typeof(T)))
+            return collider.GetComponentInParent(typeof(T)) as T;
+
+        foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
+        {
+            if (behaviour is T target)
+                return target;
+        }
+
+        return null;
+    }
+    #endregion
+
     #region Interact Ray
-    private CatchableObj FindCatchable()
-    {
-        Ray ray = BuildInteractRay();
-        RaycastHit[] hits = Physics.SphereCastAll(
-            ray.origin,
-            GetInteractRadius(),
-            ray.direction,
-            brain.InteractDistance);
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            Collider hitCollider = hits[i].collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
-
-            if (!hitCollider.TryGetComponent(out CatchableObj catchable))
-            {
-                DebugLog($"Hit non-catchable object: {hitCollider.name}");
-                continue;
-            }
-
-            DebugLog($"Hit catchable object: {catchable.name}");
-            return catchable;
-        }
-
-        return null;
-    }
-
-    private PotInteraction FindPotInteraction()
-    {
-        Ray ray = BuildInteractRay();
-        RaycastHit[] hits = Physics.SphereCastAll(
-            ray.origin,
-            GetInteractRadius(),
-            ray.direction,
-            brain.InteractDistance);
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            Collider hitCollider = hits[i].collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
-
-            PotInteraction pot = hitCollider.GetComponentInParent<PotInteraction>();
-            if (pot == null)
-            {
-                DebugLog($"Hit non-pot object: {hitCollider.name}");
-                continue;
-            }
-
-            DebugLog($"Hit pot object: {pot.name}");
-            return pot;
-        }
-
-        return null;
-    }
-
     private Ray BuildInteractRay()
     {
         Transform origin = brain.PlayerCam != null
@@ -295,7 +311,7 @@ public class PlayerInteract
 
     private void DrawDebugInteractRay()
     {
-        if (!DebugInteraction) return;
+        if (!brain.DebugInteraction) return;
 
         Ray ray = BuildInteractRay();
         float radius = GetInteractRadius();
@@ -342,13 +358,6 @@ public class PlayerInteract
 
         right.Normalize();
         up = Vector3.Cross(right, direction).normalized;
-    }
-
-    private static void DebugLog(string message)
-    {
-        if (!DebugInteraction) return;
-
-        Debug.Log($"[PlayerInteract] {message}");
     }
     #endregion
 }

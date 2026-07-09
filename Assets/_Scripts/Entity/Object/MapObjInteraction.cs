@@ -8,7 +8,8 @@ public enum ToolId
     Pot = 40,
     Plate = 50,
     PrepTable = 60,
-    Oven = 80
+    Oven = 80,
+    Stove = 90,
 }
 
 public abstract class MapObjInteraction : MonoBehaviour
