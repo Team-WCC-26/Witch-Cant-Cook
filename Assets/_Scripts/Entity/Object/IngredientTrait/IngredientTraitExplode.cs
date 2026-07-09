@@ -206,10 +206,8 @@ public class IngredientTraitExplode : IngredientTrait
         for (int i = 0; i < fragmentCount; i++)
         {
             // 팝콘도 오브젝트 풀링 적용해야됨 -> 테이블에 팝콘 생기면?
-            //GameObject obj =
-            //    ObjectPoolManager.Instance.Pop(explosionFragment);
+            GameObject obj = ObjectPoolManager.Instance.Pop("Popcorn");
 
-            GameObject obj = Instantiate(explosionFragment, origin, Quaternion.identity);
             obj.transform.position = origin;
             obj.transform.rotation = UnityEngine.Random.rotation;
 

@@ -1,35 +1,44 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class IngredientTraitBounce : MonoBehaviour
 {
-    [SerializeField] PhysicsMaterial material;
-    [SerializeField] float bounciness = 0.9f;
-    [SerializeField] float pushMultiplier = 0.8f;
-
     [SerializeField] private Rigidbody rb;
 
+    [Header("Push")]
+    [SerializeField] private float pushMultiplier = 0.5f;
+    [SerializeField] private float maxPushForce = 8f;
+    [SerializeField] private float minBounceSpeed = 2f;
+
+    [Header("Movement")]
     [SerializeField] private float minSpeed = 5f;
 
-    void Awake()
+    private void Reset()
     {
-        material.bounciness = bounciness;
+        rb = GetComponent<Rigidbody>();
     }
 
-    void OnCollisionEnter(Collision collision)
+    private void OnCollisionEnter(Collision collision)
     {
-        Rigidbody rb = collision.rigidbody;
+        Rigidbody otherRb = collision.rigidbody;
 
-        if (rb == null || rb.isKinematic)
+        if (otherRb == null || otherRb == rb || otherRb.isKinematic)
             return;
 
-        Vector3 dir = (rb.position - transform.position).normalized;
+        // ≈ ≈ ∫º ¿⁄Ω≈¿« º”µµ ±‚¡ÿ
+        float speed = rb.linearVelocity.magnitude;
 
-        float force = collision.relativeVelocity.magnitude * pushMultiplier;
+        if (speed < minBounceSpeed)
+            return;
 
-        rb.AddForce(dir * force, ForceMode.Impulse);
+        Vector3 dir = (otherRb.worldCenterOfMass - rb.worldCenterOfMass).normalized;
+
+        float force = Mathf.Min(speed * pushMultiplier, maxPushForce);
+
+        otherRb.AddForce(dir * force, ForceMode.Impulse);
     }
 
-    private void OnCollisionExit(Collision collision)
+    private void FixedUpdate()
     {
         if (rb.linearVelocity.magnitude < minSpeed)
         {

@@ -15,10 +15,11 @@ public class IngredientNetworkBridge : MonoBehaviour
     [Header("Spawn Settings")]
     private readonly Define.eIngredient[] ingredientIDs = {
         Define.eIngredient.Mushroom,
-        Define.eIngredient.Carrot,
-        Define.eIngredient.Tomato,
+        //Define.eIngredient.Carrot,
+        //Define.eIngredient.Tomato,
         Define.eIngredient.Fish,
-        Define.eIngredient.Meat
+        Define.eIngredient.Meat,
+        Define.eIngredient.Corn,
     };
 
     [SerializeField] private GameObject spawnPointObj;
