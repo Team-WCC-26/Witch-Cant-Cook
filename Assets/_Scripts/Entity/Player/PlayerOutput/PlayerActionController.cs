@@ -23,13 +23,13 @@ public class PlayerActionController
 
     public void UpdateTick(PlayerCombinedState state)
     {
-        // Animator´Â Default¿¡¼­¸¸ ÀÇ¹Ì ÀÖÀ½
+        // Animatorï¿½ï¿½ Defaultï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ç¹ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
             animController.UpdateTick(state);
         }
 
-        // »óÅÂ ÀüÈ¯ (1È¸)
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ (1È¸)
         if (state.PhysicalMode != prevMode)
         {
             switch (state.PhysicalMode)
@@ -61,4 +61,10 @@ public class PlayerActionController
             movement.Stop();
         }
     }
+
+    public void PlayPunch()
+    {
+        animController.PlayPunch();
+    }
 }
+

@@ -44,7 +44,11 @@ public class PlayerInteract
         if (IsHolding) return;
 
         CatchableObj obj = FindInteractTarget<CatchableObj>();
-        if (obj == null) return;
+        if (obj == null)
+        {
+            brain.ActionController.PlayPunch();
+            return;
+        }
         if (obj.IsHold) return;
         if (!obj.CanBePicked) return;
 
@@ -361,3 +365,5 @@ public class PlayerInteract
     }
     #endregion
 }
+
+

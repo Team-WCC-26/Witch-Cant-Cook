@@ -8,6 +8,7 @@ public class PlayerAnimController
     private readonly int speedHash = Animator.StringToHash("Speed");
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
     private readonly int onHoldHash = Animator.StringToHash("OnHold");
+    private readonly int punchHash = Animator.StringToHash("Punch");
 
     private const float IdleSpeed = 0f;
     private const float WalkSpeed = 4f;
@@ -45,4 +46,11 @@ public class PlayerAnimController
         animator.SetTrigger(toIdleHash);
         animator.Update(0f);
     }
+
+    public void PlayPunch()
+    {
+        animator.SetTrigger(punchHash);
+    }
 }
+
+
