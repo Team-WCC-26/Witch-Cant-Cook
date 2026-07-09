@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 4833686790064126660}
   - component: {fileID: 8558192342800442512}
   - component: {fileID: 7990262299635600095}
+  - component: {fileID: 3909898509001048119}
   m_Layer: 7
   m_Name: Knife
   m_TagString: Untagged
@@ -153,6 +154,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  networkId: 0
   col: {fileID: 4833686790064126660}
   rb: {fileID: 8558192342800442512}
   objType: 3
@@ -160,3 +162,15 @@ MonoBehaviour:
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
+--- !u!114 &3909898509001048119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5441762677514521552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60cd301a6d3cb6f48a47203aec398045, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KnifeInteraction

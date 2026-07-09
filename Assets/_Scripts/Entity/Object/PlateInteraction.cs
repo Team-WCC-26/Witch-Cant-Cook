@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PlateInteraction : MonoBehaviour
+public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction
 {
     [SerializeField] private GameObject tempFoodVisual;
 
@@ -14,6 +14,13 @@ public class PlateInteraction : MonoBehaviour
         if (tempFoodVisual == null) return;
 
         tempFoodVisual.SetActive(true);
+    }
+
+    public bool TryUsePrimary(PlayerInteract interact)
+    {
+        if (interact == null) return false;
+
+        return interact.TryServePlate(this);
     }
 
     private void OnCollisionEnter(Collision collision)
