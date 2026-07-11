@@ -43,10 +43,10 @@ public class StageManager : Singleton<StageManager>
 
     void Start()
     {
-        Debug.Log("1");
         ServerManager.Instance.RegisterHandler(
             PacketId.S_OpenDoor,
-            data => OnOpenDoor(data));        
+            data => OnOpenDoor(data));
+
         //config = Resources.Load<StageConfig>("StageConfig");
 
         // 페이즈 초기화
@@ -54,12 +54,12 @@ public class StageManager : Singleton<StageManager>
         cookingPhase = new CookingPhase(this);
         judgePhase = new JudgePhase(this);
 
-        Debug.Log("2");
+        // 문 관리
         lobbyDoor = GameObject.Find("LobbyDoor").GetComponent<Door>();
         kitchenDoor = GameObject.Find("KitchenDoor").GetComponent<Door>();
+
         lobbyDoor.OpenImmediate();
         kitchenDoor.CloseImmediate();
-        Debug.Log("3");
     }
 
     void Update()
@@ -104,7 +104,7 @@ public class StageManager : Singleton<StageManager>
     private void NextRound()
     {
         currentStageIndex++;
-        Debug.Log($"{currentStageIndex + 1} 라운드로 이동합니다.");
+        Debug.Log($"{currentStageIndex + 1} 스테이지로 이동합니다.");
         ChangePhase(prepPhase);
     }
 

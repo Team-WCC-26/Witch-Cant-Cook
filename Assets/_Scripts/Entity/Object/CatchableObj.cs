@@ -43,6 +43,7 @@ public class CatchableObj : MonoBehaviour
     public Vector3 HoldLocalPosition => holdLocalPosition;
     public Vector3 HoldLocalEulerAngles => holdLocalEulerAngles;
     public float ThrowForce => throwForce;
+    public PlayerBrain Holder { get; private set; }
 
     public bool IsHold { get; private set; } = false;
     public bool IsRespawning { get; set; } = false; 
@@ -76,8 +77,10 @@ public class CatchableObj : MonoBehaviour
         networkId = 0;
     }
 
-    public void OnPick()
+    public void OnPick(PlayerBrain holder)
     {
+        Holder = holder;
+
         releaseFromPrep?.Invoke(this);
         releaseFromPrep = null;
 
@@ -87,15 +90,17 @@ public class CatchableObj : MonoBehaviour
 
     public void OnDrop()
     {
-        IsHold = false;
+        Holder = null;
 
+        IsHold = false;
         SetPhysicsState(true);
     }
 
     public void OnThrow()
     {
-        IsHold = false;
+        Holder = null;
 
+        IsHold = false;
         SetPhysicsState(true);
     }
 
