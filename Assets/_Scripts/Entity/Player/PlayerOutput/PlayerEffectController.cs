@@ -1,18 +1,13 @@
-using System.Collections;
 using UnityEngine;
 
 public class PlayerEffectController
 {
     private readonly PlayerBrain brain;
-    private readonly PlayerActionController actionController;
 
-    private Coroutine blindCoroutine;
-    private Coroutine speedDownCoroutine;
 
-    public PlayerEffectController(PlayerBrain brain, PlayerActionController actionController)
+    public PlayerEffectController(PlayerBrain brain)
     {
         this.brain = brain;
-        this.actionController = actionController;
     }
 
     /// <summary>

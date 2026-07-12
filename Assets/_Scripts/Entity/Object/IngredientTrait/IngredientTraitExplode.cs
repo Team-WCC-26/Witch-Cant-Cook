@@ -111,7 +111,7 @@ public class IngredientTraitExplode : IngredientTrait
 
         SpawnFragments(origin);
 
-        ReturnToPool();
+        PushIngredientToPool(catchable);
     }
 
     private void ApplyBlast(Vector3 origin)
@@ -252,10 +252,6 @@ public class IngredientTraitExplode : IngredientTrait
     }
     #endregion
 
-    private void ReturnToPool()
-    {
-        ObjectPoolManager.Instance.Push(gameObject);
-    }
 
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
