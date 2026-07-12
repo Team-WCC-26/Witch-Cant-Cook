@@ -4,16 +4,26 @@ public class PlayerMovement
 {
     private readonly PlayerBrain brain;
 
-    private readonly float moveSpeed = 5.0f;
-    private readonly float runMultiplier = 1.5f;
+
+
+    #region Movement Settings
+    private readonly float moveSpeed;
+    private readonly float runMultiplier;
+    private readonly float jumpPower;
+    #endregion
 
     private Rigidbody rb => brain.Rb;
 
     public float CurrentSpeed { get; private set; }
+    public bool IsGroundedNow => IsGrounded();
+    public float VerticalSpeed => rb.linearVelocity.y;
 
-    public PlayerMovement(PlayerBrain brain)
+    public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower)
     {
         this.brain = brain;
+        this.moveSpeed = moveSpeed;
+        this.runMultiplier = runMultiplier;
+        this.jumpPower = jumpPower;
     }
 
     public void Move(Vector2 moveInput, bool isRun)
@@ -51,4 +61,49 @@ public class PlayerMovement
 
         CurrentSpeed = 0f;
     }
+
+    #region Jump
+    public void Jump()
+    {
+        bool isGrounded = IsGrounded();
+        if (!isGrounded)
+        {
+            return;
+        }
+
+        Vector3 velocity = rb.linearVelocity;
+        velocity.y = 0f;
+        rb.linearVelocity = velocity;
+
+        rb.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
+    }
+
+    private bool IsGrounded()
+    {
+        if (brain.Col == null) return false;
+
+        Bounds bounds = brain.Col.bounds;
+        float radius = Mathf.Min(bounds.extents.x, bounds.extents.z) * 0.9f;
+        float distance = bounds.extents.y - radius + brain.GroundCheckDistance;
+
+        if (brain.DebugGroundCheck)
+        {
+            Debug.DrawRay(
+                bounds.center,
+                Vector3.down * (distance + radius),
+                Color.green
+            );
+        }
+
+        return Physics.SphereCast(
+            bounds.center,
+            radius,
+            Vector3.down,
+            out _,
+            distance,
+            brain.GroundLayerMask,
+            QueryTriggerInteraction.Ignore
+        );
+    }
+    #endregion
 }

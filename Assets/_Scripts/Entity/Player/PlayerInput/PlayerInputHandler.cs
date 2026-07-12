@@ -5,14 +5,15 @@ using UnityEngine.InputSystem;
 public enum KeyInput
 {
     None = 0,
-    Primary, //좌클릭
-    Secondary, //우클릭
+    Primary, //Left click
+    Secondary, //Right click
     Interact, //F
-} 
+    Jump, //Space
+}
 
 public class PlayerInputHandler : MonoBehaviour
 {
-    //InputSystem의 KeyInput Event 발송
+    //InputSystem key input event sender
     public event Action<KeyInput> InputPerformed;
 
     public Vector2 RawMoveDir { get; private set; }
@@ -52,25 +53,31 @@ public class PlayerInputHandler : MonoBehaviour
         RawIsRunning = context.ReadValueAsButton();
     }
 
-    //default : F키
     public void OnInteract(InputAction.CallbackContext context)
     {
         if (!context.started) return;
         InputPerformed?.Invoke(KeyInput.Interact);
     }
 
-    //default: 마우스 좌클릭
     public void OnPrimaryTriggered(InputAction.CallbackContext context)
     {
         if (!context.started) return;
         InputPerformed?.Invoke(KeyInput.Primary);
     }
 
-    //default: 마우스 우클릭
     public void OnSecondaryTriggered(InputAction.CallbackContext context)
     {
         if (!context.started) return;
         InputPerformed?.Invoke(KeyInput.Secondary);
     }
+
+    #region Jump Input
+    // Sends one-shot jump input from the Input System.
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (!context.started) return;
+        InputPerformed?.Invoke(KeyInput.Jump);
+    }
+    #endregion
     #endregion
 }

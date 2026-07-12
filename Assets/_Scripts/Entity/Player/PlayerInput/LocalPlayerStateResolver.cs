@@ -9,6 +9,9 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
 
     private const float SendInterval = 0.05f;
     private float sendTimer = 0f;
+    private bool pendingJumpRequested = false;
+    private bool isJumpLocked = false;
+    private bool hasJumpLockStarted = false;
     public LocalPlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         inputFSM = new PlayerInputFSM(brain);
@@ -20,6 +23,9 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         inputFSM.UpdateTick();
 
         PlayerPhysicalMode physicalMode = CurrentState.PhysicalMode;
+        UpdateJumpLock(physicalMode);
+        CacheJumpRequest(physicalMode);
+
         PlayerInteraction interaction = inputFSM.CurrentInteraction;
         CatchableObjType heldObjType = ResolveHeldObjType();
 
@@ -57,6 +63,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         Vector2 moveDir = CurrentState.MoveDir;
         bool isRun = CurrentState.IsRun;
         CatchableObjType heldObjType = ResolveHeldObjType();
+        bool jumpRequested = ConsumeJumpRequest(physicalMode);
 
         if (physicalMode != PlayerPhysicalMode.Default)
         {
@@ -75,7 +82,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             moveDir,
             isRun,
             PlayerInteraction.None,
-            heldObjType
+            heldObjType,
+            jumpRequested
         ));
 
         sendTimer += Time.fixedDeltaTime;
@@ -113,4 +121,68 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             ? brain.Interact.HeldObj.ObjType
             : CatchableObjType.Default;
     }
+
+    #region Jump State
+    // Keeps jump input alive until the next physics tick.
+    private void CacheJumpRequest(PlayerPhysicalMode physicalMode)
+    {
+        if (physicalMode != PlayerPhysicalMode.Default)
+        {
+            pendingJumpRequested = false;
+            isJumpLocked = false;
+            hasJumpLockStarted = false;
+            return;
+        }
+
+        if (isJumpLocked)
+        {
+            return;
+        }
+
+        pendingJumpRequested |= inputFSM.CurrentJumpRequested;
+    }
+
+    // Consumes jump once when physics is ready to apply it.
+    private bool ConsumeJumpRequest(PlayerPhysicalMode physicalMode)
+    {
+        bool jumpRequested =
+            physicalMode == PlayerPhysicalMode.Default
+            && pendingJumpRequested
+            && !isJumpLocked
+            && brain.ActionController.CanRequestJump;
+
+        if (jumpRequested)
+        {
+            isJumpLocked = true;
+            hasJumpLockStarted = false;
+        }
+
+        pendingJumpRequested = false;
+        return jumpRequested;
+    }
+
+    private void UpdateJumpLock(PlayerPhysicalMode physicalMode)
+    {
+        if (!isJumpLocked) return;
+
+        if (physicalMode != PlayerPhysicalMode.Default)
+        {
+            isJumpLocked = false;
+            hasJumpLockStarted = false;
+            return;
+        }
+
+        if (!hasJumpLockStarted)
+        {
+            hasJumpLockStarted = !brain.ActionController.CanRequestJump;
+            return;
+        }
+
+        if (brain.ActionController.CanRequestJump)
+        {
+            isJumpLocked = false;
+            hasJumpLockStarted = false;
+        }
+    }
+    #endregion
 }

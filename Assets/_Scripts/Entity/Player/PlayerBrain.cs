@@ -6,37 +6,44 @@ using UnityEngine;
 public sealed class PlayerBrain : MonoBehaviour
 {
     [Header("Network")]
-    [SerializeField] private string playerId = null;
+    [field: SerializeField] public string PlayerId { get; set; } = null;
 
     [Header("Core")]
-    [SerializeField] private Collider col = null;
-    [SerializeField] private Rigidbody rb = null;
+    [field: SerializeField] public Collider Col { get; private set; } = null;
+    [field: SerializeField] public Rigidbody Rb { get; private set; } = null;
 
     [Header("Camera Settings")]
-    [SerializeField] private Transform cameraFollowTarget = null;
-    [SerializeField] private Transform cameraLookAtTarget = null;
+    [field: SerializeField] public Transform CameraFollowTarget { get; private set; } = null;
+    [field: SerializeField] public Transform CameraLookAtTarget { get; private set; } = null;
 
     [Header("Ragdoll")]
-    [SerializeField] private List<BodyPart> bodyParts = new();
+    [field: SerializeField] public List<BodyPart> BodyParts { get; private set; } = new();
 
     [Header("Systems")]
-    [SerializeField] private PlayerInputHandler input = null;
-    [SerializeField] private PlayerCameraController camController = null;
+    [field: SerializeField] public PlayerInputHandler Input { get; private set; } = null;
+    [field: SerializeField] public PlayerCameraController CameraController { get; private set; } = null;
 
     [Header("Animated Body")]
-    [SerializeField] private Animator animator = null;
+    [field: SerializeField] public Animator Animator { get; private set; } = null;
 
     [Header("Interaction")]
-    [SerializeField] private Transform itemHoldParent = null;
-    [SerializeField] private float interactRayStartOffset = 0.3f;
-    [SerializeField] private float interactDistance = 3.0f;
-    [SerializeField] private float interactRadius = 0.35f;
-    [SerializeField] private bool debugInteraction = false;
+    [field: SerializeField] public Transform ItemHoldParent { get; private set; } = null;
+    [field: SerializeField] public float InteractRayStartOffset { get; private set; } = 0.3f;
+    [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
+    [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
+    [field: SerializeField] public bool DebugInteraction { get; private set; } = false; 
+    [Header("Movement")]
+    [field: SerializeField] public float MoveSpeed { get; private set; } = 5.0f;
+    [field: SerializeField] public float RunMultiplier { get; private set; } = 1.5f;
+    [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
+    [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
+    [field: SerializeField] public float GroundCheckDistance { get; private set; } = 0.08f;
+    [field: SerializeField] public bool DebugGroundCheck { get; private set; } = false;
 
     [Header("Throw")]
-    [SerializeField] private float throwForce = 8.0f;
-    [SerializeField] private float throwAngle = 0.0f;
-    [SerializeField] private Vector3 throwCameraOffset = Vector3.zero;
+    [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
+    [field: SerializeField] public float ThrowAngle { get; private set; } = 0.0f;
+    [field: SerializeField] public Vector3 ThrowCameraOffset { get; private set; } = Vector3.zero;
     private PlayerInteract interact;
 
     private PlayerStateResolver stateResolver = null;
@@ -48,29 +55,10 @@ public sealed class PlayerBrain : MonoBehaviour
     private CinemachineCamera virtualCamera = null;
 
     #region properties
-    public string PlayerId
-    {
-        get => playerId;
-        set => playerId = value;
-    }
     public Camera PlayerCam => playerCamera;
-    public Collider Col => col;
-    public Rigidbody Rb => rb;
-    public IReadOnlyList<BodyPart> BodyParts => bodyParts;
-    public PlayerInputHandler Input => input;
-    public PlayerActionController ActionController => actionController;
-    public PlayerCameraController CameraController => camController;
-    public Animator Animator => animator;
-    public Transform ItemHoldParent => itemHoldParent;
-    public float InteractRayStartOffset => interactRayStartOffset;
-    public float InteractDistance => interactDistance;
-    public float InteractRadius => interactRadius;
-    public bool DebugInteraction => debugInteraction;
-    public float ThrowForce => throwForce;
-    public float ThrowAngle => throwAngle;
-    public Vector3 ThrowCameraOffset => throwCameraOffset;
     public PlayerInteract Interact => interact;
     public PlayerStateResolver StateResolver => stateResolver;
+    public PlayerActionController ActionController => actionController;
     #endregion
 
     private void Awake()
@@ -81,9 +69,9 @@ public sealed class PlayerBrain : MonoBehaviour
 
     public void Initialize(string id)
     {
-        playerId = id;
+        PlayerId = id;
 
-        bool isMine = PlayerSpawnManager.Instance.IsMine(playerId);
+        bool isMine = PlayerSpawnManager.Instance.IsMine(PlayerId);
         SetLocalControlActive(isMine);
 
         stateResolver = isMine
@@ -115,7 +103,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         if (!isInitialized) return;
-        if (!PlayerSpawnManager.Instance.IsMine(playerId)) return;
+        if (!PlayerSpawnManager.Instance.IsMine(PlayerId)) return;
         if (stateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default) return;
 
         stateResolver.NotifyCollision(collision);
@@ -132,8 +120,8 @@ public sealed class PlayerBrain : MonoBehaviour
     {
         playerCamera = cam;
         virtualCamera = virtualCam;
-        virtualCamera.Target.TrackingTarget = cameraFollowTarget;
-        virtualCamera.Target.LookAtTarget = cameraLookAtTarget;
+        virtualCamera.Target.TrackingTarget = CameraFollowTarget;
+        virtualCamera.Target.LookAtTarget = CameraLookAtTarget;
     }
 
     private void SetLocalControlActive(bool isMine)
@@ -143,14 +131,14 @@ public sealed class PlayerBrain : MonoBehaviour
             playerCamera.gameObject.SetActive(isMine);
         }
 
-        if (input != null)
+        if (Input != null)
         {
-            input.enabled = isMine;
+            Input.enabled = isMine;
         }
 
-        if (camController != null)
+        if (CameraController != null)
         {
-            camController.SetLocalControlActive(isMine);
+            CameraController.SetLocalControlActive(isMine);
         }
     }
 }

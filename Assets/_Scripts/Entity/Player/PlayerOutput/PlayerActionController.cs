@@ -10,26 +10,28 @@ public class PlayerActionController
 
     private PlayerPhysicalMode prevMode;
 
+    public bool CanRequestJump => movement.IsGroundedNow && !animController.IsJumpMotionPlaying();
+
     public PlayerActionController(PlayerBrain brain)
     {
         this.brain = brain;
 
         animController = new PlayerAnimController(brain);
         ragdollController = new PlayerRagdollController(brain, animController);
-        movement = new PlayerMovement(brain);
+        movement = new PlayerMovement(brain, brain.MoveSpeed, brain.RunMultiplier, brain.JumpPower);
 
         prevMode = PlayerPhysicalMode.Default;
     }
 
     public void UpdateTick(PlayerCombinedState state)
     {
-        // Animator�� Default������ �ǹ� ����
+        // Update default locomotion and airborne animation parameters.
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
-            animController.UpdateTick(state);
+            animController.UpdateTick(state, movement.IsGroundedNow, movement.VerticalSpeed);
         }
 
-        // ���� ��ȯ (1ȸ)
+        // Apply physical mode changes once per transition.
         if (state.PhysicalMode != prevMode)
         {
             switch (state.PhysicalMode)
@@ -55,6 +57,8 @@ public class PlayerActionController
                 movement.Move(state.MoveDir, state.IsRun);
             else
                 movement.Stop();
+
+            ApplyJump(state);
         }
         else
         {
@@ -66,5 +70,13 @@ public class PlayerActionController
     {
         animController.PlayPunch();
     }
-}
 
+    #region Jump Action
+    // Applies one-shot jump requests after horizontal movement is resolved.
+    private void ApplyJump(PlayerCombinedState state)
+    {
+        if (!state.JumpRequested) return;
+        movement.Jump();
+    }
+    #endregion
+}

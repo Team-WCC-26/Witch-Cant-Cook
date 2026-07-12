@@ -1612,7 +1612,7 @@ Transform:
   m_GameObject: {fileID: 1504811232068273791}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
+  m_LocalPosition: {x: 1.644, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2942,37 +2942,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09d22a57f39daff4b8c1a5c11908fee0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerBrain
-  playerId: 
-  col: {fileID: 7891904189108107663}
-  rb: {fileID: 1685243863294689759}
-  cameraFollowTarget: {fileID: 4330563817117246054}
-  cameraLookAtTarget: {fileID: 4330563817117246054}
-  bodyParts:
-  - {fileID: 7957876469961443487}
-  - {fileID: 5314876934156615694}
-  - {fileID: 6449241110640665846}
-  - {fileID: 8082747084296197998}
-  - {fileID: 8895436959403723115}
-  - {fileID: 7038899844141996174}
-  - {fileID: 1723362405518648283}
-  - {fileID: 5111294369866105021}
-  - {fileID: 5736216127897299047}
-  - {fileID: 1189646992730920083}
-  - {fileID: 4609176003335714581}
-  - {fileID: 8378334760059870953}
-  - {fileID: 8816512585909321909}
-  - {fileID: 5869222141734662142}
-  - {fileID: 7269832289452170089}
-  input: {fileID: 1858417482901392103}
-  camController: {fileID: 2046484605702321816}
-  animator: {fileID: 7885394116074416671}
-  itemHoldParent: {fileID: 4460277482102821099}
-  interactRayStartOffset: 2.7
-  interactDistance: 2.2
-  interactRadius: 0.35
-  throwForce: 11
-  throwAngle: 10
-  throwCameraOffset: {x: -0.25, y: -0.3, z: 3}
+  <PlayerId>k__BackingField: 
+  <Col>k__BackingField: {fileID: 7891904189108107663}
+  <Rb>k__BackingField: {fileID: 1685243863294689759}
+  <CameraFollowTarget>k__BackingField: {fileID: 4330563817117246054}
+  <CameraLookAtTarget>k__BackingField: {fileID: 4330563817117246054}
+  <BodyParts>k__BackingField: []
+  <Input>k__BackingField: {fileID: 1858417482901392103}
+  <CameraController>k__BackingField: {fileID: 2046484605702321816}
+  <Animator>k__BackingField: {fileID: 7885394116074416671}
+  <ItemHoldParent>k__BackingField: {fileID: 4460277482102821099}
+  <InteractRayStartOffset>k__BackingField: 0.3
+  <InteractDistance>k__BackingField: 3
+  <InteractRadius>k__BackingField: 0.35
+  <DebugInteraction>k__BackingField: 1
+  <MoveSpeed>k__BackingField: 5
+  <RunMultiplier>k__BackingField: 1.5
+  <JumpPower>k__BackingField: 5.5
+  <GroundLayerMask>k__BackingField:
+    serializedVersion: 2
+    m_Bits: 257
+  <GroundCheckDistance>k__BackingField: 0.02
+  <DebugGroundCheck>k__BackingField: 1
+  <ThrowForce>k__BackingField: 8
+  <ThrowAngle>k__BackingField: 0
+  <ThrowCameraOffset>k__BackingField: {x: 0, y: 0, z: 0}
 --- !u!114 &1858417482901392103
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3079,7 +3073,19 @@ MonoBehaviour:
     m_ActionId: 852140f2-7766-474d-8707-702459ba45f3
     m_ActionName: 'Player/Interact[/Keyboard/e]'
   - m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1858417482901392103}
+        m_TargetAssemblyTypeName: PlayerInputHandler, Assembly-CSharp
+        m_MethodName: OnJump
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
     m_ActionId: f1ba0d36-48eb-4cd5-b651-1c94a6531f70
     m_ActionName: 'Player/Jump[/Keyboard/space]'
   - m_PersistentCalls:
@@ -3172,7 +3178,7 @@ MonoBehaviour:
     m_ActionName: Player/RightClick
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
-  m_DefaultActionMap: 
+  m_DefaultActionMap: df70fa95-8a34-4494-b137-73ab6b9c7d37
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
 --- !u!54 &1685243863294689759
