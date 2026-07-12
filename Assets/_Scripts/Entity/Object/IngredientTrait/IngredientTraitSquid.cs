@@ -87,13 +87,12 @@ public class IngredientTraitSquid : IngredientTrait
     /// </summary>
     private void SprayHolder()
     {
-        // CatchableObj에 들고 있는 플레이어 참조가 있다고 가정
         PlayerBrain holder = catchable.Holder;
 
         if (holder == null)
             return;
 
-        //holder.ApplyBlind(blindDuration);
+        //holder.EffectController.ApplyBlind(blindDuration);
     }
 
     /// <summary>
@@ -108,7 +107,7 @@ public class IngredientTraitSquid : IngredientTrait
         {
             if (hit.TryGetComponent(out PlayerBrain player))
             {
-                //player.ApplyBlind(blindDuration);
+                //player.EffectController.ApplyBlind(blindDuration);
             }
         }
     }

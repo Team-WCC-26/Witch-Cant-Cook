@@ -14,6 +14,7 @@ public class PlayerEffectController
         this.brain = brain;
         this.actionController = actionController;
     }
+
     /// <summary>
     /// ¿ÀÂ¡¾î ¸Ô¹° È¿°ú
     /// </summary>

@@ -16,16 +16,19 @@ public class Define
         Onion = 11000,
         Salmon = 11100,
         Honey = 11200,
-        Milk = 11300,
-        MandragoraRoot = 11400,
-        Salt = 11500,
-        Sugar = 11600,
-        Parsley = 11700,
-        Butter = 11800,
-        Egg = 11900,
-        Corn = 12000,
-        Fish = 12100,
-        Cabbage = 12200,
-        Meat = 12300
+        MandragoraRoot = 11300,
+        Salt = 11400,
+        Sugar = 11500,
+        Parsley = 11600,
+        Butter = 11700,
+        Egg = 11800,
+        Corn = 11900,
+        Fish = 12000,
+        Cabbage = 12100,
+        Meat = 12200,
+        Squid = 12300,
+        Popcorn = 12400
     }
+
 }
+
