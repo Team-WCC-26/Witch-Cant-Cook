@@ -222,7 +222,7 @@ public class PlayerInteract
     {
         if (target == null) return;
 
-        target.OnPick();
+        target.OnPick(brain);
         target.transform.SetParent(brain.ItemHoldParent, false);
         target.transform.localPosition = target.HoldLocalPosition;
         target.transform.localRotation = Quaternion.Euler(target.HoldLocalEulerAngles);

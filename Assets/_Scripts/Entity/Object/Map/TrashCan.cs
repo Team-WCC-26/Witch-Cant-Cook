@@ -1,12 +1,6 @@
 using Protocol;
 using Server;
-using System.Collections.Generic;
-using Unity.Transforms;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.UIElements;
-using static UnityEditor.FilePathAttribute;
 
 public class TrashCan : MonoBehaviour
 {
