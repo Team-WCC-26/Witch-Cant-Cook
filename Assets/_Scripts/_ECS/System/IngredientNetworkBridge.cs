@@ -14,12 +14,14 @@ public class IngredientNetworkBridge : MonoBehaviour
 
     [Header("Spawn Settings")]
     private readonly Define.eIngredient[] ingredientIDs = {
-        Define.eIngredient.Mushroom,
+        //Define.eIngredient.Mushroom,
         //Define.eIngredient.Carrot,
         //Define.eIngredient.Tomato,
-        Define.eIngredient.Fish,
-        Define.eIngredient.Meat,
-        Define.eIngredient.Corn,
+        //Define.eIngredient.Fish,
+        //Define.eIngredient.Meat,
+        //Define.eIngredient.Corn,
+        Define.eIngredient.Honey,
+        Define.eIngredient.Squid,
     };
 
     [SerializeField] private GameObject spawnPointObj;
@@ -131,7 +133,6 @@ public class IngredientNetworkBridge : MonoBehaviour
             Rotation = new quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W)
         });
 
-        Debug.Log($"[Network Recv] Ingredient spawned. ID: {packet.IngredientID}, NetID: {packet.EntityId}");
     }
 
     private void OnThrowReceived(ReadOnlyMemory<byte> data)

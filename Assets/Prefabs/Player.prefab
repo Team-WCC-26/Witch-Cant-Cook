@@ -2903,6 +2903,7 @@ GameObject:
   - component: {fileID: 1858417482901392103}
   - component: {fileID: 2046484605702321816}
   - component: {fileID: 3735518019011116279}
+  - component: {fileID: 6000329936595199975}
   - component: {fileID: 1685243863294689759}
   - component: {fileID: 7891904189108107663}
   m_Layer: 6
@@ -2950,6 +2951,7 @@ MonoBehaviour:
   <BodyParts>k__BackingField: []
   <Input>k__BackingField: {fileID: 1858417482901392103}
   <CameraController>k__BackingField: {fileID: 2046484605702321816}
+  <EffectController>k__BackingField: {fileID: 6000329936595199975}
   <Animator>k__BackingField: {fileID: 7885394116074416671}
   <ItemHoldParent>k__BackingField: {fileID: 4460277482102821099}
   <InteractRayStartOffset>k__BackingField: 0.3
@@ -3178,9 +3180,21 @@ MonoBehaviour:
     m_ActionName: Player/RightClick
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
-  m_DefaultActionMap: df70fa95-8a34-4494-b137-73ab6b9c7d37
+  m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &6000329936595199975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3553836231192102681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a881f7a269f032142b3d69d5dbaca047, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEffectController
 --- !u!54 &1685243863294689759
 Rigidbody:
   m_ObjectHideFlags: 0

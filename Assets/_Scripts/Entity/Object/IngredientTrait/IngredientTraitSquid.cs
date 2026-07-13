@@ -92,7 +92,7 @@ public class IngredientTraitSquid : IngredientTrait
         if (holder == null)
             return;
 
-        //holder.EffectController.ApplyBlind(blindDuration);
+        holder.EffectController.ApplyBlind(blindDuration);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class IngredientTraitSquid : IngredientTrait
         {
             if (hit.TryGetComponent(out PlayerBrain player))
             {
-                //player.EffectController.ApplyBlind(blindDuration);
+                player.EffectController.ApplyBlind(blindDuration);
             }
         }
     }

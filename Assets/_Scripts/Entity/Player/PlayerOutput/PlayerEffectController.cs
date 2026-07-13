@@ -1,13 +1,12 @@
 using UnityEngine;
 
-public class PlayerEffectController
+public class PlayerEffectController : MonoBehaviour
 {
-    private readonly PlayerBrain brain;
+    private PlayerBrain brain;
 
-
-    public PlayerEffectController(PlayerBrain brain)
+    private void Awake()
     {
-        this.brain = brain;
+        brain = GetComponent<PlayerBrain>();
     }
 
     /// <summary>
@@ -15,6 +14,13 @@ public class PlayerEffectController
     /// </summary>
     public void ApplyBlind(float duration)
     {
+        Debug.Log($"brain : {brain}");
+        Debug.Log($"spawnManager : {PlayerSpawnManager.Instance}");
+        Debug.Log($"playerId : {brain?.PlayerId}");
+
+        if (!PlayerSpawnManager.Instance.IsMine(brain.PlayerId))
+            return;
+
         _ = UIManager.Show<UIBlind>(duration);
     }
 

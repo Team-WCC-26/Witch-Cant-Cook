@@ -22,6 +22,8 @@ public sealed class PlayerBrain : MonoBehaviour
     [Header("Systems")]
     [field: SerializeField] public PlayerInputHandler Input { get; private set; } = null;
     [field: SerializeField] public PlayerCameraController CameraController { get; private set; } = null;
+    [field: SerializeField] public PlayerEffectController EffectController { get; private set; } = null;
+    
 
     [Header("Animated Body")]
     [field: SerializeField] public Animator Animator { get; private set; } = null;
@@ -140,5 +142,11 @@ public sealed class PlayerBrain : MonoBehaviour
         {
             CameraController.SetLocalControlActive(isMine);
         }
+
+        if (EffectController == null)
+        {
+            EffectController = GetComponent<PlayerEffectController>();
+        }
+
     }
 }
