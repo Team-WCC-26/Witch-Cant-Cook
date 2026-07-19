@@ -11,6 +11,7 @@ public class Player : Entity
     public float Ping { get; set; }
     public Room? Room { get; set; }
     public PlayerCombinedState State { get; set; }
+    public Entity? HoldingEntity { get; set; }
 
     private PacketBatch _batch = new();
 

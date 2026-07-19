@@ -2,7 +2,7 @@
 
 namespace Server;
 
-public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
+public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable, IInteractable
 {
     public int IngredientId => _ingredientId;
     private readonly int _ingredientId = ingredientId;
@@ -62,6 +62,15 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
         if ((DB.Ingredients[IngredientId].InvalidProcessFlag & state) != 0) return false;
 
         ProcessState |= state;
+
+        return true;
+    }
+
+    public bool Interact(Player player)
+    {
+        if (player.HoldingEntity is not ICombinable combinable) return false;
+
+        TryCombine(combinable, out var res);
 
         return true;
     }
