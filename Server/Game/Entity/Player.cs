@@ -43,4 +43,9 @@ public class Player : Entity
 
         Send(sendBuffer);
     }
+
+    public override void WriteSnapShot(PacketBatch batch, DirtyMask mask)
+    {
+        throw new NotImplementedException();
+    }
 }

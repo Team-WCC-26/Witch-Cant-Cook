@@ -3,7 +3,7 @@
 namespace Protocol;
 
 [MemoryPackable]
-[PacketId(PacketId.C_EntityCombine)]
+//[PacketId(PacketId.C_EntityCombine)]
 public partial class EntityCombinePacket
 {
     // 손에 들고 있는 개체

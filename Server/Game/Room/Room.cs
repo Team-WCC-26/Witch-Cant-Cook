@@ -15,6 +15,8 @@ public class Room
     public IReadOnlyDictionary<long, Entity> Entities => _entities;
     private readonly Dictionary<long, Entity> _entities = new();
 
+    private readonly HashSet<Entity> _dirtyEntities = new();
+
     public int PlayerCnt => _playerCnt;
     private int _playerCnt = 0;
     private int _tick = 0;
@@ -26,7 +28,9 @@ public class Room
     private readonly Dictionary<DoorId, Door> _doors = new();
 
     private TimerManager _timerManager = new();
-    private CookManager _cookManager = new();
+    //private CookManager _cookManager = new();
+
+    private PacketBatch _batch = new();
 
     public Room(string id, string name, string password)
     {
@@ -49,8 +53,19 @@ public class Room
 
     public void Tick(long deltaTime)
     {
-        _cookManager.Tick(deltaTime);
+        _batch.Clear();
+
+        //_cookManager.Tick(deltaTime);
         _timerManager.Tick(deltaTime);
+
+        foreach (var entity in _dirtyEntities)
+        {
+            var mask = entity.ConsumeDirtyMask();
+
+            // 패킷 Writer를 통한 batching packet 작성
+        }
+
+        _dirtyEntities.Clear();
 
         foreach (var player in _players)
         {
@@ -94,12 +109,17 @@ public class Room
         return _shard;
     }
 
+    public void MakeDirty(Entity entity)
+    {
+        _dirtyEntities.Add(entity);
+    }
+
     public Ingredient GenerateIngredient(int id, out long entityId)
     {
         Ingredient ingredient = new(id);
         entityId = GenerateEntityId();
 
-        _entities[entityId] = ingredient;
+        RegisterEntity(entityId, ingredient);
 
         return ingredient;
     }
@@ -110,25 +130,37 @@ public class Room
         
         switch (id)
         {
+            case 10:
+                tool = new Knife(id);
+                break;
+
             case 20:
+                tool = new Pan(id);
+                break;
+
+            case 30:
+
             case 40:
-            case 80:
-                tool = new CookingTool(id);
-                _cookManager.RegisterCookingTool(id, tool as CookingTool);
+                tool = new Pot(id);
                 break;
 
             case 50:
                 tool = new Dish(id);
                 break;
 
+            case 80:
+                tool = new Oven(id);
+                //_cookManager.RegisterCookingTool(id, tool as CookingTool);
+                break;
+
             default:
-                tool = new(id);
+                tool = null;
                 break;
         }
         
         entityId = GenerateEntityId();
 
-        _entities[entityId] = tool;
+        RegisterEntity(entityId, tool);
 
         return tool;
     }
@@ -227,6 +259,12 @@ public class Room
     public void StopInteractDoor(DoorId doorId, string playerId)
     {
         _doors[doorId].EndInteract(playerId);
+    }
+
+    private void RegisterEntity(long id, Entity entity)
+    {
+        entity.AttachRoom(this);
+        _entities[id] = entity;
     }
 
     private void FlushSend()

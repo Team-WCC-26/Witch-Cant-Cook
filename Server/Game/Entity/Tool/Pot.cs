@@ -11,4 +11,9 @@ public class Pot(int toolId) : CookingTool(toolId)
     {
         throw new NotImplementedException();
     }
+
+    protected override void Cook(CookingTool tool)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -3,7 +3,7 @@
 namespace Protocol;
 
 [MemoryPackable]
-[PacketId(PacketId.S_EntityCombine)]
+//[PacketId(PacketId.S_EntityCombine)]
 public partial class EntityCombineResultPacket
 {
     public bool Success { get; set; }

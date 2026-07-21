@@ -23,41 +23,41 @@ public class IngredientHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_CookStart)]
-    public static void StartCook(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<CookStartPacket>(package.Body);
-        var room = session.Player.Room;
+    //[PacketHandler(PacketId.C_CookStart)]
+    //public static void StartCook(Session session, PacketPackageInfo package)
+    //{
+    //    var packet = DeSerialize<CookStartPacket>(package.Body);
+    //    var room = session.Player.Room;
 
-        room.PushJob(() =>
-        {
-            if (room.Entities[packet.EntityId] is not ICookable cookable) return;
-            if (!cookable.TryCook(packet.CookType, out var ingredient)) return;
+    //    room.PushJob(() =>
+    //    {
+    //        if (room.Entities[packet.EntityId] is not ICookable cookable) return;
+    //        if (!cookable.TryCook(packet.CookType, out var ingredient)) return;
 
-            room.UpdateEntity(packet.EntityId, ingredient);
+    //        room.UpdateEntity(packet.EntityId, ingredient);
 
-            CookCompletePacket completePacket = new() // 임시로 바로 완료 패킷 보냄 => 추후에 타입별로 다르게 처리해야함
-            {
-                EntityId = packet.EntityId,
-                IngredientId = ingredient.IngredientId,
-                CookType = packet.CookType
-            };
+    //        CookCompletePacket completePacket = new() // 임시로 바로 완료 패킷 보냄 => 추후에 타입별로 다르게 처리해야함
+    //        {
+    //            EntityId = packet.EntityId,
+    //            IngredientId = ingredient.IngredientId,
+    //            CookType = packet.CookType
+    //        };
 
-            room.BroadCast(PacketSerializer.Serialize(completePacket, true));
-        });
-    }
+    //        room.BroadCast(PacketSerializer.Serialize(completePacket, true));
+    //    });
+    //}
 
-    [PacketHandler(PacketId.C_CookCancel)]
-    public static void CancelCook(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<CookCancelPacket>(package.Body);
-        var room = session.Player.Room;
+    //[PacketHandler(PacketId.C_CookCancel)]
+    //public static void CancelCook(Session session, PacketPackageInfo package)
+    //{
+    //    var packet = DeSerialize<CookCancelPacket>(package.Body);
+    //    var room = session.Player.Room;
 
-        room.PushJob(() =>
-        {
-            room.BroadCast(PacketSerializer.Serialize(packet, true));
-        });
-    }
+    //    room.PushJob(() =>
+    //    {
+    //        room.BroadCast(PacketSerializer.Serialize(packet, true));
+    //    });
+    //}
 
     //[PacketHandler(PacketId.C_IngredientState)]
     public static void UpdateIngredientState(Session session, PacketPackageInfo package)

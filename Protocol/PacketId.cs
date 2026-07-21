@@ -60,25 +60,29 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_EntityDestroy = 332,
     S_EntityDestroy = 333,
 
-    C_EntityPickup = 334,
-    S_EntityPickup = 335,
+    //C_EntityPickup = 334,
+    //S_EntityPickup = 335,
+
+    C_EntityInsert = 334,
+
+    C_EntityInteract = 336,
 
     C_EntityThrow = 336,
     S_EntityThrow = 337,
 
-    C_EntityCombine = 338,
-    S_EntityCombine = 339,
+    //C_EntityCombine = 338,
+    //S_EntityCombine = 339,
 
-    C_EntityPut = 340,
-    S_EntityPut = 341,
+    //C_EntityPut = 340,
+    //S_EntityPut = 341,
 
     C_IngredientSpawn = 342,
     S_IngredientSpawn = 343,
 
-    C_CookStart = 344,
+    //C_CookStart = 344,
     S_CookStart = 345,
 
-    C_CookCancel = 346,
+    //C_CookCancel = 346,
     S_CookCancel = 347,
 
     S_CookComplete = 349,

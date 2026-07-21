@@ -8,4 +8,8 @@ namespace Server;
 
 public class Oven(int toolId) : CookingTool(toolId)
 {
+    protected override void Cook(CookingTool tool)
+    {
+        throw new NotImplementedException();
+    }
 }

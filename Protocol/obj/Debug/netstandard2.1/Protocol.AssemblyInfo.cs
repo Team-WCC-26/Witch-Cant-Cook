@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Protocol")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+10cc8bf269edfcf8fd6cadff9c8c57601799abdb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cd7ed45d29db2721e0d2571d9a83450c4dbc1a06")]
 [assembly: System.Reflection.AssemblyProductAttribute("Protocol")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Protocol")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
