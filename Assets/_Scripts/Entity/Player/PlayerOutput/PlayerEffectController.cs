@@ -35,8 +35,10 @@ public class PlayerEffectController : MonoBehaviour
     /// <summary>
     /// 이동속도 감소
     /// </summary>
-    public void ApplySpeedDown(float multiplier, float duration)
+    public void ApplySpeedDown(float multiplier)
     {
+        // 범위 체크는 HoneyArea가 할거고
+        // 이 범위 안에 있는 플레이어의 속도 조절
         // TODO
     }
 
