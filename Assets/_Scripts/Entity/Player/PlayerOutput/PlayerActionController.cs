@@ -10,7 +10,9 @@ public class PlayerActionController
 
     private PlayerPhysicalMode prevMode;
 
-    public bool CanRequestJump => movement.IsGroundedNow && !animController.IsJumpMotionPlaying();
+    public bool CanRequestJump => movement.CanJump;
+    public bool IsGroundedNow => movement.IsGroundedNow;
+
     public bool CanPunch { get; private set; }
     private float punchTime = 0f;
 
@@ -29,6 +31,7 @@ public class PlayerActionController
     public void UpdateTick(PlayerCombinedState state)
     {
         UpdatePunchState();
+        movement.UpdateGroundState();
 
         // Update default locomotion and airborne animation parameters.
         if (state.PhysicalMode == PlayerPhysicalMode.Default)

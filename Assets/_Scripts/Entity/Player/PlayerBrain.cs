@@ -34,14 +34,22 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
     [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
     [field: SerializeField] public bool DebugInteraction { get; private set; } = false; 
-    [Header("Movement")]
+    
+    [Header("Base Move")]
     [field: SerializeField] public float MoveSpeed { get; private set; } = 5.0f;
     [field: SerializeField] public float RunMultiplier { get; private set; } = 1.5f;
-    [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
+
+    [Header("Punch")]
+    [field: SerializeField, Min(0f)] public float PunchRecoveryDelay { get; private set; } = 0.1f;
+
+    [Header("Jump")]
     [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
+    [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
+    [field: SerializeField, Min(0f)] public float CoyoteTime { get; private set; } = 0.1f;
+
+    [Header("Jump Validation")]
     [field: SerializeField] public float GroundCheckDistance { get; private set; } = 0.08f;
     [field: SerializeField] public bool DebugGroundCheck { get; private set; } = false;
-    [field: SerializeField, Min(0f)] public float PunchRecoveryDelay { get; private set; } = 0.1f;
 
     [Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
