@@ -137,6 +137,11 @@ public class IngredientReaction : MonoBehaviour
     private void ApplyVisual(IngredientAction action)
     {
         IngredientActionVisual visual = FindActionVisual(action);
+
+        if (visual == null && (action & IngredientAction.Grill) != 0) {
+            IngredientAction fallback = (action & ~IngredientAction.Grill) | IngredientAction.Cook;
+            visual = FindActionVisual(fallback);
+        }
         if (visual == null) return;
 
         ApplyMesh(visual.Mesh);

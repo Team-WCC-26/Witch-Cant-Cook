@@ -17,11 +17,11 @@ public class IngredientNetworkBridge : MonoBehaviour
         //Define.eIngredient.Mushroom,
         //Define.eIngredient.Carrot,
         //Define.eIngredient.Tomato,
-        //Define.eIngredient.Fish,
-        //Define.eIngredient.Meat,
+        Define.eIngredient.Fish,
+        Define.eIngredient.Meat,
         //Define.eIngredient.Corn,
-        Define.eIngredient.Honey,
-        Define.eIngredient.Squid,
+        //Define.eIngredient.Honey,
+        //Define.eIngredient.Squid,
     };
 
     [SerializeField] private GameObject spawnPointObj;

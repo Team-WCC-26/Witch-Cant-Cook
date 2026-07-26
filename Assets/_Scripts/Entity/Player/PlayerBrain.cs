@@ -41,6 +41,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
     [field: SerializeField] public float GroundCheckDistance { get; private set; } = 0.08f;
     [field: SerializeField] public bool DebugGroundCheck { get; private set; } = false;
+    [field: SerializeField, Min(0f)] public float PunchRecoveryDelay { get; private set; } = 0.1f;
 
     [Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;

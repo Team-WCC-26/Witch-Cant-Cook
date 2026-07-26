@@ -20,7 +20,10 @@ public class AnythingSpawner : MonoBehaviour
         {
             SpawnTool((int)CatchableObjType.Plate);
         }
-
+        if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
+        {
+            SpawnTool((int)CatchableObjType.Pan);
+        }
     }
 
     private void SpawnTool(int toolKey)

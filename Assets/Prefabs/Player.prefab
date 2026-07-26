@@ -2954,7 +2954,7 @@ MonoBehaviour:
   <EffectController>k__BackingField: {fileID: 6000329936595199975}
   <Animator>k__BackingField: {fileID: 7885394116074416671}
   <ItemHoldParent>k__BackingField: {fileID: 4460277482102821099}
-  <InteractRayStartOffset>k__BackingField: 0.3
+  <InteractRayStartOffset>k__BackingField: 2
   <InteractDistance>k__BackingField: 3
   <InteractRadius>k__BackingField: 0.35
   <DebugInteraction>k__BackingField: 1
@@ -2966,9 +2966,10 @@ MonoBehaviour:
     m_Bits: 257
   <GroundCheckDistance>k__BackingField: 0.02
   <DebugGroundCheck>k__BackingField: 1
+  <PunchRecoveryDelay>k__BackingField: 0.1
   <ThrowForce>k__BackingField: 8
   <ThrowAngle>k__BackingField: 0
-  <ThrowCameraOffset>k__BackingField: {x: 0, y: 0, z: 0}
+  <ThrowCameraOffset>k__BackingField: {x: 0, y: 0, z: 3}
 --- !u!114 &1858417482901392103
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3229,7 +3230,7 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3553836231192102681}
-  m_Material: {fileID: 13400000, guid: 6c17d0580d66d99468707cd51099beab, type: 2}
+  m_Material: {fileID: 13400000, guid: 0e1e3b8274d61fb429739b136ad4898d, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
