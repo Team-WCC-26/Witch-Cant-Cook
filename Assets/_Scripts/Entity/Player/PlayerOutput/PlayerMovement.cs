@@ -19,6 +19,11 @@ public class PlayerMovement
     public float VerticalSpeed => rb.linearVelocity.y;
     public float SpeedMultiplier { get; set; } = 1f;
 
+    private float lastGroundedTime = float.NegativeInfinity;
+    public bool CanJump => 
+        IsGroundedNow || 
+        Time.time - lastGroundedTime <= brain.CoyoteTime;
+
     public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower)
     {
         this.brain = brain;
@@ -66,11 +71,7 @@ public class PlayerMovement
     #region Jump
     public void Jump()
     {
-        bool isGrounded = IsGrounded();
-        if (!isGrounded)
-        {
-            return;
-        }
+        if (!CanJump) return;
 
         Vector3 velocity = rb.linearVelocity;
         velocity.y = 0f;
@@ -105,6 +106,12 @@ public class PlayerMovement
             brain.GroundLayerMask,
             QueryTriggerInteraction.Ignore
         );
+    }
+
+    public void UpdateGroundState()
+    {
+        if (IsGrounded())
+            lastGroundedTime = Time.time;
     }
     #endregion
 }

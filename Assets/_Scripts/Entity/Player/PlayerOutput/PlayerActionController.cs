@@ -10,10 +10,13 @@ public class PlayerActionController
 
     private PlayerPhysicalMode prevMode;
 
-    public PlayerMovement Movement => movement;
+    public bool CanRequestJump => movement.CanJump;
+    public bool IsGroundedNow => movement.IsGroundedNow;
 
-    public bool CanRequestJump => movement.IsGroundedNow && !animController.IsJumpMotionPlaying();
+    public bool CanPunch { get; private set; }
+    private float punchTime = 0f;
 
+    
     public PlayerActionController(PlayerBrain brain)
     {
         this.brain = brain;
@@ -27,6 +30,9 @@ public class PlayerActionController
 
     public void UpdateTick(PlayerCombinedState state)
     {
+        UpdatePunchState();
+        movement.UpdateGroundState();
+
         // Update default locomotion and airborne animation parameters.
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
@@ -68,10 +74,35 @@ public class PlayerActionController
         }
     }
 
+    #region Punch Action
     public void PlayPunch()
     {
+        if (!CanPunch) return;
+
         animController.PlayPunch();
+        CanPunch = false;
     }
+
+    private void UpdatePunchState()
+    {
+        bool isPlaying = animController.IsPunchMotionPlaying();
+        if (isPlaying) return;
+
+        if (!CanPunch)
+        {
+            if (punchTime == 0)
+                punchTime = brain.PunchRecoveryDelay;
+            else
+                punchTime -= Time.deltaTime;
+
+            if (punchTime <= 0)
+            {
+                CanPunch = true;
+                punchTime = 0;
+            }
+        }
+    }
+    #endregion
 
     #region Jump Action
     // Applies one-shot jump requests after horizontal movement is resolved.

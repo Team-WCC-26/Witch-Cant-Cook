@@ -172,13 +172,14 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             return;
         }
 
+        bool isGrounded = brain.ActionController.IsGroundedNow;
         if (!hasJumpLockStarted)
         {
-            hasJumpLockStarted = !brain.ActionController.CanRequestJump;
+            hasJumpLockStarted = !isGrounded;
             return;
         }
 
-        if (brain.ActionController.CanRequestJump)
+        if (isGrounded)
         {
             isJumpLocked = false;
             hasJumpLockStarted = false;

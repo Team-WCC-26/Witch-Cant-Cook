@@ -9,6 +9,7 @@ public class PlayerAnimController
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
     private readonly int onHoldHash = Animator.StringToHash("OnHold");
     private readonly int punchHash = Animator.StringToHash("Punch");
+    private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
     private readonly int groundedHash = Animator.StringToHash("IsGrounded");
     private readonly int vSpeedHash = Animator.StringToHash("VSpeed");
     private readonly int jumpStartHash = Animator.StringToHash("JumpStart");
@@ -57,6 +58,25 @@ public class PlayerAnimController
     public void PlayPunch()
     {
         animator.SetTrigger(punchHash);
+    }
+
+    public bool IsPunchMotionPlaying()
+    {
+        const int UpperBodyLayer = 1;
+
+        AnimatorStateInfo current =
+            animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
+
+        if (current.shortNameHash == punchStateHash)
+            return true;
+
+        if (!animator.IsInTransition(UpperBodyLayer))
+            return false;
+
+        AnimatorStateInfo next =
+            animator.GetNextAnimatorStateInfo(UpperBodyLayer);
+
+        return next.shortNameHash == punchStateHash;
     }
 
     public bool IsJumpMotionPlaying()

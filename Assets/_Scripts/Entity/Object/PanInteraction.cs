@@ -5,11 +5,21 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
 {
     [SerializeField] private CatchableObj catchable;
     [SerializeField] private Transform ingredientSlot;
+
+    [Header("Toss Trigger")]
+    private Collider ingredientTrigger;
+    [Min(0f)] [SerializeField] private float triggerDisableDuration = 0.5f;
+    
+    [Header("Ingredient Toss")]
+    [Min(0f)]
     [SerializeField] private float tossForce = 3f;
+    [Min(0f)]
     [SerializeField] private float tossUpForce = 2f;
 
     private IngredientReaction currentIngredient;
+    private Vector3 currentIngredientOriginalScale;
     private Coroutine grillCoroutine;
+    private Coroutine triggerRestoreCoroutine;
     private StoveInteraction currentStove;
 
     public CatchableObj Catchable => catchable;
@@ -19,10 +29,22 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
     {
         if (catchable == null)
             catchable = GetComponent<CatchableObj>();
+
+        if (ingredientTrigger == null)
+        {
+            foreach (Collider candidate in GetComponents<Collider>())
+            {
+                if (!candidate.isTrigger) continue;
+
+                ingredientTrigger = candidate;
+                break;
+            }
+        }
     }
 
     private void OnDisable()
     {
+        RestoreIngredientTrigger();
         StopGrill();
         currentStove?.Release(this);
         currentStove = null;
@@ -142,6 +164,7 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
     private void AttachIngredient(IngredientReaction ingredient, CatchableObj ingredientCatchable)
     {
         currentIngredient = ingredient;
+        currentIngredientOriginalScale = ingredient.transform.localScale;
 
         // Keep the ingredient fixed inside the pan while it is stored.
         Transform slot = ingredientSlot != null ? ingredientSlot : transform;
@@ -159,13 +182,13 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
     {
         if (currentIngredient == null) return;
 
-        // Restore physics and throw the ingredient out of the pan.
         IngredientReaction ingredient = currentIngredient;
         CatchableObj ingredientCatchable = ingredient.Catchable;
         StopGrill();
         currentIngredient = null;
 
-        ingredient.transform.SetParent(null, true);
+        TemporarilyDisableIngredientTrigger();
+        RestoreIngredientTransform(ingredient);
         ingredientCatchable.ChangePickState(true);
         ingredientCatchable.OnThrow();
 
@@ -173,8 +196,10 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
 
         Vector2 random = Random.insideUnitCircle.normalized;
         Vector3 direction = new Vector3(random.x, 0f, random.y);
-        ingredientCatchable.Rb.linearVelocity = direction * tossForce + Vector3.up * tossUpForce;
+        Vector3 impulse = direction * tossForce + Vector3.up * tossUpForce;
+        ingredientCatchable.Rb.linearVelocity = Vector3.zero;
         ingredientCatchable.Rb.angularVelocity = Vector3.zero;
+        ingredientCatchable.Rb.AddForce(impulse, ForceMode.Impulse);
     }
 
     private void ConsumeIngredient()
@@ -184,6 +209,7 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
         currentIngredient = null;
 
         CatchableObj ingredientCatchable = ingredient.Catchable;
+        RestoreIngredientTransform(ingredient);
         ingredientCatchable.ChangePickState(false);
         ingredientCatchable.SetPhysicsState(false);
 
@@ -194,6 +220,45 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
         }
 
         ingredientCatchable.gameObject.SetActive(false);
+    }
+
+    private void RestoreIngredientTransform(IngredientReaction ingredient)
+    {
+        ingredient.transform.SetParent(null, true);
+        ingredient.transform.localScale = currentIngredientOriginalScale;
+    }
+
+    // ✨ 지정한 시간 동안 음식 감지 Trigger를 비활성화한다.
+    private void TemporarilyDisableIngredientTrigger()
+    {
+        if (ingredientTrigger == null) return;
+
+        if (triggerRestoreCoroutine != null)
+            StopCoroutine(triggerRestoreCoroutine);
+
+        ingredientTrigger.enabled = false;
+        triggerRestoreCoroutine = StartCoroutine(RestoreIngredientTriggerRoutine());
+    }
+
+    // ✨ 음식이 팬에서 벗어날 시간을 준 뒤 Trigger를 다시 활성화한다.
+    private IEnumerator RestoreIngredientTriggerRoutine()
+    {
+        yield return new WaitForSeconds(triggerDisableDuration);
+        ingredientTrigger.enabled = true;
+        triggerRestoreCoroutine = null;
+    }
+
+    // ✨ 팬 비활성화 시에도 Trigger와 Coroutine 상태를 정상화한다.
+    private void RestoreIngredientTrigger()
+    {
+        if (triggerRestoreCoroutine != null)
+        {
+            StopCoroutine(triggerRestoreCoroutine);
+            triggerRestoreCoroutine = null;
+        }
+
+        if (ingredientTrigger != null)
+            ingredientTrigger.enabled = true;
     }
 
     private bool TryGetIngredient(Collider other, out IngredientReaction ingredient, out CatchableObj ingredientCatchable)
