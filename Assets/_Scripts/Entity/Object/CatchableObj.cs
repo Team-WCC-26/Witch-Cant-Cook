@@ -46,7 +46,10 @@ public class CatchableObj : MonoBehaviour
     public PlayerBrain Holder { get; private set; }
 
     public bool IsHold { get; private set; } = false;
-    public bool IsRespawning { get; set; } = false; 
+    public bool IsRespawning { get; set; } = false;
+
+    public event Action OnPicked;
+    public event Action OnDropped;
     private void OnEnable()
     {
         ResetObj();

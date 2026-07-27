@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 
-public class IngredientTraitTimer : IngredientTrait
+public class IngredientTraitTimer
 {
     private float duration;
     private float elapsed;
@@ -12,11 +12,8 @@ public class IngredientTraitTimer : IngredientTrait
     private Action onComplete;
 
     public bool IsRunning => isRunning;
-    public float Progress => Mathf.Clamp01(elapsed / duration);
+    public float Progress => duration <= 0f ? 0f : Mathf.Clamp01(elapsed / duration);
 
-    /// <summary>
-    /// duration 후 한 번 실행
-    /// </summary>
     public void StartTimer(float duration, Action callback)
     {
         this.duration = duration;
@@ -27,9 +24,6 @@ public class IngredientTraitTimer : IngredientTrait
         isLoop = false;
     }
 
-    /// <summary>
-    /// duration마다 반복 실행
-    /// </summary>
     public void StartLoop(float duration, Action callback)
     {
         this.duration = duration;
@@ -71,5 +65,35 @@ public class IngredientTraitTimer : IngredientTrait
         {
             Stop();
         }
+    }
+
+    /// <summary>
+    /// condition이 true일 때만 시간이 흐르고,
+    /// false가 되면 자동으로 초기화된다.
+    /// </summary>
+    public void Tick(float deltaTime, bool condition)
+    {
+        if (!condition)
+        {
+            Reset();
+            return;
+        }
+
+        Tick(deltaTime);
+    }
+
+    public void TickAccurate(float deltaTime)
+    {
+        if (!isRunning)
+            return;
+
+        elapsed += deltaTime;
+
+        if (elapsed < duration)
+            return;
+
+        elapsed -= duration;
+        onComplete?.Invoke();
+        Stop();
     }
 }

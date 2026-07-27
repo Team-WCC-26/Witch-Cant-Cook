@@ -10,6 +10,8 @@ public class PlayerActionController
 
     private PlayerPhysicalMode prevMode;
 
+    public PlayerMovement Movement => movement;
+
     public bool CanRequestJump => movement.IsGroundedNow && !animController.IsJumpMotionPlaying();
 
     public PlayerActionController(PlayerBrain brain)

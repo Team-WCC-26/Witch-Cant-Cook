@@ -1,24 +1,28 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitSquid : IngredientTrait
+public class IngredientSquid : IngredientTrait
 {
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
 
-    [Header("Ink")]
+    [Header("Time Settings")]
     [SerializeField] private float holdDuration = 3f;
     [SerializeField] private float blindDuration = 3f;
     [SerializeField] private float cooldown = 10f;
+
+    [Header("Spray Settings")]
     [SerializeField] private float impactThreshold = 6f;
     [SerializeField] private float radius = 10f;
     [SerializeField] private LayerMask playerLayer;
 
     [Header("Effect")]
-    [SerializeField] private ParticleSystem inkEffect;
+    //[SerializeField] private ParticleSystem inkEffect;
 
-    private float holdTimer;
-    private float cooldownTimer;
+    private readonly IngredientTraitTimer holdTimer = new();
+    private readonly IngredientTraitTimer cooldownTimer = new();
+
+    private bool canSpray = true;
 
     private void Reset()
     {
@@ -31,53 +35,55 @@ public class IngredientTraitSquid : IngredientTrait
             catchable = GetComponent<CatchableObj>();
     }
 
+    private void OnEnable()
+    {
+        catchable.OnPicked += OnPicked;
+        catchable.OnDropped += OnDropped;
+    }
+
+    private void OnDisable()
+    {
+        catchable.OnPicked -= OnPicked;
+        catchable.OnDropped -= OnDropped;
+
+        holdTimer.Stop();
+        cooldownTimer.Stop();
+
+        PushIngredientToPool(catchable);
+
+    }
+
     private void Update()
     {
-        UpdateCooldown();
-        UpdateHold();
+        holdTimer.Tick(Time.deltaTime);
+        cooldownTimer.Tick(Time.deltaTime);
     }
 
-    private void UpdateCooldown()
+    private void OnPicked()
     {
-        if (cooldownTimer > 0f)
-            cooldownTimer -= Time.deltaTime;
+        holdTimer.StartLoop(
+            holdDuration,
+            () => TrySpray(SprayHolder));
     }
 
-    private void UpdateHold()
+    private void OnDropped()
     {
-        if (!catchable.IsHold)
-        {
-            holdTimer = 0f;
-            return;
-        }
-
-        holdTimer += Time.deltaTime;
-
-        if (holdTimer < holdDuration)
-            return;
-
-        holdTimer = 0f;
-
-        TrySpray(SprayHolder);
+        holdTimer.Stop();
     }
 
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.relativeVelocity.magnitude < impactThreshold)
-            return;
-
-        TrySpray(SprayAround);
-    }
 
     private void TrySpray(System.Action sprayAction)
     {
-        if (cooldownTimer > 0f)
+        if (!canSpray)
             return;
 
-        cooldownTimer = cooldown;
+        canSpray = false;
 
-        if (inkEffect != null)
-            inkEffect.Play();
+        cooldownTimer.StartTimer(
+            cooldown,
+            () => canSpray = true);
+
+        //inkEffect?.Play();
 
         sprayAction?.Invoke();
     }
@@ -96,7 +102,7 @@ public class IngredientTraitSquid : IngredientTrait
     }
 
     /// <summary>
-    /// 주변 플레이어 모두에게 먹물
+    /// 주변 플레이어 모두에게 먹물 - 혹시 몰라서 구현
     /// </summary>
     private void SprayAround()
     {

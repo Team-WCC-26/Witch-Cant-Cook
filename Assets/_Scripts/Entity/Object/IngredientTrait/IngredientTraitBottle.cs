@@ -1,7 +1,8 @@
+using Protocol;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitBottle : IngredientTrait
+public class IngredientTraitBottle : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
@@ -14,6 +15,7 @@ public class IngredientTraitBottle : IngredientTrait
 
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;
+    [SerializeField] private GameObject honeyArea;
 
     private bool isBroken;
 
@@ -56,14 +58,16 @@ public class IngredientTraitBottle : IngredientTrait
         }
 
         SpawnHoneyArea(spawnPos);
-
-        // 깨진 후에는 오브젝트 풀로 반납
-        PushIngredientToPool(catchable);
     }
 
     private void SpawnHoneyArea(Vector3 position)
     {
-        Debug.Log($"SpawnHoneyArea - Position: {position}");
-        // 생성 요청 패킷 전송
+        IngredientSpawnPacket packet = new IngredientSpawnPacket
+        {
+            // Ingredient 테이블에 생성되는 영역들도 추가하던가 해야될 것 같음
+        };
+        // Todo : 생성 요청 패킷 전송
+
+        Instantiate(honeyArea, position, Quaternion.identity);
     }
 }

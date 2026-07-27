@@ -1,23 +1,13 @@
-using MemoryPack;
-using Protocol;
-using Server;
-using System;
-using System.Collections;
-using Unity.Entities;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitExplode : IngredientTrait
+public class IngredientTraitExplode : MonoBehaviour
 {
     [Header("Fragments")]
     [SerializeField] private GameObject explosionVFXPrefab;
     [SerializeField] private GameObject explosionFragment;
     [SerializeField] private int fragmentCount = 10;
     [SerializeField] private float fragmentForce = 8f;
-
-    [Header("Fuse")]
-    [SerializeField] private float holdFuseTime = 3f;
-    [SerializeField] private float groundFuseTime = 10f;
 
     [Header("Explosion")]
     [SerializeField] private float blastRadius = 4f;
@@ -29,89 +19,32 @@ public class IngredientTraitExplode : IngredientTrait
     [SerializeField] private ParticleSystem explosionVFX;
     [SerializeField] private AudioSource explosionSFX;
 
-    private CatchableObj catchable;
+    private bool exploded = false;
 
-    private Coroutine fuseCoroutine;
-
-    private bool previousHoldState;
-    private bool exploded;
-
-    private void Awake()
-    {
-        catchable = GetComponent<CatchableObj>();
-    }
 
     private void OnEnable()
     {
         exploded = false;
-
-        previousHoldState = catchable.IsHold;
-
-        if (previousHoldState)
-            StartFuse(holdFuseTime);
-        else
-            StartFuse(groundFuseTime);
-    }
-    private void OnDisable()
-    {
-        StopFuse();
     }
 
-    private void Update()
-    {
-        if (previousHoldState == catchable.IsHold)
-            return;
-
-        previousHoldState = catchable.IsHold;
-
-        // 상태가 바뀐 경우에만 타이머를 교체
-        if (catchable.IsHold)
-            StartFuse(holdFuseTime);
-        else
-            StartFuse(groundFuseTime);
-    }
-
-
-    private void StartFuse(float time)
-    {
-        StopFuse();
-        fuseCoroutine = StartCoroutine(FuseRoutine(time));
-    }
-    private void StopFuse()
-    {
-        if (fuseCoroutine == null)
-            return;
-
-        StopCoroutine(fuseCoroutine);
-        fuseCoroutine = null;
-    }
-
-    private IEnumerator FuseRoutine(float time)
-    {
-        yield return new WaitForSeconds(time);
-        Explode();
-    }
-
-    private void Explode()
+    public void Explode()
     {
         if (exploded)
             return;
 
         exploded = true;
 
-        StopFuse();
-
         Vector3 origin = transform.position;
 
-        //PlayVFX(origin);
-        //PlaySFX();
         SpawnExplosionParticle(origin);
 
-        ApplyBlast(origin);
+        // 필요하면 사용
+        // PlayVFX(origin);
+        // PlaySFX();
 
+        ApplyBlast(origin);
         SpawnFragments(origin);
 
-        PushIngredientToPool(catchable);
     }
 
     private void ApplyBlast(Vector3 origin)
@@ -120,8 +53,7 @@ public class IngredientTraitExplode : IngredientTrait
             origin,
             blastRadius,
             blastMask,
-            QueryTriggerInteraction.Ignore
-        );
+            QueryTriggerInteraction.Ignore);
 
         foreach (Collider hit in hits)
         {
@@ -133,6 +65,7 @@ public class IngredientTraitExplode : IngredientTrait
                 ApplyPlayerKnockback(player.Rb);
                 continue;
             }
+
             if (hit.TryGetComponent(out CatchableObj catchable))
             {
                 if (catchable.IsHold)
@@ -146,17 +79,15 @@ public class IngredientTraitExplode : IngredientTrait
                 ApplyObjectKnockback(rb, origin);
             }
         }
-        
     }
+
     private void ApplyObjectKnockback(Rigidbody rb, Vector3 origin)
     {
         Vector3 dir = rb.position - origin;
-
-        // 수평 위주 퍼짐
         dir.y = 0f;
 
         if (dir.sqrMagnitude < 0.001f)
-            dir = UnityEngine.Random.insideUnitSphere;
+            dir = Random.insideUnitSphere;
 
         dir.Normalize();
 
@@ -169,18 +100,17 @@ public class IngredientTraitExplode : IngredientTrait
 
         rb.AddForce(force, ForceMode.Impulse);
     }
+
     private void ApplyPlayerKnockback(Rigidbody rb)
     {
         Vector3 backDir = -transform.forward;
         backDir.y = 0f;
         backDir.Normalize();
 
-        // 뒤 + 아주 약한 위로 (포물선 시작용)
         Vector3 force =
             backDir * blastForce * 2.2f +
             Vector3.up * blastForce * 0.25f;
 
-        // 기존 속도 초기화
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
@@ -188,7 +118,7 @@ public class IngredientTraitExplode : IngredientTrait
 
         Vector3 vel = rb.linearVelocity;
 
-        if (vel.y > 2f)   // 너무 높게 뜨는 것만 컷
+        if (vel.y > 2f)
             vel.y = 2f;
 
         rb.linearVelocity = vel;
@@ -199,17 +129,17 @@ public class IngredientTraitExplode : IngredientTrait
         if (explosionVFXPrefab == null)
             return;
 
-        GameObject vfx = Instantiate(explosionVFXPrefab, position, Quaternion.identity);
+        Instantiate(explosionVFXPrefab, position, Quaternion.identity);
     }
+
     private void SpawnFragments(Vector3 origin)
     {
         for (int i = 0; i < fragmentCount; i++)
         {
-            // 팝콘도 오브젝트 풀링 적용해야됨 -> 테이블에 팝콘 생기면?
             GameObject obj = ObjectPoolManager.Instance.Pop("Popcorn");
 
             obj.transform.position = origin;
-            obj.transform.rotation = UnityEngine.Random.rotation;
+            obj.transform.rotation = Random.rotation;
 
             Rigidbody rb = obj.GetComponent<Rigidbody>();
 
@@ -219,25 +149,22 @@ public class IngredientTraitExplode : IngredientTrait
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
 
-            Vector3 dir = UnityEngine.Random.onUnitSphere;
-
+            Vector3 dir = Random.onUnitSphere;
             dir.y = Mathf.Abs(dir.y) + 0.3f;
 
-            rb.AddForce(dir.normalized * fragmentForce,
-                ForceMode.Impulse);
+            rb.AddForce(dir.normalized * fragmentForce, ForceMode.Impulse);
         }
     }
 
     #region SFX & VFX
+
     private void PlayVFX(Vector3 position)
     {
         if (explosionVFX == null)
             return;
 
         explosionVFX.transform.SetParent(null);
-
         explosionVFX.transform.position = position;
-
         explosionVFX.Play();
     }
 
@@ -247,11 +174,10 @@ public class IngredientTraitExplode : IngredientTrait
             return;
 
         explosionSFX.transform.SetParent(null);
-
         explosionSFX.Play();
     }
-    #endregion
 
+    #endregion
 
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
