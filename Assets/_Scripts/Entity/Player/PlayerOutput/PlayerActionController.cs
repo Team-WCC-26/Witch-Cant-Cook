@@ -10,6 +10,7 @@ public class PlayerActionController
 
     private PlayerPhysicalMode prevMode;
 
+    public PlayerMovement Movement => movement;
     public bool CanRequestJump => movement.CanJump;
     public bool IsGroundedNow => movement.IsGroundedNow;
 
