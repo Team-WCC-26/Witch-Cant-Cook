@@ -19,6 +19,21 @@ public class EntityHandler : PacketHandlerBase
         });
     }
 
+    [PacketHandler(PacketId.C_EntityInteract)]
+    public static void InteractEntity(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<EntityInteractPacket>(package.Body);
+
+        session.Player.Room.InteractEntity(packet.TargetEntityId, session.Player);
+    }
+
+    [PacketHandler(PacketId.C_EntityInsert)]
+    public static void InsertEntity(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<EntityInsertPacket>(package.Body);
+
+        session.Player.Room.InsertEntity(packet.TargetEntityId, packet.SubjectEntityId);
+    }
 
     //[PacketHandler(PacketId.C_EntityPickup)]
     //public static void PickupEntity(Session session, PacketPackageInfo package)

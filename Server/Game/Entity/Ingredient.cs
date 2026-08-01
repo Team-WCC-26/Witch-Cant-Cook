@@ -2,7 +2,7 @@
 
 namespace Server;
 
-public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable, IInteractable
+public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
 {
     public int IngredientId => _ingredientId;
     private readonly int _ingredientId = ingredientId;
@@ -29,32 +29,21 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable, IInt
         }
     }
 
-    public bool TryCombine(ICombinable other, out ICombinable combinable)
+    public bool TryCombine(Ingredient other, out Ingredient result)
     {
-        combinable = null;
+        result = null;
 
-        switch (other)
-        {
-            case Ingredient ingredient:
-                var DB = ServerContext.Instance.DataBase;
+        var DB = ServerContext.Instance.DataBase;
 
-                if (!DB.IngredientCombinations.TryGetValue(new(this, ingredient), out var resId)) return false;
+        if (!DB.IngredientCombinations.TryGetValue(new(this, other), out var resId)) return false;
 
-                combinable = new Ingredient(resId);
-                return true;
+        result = new Ingredient(resId);
 
-            case Dish d:
-                d.TryCombine(this, out combinable);
-                return true;
-        }
-
-        return false;
+        return true;
     }
 
-    public bool TryCook(IngredientState state, out Ingredient ingredient)
+    public bool TryCook(IngredientState state)
     {
-        ingredient = this;
-
         if ((ProcessState & state) != 0) return false;
 
         var DB = ServerContext.Instance.DataBase;
@@ -68,10 +57,20 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable, IInt
 
     public bool Interact(Player player)
     {
-        if (player.HoldingEntity is not ICombinable combinable) return false;
+        if (player.HoldingEntity is Knife) return TryCook(IngredientState.Cut);
+        if (player.HoldingEntity is Dish dish)
+        {
+            if (dish.Ingredient != null)
+            {
 
-        TryCombine(combinable, out var res);
+            }
 
-        return true;
+        }
+
+        //if (player.HoldingEntity is not ICombinable combinable) return false;
+
+        //TryCombine(combinable, out var res);
+
+        return false;
     }
 }

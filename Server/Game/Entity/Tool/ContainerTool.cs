@@ -1,27 +1,25 @@
 ﻿namespace Server;
 
-public abstract class ContainerTool(int toolId) : Tool(toolId), ICombinable
+public abstract class ContainerTool(int toolId, IContainerStorage storage) : Tool(toolId)
 {
-    public Entity? Entity { get; protected set; }
+    protected IContainerStorage _storage { get; init; } = storage;
 
-    public abstract bool TryCombine(ICombinable other, out ICombinable combinable);
+    //public override bool Interact(Player player)
+    //{
+    //    if (player.HoldingEntity == null || player.HoldingEntity is not ICombinable combinable) return false;
 
-    public override bool Interact(Player player)
-    {
-        if (player.HoldingEntity == null || player.HoldingEntity is not ICombinable combinable) return false;
+    //    return TryCombine(combinable, out _);
+    //}
 
-        return TryCombine(combinable, out _);
-    }
-
-    public bool Insert(Entity entity)
+    public virtual bool Insert(Entity entity)
     {
         if (entity is IFixedTool) return false;
 
-        return true;
+        return _storage.TryInsert(entity);
     }
 
     public void Clear()
     {
-        Entity = null;
+        _storage.Clear();
     }
 }

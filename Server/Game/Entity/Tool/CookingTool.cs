@@ -1,15 +1,19 @@
-﻿namespace Server;
+﻿using Protocol;
 
-public abstract class CookingTool(int toolId) : ContainerTool(toolId), IFixedTool
+namespace Server;
+
+public abstract class CookingTool(int toolId, IContainerStorage storage) : ContainerTool(toolId, storage)
 {
     public event Action? OnCookingCompleted;
 
     public int IngredientId => (Ingredient != null) ? Ingredient.IngredientId : -1;
 
-    public Ingredient? Ingredient => Entity as Ingredient;
+    public Ingredient? Ingredient => _storage.First as Ingredient;
 
-    private int _damage => ServerContext.Instance.DataBase.Tools[toolId].Damage;
+    protected abstract IngredientState _cookState { get; }
+    private int _damage => ServerContext.Instance.DataBase.Tools[ToolId].Damage;
 
+    private bool _cookable = true;
     private float _process = 0;
     private bool _bIsProcessing = false;
 
@@ -55,41 +59,58 @@ public abstract class CookingTool(int toolId) : ContainerTool(toolId), IFixedToo
     //    return true;
     //}
 
-    public override bool TryCombine(ICombinable other, out ICombinable combinable)
+    public void StartCook()
     {
-        combinable = this;
+        if (_storage.Count <= 0) return;
 
-        if (other is Dish)
-        {
-            if (_bIsProcessing) return false;
-
-            if (other.TryCombine(this, out combinable))
-            {
-                Clear();
-
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        if (Ingredient != null && !Ingredient.TryCombine(other, out other)) return false;
-
-        Entity = other as Ingredient;
-
-        return true;
+        _cookTimer = _timerManager.Schedule(200, this, Cook);
     }
+
+    public void SetCookEnable(bool enable)
+    {
+        _cookable = enable;
+    }
+
+    //public override bool TryCombine(ICombinable other, out ICombinable combinable)
+    //{
+    //    combinable = this;
+
+    //    if (other is Dish)
+    //    {
+    //        if (_bIsProcessing) return false;
+
+    //        if (!other.TryCombine(this, out combinable)) return false;
+
+    //        Clear();
+
+    //        return true;
+    //    }
+
+    //    if (Ingredient != null && !Ingredient.TryCombine(other, out other)) return false;
+
+    //    Entity = other as Ingredient;
+
+    //    return true;
+    //}
 
     public override bool Interact(Player player)
     {
-        if (!base.Interact(player)) return false;
+        //if (!base.Interact(player)) return false;
 
         _cookTimer = _timerManager.Schedule(100, this, static t => t.Cook(t));
 
         return true;
     }
 
-    protected abstract void Cook(CookingTool tool);
+    public override bool Insert(Entity entity)
+    {
+        if (entity is not Ingredient _) return false;
+
+        return _storage.TryInsert(entity);
+    }
+
+    protected virtual void Cook(CookingTool tool)
+    {
+        Ingredient?.TryCook(_cookState);
+    }
 }

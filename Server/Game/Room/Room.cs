@@ -1,4 +1,5 @@
 using Protocol;
+using System.Numerics;
 
 namespace Server;
 
@@ -249,6 +250,24 @@ public class Room
 
             BroadCast(PacketSerializer.Serialize(packet, true));
         });
+    }
+
+    public bool InteractEntity(long entityId, Player player)
+    {
+        if (!_entities.TryGetValue(entityId, out var entity)) return false;
+        if (entity is not IInteractable interactable) return false;
+
+        return interactable.Interact(player);
+    }
+
+    public bool InsertEntity(long targetId, long subjectId)
+    {
+        if (!_entities.TryGetValue(targetId, out var target)) return false;
+        if (!_entities.TryGetValue(subjectId, out var subject)) return false;
+
+        if (target is not ContainerTool containerTool) return false;
+
+        return containerTool.Insert(subject);
     }
 
     public void InteractDoor(DoorId doorId, string playerId)
