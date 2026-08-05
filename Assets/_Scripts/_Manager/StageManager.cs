@@ -8,14 +8,6 @@ public class StageManager : Singleton<StageManager>
     // 열어야 하는 문 정보
     [SerializeField] private Door lobbyDoor;
     [SerializeField] private Door kitchenDoor;
-    // 폐기된 내용, 삭제 필요 -----------------------------
-    public float happiness = 0f; // 0.0 ~ 1.0 (100%)
-    public int lives = 3;
-
-    // 판정 조건 수치
-    private readonly float HAPPINESS_STANDARD = 0.7f;
-    private readonly int TARGET_STAGE_COUNT = 7;
-    // --------------------------------------------------
 
     private PhaseBase currentPhase = null;
     public PhaseBase CurrentPhase => currentPhase;
@@ -83,19 +75,8 @@ public class StageManager : Singleton<StageManager>
     public void FinishStage()
     {
         // 게임 오버 조건 체크
-        if (happiness < HAPPINESS_STANDARD || lives <= 0)
-        {
-            GameOver();
-            return;
-        }
 
         // 게임 클리어 조건 체크
-        if (currentStageIndex >= TARGET_STAGE_COUNT - 1)
-        {
-            GameClear();
-            PlayEndingScene();
-            return;
-        }
 
         // 아무 조건에도 걸리지 않으면 다음 라운드로 이동
         NextRound();

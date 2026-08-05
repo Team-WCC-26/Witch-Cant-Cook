@@ -15,7 +15,9 @@ public class StageData : ScriptableObject
 
     [Tooltip("스테이지 번호를 입력해주세요.")]
     public int stageNumber;
-    [Tooltip("(임시)스테이지에서 등장할 레시피 인덱스를 넣어주세요.")]
-    public List<int> recipeList;
+    //[Tooltip("(임시)스테이지에서 등장할 레시피 인덱스를 넣어주세요.")]
+    //public List<int> recipeList;
+
+
 
 }
