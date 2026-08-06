@@ -39,5 +39,4 @@ public class PlayerHPCanvas : MonoBehaviour
         hpForeground.fillAmount = data.NormalizedHealth;
         hpBackground.SetActive(data.NormalizedHealth < 1f);
     }
-
 }

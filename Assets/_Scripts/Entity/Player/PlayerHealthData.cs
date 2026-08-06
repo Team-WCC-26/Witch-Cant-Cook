@@ -2,53 +2,42 @@ using System;
 
 public sealed class PlayerHealthData
 {
-    public float CurrentHealth { get; private set; }
+    public float CurHealth { get; private set; }
     public float MaxHealth { get; }
-    public bool IsRagdoll => CurrentHealth <= 0f;
-    public float NormalizedHealth => MaxHealth <= 0f ? 0f : CurrentHealth / MaxHealth;
+    public bool IsRagdoll => CurHealth <= 0f;
+    public float NormalizedHealth => MaxHealth <= 0f ? 0f : CurHealth / MaxHealth;
 
     public event Action<PlayerHealthData> HealthChanged;
 
     public PlayerHealthData(float maxHealth)
     {
         MaxHealth = Math.Max(0f, maxHealth);
-        CurrentHealth = MaxHealth;
+        Reset();
     }
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f || IsRagdoll)
-        {
-            return;
-        }
-
-        SetCurrentHealth(CurrentHealth - amount);
+        if (amount <= 0f || IsRagdoll) return;
+        SetHealth(CurHealth - amount);
     }
 
     public void Heal(float amount)
     {
-        if (amount <= 0f || IsRagdoll)
-        {
-            return;
-        }
-
-        SetCurrentHealth(CurrentHealth + amount);
+        if (amount <= 0f || IsRagdoll) return;
+        SetHealth(CurHealth + amount);
     }
 
     public void Reset()
     {
-        SetCurrentHealth(MaxHealth);
+        SetHealth(MaxHealth);
     }
 
-    private void SetCurrentHealth(float health)
+    private void SetHealth(float health)
     {
-        float nextHealth = Math.Max(0f, Math.Min(health, MaxHealth));
-        if (CurrentHealth == nextHealth)
-        {
-            return;
-        }
+        float nextHealth = Math.Clamp(health, 0f, MaxHealth);
+        if (CurHealth == nextHealth) return;
 
-        CurrentHealth = nextHealth;
+        CurHealth = nextHealth;
         HealthChanged?.Invoke(this);
     }
 }
