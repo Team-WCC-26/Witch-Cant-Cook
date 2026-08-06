@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 public sealed class PlayerHealthData
 {
@@ -9,16 +10,22 @@ public sealed class PlayerHealthData
 
     public event Action<PlayerHealthData> HealthChanged;
 
-    public PlayerHealthData(float maxHealth)
+    private readonly float damageCooldown;
+    private float nextDamageTime;
+
+    public PlayerHealthData(float maxHealth, float damageCooldown)
     {
         MaxHealth = Math.Max(0f, maxHealth);
+        this.damageCooldown = Math.Max(0f, damageCooldown);
         Reset();
     }
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f || IsRagdoll) return;
+        if (amount <= 0f || IsRagdoll || Time.time < nextDamageTime) return;
+
         SetHealth(CurHealth - amount);
+        nextDamageTime = Time.time + damageCooldown;
     }
 
     public void Heal(float amount)
@@ -29,6 +36,7 @@ public sealed class PlayerHealthData
 
     public void Reset()
     {
+        nextDamageTime = 0f;
         SetHealth(MaxHealth);
     }
 

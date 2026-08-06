@@ -14,6 +14,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [Header("Health")]
     [field: SerializeField, Min(0f)] public float MaxHealth { get; private set; } = 100f;
+    [field: SerializeField, Min(0f)] public float DamageCooldown { get; private set; } = 0.2f;
     [field: SerializeField, Min(0f)] public float RagdollStunDuration { get; private set; } = 2f;
 
     [Header("Camera Settings")]
@@ -92,7 +93,7 @@ public sealed class PlayerBrain : MonoBehaviour
             Health.HealthChanged -= OnHealthChanged;
         }
 
-        Health = new PlayerHealthData(MaxHealth);
+        Health = new PlayerHealthData(MaxHealth, DamageCooldown);
         Health.HealthChanged += OnHealthChanged;
 
         bool isMine = PlayerSpawnManager.Instance.IsMine(PlayerId);
