@@ -45,6 +45,10 @@ public class PlayerActionController
         {
             switch (state.PhysicalMode)
             {
+                case PlayerPhysicalMode.Default when prevMode == PlayerPhysicalMode.Ragdoll:
+                    ragdollController.Recover();
+                    break;
+
                 case PlayerPhysicalMode.Ragdoll:
                     ragdollController.Enter();
                     break;

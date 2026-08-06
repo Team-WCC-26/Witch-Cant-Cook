@@ -4,8 +4,7 @@ using UnityEngine;
 public class PlayerLocomotion : MonoBehaviour
 {
     [SerializeField] private PlayerBrain brain = null;
-    [SerializeField] private Transform yawRoot = null;
-
+    
     [Header("Body Parts")]
     [SerializeField] private List<BodyPart> bodyParts = new();
 

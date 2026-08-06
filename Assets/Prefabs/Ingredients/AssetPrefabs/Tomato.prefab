@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: -8294466810255185304}
   - component: {fileID: 3525218091698516734}
   - component: {fileID: -34743592014512021}
+  - component: {fileID: -3012402540637535007}
   m_Layer: 7
   m_Name: Tomato
   m_TagString: Untagged
@@ -175,7 +176,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Tomato
   explosionVFXPrefab: {fileID: 2948390974073299325, guid: 90e0ecf246aa4d345b1b9f58490435d1, type: 3}
-  fuseTime: 2
+  explosionFragment: {fileID: 0}
+  fragmentCount: 10
+  fragmentForce: 8
+  holdFuseTime: 3
+  groundFuseTime: 10
   blastRadius: 50
   blastForce: 30
   upwardModifier: 15
@@ -184,3 +189,17 @@ MonoBehaviour:
     m_Bits: 192
   explosionVFX: {fileID: 0}
   explosionSFX: {fileID: 0}
+--- !u!114 &-3012402540637535007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2274349369809703162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: 0}
+  playerTag: Player
