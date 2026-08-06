@@ -27,7 +27,9 @@ public class Define
         Cabbage = 12100,
         Meat = 12200,
         Squid = 12300,
-        Popcorn = 12400
+        Popcorn = 12400,
+        OnionLiquid = 50001,
+        HoneyLiquid = 50002,
     }
 
 }

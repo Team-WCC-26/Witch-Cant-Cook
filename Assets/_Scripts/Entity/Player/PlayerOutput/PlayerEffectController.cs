@@ -1,9 +1,24 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerEffectController : MonoBehaviour
 {
     private PlayerBrain brain;
 
+    private Coroutine movementCoroutine;
+
+    private float originalSpeed;
+    private float originalRunMultiplier;
+    public struct MovementEffectData
+    {
+        public bool ChangeSpeed;
+        public float SpeedMultiplier;
+
+        public bool ChangeFriction;
+        public float FrictionMultiplier;
+
+        public float Duration;
+    }
     private void Awake()
     {
         brain = GetComponent<PlayerBrain>();
@@ -32,17 +47,52 @@ public class PlayerEffectController : MonoBehaviour
         brain.Rb.AddForce(force, ForceMode.Impulse);
     }
 
+
+    #region Movement
     /// <summary>
     /// 이동속도 감소
     /// </summary>
-    public void ApplySpeedDown(float multiplier, float duration)
+    public void ApplyMovementEffect(MovementEffectData data)
     {
-        // TODO
+        if (movementCoroutine != null)
+            StopCoroutine(movementCoroutine);
+
+        movementCoroutine = StartCoroutine(CoMovement(data));
     }
 
+    private IEnumerator CoMovement(MovementEffectData data)
+    {
+        PlayerMovement movement =
+            brain.ActionController.Movement;
 
-    // - (양파) 마찰력 계수 낮추기
+        float prevMultiplier = movement.SpeedMultiplier;
 
+        if (data.ChangeSpeed)
+        {
+            movement.SpeedMultiplier = data.SpeedMultiplier;
+        }
+
+        if (data.ChangeFriction)
+        {
+            // TODO : 마찰 적용
+        }
+
+        yield return new WaitForSeconds(data.Duration);
+
+        if (data.ChangeSpeed)
+        {
+            movement.SpeedMultiplier = prevMultiplier;
+        }
+
+        if (data.ChangeFriction)
+        {
+            // TODO : 마찰 복구
+        }
+
+        movementCoroutine = null;
+    }
+
+    #endregion
 }
 
 

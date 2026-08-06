@@ -17,6 +17,7 @@ public class PlayerMovement
     public float CurrentSpeed { get; private set; }
     public bool IsGroundedNow => IsGrounded();
     public float VerticalSpeed => rb.linearVelocity.y;
+    public float SpeedMultiplier { get; set; } = 1f;
 
     private float lastGroundedTime = float.NegativeInfinity;
     public bool CanJump => 
@@ -42,7 +43,7 @@ public class PlayerMovement
             moveDir.Normalize();
         }
 
-        float speed = isRun ? moveSpeed * runMultiplier : moveSpeed;
+        float speed = (isRun ? moveSpeed * runMultiplier : moveSpeed)  * SpeedMultiplier;
         Vector3 velocity = moveDir * speed;
 
         rb.linearVelocity = new Vector3(
