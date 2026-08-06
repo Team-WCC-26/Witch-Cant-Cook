@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 229093935088154368}
   - component: {fileID: 287341765393210474}
   - component: {fileID: 4835016729146804557}
+  - component: {fileID: -7750319739028657001}
   m_Layer: 7
   m_Name: HoneyBottle
   m_TagString: Untagged
@@ -180,3 +181,17 @@ MonoBehaviour:
   breakImpactThreshold: 8
   honeyRadius: 3
   breakEffect: {fileID: 0}
+--- !u!114 &-7750319739028657001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3243848449515356353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: 0}
+  playerTag: Player

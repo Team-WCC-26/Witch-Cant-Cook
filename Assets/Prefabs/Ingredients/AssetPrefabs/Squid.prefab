@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 3056418799792095950}
   - component: {fileID: 6475820690674550609}
   - component: {fileID: 7384196710351173819}
+  - component: {fileID: 7275370848250874409}
   m_Layer: 0
   m_Name: Squid
   m_TagString: Untagged
@@ -184,3 +185,17 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   inkEffect: {fileID: 0}
+--- !u!114 &7275370848250874409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6076789315949068688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: 0}
+  playerTag: Player
