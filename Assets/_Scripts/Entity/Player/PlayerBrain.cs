@@ -12,6 +12,10 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public Collider Col { get; private set; } = null;
     [field: SerializeField] public Rigidbody Rb { get; private set; } = null;
 
+    [Header("Health")]
+    [field: SerializeField, Min(0f)] public float MaxHealth { get; private set; } = 100f;
+    [field: SerializeField, Min(0f)] public float RagdollStunDuration { get; private set; } = 2f;
+
     [Header("Camera Settings")]
     [field: SerializeField] public Transform CameraFollowTarget { get; private set; } = null;
     [field: SerializeField] public Transform CameraLookAtTarget { get; private set; } = null;
@@ -70,6 +74,7 @@ public sealed class PlayerBrain : MonoBehaviour
     public PlayerInteract Interact => interact;
     public PlayerStateResolver StateResolver => stateResolver;
     public PlayerActionController ActionController => actionController;
+    public PlayerHealthData Health { get; private set; }
     #endregion
 
     private void Awake()
@@ -81,6 +86,14 @@ public sealed class PlayerBrain : MonoBehaviour
     public void Initialize(string id)
     {
         PlayerId = id;
+
+        if (Health != null)
+        {
+            Health.HealthChanged -= OnHealthChanged;
+        }
+
+        Health = new PlayerHealthData(MaxHealth);
+        Health.HealthChanged += OnHealthChanged;
 
         bool isMine = PlayerSpawnManager.Instance.IsMine(PlayerId);
         SetLocalControlActive(isMine);
@@ -122,6 +135,11 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (Health != null)
+        {
+            Health.HealthChanged -= OnHealthChanged;
+        }
+
         if (PlayerSpawnManager.Instance == null) return;
 
         PlayerSpawnManager.Instance.UnregisterPlayer(this);
@@ -157,5 +175,18 @@ public sealed class PlayerBrain : MonoBehaviour
             EffectController = GetComponent<PlayerEffectController>();
         }
 
+    }
+
+    private void OnHealthChanged(PlayerHealthData health)
+    {
+        if (!health.IsRagdoll)
+        {
+            return;
+        }
+
+        if (stateResolver is LocalPlayerStateResolver localStateResolver)
+        {
+            localStateResolver.EnterRagdoll();
+        }
     }
 }

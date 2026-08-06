@@ -102,6 +102,11 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         physicalFSM.NotifyCollision(collision);
     }
 
+    public void EnterRagdoll()
+    {
+        physicalFSM.EnterRagdoll();
+    }
+
     private void SendMovementPacket()
     {
         PlayerMovementPacket packet = new()

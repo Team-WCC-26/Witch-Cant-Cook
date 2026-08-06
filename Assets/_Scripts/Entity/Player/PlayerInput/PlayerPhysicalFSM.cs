@@ -4,9 +4,6 @@ public class PlayerPhysicalFSM
 {
     private readonly PlayerBrain brain;
 
-    private readonly float ragdollDuration = 2.5f;
-    private readonly float recoverDuration = 0.7f;
-
     private float modeStartTime = 0f;
 
     public PlayerPhysicalMode CurrentMode { get; private set; }
@@ -26,16 +23,10 @@ public class PlayerPhysicalFSM
                 break;
 
             case PlayerPhysicalMode.Ragdoll:
-                if (Time.time >= modeStartTime + ragdollDuration)
-                {
-                    SetMode(PlayerPhysicalMode.Recover);
-                }
-                break;
-
-            case PlayerPhysicalMode.Recover:
-                if (Time.time >= modeStartTime + recoverDuration)
+                if (Time.time >= modeStartTime + brain.RagdollStunDuration)
                 {
                     SetMode(PlayerPhysicalMode.Default);
+                    brain.Health.Reset();
                 }
                 break;
         }
@@ -49,6 +40,16 @@ public class PlayerPhysicalFSM
         }
 
         if (!IsObstacleCollision(collision))
+        {
+            return;
+        }
+
+        EnterRagdoll();
+    }
+
+    public void EnterRagdoll()
+    {
+        if (CurrentMode != PlayerPhysicalMode.Default)
         {
             return;
         }
