@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8215816992792688438}
   - component: {fileID: -1332983000890299985}
   - component: {fileID: -274396100364849250}
+  - component: {fileID: -5558276893335986928}
   m_Layer: 7
   m_Name: Carrot
   m_TagString: Obstacle
@@ -161,3 +162,17 @@ MonoBehaviour:
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 5
+--- !u!114 &-5558276893335986928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7294934431915186970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: 0}
+  playerTag: Player

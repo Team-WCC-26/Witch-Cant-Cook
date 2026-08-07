@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 2194554968496521147}
   - component: {fileID: 6526766964327710508}
   - component: {fileID: -8917129858923743591}
+  - component: {fileID: 3713424704699584209}
   m_Layer: 7
   m_Name: Mushroom
   m_TagString: Untagged
@@ -154,10 +155,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39600e277b2850d46b1d9925f744a897, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitBounce
-  material: {fileID: 0}
-  bounciness: 0.9
-  pushMultiplier: 0.8
   rb: {fileID: 2194554968496521147}
+  pushMultiplier: 0.8
+  maxPushForce: 8
+  minBounceSpeed: 2
   minSpeed: 5
 --- !u!114 &-8917129858923743591
 MonoBehaviour:
@@ -179,3 +180,17 @@ MonoBehaviour:
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
+--- !u!114 &3713424704699584209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4455335733293047946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: 0}
+  playerTag: Player
