@@ -752,7 +752,7 @@ GameObject:
   m_Component:
   - component: {fileID: 66803195}
   m_Layer: 0
-  m_Name: Waypoint_4
+  m_Name: Waypoint_5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2943,7 +2943,7 @@ GameObject:
   m_Component:
   - component: {fileID: 314629613}
   m_Layer: 0
-  m_Name: Waypoint_5
+  m_Name: Waypoint_6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4560,7 +4560,12 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1218.4587, y: 386.78073, z: 61.101456}
   m_Center: {x: -9.671724, y: 192.02513, z: 2.562455}
---- !u!1 &547793274
+--- !u!4 &548809793 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5506421855659119079, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  m_PrefabInstance: {fileID: 5309738610979269577}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &550948827
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -4568,115 +4573,29 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 547793275}
-  - component: {fileID: 547793278}
-  - component: {fileID: 547793277}
-  - component: {fileID: 547793276}
+  - component: {fileID: 550948828}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: Waypoint_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &547793275
+--- !u!4 &550948828
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 547793274}
+  m_GameObject: {fileID: 550948827}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.000000059605, z: 0}
-  m_LocalScale: {x: 0.045403, y: 0.045403, z: 0.045403}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -25.131, y: 0.468, z: 9.91}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 737330671}
+  m_Father: {fileID: 616137330}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &547793276
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 547793274}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &547793277
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 547793274}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &547793278
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 547793274}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &548809793 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5506421855659119079, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
-  m_PrefabInstance: {fileID: 5309738610979269577}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &552568922
 GameObject:
   m_ObjectHideFlags: 0
@@ -5091,6 +5010,7 @@ Transform:
   - {fileID: 915525018}
   - {fileID: 737330671}
   - {fileID: 463609768}
+  - {fileID: 550948828}
   - {fileID: 980531760}
   - {fileID: 1279405323}
   - {fileID: 66803195}
@@ -5114,6 +5034,7 @@ MonoBehaviour:
   waypoints:
   - {fileID: 737330671}
   - {fileID: 463609768}
+  - {fileID: 550948828}
   - {fileID: 980531760}
   - {fileID: 1279405323}
   - {fileID: 66803195}
@@ -6092,8 +6013,7 @@ Transform:
   m_LocalPosition: {x: -25.131, y: 0.468, z: 13.215}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 547793275}
+  m_Children: []
   m_Father: {fileID: 616137330}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &764437300 stripped
@@ -12441,7 +12361,7 @@ GameObject:
   m_Component:
   - component: {fileID: 980531760}
   m_Layer: 0
-  m_Name: Waypoint_2
+  m_Name: Waypoint_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14286,7 +14206,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1180901110}
   m_Layer: 0
-  m_Name: Waypoint_6
+  m_Name: Waypoint_7
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -15128,7 +15048,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1279405323}
   m_Layer: 0
-  m_Name: Waypoint_3
+  m_Name: Waypoint_4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17878,6 +17798,8 @@ MonoBehaviour:
   beltSpeed: 2
   beltRenderer: {fileID: 0}
   rotationLerpSpeed: 10
+  maxLateralOffset: 0.35
+  settleDuration: 0.2
 --- !u!4 &1565648915
 Transform:
   m_ObjectHideFlags: 0

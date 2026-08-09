@@ -15,6 +15,16 @@ public class ConveyorItemState
     public CatchableObj Catchable; // 잡힘 여부(IsHold) 확인용, 없으면 null 허용
     public float LocalSpawnTime;   // 클라이언트가 스폰 이벤트를 수신한 로컬 Time.time
     public bool IsMovingOnBelt;
+
+    // 착지 지점이 벨트 중심선에서 좌우로 벗어난 정도. 이동 내내 유지되어
+    // 모든 재료가 하나의 레일 위를 도는 것처럼 보이지 않게 한다.
+    public float LateralOffset;
+
+    // 등록 직후 실제 위치 -> 경로 목표 위치로 짧게 보간(settle)하기 위한 상태
+    public bool IsSettling;
+    public float SettleStartTime;
+    public Vector3 SettleStartPosition;
+    public Quaternion SettleStartRotation;
 }
 
 /// <summary>
@@ -28,9 +38,11 @@ public class ConveyorItemState
 public class ConveyorBeltController : MonoBehaviour
 {
     [SerializeField] private ConveyorPath path;
-    [SerializeField] private float beltSpeed = 1f;
+    [SerializeField] private float beltSpeed = 2f;
     [SerializeField] private Renderer beltRenderer;
     [SerializeField] private float rotationLerpSpeed = 10f;
+    [SerializeField] private float maxLateralOffset = 0.35f; // 벨트 폭 절반 정도로, 실제 벨트 폭에 맞춰 조정
+    [SerializeField] private float settleDuration = 0.2f;    // 착지 순간 -> 경로 추종 시작까지 보간 시간
 
     public ConveyorPath Path => path;
     public float Speed => beltSpeed;
@@ -51,22 +63,54 @@ public class ConveyorBeltController : MonoBehaviour
     /// <summary>
     /// 스폰 시점에 IngredientSpawnSystem 등에서 호출.
     /// 재료 프리팹의 Transform만 넘겨받아 이동을 대신 맡는다.
-    /// CatchableObj가 붙어있으면 참조를 캐싱해서, 잡힘 여부를 매 프레임 확인할 수 있게 한다.
+    /// 착지 위치를 경로에 딱 맞추지 않고, 그 위치와 경로 사이의 실제 관계를 계산해서
+    /// (좌우 오프셋 + 정착 보간) 자연스럽게 흡수되도록 한다.
     /// </summary>
     public void RegisterItem(long serverItemId, Transform itemTransform, GameObject itemObject)
     {
-        if (ConveyorBeltRegistry.IsOwnedByAnyBelt(serverItemId)) return; // 방어적 중복 방지
+        AddItemInternal(serverItemId, itemTransform, itemObject, explicitDistance: null);
+    }
+
+    /// <summary>
+    /// 드롭 후 벨트 위에 다시 착지한 재료를 등록할 때 사용. distance는 보통
+    /// ConveyorReentryTrigger가 path.GetNearestDistance()로 미리 계산해서 넘겨준다.
+    /// </summary>
+    public void RegisterItemAtDistance(long serverItemId, Transform itemTransform, GameObject itemObject, float distance)
+    {
+        AddItemInternal(serverItemId, itemTransform, itemObject, explicitDistance: distance);
+    }
+
+    private void AddItemInternal(long serverItemId, Transform itemTransform, GameObject itemObject, float? explicitDistance)
+    {
+        if (ConveyorBeltRegistry.IsOwnedByAnyBelt(serverItemId)) return; // 다른 벨트가 이미 담당 중이면 무시
 
         itemObject.TryGetComponent(out CatchableObj catchable);
+
+        Vector3 currentPos = itemTransform.position;
+        // 명시적 distance가 없으면(=스폰 직후) 지금 위치와 가장 가까운 경로 지점을 역산
+        float distance = explicitDistance ?? path.GetNearestDistance(currentPos);
+        var (pathPoint, tangent) = path.Evaluate(distance);
+
+        // 착지 지점이 벨트 중심선에서 좌우로 얼마나 벗어났는지 계산 (수평 폭 방향 기준)
+        Vector3 right = Vector3.Cross(Vector3.up, tangent).normalized;
+        float lateral = Vector3.Dot(currentPos - pathPoint, right);
+        lateral = Mathf.Clamp(lateral, -maxLateralOffset, maxLateralOffset);
+
+        float distanceTravelTime = beltSpeed > 0.0001f ? distance / beltSpeed : 0f;
 
         var state = new ConveyorItemState
         {
             ServerItemId = serverItemId,
             ItemTransform = itemTransform,
             GameObject = itemObject,
-            Catchable = catchable, // 없으면 null, 아래 이동 로직에서 null 체크
-            LocalSpawnTime = Time.time,
-            IsMovingOnBelt = true
+            Catchable = catchable,
+            LocalSpawnTime = Time.time - distanceTravelTime, // 착지 지점부터 이어서 흐르도록 역산
+            IsMovingOnBelt = true,
+            LateralOffset = lateral,
+            IsSettling = settleDuration > 0f,
+            SettleStartTime = Time.time,
+            SettleStartPosition = currentPos,
+            SettleStartRotation = itemTransform.rotation
         };
 
         itemsOnBelt.Add(state);
@@ -93,35 +137,6 @@ public class ConveyorBeltController : MonoBehaviour
         => itemLookup.TryGetValue(serverItemId, out state);
 
     public bool IsRegistered(long serverItemId) => itemLookup.ContainsKey(serverItemId);
-
-    /// <summary>
-    /// 드롭 후 벨트 위에 다시 착지한 재료를 등록할 때 사용.
-    /// distance=0(시작점)이 아니라, 실제로 착지한 지점부터 이어서 흘러가도록
-    /// "그 지점에 도달하는 데 걸렸어야 할 시간"만큼 LocalSpawnTime을 과거로 당겨서 계산한다.
-    /// </summary>
-    public void RegisterItemAtDistance(long serverItemId, Transform itemTransform, GameObject itemObject, float distance)
-    {
-        // 벨트 내부 중복뿐 아니라, 다른 벨트가 이미 담당 중인 경우도 막아야 함
-        if (ConveyorBeltRegistry.IsOwnedByAnyBelt(serverItemId)) return;
-
-        itemObject.TryGetComponent(out CatchableObj catchable);
-
-        float distanceTravelTime = beltSpeed > 0.0001f ? distance / beltSpeed : 0f;
-
-        var state = new ConveyorItemState
-        {
-            ServerItemId = serverItemId,
-            ItemTransform = itemTransform,
-            GameObject = itemObject,
-            Catchable = catchable,
-            LocalSpawnTime = Time.time - distanceTravelTime, // 착지 지점부터 이어서 흐르도록 역산
-            IsMovingOnBelt = true
-        };
-
-        itemsOnBelt.Add(state);
-        itemLookup[serverItemId] = state;
-        ConveyorBeltRegistry.SetOwner(serverItemId, this);
-    }
 
     void Update()
     {
@@ -162,11 +177,35 @@ public class ConveyorBeltController : MonoBehaviour
             }
 
             var (point, tangent) = path.Evaluate(distance);
-            item.ItemTransform.position = point;
+            Quaternion targetRot = tangent.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(tangent, Vector3.up)
+                : item.ItemTransform.rotation;
 
-            if (tangent.sqrMagnitude > 0.0001f)
+            // 등록 시점에 계산해둔 좌우 오프셋을 유지한 채 경로를 따라간다.
+            // (모든 재료가 하나의 중심선 위를 그대로 지나가지 않도록)
+            Vector3 right = Vector3.Cross(Vector3.up, tangent).normalized;
+            Vector3 targetPos = point + right * item.LateralOffset;
+
+            if (item.IsSettling)
             {
-                Quaternion targetRot = Quaternion.LookRotation(tangent, Vector3.up);
+                float t = settleDuration > 0f ? (Time.time - item.SettleStartTime) / settleDuration : 1f;
+
+                if (t >= 1f)
+                {
+                    item.IsSettling = false;
+                    item.ItemTransform.position = targetPos;
+                    item.ItemTransform.rotation = targetRot;
+                }
+                else
+                {
+                    // 착지 시점 실제 위치/회전에서 경로 추종 목표로 부드럽게 흡수
+                    item.ItemTransform.position = Vector3.Lerp(item.SettleStartPosition, targetPos, t);
+                    item.ItemTransform.rotation = Quaternion.Slerp(item.SettleStartRotation, targetRot, t);
+                }
+            }
+            else
+            {
+                item.ItemTransform.position = targetPos;
                 item.ItemTransform.rotation = Quaternion.Slerp(
                     item.ItemTransform.rotation, targetRot, Time.deltaTime * rotationLerpSpeed);
             }

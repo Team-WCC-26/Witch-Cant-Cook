@@ -37,8 +37,12 @@ public class IngredientSquid : IngredientTrait
 
     private void OnEnable()
     {
+        Debug.Log($"[Squid] OnEnable called");
+
+        canSpray = true;
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
+        Debug.Log($"[Squid] OnEnable called");
     }
 
     private void OnDisable()
@@ -61,11 +65,9 @@ public class IngredientSquid : IngredientTrait
 
     private void OnPicked()
     {
-        holdTimer.StartLoop(
-            holdDuration,
-            () => TrySpray(SprayHolder));
+        Debug.Log($"[Squid] OnPicked 핸들러 호출됨 - {gameObject.name}");
+        holdTimer.StartLoop(holdDuration, () => TrySpray(SprayHolder));
     }
-
     private void OnDropped()
     {
         holdTimer.Stop();
@@ -74,6 +76,7 @@ public class IngredientSquid : IngredientTrait
 
     private void TrySpray(System.Action sprayAction)
     {
+        Debug.Log($"TrySpray called, canSpray={canSpray}");
         if (!canSpray)
             return;
 
@@ -94,6 +97,7 @@ public class IngredientSquid : IngredientTrait
     private void SprayHolder()
     {
         PlayerBrain holder = catchable.Holder;
+        Debug.Log($"SprayHolder called, holder={holder}");
 
         if (holder == null)
             return;
