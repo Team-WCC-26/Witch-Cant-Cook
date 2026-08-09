@@ -1,5 +1,6 @@
 using Protocol;
 using SuperSocket.Server.Abstractions.Session;
+using System.Numerics;
 
 namespace Server;
 
@@ -12,6 +13,8 @@ public class Player : Entity
     public Room? Room { get; set; }
     public PlayerCombinedState State { get; set; }
     public Entity? HoldingEntity { get; set; }
+    public Vector3 Position { get; set; }
+    public Quaternion Rotation { get; set; }
 
     private PacketBatch _batch = new();
 
@@ -46,6 +49,14 @@ public class Player : Entity
 
     public override void WriteSnapShot(PacketBatch batch, DirtyMask mask)
     {
-        throw new NotImplementedException();
+        if (mask.HasFlag(DirtyMask.Position))
+        {
+
+        }
+
+        if (mask.HasFlag(DirtyMask.Rotation))
+        {
+
+        }
     }
 }

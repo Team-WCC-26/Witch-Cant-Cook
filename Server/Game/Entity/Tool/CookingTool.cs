@@ -8,17 +8,17 @@ public abstract class CookingTool(int toolId, IContainerStorage storage) : Conta
 
     public int IngredientId => (Ingredient != null) ? Ingredient.IngredientId : -1;
 
-    public Ingredient? Ingredient => _storage.First as Ingredient;
+    public Ingredient? Ingredient => First as Ingredient;
 
     protected abstract IngredientState _cookState { get; }
     private int _damage => ServerContext.Instance.DataBase.Tools[ToolId].Damage;
 
-    private bool _cookable = true;
-    private float _process = 0;
-    private bool _bIsProcessing = false;
+    protected bool _cookable = true;
+    //private float _process = 0;
+    //private bool _bIsProcessing = false;
 
-    private TimerManager _timerManager;
-    private TimerHandle _cookTimer;
+    protected TimerManager _timerManager;
+    protected TimerHandle _cookTimer;
 
     //public void Tick(long deltaTime)
     //{
@@ -63,7 +63,7 @@ public abstract class CookingTool(int toolId, IContainerStorage storage) : Conta
     {
         if (_storage.Count <= 0) return;
 
-        _cookTimer = _timerManager.Schedule(200, this, Cook);
+        _cookTimer = _timerManager.Schedule(200, this, static t => t.Cook(t));
     }
 
     public void SetCookEnable(bool enable)
@@ -95,9 +95,11 @@ public abstract class CookingTool(int toolId, IContainerStorage storage) : Conta
 
     public override bool Interact(Player player)
     {
-        //if (!base.Interact(player)) return false;
+        if (Ingredient == null) return false;
+        if (player.HoldingEntity is not Dish dish) return false;
+        if (!dish.TryCombine(Ingredient)) return false;
 
-        _cookTimer = _timerManager.Schedule(100, this, static t => t.Cook(t));
+        _storage.Clear();
 
         return true;
     }

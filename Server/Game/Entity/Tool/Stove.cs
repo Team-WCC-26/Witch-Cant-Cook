@@ -19,14 +19,11 @@ public class Stove(int toolId) : ContainerTool(toolId, new SingleSlotStorage()),
 
     public override bool Interact(Player player)
     {
-        if (Insert(player.HoldingEntity))
-        {
-            player.HoldingEntity = null;
+        if (!Insert(player.HoldingEntity)) return false;
 
-            return true;
-        }
+        player.HoldingEntity = null;
 
-        return false;
+        return true;
     }
 
     public override bool Insert(Entity entity)

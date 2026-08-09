@@ -37,7 +37,10 @@ public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
 
         if (!DB.IngredientCombinations.TryGetValue(new(this, other), out var resId)) return false;
 
-        result = new Ingredient(resId);
+        result = Room.GenerateIngredient(resId, out _);
+
+        other.Room.UnregisterEntity(other.EntityId);
+        Room.UnregisterEntity(EntityId);
 
         return true;
     }
@@ -57,14 +60,18 @@ public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
 
     public bool Interact(Player player)
     {
+        if (player.HoldingEntity == null)
+        {
+            player.HoldingEntity = this;
+            Parent = player;
+
+            return true;
+        }
+
         if (player.HoldingEntity is Knife) return TryCook(IngredientState.Cut);
         if (player.HoldingEntity is Dish dish)
         {
-            if (dish.Ingredient != null)
-            {
-
-            }
-
+            return dish.TryCombine(this);
         }
 
         //if (player.HoldingEntity is not ICombinable combinable) return false;

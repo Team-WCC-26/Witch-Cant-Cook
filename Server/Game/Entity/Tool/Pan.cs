@@ -11,7 +11,14 @@ public class Pan(int toolId) : CookingTool(toolId, new SingleSlotStorage())
         if (player.HoldingEntity == null)
         {
             player.HoldingEntity = this;
+            Parent = player;
+
             return true;
+        }
+
+        if (player.HoldingEntity is Dish dish && _timerManager.RemainingTime(_cookTimer) <= 0)
+        {
+            return dish.TryCombine(Ingredient);
         }
 
         if (player.HoldingEntity is not Ingredient ingredient) return false;

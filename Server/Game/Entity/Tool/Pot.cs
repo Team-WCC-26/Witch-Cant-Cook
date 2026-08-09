@@ -6,23 +6,13 @@ public class Pot(int toolId) : CookingTool(toolId, new SingleSlotStorage()), IFi
 {
     protected override IngredientState _cookState => IngredientState.Boiled;
 
-    public override bool Interact(Player player)
-    {
-        if (player.HoldingEntity is not Dish dish) return false;
-        if (!dish.Ingredient.TryCombine(Ingredient, out var res)) return false;
-
-        dish.Clear();
-        return dish.Insert(res as Entity);
-    }
-
     public override bool Insert(Entity entity)
     {
         if (entity is not Ingredient subject) return false;
 
         if (!base.Insert(entity))
         {
-            if (!Ingredient.TryCombine(subject, out var result)) return false; // false가 아닌 res를 쓰레기로 db연결시켜야할듯
-
+            Ingredient.TryCombine(subject, out var result);
             _storage.Clear();
             _storage.TryInsert(result);
         }

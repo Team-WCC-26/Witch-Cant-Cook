@@ -7,6 +7,7 @@ public class Knife(int toolId) : Tool(toolId)
         if (player.HoldingEntity != null) return false;
 
         player.HoldingEntity = this;
+        Parent = player;
 
         return true;
     }

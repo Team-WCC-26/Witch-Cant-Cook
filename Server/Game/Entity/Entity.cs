@@ -1,14 +1,29 @@
-﻿using System.Numerics;
-
-namespace Server;
+﻿namespace Server;
 
 public abstract class Entity
 {
+    public long EntityId { get; private set; }
     public Room Room { get; private set; }
-    public Vector3 Position { get; set; }
-    public Quaternion Rotation { get; set; }
+    public Entity? Parent
+    {
+        get; 
+        set
+        {
+            if (Parent is ContainerTool ct)
+            {
+                ct.Remvoe(this);
+            }
+
+            Parent = value;
+        }
+    }
 
     private DirtyMask _dirtyMask = DirtyMask.None;
+
+    internal void InitEntityId(long id)
+    {
+        EntityId = id;
+    }
 
     internal void AttachRoom(Room room)
     {
@@ -25,15 +40,6 @@ public abstract class Entity
 
     public virtual void WriteSnapShot(PacketBatch batch, DirtyMask mask)
     {
-        if (mask.HasFlag(DirtyMask.Position))
-        {
-            
-        }
-
-        if (mask.HasFlag(DirtyMask.Rotation))
-        {
-
-        }
     }
 
     protected void MakeDirty(DirtyMask mask)

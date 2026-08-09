@@ -3,45 +3,58 @@
 public class Dish(int toolId) : ContainerTool(toolId, new SingleSlotStorage())
 {
     public int IngredientId => (Ingredient != null) ? Ingredient.IngredientId : -1;
-    public Ingredient? Ingredient => _storage.First as Ingredient;
+    public Ingredient? Ingredient => First as Ingredient;
 
     public override bool Interact(Player player)
     {
         if (player.HoldingEntity == null)
         {
             player.HoldingEntity = this;
-            return true;
+            Parent = player;
         }
-
-        if (player.HoldingEntity is Dish dish)
+        else if (player.HoldingEntity is Dish dish)
         {
-            if (dish.Ingredient == null)
+            if (TryCombine(dish.Ingredient))
             {
-                if (dish.Insert(Ingredient))
-                {
-                    _storage.Clear();
-                }
-            }
-            else
-            {
-                var ingredient = dish.Ingredient;
                 dish.Clear();
-
-                if (!_storage.TryInsert(ingredient))
-                {
-                    Ingredient.TryCombine(ingredient, out var res); // 합치기 실패인 경우 쓰레기가 나올지 아님 합쳐지지 않도록 할지 구분 필요
-                    dish.Insert(res);
-                }
             }
+            else if(dish.TryCombine(Ingredient))
+            {
+                _storage.Clear();
+            }
+
+            return false;
+        }
+        else if (player.HoldingEntity is Pan pan)
+        {
+            if (!TryCombine(pan.Ingredient)) return false;
         }
         else if (player.HoldingEntity is Ingredient ingredient)
         {
-            if (!_storage.TryInsert(ingredient))
-            {
-                Ingredient.TryCombine(ingredient, out var res);
-                _storage.Clear();
-                _storage.TryInsert(res);
-            }
+            TryCombine(ingredient);
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public override bool Insert(Entity entity)
+    {
+        return false; // insert 없음
+    }
+
+    public bool TryCombine(Ingredient ingredient)
+    {
+        if (ingredient == null) return false;
+
+        if (!_storage.TryInsert(ingredient))
+        {
+            Ingredient.TryCombine(ingredient, out var result);
+            _storage.Clear();
+            _storage.TryInsert(result);
         }
 
         return true;

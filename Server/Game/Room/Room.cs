@@ -282,8 +282,14 @@ public class Room
 
     private void RegisterEntity(long id, Entity entity)
     {
+        entity.InitEntityId(id);
         entity.AttachRoom(this);
         _entities[id] = entity;
+    }
+
+    public void UnregisterEntity(long id)
+    {
+        _entities.Remove(id); // GC 효율보면서 필요시 Pool로 반환
     }
 
     private void FlushSend()

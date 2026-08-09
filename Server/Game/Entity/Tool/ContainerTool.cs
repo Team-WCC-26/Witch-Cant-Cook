@@ -2,6 +2,7 @@
 
 public abstract class ContainerTool(int toolId, IContainerStorage storage) : Tool(toolId)
 {
+    public Entity? First => _storage.First;
     protected IContainerStorage _storage { get; init; } = storage;
 
     //public override bool Interact(Player player)
@@ -16,6 +17,11 @@ public abstract class ContainerTool(int toolId, IContainerStorage storage) : Too
         if (entity is IFixedTool) return false;
 
         return _storage.TryInsert(entity);
+    }
+
+    public bool Remvoe(Entity entity)
+    {
+        return _storage.TryRemove(entity);
     }
 
     public void Clear()

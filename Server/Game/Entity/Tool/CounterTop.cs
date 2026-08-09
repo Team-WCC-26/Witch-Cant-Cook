@@ -32,6 +32,8 @@ public class CounterTop(int toolId) : ContainerTool(toolId, new SingleSlotStorag
     //}
     public override bool Interact(Player player)
     {
-        throw new NotImplementedException();
+        if (player.HoldingEntity == null) return false;
+
+        return _storage.TryInsert(player.HoldingEntity);
     }
 }
