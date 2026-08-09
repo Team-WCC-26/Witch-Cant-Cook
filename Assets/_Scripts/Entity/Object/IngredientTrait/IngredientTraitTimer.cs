@@ -5,10 +5,8 @@ public class IngredientTraitTimer
 {
     private float duration;
     private float elapsed;
-
     private bool isRunning;
     private bool isLoop;
-
     private Action onComplete;
 
     public bool IsRunning => isRunning;
@@ -18,7 +16,6 @@ public class IngredientTraitTimer
     {
         this.duration = duration;
         this.onComplete = callback;
-
         elapsed = 0f;
         isRunning = true;
         isLoop = false;
@@ -28,10 +25,19 @@ public class IngredientTraitTimer
     {
         this.duration = duration;
         this.onComplete = callback;
-
         elapsed = 0f;
         isRunning = true;
         isLoop = true;
+    }
+
+    /// <summary>
+    /// 지정된 시간만큼 대기한 뒤 콜백을 1회 실행한다.
+    /// StartTimer와 동작은 동일하지만, "대기" 용도임을 명확히 하기 위한 별칭 메서드.
+    /// 다른 IngredientTrait에서도 초기 대기 시간이 필요할 때 이 메서드를 사용한다.
+    /// </summary>
+    public void StartWait(float waitDuration, Action callback)
+    {
+        StartTimer(waitDuration, callback);
     }
 
     public void Stop()
@@ -49,14 +55,10 @@ public class IngredientTraitTimer
     {
         if (!isRunning)
             return;
-
         elapsed += deltaTime;
-
         if (elapsed < duration)
             return;
-
         onComplete?.Invoke();
-
         if (isLoop)
         {
             elapsed = 0f;
@@ -78,7 +80,6 @@ public class IngredientTraitTimer
             Reset();
             return;
         }
-
         Tick(deltaTime);
     }
 
@@ -86,12 +87,9 @@ public class IngredientTraitTimer
     {
         if (!isRunning)
             return;
-
         elapsed += deltaTime;
-
         if (elapsed < duration)
             return;
-
         elapsed -= duration;
         onComplete?.Invoke();
         Stop();
