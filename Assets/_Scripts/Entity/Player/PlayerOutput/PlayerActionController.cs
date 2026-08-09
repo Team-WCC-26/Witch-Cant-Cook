@@ -72,6 +72,7 @@ public class PlayerActionController
                 movement.Stop();
 
             ApplyJump(state);
+            movement.ApplyFallGravity();
         }
         else
         {
