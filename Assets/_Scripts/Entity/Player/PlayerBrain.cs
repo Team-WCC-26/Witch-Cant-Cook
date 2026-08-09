@@ -50,6 +50,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [Header("Jump")]
     [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
     [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
+    [field: SerializeField, Min(1f)] public float FallMultiplier { get; private set; } = 2.5f;
     [field: SerializeField, Min(0f)] public float CoyoteTime { get; private set; } = 0.1f;
 
     [Header("Jump Validation")]

@@ -80,6 +80,16 @@ public class PlayerMovement
         rb.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
     }
 
+    public void ApplyFallGravity()
+    {
+        if (rb.linearVelocity.y >= 0f) return;
+
+        rb.AddForce(
+            Physics.gravity * (brain.FallMultiplier - 1f),
+            ForceMode.Acceleration
+        );
+    }
+
     private bool IsGrounded()
     {
         if (brain.Col == null) return false;
