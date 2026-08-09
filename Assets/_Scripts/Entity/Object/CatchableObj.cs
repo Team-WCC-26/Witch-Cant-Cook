@@ -89,6 +89,7 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = true;
         SetPhysicsState(false);
+        OnPicked?.Invoke();
     }
 
     public void OnDrop()
@@ -97,6 +98,7 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = false;
         SetPhysicsState(true);
+        OnDropped?.Invoke();
     }
 
     public void OnThrow()
@@ -105,6 +107,7 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = false;
         SetPhysicsState(true);
+        OnDropped?.Invoke();
     }
 
     public void SetPhysicsState(bool enablePhysics)

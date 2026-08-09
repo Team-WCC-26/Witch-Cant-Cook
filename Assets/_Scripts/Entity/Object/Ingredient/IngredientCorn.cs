@@ -46,7 +46,7 @@ public class IngredientCorn : IngredientTrait
         waitTimer.Stop();
         holdTimer.Stop();
         abandonTimer.Stop();
-        PushIngredientToPool(catchable);
+        //PushIngredientToPool(catchable);
     }
 
     private void Update()

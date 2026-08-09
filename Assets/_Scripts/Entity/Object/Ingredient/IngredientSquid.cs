@@ -37,12 +37,13 @@ public class IngredientSquid : IngredientTrait
 
     private void OnEnable()
     {
-        Debug.Log($"[Squid] OnEnable called");
+        Debug.Log($"[Squid] OnEnable called Start");
 
         canSpray = true;
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
-        Debug.Log($"[Squid] OnEnable called");
+        Debug.Log($"[Squid] OnEnable called End");
+
     }
 
     private void OnDisable()
@@ -53,7 +54,7 @@ public class IngredientSquid : IngredientTrait
         holdTimer.Stop();
         cooldownTimer.Stop();
 
-        PushIngredientToPool(catchable);
+        //PushIngredientToPool(catchable);
 
     }
 
@@ -76,7 +77,7 @@ public class IngredientSquid : IngredientTrait
 
     private void TrySpray(System.Action sprayAction)
     {
-        Debug.Log($"TrySpray called, canSpray={canSpray}");
+        Debug.Log($"[Squid] TrySpray called, canSpray={canSpray}");
         if (!canSpray)
             return;
 

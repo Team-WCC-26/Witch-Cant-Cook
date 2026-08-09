@@ -35,7 +35,7 @@ public class IngredientOnion : IngredientTrait
         catchable.OnDropped -= OnDropped;
         holdTimer.Stop();
 
-        PushIngredientToPool(catchable);
+        //PushIngredientToPool(catchable);
 
     }
 
