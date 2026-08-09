@@ -35,7 +35,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [Header("Interaction")]
     [field: SerializeField] public Transform ItemHoldParent { get; private set; } = null;
-    [field: SerializeField] public float InteractRayStartOffset { get; private set; } = 0.3f;
+    [field: SerializeField] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
     [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
     [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
     [field: SerializeField] public bool DebugInteraction { get; private set; } = false; 

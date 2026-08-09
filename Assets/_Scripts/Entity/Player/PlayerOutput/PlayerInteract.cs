@@ -304,7 +304,7 @@ public class PlayerInteract
             ? brain.PlayerCam.transform
             : brain.transform;
 
-        Vector3 start = origin.position + origin.forward * brain.InteractRayStartOffset;
+        Vector3 start = origin.position + origin.TransformDirection(brain.InteractRayStartOffset);
         return new Ray(start, origin.forward);
     }
 
