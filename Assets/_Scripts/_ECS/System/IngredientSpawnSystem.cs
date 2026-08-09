@@ -31,7 +31,7 @@ public partial class IngredientSpawnSystem : SystemBase
 
             // 橇府普 积己 夸没
             GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey, reqPos, reqRot);
-            Debug.Log($"[TEST] Spawned Object: {spawnedObj}");
+            Debug.Log($"[TEST] Spawned Object: {spawnedObj} pos: {reqPos}");
 
             if (spawnedObj != null)
             {
@@ -49,6 +49,12 @@ public partial class IngredientSpawnSystem : SystemBase
                 if (spawnedObj.TryGetComponent(out CatchableObj catchObj))
                 {
                     catchObj.Data = ingredientRaw;
+                }
+
+                var belt = ConveyorBeltRegistry.FindBeltNearStart(reqPos);
+                if (belt != null)
+                {
+                    belt.RegisterItem(netID, spawnedObj.transform, spawnedObj);
                 }
             }
             else

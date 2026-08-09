@@ -19,7 +19,7 @@ public class IngredientNetworkBridge : MonoBehaviour
         //Define.eIngredient.Tomato,
         Define.eIngredient.Fish,
         Define.eIngredient.Meat,
-        //Define.eIngredient.Corn,
+        Define.eIngredient.Corn,
         //Define.eIngredient.Honey,
         //Define.eIngredient.Squid,
     };
