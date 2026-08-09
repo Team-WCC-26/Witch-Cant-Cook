@@ -159,8 +159,10 @@ MonoBehaviour:
   rb: {fileID: 8558192342800442512}
   objType: 3
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0.03, y: 0.15, z: -0.1}
+    localEulerAngles: {x: -90, y: 180, z: 0}
+    localScale: {x: 3, y: 3, z: 3}
   throwForce: 0
 --- !u!114 &5873812333986090579
 MonoBehaviour:
