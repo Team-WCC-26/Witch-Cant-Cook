@@ -1,3 +1,7 @@
+using MemoryPack;
+using Protocol;
+using Server;
+using System;
 using UnityEngine;
 
 public class IngredientTraitTracker : MonoBehaviour
@@ -16,9 +20,18 @@ public class IngredientTraitTracker : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    public void StartTracking()
+    private void OnEnable()
     {
-        //target = FindNearestPlayer();  -> 서버가 정해주는 것으로 받기..
+        //ServerManager.Instance.RegisterHandler(PacketId.추적할플레이어, StartTracking);
+
+    }
+
+    private void StartTracking(ReadOnlyMemory<byte> data)
+    {
+        //어쩌고Packet packet = MemoryPackSerializer.Deserialize<어쩌고Packet>(data.Span);
+
+        //if (isTracking) { }
+        // 중간에 추적 플레이어 바뀌는 경우 있나?
 
         if (target == null)
         {

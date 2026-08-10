@@ -14,7 +14,9 @@ GameObject:
   - component: {fileID: 759561449717819131}
   - component: {fileID: 229093935088154368}
   - component: {fileID: 287341765393210474}
+  - component: {fileID: -7213826803370546512}
   - component: {fileID: 4835016729146804557}
+  - component: {fileID: 7487898934483325409}
   - component: {fileID: -7750319739028657001}
   m_Layer: 7
   m_Name: HoneyBottle
@@ -165,6 +167,19 @@ MonoBehaviour:
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
+--- !u!114 &-7213826803370546512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3243848449515356353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6de1913c69af454b9421f1befe83b4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientHoneyBottle
+  eArea: 50002
 --- !u!114 &4835016729146804557
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -179,8 +194,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitBottle
   catchable: {fileID: 287341765393210474}
   breakImpactThreshold: 8
-  honeyRadius: 3
   breakEffect: {fileID: 0}
+--- !u!114 &7487898934483325409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3243848449515356353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5cb2fffe38cc1f4487f4db4f1127177, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitAreaCreator
 --- !u!114 &-7750319739028657001
 MonoBehaviour:
   m_ObjectHideFlags: 0

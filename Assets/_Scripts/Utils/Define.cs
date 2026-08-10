@@ -30,6 +30,7 @@ public class Define
         Popcorn = 12400,
         OnionLiquid = 50001,
         HoneyLiquid = 50002,
+        EggInside = 50003,
         Trash = 99999
     }
 

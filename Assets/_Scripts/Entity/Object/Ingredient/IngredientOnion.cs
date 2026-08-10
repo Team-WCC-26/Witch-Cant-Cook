@@ -11,15 +11,17 @@ public class IngredientOnion : IngredientTrait
     [SerializeField] private float holdDuration = 3f;
 
     private readonly IngredientTraitTimer holdTimer = new();
+    private IngredientTraitAreaCreator areaCreator;
 
-    [Header("Effect")]
-    [SerializeField] private GameObject tearArea;
+    [Header("Area")]
+    [SerializeField] private Define.eIngredient eArea = Define.eIngredient.OnionLiquid;
 
 
     private void Awake()
     {
         if (catchable == null)
             catchable = GetComponent<CatchableObj>();
+        areaCreator = GetComponent<IngredientTraitAreaCreator>();
     }
 
     private void OnEnable()
@@ -34,8 +36,6 @@ public class IngredientOnion : IngredientTrait
         catchable.OnPicked -= OnPicked;
         catchable.OnDropped -= OnDropped;
         holdTimer.Stop();
-
-        //PushIngredientToPool(catchable);
 
     }
 
@@ -65,9 +65,13 @@ public class IngredientOnion : IngredientTrait
 
     private void SpawnTearArea()
     {
-        Debug.Log($"SpawnTearArea - Position: {transform.position}");
-        Instantiate(tearArea, transform.position, Quaternion.identity);
-
-        // 积己 夸没 菩哦 傈价
+        if (areaCreator != null)
+        {
+            areaCreator.CreateArea(eArea);
+        }
+        else
+        {
+            Debug.LogWarning("IngredientTraitAreaCreator is not assigned.");
+        }
     }
 }

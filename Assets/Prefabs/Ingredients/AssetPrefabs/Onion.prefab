@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7034938101917262319}
   - component: {fileID: -803327322789880523}
   - component: {fileID: 5364085732468590351}
+  - component: {fileID: 7480053609396931762}
   m_Layer: 7
   m_Name: Onion
   m_TagString: Untagged
@@ -155,6 +156,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitOnion
   catchable: {fileID: 5364085732468590351}
+  holdDuration: 3
+  tearArea: {fileID: 0}
+  eArea: 50001
 --- !u!114 &5364085732468590351
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -175,3 +179,15 @@ MonoBehaviour:
   holdLocalPosition: {x: 0, y: 0, z: 0}
   holdLocalEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
+--- !u!114 &7480053609396931762
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1085333856064950526}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5cb2fffe38cc1f4487f4db4f1127177, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitAreaCreator

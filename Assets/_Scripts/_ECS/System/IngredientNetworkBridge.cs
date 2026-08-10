@@ -10,6 +10,7 @@ using UnityEngine.InputSystem;
 
 public class IngredientNetworkBridge : MonoBehaviour
 {
+    public static IngredientNetworkBridge Instance { get; private set; }
     public static event Action<CookCompletePacket> CookCompleted;
 
     [Header("Spawn Settings")]
@@ -72,6 +73,38 @@ public class IngredientNetworkBridge : MonoBehaviour
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         float3 targetPosition = GetSpawnPosition();
+
+        IngredientSpawnPacket spawnPacket = new()
+        {
+            EntityId = 0,
+            IngredientID = ingredientID,
+            Position = new System.Numerics.Vector3(targetPosition.x, targetPosition.y, targetPosition.z),
+            Quaternion = System.Numerics.Quaternion.Identity
+        };
+
+        byte[] sendBuffer = PacketSerializer.Serialize(spawnPacket);
+
+        if (ServerManager.Instance != null)
+        {
+            ServerManager.Instance.SendData(sendBuffer).Forget();
+            Debug.Log($"[Network Send] Ingredient spawn requested. ID: {ingredientID}, Position: {targetPosition}");
+        }
+        else
+        {
+            Debug.LogError("[Network Error] ServerManager.Instance not found.");
+        }
+    }
+
+    /// <summary>
+    /// 다른 position에서 스폰해야할 필요가 있을 때 사용
+    /// </summary>
+    /// <param name="ingredientID"></param>
+    /// <param name="pos"></param>
+    public void SendSpawnPacketToServer(int ingredientID, float3 pos)
+    {
+        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
+
+        float3 targetPosition = pos;
 
         IngredientSpawnPacket spawnPacket = new()
         {

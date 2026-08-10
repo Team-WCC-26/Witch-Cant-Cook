@@ -1,8 +1,9 @@
 using Protocol;
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitBottle : MonoBehaviour
+public class IngredientTraitFragile : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
@@ -10,12 +11,10 @@ public class IngredientTraitBottle : MonoBehaviour
     [Header("Break")]
     [SerializeField] private float breakImpactThreshold = 8f; // 충격량이 이 값 이상이면 깨짐
 
-    [Header("Honey Area")]
-    [SerializeField] private float honeyRadius = 3f;
-
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;
-    [SerializeField] private GameObject honeyArea;
+
+    public event Action OnBroken;
 
     private bool isBroken;
 
@@ -56,18 +55,7 @@ public class IngredientTraitBottle : MonoBehaviour
         {
             spawnPos = hit.point;
         }
-
-        SpawnHoneyArea(spawnPos);
-    }
-
-    private void SpawnHoneyArea(Vector3 position)
-    {
-        IngredientSpawnPacket packet = new IngredientSpawnPacket
-        {
-            // Ingredient 테이블에 생성되는 영역들도 추가하던가 해야될 것 같음
-        };
-        // Todo : 생성 요청 패킷 전송
-
-        Instantiate(honeyArea, position, Quaternion.identity);
+        // 깨진 위치에 영역 생성해야함. 영역 생성은 통합특성 스크립트에서 호출하는데.. 
+        OnBroken?.Invoke();
     }
 }

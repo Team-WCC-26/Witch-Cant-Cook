@@ -2,40 +2,18 @@ using UnityEngine;
 
 public class IngredientTraitAreaCreator : MonoBehaviour
 {
-    [Header("Area")]
-
-    // 테이블 생기면 테스트 해보기 
-    [SerializeField] private string areaPoolKey;
-
     /// <summary>
-    /// 영역 생성
+    /// 영역 생성 요청 패킷 전송(스폰 자체는 서버가)
     /// </summary>
-    public GameObject CreateArea()
+    public void CreateArea(Define.eIngredient eIngredient)
     {
-        GameObject area = ObjectPoolManager.Instance.Pop(areaPoolKey);
+        Debug.Log($"SpawnTearArea - Position: {transform.position}");
 
-        if (area == null)
-            return null;
-
-        area.transform.SetPositionAndRotation(
-            transform.position,
-            Quaternion.identity);
-
-        return area;
+        // 생성 요청 패킷 전송
+        IngredientNetworkBridge.Instance.SendSpawnPacketToServer(
+            (int)eIngredient,
+            transform.position
+            );
     }
 
-    public GameObject CreateArea(Vector3 position)
-    {
-        GameObject area = ObjectPoolManager.Instance.Pop(areaPoolKey);
-
-        if (area == null)
-            return null;
-
-        area.transform.SetPositionAndRotation(
-            position,
-            Quaternion.identity);
-
-        return area;
-    }
-    // IngredientSpawnSystem 거쳐서 영역 생성하도록 
 }

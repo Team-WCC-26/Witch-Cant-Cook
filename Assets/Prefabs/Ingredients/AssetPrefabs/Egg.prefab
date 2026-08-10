@@ -15,6 +15,9 @@ GameObject:
   - component: {fileID: -9012784190197821221}
   - component: {fileID: 6408138329122547482}
   - component: {fileID: -8273837953479191527}
+  - component: {fileID: 7621611862846174925}
+  - component: {fileID: 3732057744919762602}
+  - component: {fileID: 9190568062789187978}
   m_Layer: 7
   m_Name: Egg
   m_TagString: Untagged
@@ -176,3 +179,42 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
   catchable: {fileID: 6408138329122547482}
   playerTag: Player
+--- !u!114 &7621611862846174925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504339039570481806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b573810bd2d99fc4e907c9eeb3622fc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientEgg
+--- !u!114 &3732057744919762602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504339039570481806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5cb2fffe38cc1f4487f4db4f1127177, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitAreaCreator
+--- !u!114 &9190568062789187978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504339039570481806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2244e3b805beb9b4caded9271ce75b40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitFragile
+  catchable: {fileID: 6408138329122547482}
+  breakImpactThreshold: 8
+  breakEffect: {fileID: 0}
