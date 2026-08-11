@@ -7,7 +7,7 @@ public class OvenInteraction : MapObjInteraction
 {
     [SerializeField] private float cookDuration = 2f;
 
-    private readonly Dictionary<Collider, OvenCookState> currentIngredients = new();
+    private readonly Dictionary<long, OvenCookState> currentIngredients = new();
 
     private void OnEnable()
     {
@@ -27,19 +27,25 @@ public class OvenInteraction : MapObjInteraction
 
     private void OnTriggerEnter(Collider other)
     {
-        if (currentIngredients.ContainsKey(other)) return;
         if (!TryGetIngredient(other, out IngredientReaction reaction, out CatchableObj catchable)) return;
+        if (reaction.IsActionCompleted(IngredientAction.Cook)) return;
+
+        long id = catchable.NetworkId;
+        if (currentIngredients.ContainsKey(id)) return;
 
         Coroutine coroutine = StartCoroutine(CookIngredient(reaction, catchable));
-        currentIngredients[other] = new OvenCookState(reaction, catchable.NetworkId, coroutine);
+        currentIngredients[id] = new OvenCookState(reaction, catchable.NetworkId, coroutine);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!currentIngredients.TryGetValue(other, out OvenCookState state)) return;
+        if (!TryGetIngredient(other, out IngredientReaction reaction, out CatchableObj catchable)) return;
+
+        long id = catchable.NetworkId;
+        if (!currentIngredients.TryGetValue(id, out OvenCookState state)) return;
 
         StopCooking(state);
-        currentIngredients.Remove(other);
+        currentIngredients.Remove(id);
     }
 
     private IEnumerator CookIngredient(IngredientReaction reaction, CatchableObj catchable)
@@ -53,25 +59,11 @@ public class OvenInteraction : MapObjInteraction
     private void OnCookComplete(CookCompletePacket packet)
     {
         if (packet.CookType != IngredientState.Roasted) return;
+        if (!currentIngredients.TryGetValue(packet.EntityId, out OvenCookState state)) return;
 
-        Collider completedCollider = null;
-        OvenCookState completedState = default;
-
-        foreach (var kvp in currentIngredients)
-        {
-            OvenCookState state = kvp.Value;
-            if (state.EntityId != packet.EntityId) continue;
-
-            completedCollider = kvp.Key;
-            completedState = state;
-            break;
-        }
-
-        if (completedCollider == null) return;
-
-        completedState.Reaction.GaugeUI?.Hide();
-        completedState.Reaction.Interact(IngredientAction.Cook, int.MaxValue);
-        currentIngredients.Remove(completedCollider);
+        state.Reaction.GaugeUI?.Hide();
+        state.Reaction.Interact(IngredientAction.Cook, int.MaxValue);
+        currentIngredients.Remove(packet.EntityId);
     }
 
     private bool TryGetIngredient(Collider other, out IngredientReaction reaction, out CatchableObj catchable)
