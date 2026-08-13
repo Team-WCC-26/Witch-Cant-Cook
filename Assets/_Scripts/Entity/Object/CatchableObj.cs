@@ -69,6 +69,7 @@ public class CatchableObj : MonoBehaviour
     public CatchableObjType ObjType => objType;
     public LocalTransformData HoldTransform => holdTransform;
     public float ThrowForce => throwForce;
+    public bool IsEquipment { get; private set; }
     public PlayerBrain Holder { get; private set; }
 
     public bool IsHold { get; private set; } = false;
@@ -79,6 +80,18 @@ public class CatchableObj : MonoBehaviour
 
     public event Action OnPicked;
     public event Action OnDropped;
+
+    private void Awake()
+    {
+        foreach (MonoBehaviour behaviour in GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is not IEquipment) continue;
+
+            IsEquipment = true;
+            break;
+        }
+    }
+
     private void OnEnable()
     {
         ResetObj();
