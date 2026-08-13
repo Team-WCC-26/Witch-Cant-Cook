@@ -24,8 +24,7 @@ public class PlayerActionController
 
         animController = new PlayerAnimController(brain);
         ragdollController = new PlayerRagdollController(brain, animController);
-        movement = new PlayerMovement(brain, brain.MoveSpeed, brain.RunMultiplier, brain.JumpPower);
-
+        movement = new PlayerMovement(brain, brain.MoveSpeed, brain.RunMultiplier, brain.JumpPower, brain.MoveAcceleration);
         prevMode = PlayerPhysicalMode.Default;
     }
 

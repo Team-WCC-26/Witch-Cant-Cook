@@ -34,7 +34,6 @@ public struct IngredientPhysics : IComponentData
 public struct IngredientCombat : IComponentData
 {
     public int Damage;
-    // 태그의 경우 enum이나 정수형 ID로 관리하는 것이 최적화에 좋습니다.
     public FixedString32Bytes Tag;
 }
 public struct IngredientSpawnRequest : IComponentData

@@ -9,7 +9,7 @@ public class IngredientTraitFragile : MonoBehaviour
     [SerializeField] private CatchableObj catchable;
 
     [Header("Break")]
-    [SerializeField] private float breakImpactThreshold = 8f; // 충격량이 이 값 이상이면 깨짐
+    [SerializeField] private float breakImpactThreshold = 2f; // 충격량이 이 값 이상이면 깨짐
 
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;

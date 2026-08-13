@@ -1,7 +1,9 @@
 using UnityEngine;
+using Unity.Mathematics;
 
 public class IngredientTraitAreaCreator : MonoBehaviour
 {
+    [SerializeField] private float yFloor = 0.11f;
     /// <summary>
     /// 영역 생성 요청 패킷 전송(스폰 자체는 서버가)
     /// </summary>
@@ -12,7 +14,7 @@ public class IngredientTraitAreaCreator : MonoBehaviour
         // 생성 요청 패킷 전송
         IngredientNetworkBridge.Instance.SendSpawnPacketToServer(
             (int)eIngredient,
-            transform.position
+            new float3(transform.position.x, yFloor, transform.position.z)
             );
     }
 
