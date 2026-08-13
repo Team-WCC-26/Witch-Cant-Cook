@@ -119,6 +119,7 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
     public void StartGrill(float duration)
     {
         if (currentIngredient == null) return;
+        if (currentIngredient.IsActionCompleted(IngredientAction.Grill)) return;
         if (grillCoroutine != null) return;
 
         // Gauge is visual only; the coroutine owns completion.

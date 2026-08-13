@@ -43,6 +43,11 @@ public class IngredientReaction : MonoBehaviour
     public float CurGuage => 1 - (float)curHP / maxHP;
     public InteractionGaugeUI GaugeUI => gaugeUI;
 
+    public bool IsActionCompleted(IngredientAction action)
+    {
+        return (completedActions & action) != 0;
+    }
+
     [Header("Plate Offset")]
     [SerializeField] private Vector3 plateOffsetPos = Vector3.zero;
     [SerializeField] private Vector3 plateOffsetEuler = Vector3.zero;

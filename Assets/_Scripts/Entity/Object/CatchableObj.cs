@@ -14,6 +14,34 @@ public enum CatchableObjType
     Broom,
     Bucket
 }
+
+[Serializable]
+public struct LocalTransformData
+{
+    [SerializeField] private Vector3 localPosition;
+    [SerializeField] private Vector3 localEulerAngles;
+    [SerializeField] private Vector3 localScale;
+
+    public Vector3 LocalPosition => localPosition;
+    public Vector3 LocalEulerAngles => localEulerAngles;
+    public Vector3 LocalScale => localScale;
+
+    public static LocalTransformData Identity => new(
+        Vector3.zero,
+        Vector3.zero,
+        Vector3.one);
+
+    public LocalTransformData(
+        Vector3 localPosition,
+        Vector3 localEulerAngles,
+        Vector3 localScale)
+    {
+        this.localPosition = localPosition;
+        this.localEulerAngles = localEulerAngles;
+        this.localScale = localScale;
+    }
+}
+
 public class CatchableObj : MonoBehaviour
 {
     [SerializeField] private long networkId;
@@ -31,8 +59,7 @@ public class CatchableObj : MonoBehaviour
     [Header("Obj Settings")]
     [SerializeField] private CatchableObjType objType = CatchableObjType.Ingredient;
     [SerializeField] private bool canBePicked = true;
-    [SerializeField] private Vector3 holdLocalPosition = Vector3.zero;
-    [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
+    [SerializeField] private LocalTransformData holdTransform = LocalTransformData.Identity;
     [SerializeField] private float throwForce = 0;
 
 
@@ -40,13 +67,15 @@ public class CatchableObj : MonoBehaviour
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
     public CatchableObjType ObjType => objType;
-    public Vector3 HoldLocalPosition => holdLocalPosition;
-    public Vector3 HoldLocalEulerAngles => holdLocalEulerAngles;
+    public LocalTransformData HoldTransform => holdTransform;
     public float ThrowForce => throwForce;
     public PlayerBrain Holder { get; private set; }
 
     public bool IsHold { get; private set; } = false;
     public bool IsRespawning { get; set; } = false;
+
+    private Vector3 worldScaleBeforeHold = Vector3.one;
+    private bool hasHoldScaleSnapshot;
 
     public event Action OnPicked;
     public event Action OnDropped;
@@ -84,6 +113,9 @@ public class CatchableObj : MonoBehaviour
     {
         Holder = holder;
 
+        worldScaleBeforeHold = transform.lossyScale;
+        hasHoldScaleSnapshot = true;
+
         releaseFromPrep?.Invoke(this);
         releaseFromPrep = null;
 
@@ -97,6 +129,7 @@ public class CatchableObj : MonoBehaviour
         Holder = null;
 
         IsHold = false;
+        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
     }
@@ -106,8 +139,17 @@ public class CatchableObj : MonoBehaviour
         Holder = null;
 
         IsHold = false;
+        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
+    }
+
+    public void RestoreWorldScaleAfterHold()
+    {
+        if (!hasHoldScaleSnapshot) return;
+
+        transform.localScale = worldScaleBeforeHold;
+        hasHoldScaleSnapshot = false;
     }
 
     public void SetPhysicsState(bool enablePhysics)

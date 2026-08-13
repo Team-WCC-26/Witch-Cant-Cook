@@ -196,6 +196,7 @@ public class PlayerInteract
 
         HeldObj = null;
         target.transform.SetParent(null, true);
+        target.RestoreWorldScaleAfterHold();
         return true;
     }
 
@@ -224,8 +225,10 @@ public class PlayerInteract
 
         target.OnPick(brain);
         target.transform.SetParent(brain.ItemHoldParent, false);
-        target.transform.localPosition = target.HoldLocalPosition;
-        target.transform.localRotation = Quaternion.Euler(target.HoldLocalEulerAngles);
+        LocalTransformData holdTransform = target.HoldTransform;
+        target.transform.localPosition = holdTransform.LocalPosition;
+        target.transform.localRotation = Quaternion.Euler(holdTransform.LocalEulerAngles);
+        target.transform.localScale = holdTransform.LocalScale;
         HeldObj = target;
     }
     #endregion
