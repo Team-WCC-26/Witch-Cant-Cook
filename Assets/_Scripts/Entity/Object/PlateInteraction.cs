@@ -6,7 +6,10 @@ public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction
 
     private void OnEnable()
     {
+        if (tempFoodVisual == null) return;
+
         tempFoodVisual.SetActive(false);
+        DisableTempFoodColliders();
     }
 
     public void ShowTempFood()
@@ -14,6 +17,15 @@ public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction
         if (tempFoodVisual == null) return;
 
         tempFoodVisual.SetActive(true);
+        DisableTempFoodColliders();
+    }
+
+    private void DisableTempFoodColliders()
+    {
+        foreach (Collider foodCollider in tempFoodVisual.GetComponentsInChildren<Collider>(true))
+        {
+            foodCollider.enabled = false;
+        }
     }
 
     public bool TryUsePrimary(PlayerInteract interact)
