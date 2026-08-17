@@ -1,63 +1,65 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public sealed class PlayerBrain : MonoBehaviour
 {
-    [Header("Network")]
+    [field: Header("Network")]
     [field: SerializeField] public string PlayerId { get; set; } = null;
 
-    [Header("Core")]
+    [field: Header("Core")]
     [field: SerializeField] public Collider Col { get; private set; } = null;
     [field: SerializeField] public Rigidbody Rb { get; private set; } = null;
 
-    [Header("Health")]
+    [field: Header("Health")]
     [field: SerializeField, Min(0f)] public float MaxHealth { get; private set; } = 100f;
     [field: SerializeField, Min(0f)] public float DamageCooldown { get; private set; } = 0.2f;
     [field: SerializeField, Min(0f)] public float RagdollStunDuration { get; private set; } = 2f;
 
-    [Header("Camera Settings")]
+    [field: Header("Camera Settings")]
     [field: SerializeField] public Transform CameraFollowTarget { get; private set; } = null;
     [field: SerializeField] public Transform CameraLookAtTarget { get; private set; } = null;
 
-    [Header("Ragdoll")]
+    [field: Header("Ragdoll")]
     [field: SerializeField] public List<BodyPart> BodyParts { get; private set; } = new();
 
-    [Header("Systems")]
+    [field: Header("Systems")]
     [field: SerializeField] public PlayerInputHandler Input { get; private set; } = null;
     [field: SerializeField] public PlayerCameraController CameraController { get; private set; } = null;
     [field: SerializeField] public PlayerEffectController EffectController { get; private set; } = null;
     
 
-    [Header("Animated Body")]
+    [field: Header("Animated Body")]
     [field: SerializeField] public Animator Animator { get; private set; } = null;
 
-    [Header("Interaction")]
-    [field: SerializeField] public Transform ItemHoldParent { get; private set; } = null;
+    [field: Header("Interaction")]
+    [field: SerializeField] public Transform ItemPoint { get; private set; } = null;
+    [field: SerializeField] public Transform EquipPoint { get; private set; } = null;
     [field: SerializeField] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
     [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
     [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
     [field: SerializeField] public bool DebugInteraction { get; private set; } = false; 
     
-    [Header("Base Move")]
+    [field: Header("Base Move")]
     [field: SerializeField] public float MoveSpeed { get; private set; } = 5.0f;
     [field: SerializeField] public float RunMultiplier { get; private set; } = 1.5f;
 
-    [Header("Punch")]
-    [field: SerializeField, Min(0f)] public float PunchRecoveryDelay { get; private set; } = 0.1f;
+    [field: Header("Action")]
+    [field: SerializeField, Min(0f)] public float RecoveryDelay { get; private set; } = 0.1f;
 
-    [Header("Jump")]
+    [field: Header("Jump")]
     [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
     [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
     [field: SerializeField, Min(1f)] public float FallMultiplier { get; private set; } = 2.5f;
     [field: SerializeField, Min(0f)] public float CoyoteTime { get; private set; } = 0.1f;
 
-    [Header("Jump Validation")]
+    [field: Header("Jump Validation")]
     [field: SerializeField] public float GroundCheckDistance { get; private set; } = 0.08f;
     [field: SerializeField] public bool DebugGroundCheck { get; private set; } = false;
 
-    [Header("Throw")]
+    [field: Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
     [field: SerializeField] public float ThrowAngle { get; private set; } = 0.0f;
     [field: SerializeField] public Vector3 ThrowCameraOffset { get; private set; } = Vector3.zero;

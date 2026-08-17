@@ -7,14 +7,20 @@ public class PlayerAnimController
 
     private readonly int speedHash = Animator.StringToHash("Speed");
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
+
     private readonly int onHoldHash = Animator.StringToHash("OnHold");
+    private readonly int equipActionHash = Animator.StringToHash("EquipAction");
     private readonly int punchHash = Animator.StringToHash("Punch");
-    private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
+    
     private readonly int groundedHash = Animator.StringToHash("IsGrounded");
     private readonly int vSpeedHash = Animator.StringToHash("VSpeed");
     private readonly int jumpStartHash = Animator.StringToHash("JumpStart");
     private readonly int jumpMiddleHash = Animator.StringToHash("JumpMiddle");
     private readonly int jumpEndHash = Animator.StringToHash("JumpEnd");
+
+    private readonly int emptyStateHash = Animator.StringToHash("Empty");
+    private readonly int equipActionStateHash = Animator.StringToHash("HoldKnife");
+    private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
 
     private const float IdleSpeed = 0f;
     private const float WalkSpeed = 4f;
@@ -28,7 +34,10 @@ public class PlayerAnimController
 
     public void UpdateTick(PlayerCombinedState state, bool isGrounded, float vSpeed)
     {
-        animator.SetBool(onHoldHash, state.HeldObjType != CatchableObjType.Default);
+        bool isHolding = state.HeldObjType != CatchableObjType.Default;
+        bool isEquipped = brain.Interact.IsHolding && brain.Interact.HeldObj.IsEquipment;
+
+        animator.SetBool(onHoldHash, isHolding && !isEquipped);
         animator.SetBool(groundedHash, isGrounded);
         animator.SetFloat(vSpeedHash, vSpeed);
 
@@ -55,9 +64,35 @@ public class PlayerAnimController
         animator.Update(0f);
     }
 
-    public void PlayPunch()
+    public void PlayPunchAnim()
     {
         animator.SetTrigger(punchHash);
+    }
+
+    public void PlayEquipAnim()
+    {
+        animator.SetTrigger(equipActionHash);
+    }
+
+    public void CancelAction()
+    {
+        const int UpperBodyLayer = 1;
+
+        animator.ResetTrigger(punchHash);
+        animator.ResetTrigger(equipActionHash);
+        animator.CrossFade(emptyStateHash, 0f, UpperBodyLayer);
+    }
+
+    public bool IsEquipActionPlaying()
+    {
+        const int EquipmentLayer = 1;
+
+        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(EquipmentLayer);
+        if (current.shortNameHash == equipActionStateHash) return true;
+        if (!animator.IsInTransition(EquipmentLayer)) return false;
+
+        AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(EquipmentLayer);
+        return next.shortNameHash == equipActionStateHash;
     }
 
     public bool IsPunchMotionPlaying()

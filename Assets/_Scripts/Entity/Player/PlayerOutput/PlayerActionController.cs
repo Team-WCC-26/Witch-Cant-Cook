@@ -14,8 +14,8 @@ public class PlayerActionController
     public bool CanRequestJump => movement.CanJump;
     public bool IsGroundedNow => movement.IsGroundedNow;
 
-    public bool CanPunch { get; private set; }
-    private float punchTime = 0f;
+    private bool canAction = true;
+    private float actionTime;
 
     
     public PlayerActionController(PlayerBrain brain)
@@ -30,7 +30,7 @@ public class PlayerActionController
 
     public void UpdateTick(PlayerCombinedState state)
     {
-        UpdatePunchState();
+        UpdateActionState();
         movement.UpdateGroundState();
 
         // Update default locomotion and airborne animation parameters.
@@ -49,6 +49,7 @@ public class PlayerActionController
                     break;
 
                 case PlayerPhysicalMode.Ragdoll:
+                    brain.Interact.ForceDropHeld();
                     ragdollController.Enter();
                     break;
 
@@ -79,33 +80,50 @@ public class PlayerActionController
         }
     }
 
-    #region Punch Action
-    public void PlayPunch()
+    #region Action
+    public void PunchAction()
     {
-        if (!CanPunch) return;
+        if (!canAction) return;
 
-        animController.PlayPunch();
-        CanPunch = false;
+        animController.PlayPunchAnim();
+        canAction = false;
     }
 
-    private void UpdatePunchState()
+    public bool TryEquipAction()
     {
-        bool isPlaying = animController.IsPunchMotionPlaying();
+        if (!canAction) return false;
+
+        animController.PlayEquipAnim();
+        canAction = false;
+        return true;
+    }
+
+    private void UpdateActionState()
+    {
+        bool isPlaying =
+            animController.IsPunchMotionPlaying()
+            || animController.IsEquipActionPlaying();
+
         if (isPlaying) return;
 
-        if (!CanPunch)
-        {
-            if (punchTime == 0)
-                punchTime = brain.PunchRecoveryDelay;
-            else
-                punchTime -= Time.deltaTime;
+        if (canAction) return;
 
-            if (punchTime <= 0)
-            {
-                CanPunch = true;
-                punchTime = 0;
-            }
-        }
+        if (actionTime == 0)
+            actionTime = brain.RecoveryDelay;
+        else
+            actionTime -= Time.deltaTime;
+
+        if (actionTime > 0) return;
+
+        canAction = true;
+        actionTime = 0;
+    }
+
+    public void CancelAction()
+    {
+        animController.CancelAction();
+        canAction = true;
+        actionTime = 0;
     }
     #endregion
 

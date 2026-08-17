@@ -46,7 +46,7 @@ public class PlayerInteract
         CatchableObj obj = FindInteractTarget<CatchableObj>();
         if (obj == null)
         {
-            brain.ActionController.PlayPunch();
+            brain.ActionController.PunchAction();
             return;
         }
         if (obj.IsHold) return;
@@ -138,6 +138,12 @@ public class PlayerInteract
     #region User Input Helper
     private void RequestDrop()
     {
+        ForceDropHeld();
+    }
+
+    public void ForceDropHeld()
+    {
+        brain.ActionController.CancelAction();
         if (!IsHolding) return;
 
         CatchableObj target = HeldObj;
@@ -149,6 +155,7 @@ public class PlayerInteract
 
     private void RequestThrow()
     {
+        brain.ActionController.CancelAction();
         if (!IsHolding) return;
 
         CatchableObj target = HeldObj;
@@ -189,11 +196,20 @@ public class PlayerInteract
         return true;
     }
 
+    public bool TryUseEquipment()
+    {
+        if (!IsHolding) return false;
+        if (!HeldObj.IsEquipment) return false;
+
+        return brain.ActionController.TryEquipAction();
+    }
+
     public bool TryReleaseHeld(CatchableObj target)
     {
         if (target == null) return false;
         if (HeldObj != target) return false;
 
+        brain.ActionController.CancelAction();
         HeldObj = null;
         target.transform.SetParent(null, true);
         target.RestoreWorldScaleAfterHold();
@@ -223,8 +239,13 @@ public class PlayerInteract
     {
         if (target == null) return;
 
+        brain.ActionController.CancelAction();
         target.OnPick(brain);
-        target.transform.SetParent(brain.ItemHoldParent, false);
+        Transform holdParent = target.IsEquipment
+            ? brain.EquipPoint
+            : brain.ItemPoint;
+
+        target.transform.SetParent(holdParent, false);
         LocalTransformData holdTransform = target.HoldTransform;
         target.transform.localPosition = holdTransform.LocalPosition;
         target.transform.localRotation = Quaternion.Euler(holdTransform.LocalEulerAngles);
