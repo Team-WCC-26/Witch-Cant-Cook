@@ -5,31 +5,23 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public class IngredientTraitArea : MonoBehaviour
 {
-    [Serializable]
-    public struct AreaEffectData
-    {
-        [Header("마찰 감소 효과 (Egg, Onion 등)")]
-        public bool ChangeFriction;
-        [Range(0f, 1f)]
-        public float FrictionMultiplier;
-
-        [Header("속도 증가 효과 (선택, 미끄러짐과 함께 사용 가능)")]
-        public bool ChangeSpeed;
-        [Min(0f)]
-        public float SpeedMultiplier;
-
-        [Header("정지 효과 (Honey 등, 최초 진입 시 1회만 적용)")]
-        public bool StopOnEnter;
-    }
     public event Action<PlayerBrain> PlayerEntered;
     public event Action<PlayerBrain> PlayerStayed;
     public event Action<PlayerBrain> PlayerExited;
 
     [SerializeField] private LayerMask playerLayer;
-    [SerializeField] private AreaEffectData effectData;
 
-    // 영역이 파괴/비활성화될 때 안에 남아있는 플레이어의 효과를 해제하기 위한 추적용
-    private readonly HashSet<PlayerBrain> playersInside = new();
+    [Header("Movement Effect")]
+    [Tooltip("이 영역에 들어온 플레이어에게 적용할 이동 효과. " +
+             "빙판: ChangeFriction만 켜고 FrictionMultiplier를 낮게(0.03~0.1). " +
+             "진흙: ChangeSpeed만 켜고 SpeedMultiplier를 낮게(0.4 등). " +
+             "Duration이 남아있어도 영역을 벗어나면 즉시 원복된다.")]
+    [SerializeField] private PlayerEffectController.MovementEffectData movementEffect;
+
+    // 랙돌 손/발처럼 한 플레이어에 콜라이더가 여러 개 붙어있는 경우,
+    // 콜라이더 하나가 먼저 빠져나가도 다른 콜라이더가 아직 영역 안에 있으면
+    // 효과가 꺼지면 안 되므로 플레이어별로 몇 개가 겹쳐있는지 센다.
+    private readonly Dictionary<PlayerBrain, int> overlapCounts = new();
 
     private void Reset()
     {
@@ -42,44 +34,40 @@ public class IngredientTraitArea : MonoBehaviour
     private bool IsPlayer(Collider other, out PlayerBrain player)
     {
         player = null;
+
         if (((1 << other.gameObject.layer) & playerLayer) == 0)
             return false;
 
+        // 랙돌 손/발 등은 PlayerBrain이 붙어있는 루트가 아니라
+        // rig 하위 자식 오브젝트의 콜라이더이므로, 같은 오브젝트에서만 찾는
+        // TryGetComponent 대신 부모 계층까지 탐색하는 GetComponentInParent를 사용한다.
         player = other.GetComponentInParent<PlayerBrain>();
         return player != null;
-    }
-    private bool TryGetEffectController(PlayerBrain player, out PlayerEffectController controller)
-    {
-        controller = player != null ? player.GetComponent<PlayerEffectController>() : null;
-        return controller != null;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[Area] Trigger Enter: {other.name}");
         if (!IsPlayer(other, out PlayerBrain player))
-        {
-            Debug.Log($"[Area] Not recognized as player. layer={other.gameObject.layer}");
             return;
-        }
-        Debug.Log($"[Area] Player entered: {player.PlayerId}, ChangeFriction={effectData.ChangeFriction}, value={effectData.FrictionMultiplier}");
 
-        playersInside.Add(player);
+        int count = overlapCounts.GetValueOrDefault(player, 0) + 1;
+        overlapCounts[player] = count;
 
-        if (TryGetEffectController(player, out PlayerEffectController controller))
-        {
-            if (effectData.ChangeFriction)
-                controller.EnterFrictionArea(this, effectData.FrictionMultiplier);
-
-            if (effectData.ChangeSpeed) // 추가
-                controller.EnterSpeedArea(this, effectData.SpeedMultiplier);
-
-            if (effectData.StopOnEnter)
-                controller.ApplyStopOnEnter();
-        }
+        // 이미 다른 콜라이더(반대쪽 발 등)로 겹쳐 있던 상태라면 중복 진입이므로 스킵.
+        if (count > 1)
+            return;
 
         PlayerEntered?.Invoke(player);
+
+        if (!PlayerSpawnManager.Instance.IsMine(player.PlayerId))
+            return;
+
+        if (player.TryGetComponent(out PlayerEffectController effectController))
+        {
+            effectController.ApplyMovementEffect(movementEffect);
+        }
     }
+
     private void OnTriggerStay(Collider other)
     {
         if (!IsPlayer(other, out PlayerBrain player))
@@ -93,37 +81,25 @@ public class IngredientTraitArea : MonoBehaviour
         if (!IsPlayer(other, out PlayerBrain player))
             return;
 
-        playersInside.Remove(player);
+        int count = overlapCounts.GetValueOrDefault(player, 0) - 1;
 
-        if (TryGetEffectController(player, out PlayerEffectController controller))
+        if (count > 0)
         {
-            if (effectData.ChangeFriction)
-                controller.ExitFrictionArea(this);
-
-            if (effectData.ChangeSpeed) // 추가
-                controller.ExitSpeedArea(this);
+            overlapCounts[player] = count;
+            // 아직 다른 콜라이더가 영역 안에 남아있으므로 효과를 끄지 않는다.
+            return;
         }
+
+        overlapCounts.Remove(player);
 
         PlayerExited?.Invoke(player);
-    }
-    // 아이템 지속시간 만료 등으로 영역 오브젝트가 먼저 사라지는 경우,
-    // 안에 있던 플레이어의 마찰 효과가 영구히 남는 것을 방지
-    private void OnDisable()
-    {
-        if (playersInside.Count == 0)
+
+        if (!PlayerSpawnManager.Instance.IsMine(player.PlayerId))
             return;
 
-        foreach (PlayerBrain player in playersInside)
+        if (player.TryGetComponent(out PlayerEffectController effectController))
         {
-            if (!TryGetEffectController(player, out PlayerEffectController controller))
-                continue;
-
-            if (effectData.ChangeFriction)
-                controller.ExitFrictionArea(this);
-
-            if (effectData.ChangeSpeed) 
-                controller.ExitSpeedArea(this);
+            effectController.EndMovementEffect();
         }
-        playersInside.Clear();
     }
 }

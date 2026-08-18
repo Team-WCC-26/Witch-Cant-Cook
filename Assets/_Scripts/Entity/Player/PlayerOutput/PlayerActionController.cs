@@ -17,14 +17,14 @@ public class PlayerActionController
     private bool canAction = true;
     private float actionTime;
 
-    
+
     public PlayerActionController(PlayerBrain brain)
     {
         this.brain = brain;
 
         animController = new PlayerAnimController(brain);
         ragdollController = new PlayerRagdollController(brain, animController);
-        movement = new PlayerMovement(brain, brain.MoveSpeed, brain.RunMultiplier, brain.JumpPower, brain.MoveAcceleration);
+        movement = new PlayerMovement(brain, brain.MoveSpeed, brain.RunMultiplier, brain.JumpPower);
         prevMode = PlayerPhysicalMode.Default;
     }
 
@@ -66,11 +66,9 @@ public class PlayerActionController
     {
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
-            if (state.MoveDir.sqrMagnitude > 0.0001f)
-                movement.Move(state.MoveDir, state.IsRun);
-            else
-                movement.Stop();
-
+            // 입력이 없어도 Move(0, ...)를 호출해 마찰(FrictionMultiplier) 기반 감속을 타게 한다.
+            // Stop()으로 바로 가면 즉시 0으로 스냅되어 빙판 등의 미끄러짐 효과가 무시된다.
+            movement.Move(state.MoveDir, state.IsRun);
             ApplyJump(state);
             movement.ApplyFallGravity();
         }

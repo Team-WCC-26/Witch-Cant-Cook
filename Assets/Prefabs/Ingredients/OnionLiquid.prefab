@@ -128,9 +128,9 @@ MonoBehaviour:
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
-  effectData:
+  movementEffect:
+    ChangeSpeed: 0
+    SpeedMultiplier: 0
     ChangeFriction: 1
-    FrictionMultiplier: 0
-    ChangeSpeed: 1
-    SpeedMultiplier: 1.4
-    StopOnEnter: 0
+    FrictionMultiplier: 0.015
+    Duration: 10
