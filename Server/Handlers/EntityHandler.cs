@@ -23,16 +23,24 @@ public class EntityHandler : PacketHandlerBase
     public static void InteractEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityInteractPacket>(package.Body);
+        var room = session.Player.Room;
 
-        session.Player.Room.InteractEntity(packet.TargetEntityId, session.Player);
+        room.PushJob(() =>
+        {
+            room.InteractEntity(packet.TargetEntityId, session.Player);
+        });
     }
 
     [PacketHandler(PacketId.C_EntityInsert)]
     public static void InsertEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityInsertPacket>(package.Body);
+        var room = session.Player.Room;
 
-        session.Player.Room.InsertEntity(packet.TargetEntityId, packet.SubjectEntityId);
+        room.PushJob(() =>
+        {
+            room.InsertEntity(packet.TargetEntityId, packet.SubjectEntityId);
+        });
     }
 
     //[PacketHandler(PacketId.C_EntityPickup)]

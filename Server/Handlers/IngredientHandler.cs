@@ -14,8 +14,6 @@ public class IngredientHandler : PacketHandlerBase
         var ingredient = room.GenerateIngredient(packet.IngredientID, out var entityId);
 
         packet.EntityId = entityId;
-        ingredient.Position = packet.Position;
-        ingredient.Rotation = packet.Quaternion;
 
         room.PushJob(() =>
         {
@@ -60,16 +58,16 @@ public class IngredientHandler : PacketHandlerBase
     //}
 
     //[PacketHandler(PacketId.C_IngredientState)]
-    public static void UpdateIngredientState(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<IngredientStatePacket>(package.Body);
-        var room = session.Player.Room;
+    //public static void UpdateIngredientState(Session session, PacketPackageInfo package)
+    //{
+    //    var packet = DeSerialize<IngredientStatePacket>(package.Body);
+    //    var room = session.Player.Room;
 
-        // hp에 따라 state 변경 로직 추가
+    //    // hp에 따라 state 변경 로직 추가
 
-        room.PushJob(() =>
-        {
-            room.BroadCast(PacketSerializer.Serialize(packet, true));
-        });
-    }
+    //    room.PushJob(() =>
+    //    {
+    //        room.BroadCast(PacketSerializer.Serialize(packet, true));
+    //    });
+    //}
 }

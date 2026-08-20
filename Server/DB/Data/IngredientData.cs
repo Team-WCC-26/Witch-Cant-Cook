@@ -19,4 +19,7 @@ public class IngredientData
 
     [JsonProperty("conditionFlag")]
     public IngredientState InvalidProcessFlag { get; init; }
+
+    [JsonProperty("spawnProbability")]
+    public int SpawnWeight { get; init; }
 }

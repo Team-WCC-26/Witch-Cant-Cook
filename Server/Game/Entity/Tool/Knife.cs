@@ -1,6 +1,6 @@
 ﻿namespace Server;
 
-public class Knife(int toolId) : Tool(toolId)
+public class Knife : Tool
 {
     public override bool Interact(Player player)
     {

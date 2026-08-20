@@ -1,4 +1,6 @@
-﻿namespace Server;
+﻿using Protocol;
+
+namespace Server;
 
 public abstract class Entity
 {
@@ -13,21 +15,36 @@ public abstract class Entity
             {
                 ct.Remvoe(this);
             }
+            else if (Parent is Player player)
+            {
+                player.HoldingEntity = null;
+            }
 
             Parent = value;
+
+            MakeDirty(DirtyMask.Parent);
         }
     }
+
+    public bool IsDestroyed => _dirtyMask.HasFlag(DirtyMask.Destroy);
 
     private DirtyMask _dirtyMask = DirtyMask.None;
 
     internal void InitEntityId(long id)
     {
         EntityId = id;
+        _dirtyMask = DirtyMask.None;
     }
 
     internal void AttachRoom(Room room)
     {
         Room = room;
+    }
+
+    public void Destroy()
+    {
+        Parent = null;
+        MakeDirty(DirtyMask.Destroy);
     }
 
     public DirtyMask ConsumeDirtyMask()
@@ -38,8 +55,37 @@ public abstract class Entity
         return mask;
     }
 
-    public virtual void WriteSnapShot(PacketBatch batch, DirtyMask mask)
+    public virtual void WriteSnapShot(WorldStatePacket packet, DirtyMask mask)
     {
+        if (mask.HasFlag(DirtyMask.Destroy))
+        {
+            Room.UnregisterEntity(EntityId);
+
+            packet.DestroyedEntities.Add(new()
+            {
+                EntityId = EntityId,
+            });
+        }
+
+        if (mask.HasFlag(DirtyMask.Parent))
+        {
+            if (Parent is Player player)
+            {
+                packet.PickupEntities.Add(new()
+                {
+                    EntityId = EntityId,
+                    PlayerID = player.PlayerId
+                });
+            }
+            else
+            {
+                packet.ParentChangedEntities.Add(new()
+                {
+                    EntityId = EntityId,
+                    ParentEntityId = Parent.EntityId
+                });
+            }
+        }
     }
 
     protected void MakeDirty(DirtyMask mask)
@@ -56,8 +102,18 @@ public abstract class Entity
 public enum DirtyMask
 {
     None = 0,
-    Position = 1 << 0,
-    Rotation = 1 << 1,
-    State = 1 << 2,
-    Container = 1 << 3,
+
+    // Entity Lifecycle
+    Destroy = 1 << 0,
+
+    // Hierachy
+    Parent = 1 << 1,
+
+    // Transform
+    Transform = 1 << 2,
+
+    // GamePlay State
+    Ping = 1 << 3,
+    State = 1 << 4,
+    Process = 1 << 5,
 }

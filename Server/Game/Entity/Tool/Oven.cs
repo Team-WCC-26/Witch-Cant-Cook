@@ -2,7 +2,7 @@
 
 namespace Server;
 
-public class Oven(int toolId) : CookingTool(toolId, new MultiSlotStorage()), IFixedTool
+public class Oven() : CookingTool(new MultiSlotStorage()), IFixedTool
 {
     protected override IngredientState _cookState => IngredientState.Roasted;
 
@@ -16,11 +16,14 @@ public class Oven(int toolId) : CookingTool(toolId, new MultiSlotStorage()), IFi
     public override bool Insert(Entity entity)
     {
         if (entity is IFixedTool) return false;
+        if (!_storage.TryInsert(entity)) return false;
 
-        return _storage.TryInsert(entity);
+        entity.Parent = this;
+
+        return true;
     }
 
-    protected override void Cook(CookingTool tool)
+    protected override void Cook()
     {
         foreach (var item in _storage)
         {

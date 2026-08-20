@@ -1,8 +1,9 @@
 ﻿using Protocol;
+using System.Runtime.Serialization.DataContracts;
 
 namespace Server;
 
-public abstract class CookingTool(int toolId, IContainerStorage storage) : ContainerTool(toolId, storage)
+public abstract class CookingTool(IContainerStorage storage) : ContainerTool(storage)
 {
     public event Action? OnCookingCompleted;
 
@@ -11,9 +12,8 @@ public abstract class CookingTool(int toolId, IContainerStorage storage) : Conta
     public Ingredient? Ingredient => First as Ingredient;
 
     protected abstract IngredientState _cookState { get; }
-    private int _damage => ServerContext.Instance.DataBase.Tools[ToolId].Damage;
 
-    protected bool _cookable = true;
+    private bool _cookable = true;
     //private float _process = 0;
     //private bool _bIsProcessing = false;
 
@@ -61,9 +61,44 @@ public abstract class CookingTool(int toolId, IContainerStorage storage) : Conta
 
     public void StartCook()
     {
+        if (!_cookable) return;
         if (_storage.Count <= 0) return;
 
-        _cookTimer = _timerManager.Schedule(200, this, static t => t.Cook(t));
+        if (!_timerManager.Resume(_cookTimer))
+        {
+            float maxHp = 0;
+
+            foreach (var item in _storage)
+            {
+                Ingredient ingredient;
+
+                if (item is ContainerTool ct)
+                {
+                    ingredient = ct.First as Ingredient;
+                }
+                else
+                {
+                    ingredient = item as Ingredient;
+                }
+
+                maxHp = MathF.Max(maxHp, ingredient.Hp);
+            }
+
+            long delayMs = (long)MathF.Ceiling(maxHp / Damage);
+
+            if (!_timerManager.ResetDelayMs(_cookTimer, delayMs))
+            {
+                _cookTimer = _timerManager.Schedule(delayMs, this, static t => t.Cook());
+            }
+        }
+
+        CookStartPacket packet = new()
+        {
+            ToolEntityId = EntityId,
+            CookingTimeMs = _timerManager.RemainingTime(_cookTimer)
+        };
+
+        Room.BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
     public void SetCookEnable(bool enable)
@@ -108,10 +143,10 @@ public abstract class CookingTool(int toolId, IContainerStorage storage) : Conta
     {
         if (entity is not Ingredient _) return false;
 
-        return _storage.TryInsert(entity);
+        return base.Insert(entity);
     }
 
-    protected virtual void Cook(CookingTool tool)
+    protected virtual void Cook()
     {
         Ingredient?.TryCook(_cookState);
     }

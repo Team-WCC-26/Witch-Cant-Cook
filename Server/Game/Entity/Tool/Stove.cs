@@ -1,6 +1,6 @@
 ﻿namespace Server;
 
-public class Stove(int toolId) : ContainerTool(toolId, new SingleSlotStorage()), IFixedTool
+public class Stove() : ContainerTool(new SingleSlotStorage()), IFixedTool
 {
     //public override bool TryCombine(ICombinable other, out ICombinable combinable)
     //{
@@ -19,18 +19,16 @@ public class Stove(int toolId) : ContainerTool(toolId, new SingleSlotStorage()),
 
     public override bool Interact(Player player)
     {
-        if (!Insert(player.HoldingEntity)) return false;
-
-        player.HoldingEntity = null;
-
-        return true;
+        return Insert(player.HoldingEntity);
     }
 
     public override bool Insert(Entity entity)
     {
         if (entity is Pan pan && _storage.TryInsert(pan))
         {
+            pan.Parent = this;
             pan.SetCookEnable(true);
+            pan.StartCook();
 
             return true;
         }

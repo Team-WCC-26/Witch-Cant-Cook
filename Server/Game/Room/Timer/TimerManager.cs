@@ -18,6 +18,7 @@ public sealed class TimerManager
         var timer = new Timer<T>
         {
             Id = _nextId++,
+            DelayMs = delayMs,
             EndTime = now + delayMs,
             State = state,
             Callback = callback
@@ -39,6 +40,7 @@ public sealed class TimerManager
 
             _queue.Dequeue();
 
+            if (endTime != timer.EndTime) continue;
             if (!_timers.TryGetValue(timer.Id, out var current)) continue;
             if (!ReferenceEquals(timer, current)) continue;
             if (timer.Paused || timer.Cancelled) continue;
@@ -91,19 +93,38 @@ public sealed class TimerManager
         return Math.Max(0, timer.EndTime - TimeUtil.NowMs());
     }
 
+    //public bool ResetDelayMs(TimerHandle handle, long delayMs)
+    //{
+    //    if (delayMs == 0) return false;
+    //    if (!_timers.TryGetValue(handle.Id, out var timer)) return false;
+
+    //    if (timer.Paused)
+    //    {
+    //        timer.DelayMs += delayMs - timer.RemainingTime;
+    //        timer.RemainingTime = delayMs;
+    //    }
+    //    else
+    //    {
+    //        var newEndTime = TimeUtil.NowMs() + delayMs;
+    //        timer.DelayMs += newEndTime - timer.EndTime;
+    //        timer.EndTime = newEndTime;
+    //    }
+
+    //    return true;
+    //}
+
+    /// <summary>
+    /// pot 전용
+    /// </summary>
     public bool ResetDelayMs(TimerHandle handle, long delayMs)
     {
         if (delayMs == 0) return false;
         if (!_timers.TryGetValue(handle.Id, out var timer)) return false;
 
-        if (timer.Paused)
-        {
-            timer.RemainingTime = delayMs;
-        }
-        else
-        {
-            timer.EndTime = TimeUtil.NowMs() + delayMs;
-        }
+        timer.EndTime += delayMs - timer.DelayMs;
+        timer.DelayMs = delayMs;
+
+        _queue.Enqueue(timer, timer.EndTime);
 
         return true;
     }

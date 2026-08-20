@@ -1,6 +1,6 @@
 ﻿namespace Server;
 
-public class CounterTop(int toolId) : ContainerTool(toolId, new SingleSlotStorage()), IFixedTool
+public class CounterTop() : ContainerTool(new SingleSlotStorage()), IFixedTool
 {
     //public override bool TryCombine(ICombinable other, out ICombinable combinable)
     //{
@@ -34,6 +34,17 @@ public class CounterTop(int toolId) : ContainerTool(toolId, new SingleSlotStorag
     {
         if (player.HoldingEntity == null) return false;
 
-        return _storage.TryInsert(player.HoldingEntity);
+        if (!Insert(player.HoldingEntity)) return false;
+
+        player.HoldingEntity.Parent = this;
+
+        return true;
+    }
+
+    public override bool Insert(Entity entity)
+    {
+        if (entity is Ingredient ingraedient && !ingraedient.Stat.CanAttachToCounterTop) return false;
+
+        return base.Insert(entity);
     }
 }

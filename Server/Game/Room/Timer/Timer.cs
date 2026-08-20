@@ -3,6 +3,7 @@
 internal abstract class TimerBase
 {
     public long Id;
+    public long DelayMs;
     public long EndTime;
 
     public long RemainingTime;

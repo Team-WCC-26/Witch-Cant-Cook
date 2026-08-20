@@ -10,12 +10,19 @@ public class DataBase
     public IReadOnlyDictionary<RecipeKey, int> IngredientCombinations => _ingredientCombinations;
     public IReadOnlyDictionary<int, ToolData> Tools => _tools;
     public IReadOnlyDictionary<int, DishData> Dishes => _dishes;
+    public IReadOnlyDictionary<IngredientStatePair, int> Recipes => _recipes;
+    public IReadOnlyDictionary<int, List<IngredientGroup>> IngredientGroups => _ingredientGroups;
+    public IReadOnlyDictionary<int, List<RecipeGroup>> RecipeGroups => _recipeGroups;
 
     private readonly Dictionary<int, IngredientData> _ingredients = new();
     private readonly Dictionary<int, IngredientStatData> _ingredientStats = new();
     private readonly Dictionary<RecipeKey, int> _ingredientCombinations = new();
     private readonly Dictionary<int, ToolData> _tools = new();
     private readonly Dictionary<int, DishData> _dishes = new();
+    private readonly Dictionary<IngredientStatePair, int> _recipes = new();
+    private readonly Dictionary<int, List<IngredientGroup>> _ingredientGroups = new();
+    private readonly Dictionary<int, List<RecipeGroup>> _recipeGroups = new();
+
     //private readonly Dictionary<IngredientStatePair, HashSet<RecipeKey>> _recipeCandidate = new();
 
     public async Task Init()
@@ -31,6 +38,8 @@ public class DataBase
             string combination = "Combination";
             string tool = "Tool";
             string dish = "Recipe";
+            string ingredientGroup = "IngredientGroup";
+            string recipeGroup = "RecipeGroup";
 
             // 재료 데이터 파싱
             string json = await client.GetStringAsync(url + export + ingredient);
@@ -70,10 +79,44 @@ public class DataBase
             json = await client.GetStringAsync(url + export + dish);
 
             _dishes.Clear();
+            _recipes.Clear();
 
             foreach (var dishData in JsonConvert.DeserializeObject<List<DishData>>(json))
             {
                 _dishes[dishData.Id] = dishData;
+                _recipes[new(dishData.IngredientId, dishData.ConditionFlag)] = dishData.Id;
+            }
+
+            // 재료 그룹 파싱
+            json = await client.GetStringAsync(url + export + ingredientGroup);
+
+            _ingredientGroups.Clear();
+
+            foreach (var groupData in JsonConvert.DeserializeObject<List<IngredientGroup>>(json))
+            {
+                if (!_ingredientGroups.TryGetValue(groupData.Difficulty, out var list))
+                {
+                    list = new();
+                    _ingredientGroups[groupData.Difficulty] = list;
+                }
+
+                list.Add(groupData);
+            }
+
+            // 레시피 그룹 파싱
+            json = await client.GetStringAsync(url + export + recipeGroup);
+
+            _recipeGroups.Clear();
+
+            foreach (var groupData in JsonConvert.DeserializeObject<List<RecipeGroup>>(json))
+            {
+                if (!_recipeGroups.TryGetValue(groupData.Difficulty, out var list))
+                {
+                    list = new();
+                    _recipeGroups[groupData.Difficulty] = list;
+                }
+
+                list.Add(groupData);
             }
         };
 

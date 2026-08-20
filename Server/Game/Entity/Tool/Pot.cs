@@ -2,7 +2,7 @@
 
 namespace Server;
 
-public class Pot(int toolId) : CookingTool(toolId, new SingleSlotStorage()), IFixedTool
+public class Pot() : CookingTool(new SingleSlotStorage()), IFixedTool
 {
     protected override IngredientState _cookState => IngredientState.Boiled;
 
@@ -15,18 +15,11 @@ public class Pot(int toolId) : CookingTool(toolId, new SingleSlotStorage()), IFi
             Ingredient.TryCombine(subject, out var result);
             _storage.Clear();
             _storage.TryInsert(result);
+            result.Parent = this;
         }
 
         StartCook();
 
         return true;
-    }
-
-    protected override void Cook(CookingTool tool)
-    {
-        if (!Ingredient.TryCook(IngredientState.Boiled))
-        {
-            // Ingredient를 쓰레기로 바꾸는 로직 넣거나 trycook 내부에서 불가능한 조리법일시 쓰레기로 바꾸도록 해야할듯
-        }
     }
 }

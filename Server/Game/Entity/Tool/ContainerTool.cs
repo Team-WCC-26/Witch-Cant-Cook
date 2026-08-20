@@ -1,6 +1,6 @@
 ﻿namespace Server;
 
-public abstract class ContainerTool(int toolId, IContainerStorage storage) : Tool(toolId)
+public abstract class ContainerTool(IContainerStorage storage) : Tool
 {
     public Entity? First => _storage.First;
     protected IContainerStorage _storage { get; init; } = storage;
@@ -16,7 +16,11 @@ public abstract class ContainerTool(int toolId, IContainerStorage storage) : Too
     {
         if (entity is IFixedTool) return false;
 
-        return _storage.TryInsert(entity);
+        if (!_storage.TryInsert(entity)) return false;
+
+        entity.Parent = this;
+
+        return true;
     }
 
     public bool Remvoe(Entity entity)

@@ -1,4 +1,5 @@
 using Protocol;
+using System.Net.Sockets;
 using System.Numerics;
 
 namespace Server;
@@ -29,15 +30,17 @@ public class Room
     private readonly Dictionary<DoorId, Door> _doors = new();
 
     private TimerManager _timerManager = new();
-    //private CookManager _cookManager = new();
-
-    private PacketBatch _batch = new();
+    private IngredientSpawner _ingredientSpanwer;
+    private DishManager _dishManager;
 
     public Room(string id, string name, string password)
     {
         Id = id;
         Name = name;
         Password = password;
+
+        _ingredientSpanwer = new(this, _timerManager, 3);
+        _dishManager = new(this, _timerManager);
     }
 
     public void Init()
@@ -50,43 +53,40 @@ public class Room
 
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
         _doors[DoorId.Kitchen] = new(DoorId.Kitchen, 2, 3, _timerManager, HandleDoorOpened);
+
+        _ingredientSpanwer.SetStage(1);
+    }
+
+    public void Start()
+    {
+        _dishManager.Start();
+        _ingredientSpanwer.Start();
+    }
+
+    public void Stop()
+    {
+        _dishManager.Stop();
+        _ingredientSpanwer.Stop();
     }
 
     public void Tick(long deltaTime)
     {
-        _batch.Clear();
-
-        //_cookManager.Tick(deltaTime);
         _timerManager.Tick(deltaTime);
+
+        WorldStatePacket packet = new()
+        {
+            Tick = _tick
+        };
 
         foreach (var entity in _dirtyEntities)
         {
             var mask = entity.ConsumeDirtyMask();
-
-            // 패킷 Writer를 통한 batching packet 작성
+            entity.WriteSnapShot(packet, mask);
         }
 
         _dirtyEntities.Clear();
 
-        foreach (var player in _players)
-        {
-            WorldStatePacket packet = new()
-            {
-                Tick = _tick
-            };
-            packet.Players.Add(GetMovementData(player));
-
-            foreach (var p in _players)
-            {
-                if (p == player) continue;
-
-                packet.Pings.Add(GetPingData(p));
-                packet.Players.Add(GetMovementData(p));
-                // Room의 재료 업데이트 상태 보내기
-            }
-
-            player.AddBatch(PacketSerializer.Serialize(packet, true));
-        }
+        BroadCast(PacketSerializer.Serialize(packet, true));
 
         FlushSend();
 
@@ -117,8 +117,9 @@ public class Room
 
     public Ingredient GenerateIngredient(int id, out long entityId)
     {
-        Ingredient ingredient = new(id);
+        Ingredient ingredient = new();
         entityId = GenerateEntityId();
+        ingredient.InitIngredientId(id);
 
         RegisterEntity(entityId, ingredient);
 
@@ -132,25 +133,31 @@ public class Room
         switch (id)
         {
             case 10:
-                tool = new Knife(id);
+                tool = new Knife();
                 break;
 
             case 20:
-                tool = new Pan(id);
+                tool = new Pan();
                 break;
 
             case 30:
+                tool = new Stove();
+                break;
 
             case 40:
-                tool = new Pot(id);
+                tool = new Pot();
                 break;
 
             case 50:
-                tool = new Dish(id);
+                tool = new Dish();
+                break;
+
+            case 60:
+                tool = new CounterTop();
                 break;
 
             case 80:
-                tool = new Oven(id);
+                tool = new Oven();
                 //_cookManager.RegisterCookingTool(id, tool as CookingTool);
                 break;
 
@@ -160,6 +167,7 @@ public class Room
         }
         
         entityId = GenerateEntityId();
+        tool.InitToolId(id);
 
         RegisterEntity(entityId, tool);
 
@@ -171,17 +179,17 @@ public class Room
         _entities.Remove(id);
     }
 
-    public void CombineEntity(long resultId, long removeId, Entity eentity)
-    {
-        _entities.Remove(removeId);
+    //public void CombineEntity(long resultId, long removeId, Entity entity)
+    //{
+    //    _entities.Remove(removeId);
 
-        _entities[resultId] = eentity;
-    }
+    //    _entities[resultId] = entity;
+    //}
 
-    public void UpdateEntity(long entityId, Entity entity)
-    {
-        _entities[entityId] = entity;
-    }
+    //public void UpdateEntity(long entityId, Entity entity)
+    //{
+    //    _entities[entityId] = entity;
+    //}
 
     private long GenerateEntityId()
     {
@@ -254,7 +262,8 @@ public class Room
 
     public bool InteractEntity(long entityId, Player player)
     {
-        if (!_entities.TryGetValue(entityId, out var entity)) return false;
+        if (!_entities.TryGetValue(entityId, out var entity) || entity.IsDestroyed) return false;
+        if (player.HoldingEntity != null && entityId == player.HoldingEntity.EntityId) return false;
         if (entity is not IInteractable interactable) return false;
 
         return interactable.Interact(player);
@@ -262,8 +271,8 @@ public class Room
 
     public bool InsertEntity(long targetId, long subjectId)
     {
-        if (!_entities.TryGetValue(targetId, out var target)) return false;
-        if (!_entities.TryGetValue(subjectId, out var subject)) return false;
+        if (!_entities.TryGetValue(targetId, out var target) || target.IsDestroyed) return false;
+        if (!_entities.TryGetValue(subjectId, out var subject) || target.IsDestroyed) return false;
 
         if (target is not ContainerTool containerTool) return false;
 
@@ -278,6 +287,17 @@ public class Room
     public void StopInteractDoor(DoorId doorId, string playerId)
     {
         _doors[doorId].EndInteract(playerId);
+    }
+
+    public bool ServeDish(long dishId)
+    {
+        if (!Entities.TryGetValue(dishId, out var entity)) return false;
+        if (entity is not Dish dish || dish.Ingredient == null) return false;
+
+        var ingredient = dish.Ingredient;
+        _dishManager.SubmitDish(new(ingredient.IngredientId, ingredient.ProcessState));
+
+        return true;
     }
 
     private void RegisterEntity(long id, Entity entity)
@@ -337,6 +357,11 @@ public class Room
         {
             DoorId = door.DoorId
         };
+
+        if (door.DoorId == DoorId.Kitchen)
+        {
+            Start();
+        }
 
         BroadCast(PacketSerializer.Serialize(packet, true));
     }

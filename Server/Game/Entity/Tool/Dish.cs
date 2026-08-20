@@ -1,6 +1,6 @@
 ﻿namespace Server;
 
-public class Dish(int toolId) : ContainerTool(toolId, new SingleSlotStorage())
+public class Dish() : ContainerTool(new SingleSlotStorage())
 {
     public int IngredientId => (Ingredient != null) ? Ingredient.IngredientId : -1;
     public Ingredient? Ingredient => First as Ingredient;
@@ -55,6 +55,7 @@ public class Dish(int toolId) : ContainerTool(toolId, new SingleSlotStorage())
             Ingredient.TryCombine(ingredient, out var result);
             _storage.Clear();
             _storage.TryInsert(result);
+            result.Parent = this;
         }
 
         return true;

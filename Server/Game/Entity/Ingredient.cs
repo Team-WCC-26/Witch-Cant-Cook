@@ -2,30 +2,22 @@
 
 namespace Server;
 
-public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
+public class Ingredient() : Entity, ICookable, IInteractable
 {
-    public int IngredientId => _ingredientId;
-    private readonly int _ingredientId = ingredientId;
-    public IngredientState ProcessState { get; set; } = 0;
-
-    private int _hp = -1;
-    public int Hp
+    public int IngredientId { get; private set; }
+    public IngredientState ProcessState { get; private set; }
+    public int Hp { get; private set; }
+    public IngredientStatData Stat { get; private set; }
+    
+    internal void InitIngredientId(int id)
     {
-        get
-        {
-            if (_hp < 0)
-            {
-                if (ServerContext.Instance.DataBase.TryGetIngredientStatById(IngredientId, out var stat))
-                {
-                    _hp = stat.Hp;
-                }
-                else
-                {
-                    _hp = 10;
-                }
-            }
+        IngredientId = id;
+        Hp = 0;
+        ProcessState = 0;
 
-            return _hp;
+        if (ServerContext.Instance.DataBase.TryGetIngredientStatById(IngredientId, out var stat))
+        {
+            Stat = stat;
         }
     }
 
@@ -39,8 +31,18 @@ public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
 
         result = Room.GenerateIngredient(resId, out _);
 
-        other.Room.UnregisterEntity(other.EntityId);
-        Room.UnregisterEntity(EntityId);
+        other.Destroy();
+        Destroy();
+
+        IngredientCombinePacket packet = new()
+        {
+            SubjectEntityId = EntityId,
+            TargetEntityId = other.EntityId,
+            NewEntityId = result.EntityId,
+            ResultIngredientId = resId
+        };
+
+        Room.BroadCast(PacketSerializer.Serialize(packet, true));
 
         return true;
     }
@@ -54,6 +56,7 @@ public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
         if ((DB.Ingredients[IngredientId].InvalidProcessFlag & state) != 0) return false;
 
         ProcessState |= state;
+        MakeDirty(DirtyMask.State);
 
         return true;
     }
@@ -68,7 +71,17 @@ public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
             return true;
         }
 
-        if (player.HoldingEntity is Knife) return TryCook(IngredientState.Cut);
+        if (player.HoldingEntity is Knife knife)
+        {
+            Hp += knife.Damage;
+
+            if (Hp >= Stat.Hp) return TryCook(IngredientState.Cut);
+
+            MakeDirty(DirtyMask.Process);
+
+            return true;
+        }
+
         if (player.HoldingEntity is Dish dish)
         {
             return dish.TryCombine(this);
@@ -80,4 +93,31 @@ public class Ingredient(int ingredientId) : Entity, ICookable, IInteractable
 
         return false;
     }
+
+    public override void WriteSnapShot(WorldStatePacket packet, DirtyMask mask)
+    {
+        base.WriteSnapShot(packet, mask);
+
+        if (mask.HasFlag(DirtyMask.State))
+        {
+            packet.CookCompleteIngredients.Add(new()
+            {
+                ToolEntityId = Parent.EntityId,
+                IngredientEntityId = EntityId,
+                CookType = ProcessState
+            });
+        }
+        else if (mask.HasFlag(DirtyMask.Process))
+        {
+            packet.CookProcessIngredients.Add(new()
+            {
+                EntityId = EntityId,
+                Process = 1.0f * Hp / Stat.Hp
+            });
+        }
+    }
+
+    public virtual void OnPickup(Player player) { }
+    public virtual void OnDrop() { }
+    public virtual void OnCollision() { }
 }

@@ -15,8 +15,17 @@ public class DishData
     public string PrefabName { get; init; }
 
     [JsonProperty("ingredientID")]
-    public string IngredientId { get; init; }
+    public int IngredientId { get; init; }
 
-    [JsonProperty("conditionFlag")]
+    [JsonProperty("finalConditionFlag")]
     public IngredientState ConditionFlag { get; init; }
+
+    [JsonProperty("timeLimit")]
+    public int TimeLimit { get; init; }
+
+    [JsonProperty("nextRecipeSpawnDelay")]
+    public int SpawnDelay { get; init; }
+
+    [JsonProperty("spawnProbability")]
+    public int SpawnWeight { get; init; }
 }

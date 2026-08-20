@@ -2,7 +2,7 @@
 
 namespace Server;
 
-public class Pan(int toolId) : CookingTool(toolId, new SingleSlotStorage())
+public class Pan() : CookingTool(new SingleSlotStorage())
 {
     protected override IngredientState _cookState => IngredientState.Grilled;
 
@@ -13,6 +13,18 @@ public class Pan(int toolId) : CookingTool(toolId, new SingleSlotStorage())
             player.HoldingEntity = this;
             Parent = player;
 
+            SetCookEnable(false);
+            
+            if (_timerManager.Pause(_cookTimer))
+            {
+                CookPausePacket packet = new()
+                {
+                    ToolEntityId = EntityId,
+                };
+
+                Room.BroadCast(PacketSerializer.Serialize(packet, true));
+            }
+
             return true;
         }
 
@@ -21,8 +33,12 @@ public class Pan(int toolId) : CookingTool(toolId, new SingleSlotStorage())
             return dish.TryCombine(Ingredient);
         }
 
-        if (player.HoldingEntity is not Ingredient ingredient) return false;
-        if (!_storage.TryInsert(ingredient)) return false;
+        return Insert(player.HoldingEntity);
+    }
+
+    public override bool Insert(Entity entity)
+    {
+        if (!base.Insert(entity)) return false;
 
         StartCook();
 
