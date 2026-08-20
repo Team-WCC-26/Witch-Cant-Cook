@@ -8,8 +8,12 @@ namespace Server
     public class WorldStateRouter
     {
         public Action<IReadOnlyList<PingResultPacket>> OnPing;
-        public Action<IReadOnlyList<PlayerMovementPacket>> OnPlayer;
-        public Action<IReadOnlyList<IngredientMovementStatePacket>> OnIngredient;
+        public Action<IReadOnlyList<EntityPickupPacket>> OnEntityPickup;
+        public Action<IReadOnlyList<EntityChangeParentPacket>> OnEntityInserted;
+        public Action<IReadOnlyList<EntityDestroyPacket>> OnEntityDestroyed;
+        public Action<IReadOnlyList<PlayerMovementPacket>> OnPlayerMoved;
+        public Action<IReadOnlyList<CookCompletePacket>> OnCookCompleted;
+        public Action<IReadOnlyList<CookProcessPacket>> OnCookProcessChanged;
 
         private PacketId _worldStateId => PacketId.S_WorldState;
 
@@ -27,8 +31,12 @@ namespace Server
             var packet = MemoryPackSerializer.Deserialize<WorldStatePacket>(data.Span);
 
             OnPing?.Invoke(packet.Pings);
-            OnPlayer?.Invoke(packet.Players);
-            OnIngredient?.Invoke(packet.IngredientMovements);
+            OnEntityPickup?.Invoke(packet.PickupEntities);
+            OnEntityInserted?.Invoke(packet.ParentChangedEntities);
+            OnEntityDestroyed?.Invoke(packet.DestroyedEntities);
+            OnPlayerMoved?.Invoke(packet.Players);
+            OnCookCompleted?.Invoke(packet.CookCompleteIngredients);
+            OnCookProcessChanged?.Invoke(packet.CookProcessIngredients);
         }
 
         ~WorldStateRouter()

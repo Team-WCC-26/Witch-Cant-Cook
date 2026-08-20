@@ -28,6 +28,11 @@ public class JobQueue
         _shard.Push(Process);
     }
 
+    public void Clear()
+    {
+        _jobs.Clear();
+    }
+
     private void Process()
     {
         int processCnt = 0;

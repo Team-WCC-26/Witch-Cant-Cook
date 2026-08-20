@@ -12,7 +12,7 @@ public class ShardManager
         for (int i = 0; i < _shardCnt; i++)
         {
             Shard shard = new();
-            _ = Task.Run(async () => await shard.StartProcess());
+            _ = Task.Run(shard.StartProcess);
             _shards[i] = shard;
         }
     }

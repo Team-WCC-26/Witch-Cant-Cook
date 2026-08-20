@@ -2,38 +2,53 @@
 
 namespace Server;
 
-public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
+public class Ingredient() : Entity, ICookable, IInteractable
 {
-    public int IngredientId => _ingredientId;
-    private readonly int _ingredientId = ingredientId;
-    public IngredientState ProcessState { get; set; } = 0;
-
-    public bool TryCombine(ICombinable other, out ICombinable combinable)
+    public int IngredientId { get; private set; }
+    public IngredientState ProcessState { get; private set; }
+    public int Hp { get; private set; }
+    public IngredientStatData Stat { get; private set; }
+    
+    internal void InitIngredientId(int id)
     {
-        combinable = null;
+        IngredientId = id;
+        Hp = 0;
+        ProcessState = 0;
 
-        switch (other)
+        if (ServerContext.Instance.DataBase.TryGetIngredientStatById(IngredientId, out var stat))
         {
-            case Ingredient ingredient:
-                var DB = ServerContext.Instance.DataBase;
-
-                if (!DB.RecipeDict.TryGetValue(new(this, ingredient), out var resId)) return false;
-
-                combinable = new Ingredient(resId);
-                return true;
-
-            case Dish d:
-                d.TryCombine(this, out combinable);
-                return true;
+            Stat = stat;
         }
-
-        return false;
     }
 
-    public bool TryCook(IngredientState state, out Ingredient ingredient)
+    public bool TryCombine(Ingredient other, out Ingredient result)
     {
-        ingredient = this;
+        result = null;
 
+        var DB = ServerContext.Instance.DataBase;
+
+        if (!DB.IngredientCombinations.TryGetValue(new(this, other), out var resId)) return false;
+
+        result = Room.GenerateIngredient(resId, out _);
+
+        other.Destroy();
+        Destroy();
+
+        IngredientCombinePacket packet = new()
+        {
+            SubjectEntityId = EntityId,
+            TargetEntityId = other.EntityId,
+            NewEntityId = result.EntityId,
+            ResultIngredientId = resId
+        };
+
+        Room.BroadCast(PacketSerializer.Serialize(packet, true));
+
+        return true;
+    }
+
+    public bool TryCook(IngredientState state)
+    {
         if ((ProcessState & state) != 0) return false;
 
         var DB = ServerContext.Instance.DataBase;
@@ -41,7 +56,68 @@ public class Ingredient(int ingredientId) : Entity, ICombinable, ICookable
         if ((DB.Ingredients[IngredientId].InvalidProcessFlag & state) != 0) return false;
 
         ProcessState |= state;
+        MakeDirty(DirtyMask.State);
 
         return true;
     }
+
+    public bool Interact(Player player)
+    {
+        if (player.HoldingEntity == null)
+        {
+            player.HoldingEntity = this;
+            Parent = player;
+
+            return true;
+        }
+
+        if (player.HoldingEntity is Knife knife)
+        {
+            Hp += knife.Damage;
+
+            if (Hp >= Stat.Hp) return TryCook(IngredientState.Cut);
+
+            MakeDirty(DirtyMask.Process);
+
+            return true;
+        }
+
+        if (player.HoldingEntity is Dish dish)
+        {
+            return dish.TryCombine(this);
+        }
+
+        //if (player.HoldingEntity is not ICombinable combinable) return false;
+
+        //TryCombine(combinable, out var res);
+
+        return false;
+    }
+
+    public override void WriteSnapShot(WorldStatePacket packet, DirtyMask mask)
+    {
+        base.WriteSnapShot(packet, mask);
+
+        if (mask.HasFlag(DirtyMask.State))
+        {
+            packet.CookCompleteIngredients.Add(new()
+            {
+                ToolEntityId = Parent.EntityId,
+                IngredientEntityId = EntityId,
+                CookType = ProcessState
+            });
+        }
+        else if (mask.HasFlag(DirtyMask.Process))
+        {
+            packet.CookProcessIngredients.Add(new()
+            {
+                EntityId = EntityId,
+                Process = 1.0f * Hp / Stat.Hp
+            });
+        }
+    }
+
+    public virtual void OnPickup(Player player) { }
+    public virtual void OnDrop() { }
+    public virtual void OnCollision() { }
 }
