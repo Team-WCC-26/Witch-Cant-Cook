@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UIElements;
 
 [RequireComponent(typeof(CatchableObj))]
 public class IngredientOnion : IngredientTrait
@@ -8,7 +7,10 @@ public class IngredientOnion : IngredientTrait
     [SerializeField] private CatchableObj catchable;
 
     [Header("Time Settings")]
-    [SerializeField] private float holdDuration = 3f;
+    [Tooltip("들고 있는 상태로 이 시간이 지나면 처음 활성화되어 영역을 생성한다.")]
+    [SerializeField] private float initialHoldDuration = 3f;
+    [Tooltip("첫 활성화 이후, 영역을 반복 생성하는 주기(쿨타임).")]
+    [SerializeField] private float spawnCooldown = 2f;
 
     private readonly IngredientTraitTimer holdTimer = new();
     private IngredientTraitAreaCreator areaCreator;
@@ -57,10 +59,19 @@ public class IngredientOnion : IngredientTrait
 
     private void StartHoldTimer()
     {
+        // 1단계: 처음 initialHoldDuration(3초)만큼 들고 있어야 활성화된다.
         holdTimer.StartTimer(
-            holdDuration,
-            SpawnTearArea
+            initialHoldDuration,
+            ActivateSpawnLoop
         );
+    }
+
+    private void ActivateSpawnLoop()
+    {
+        // 3초를 채운 시점에 첫 영역을 생성하고,
+        // 2단계: 이후로는 spawnCooldown(2초)마다 반복 생성한다.
+        SpawnTearArea();
+        holdTimer.StartLoop(spawnCooldown, SpawnTearArea);
     }
 
     private void SpawnTearArea()
