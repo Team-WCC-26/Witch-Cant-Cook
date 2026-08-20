@@ -12,9 +12,9 @@ public class IngredientTraitArea : MonoBehaviour
     [SerializeField] private LayerMask playerLayer;
 
     [Header("Movement Effect")]
-    [Tooltip("이 영역에 들어온 플레이어에게 적용할 이동 효과. " +
-             "빙판: ChangeFriction만 켜고 FrictionMultiplier를 낮게(0.03~0.1). " +
-             "진흙: ChangeSpeed만 켜고 SpeedMultiplier를 낮게(0.4 등). " +
+    [Tooltip("이 영역에 들어온 플레이어에게 적용할 이동 효과. |" +
+             "눈물: ChangeFriction만 켜고 FrictionMultiplier(0.008 ~ 0.015). |" +
+             "꿀, 달걀: 둘 다 켜고 SpeedMultiplier를 낮게(0.3 ~ 0.5). | " +
              "Duration이 남아있어도 영역을 벗어나면 즉시 원복된다.")]
     [SerializeField] private PlayerEffectController.MovementEffectData movementEffect;
 

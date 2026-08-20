@@ -21,9 +21,10 @@ public class IngredientNetworkBridge : MonoBehaviour
         //Define.eIngredient.Fish,
         //Define.eIngredient.Meat,
         //Define.eIngredient.Corn,
-        Define.eIngredient.Honey,
+        //Define.eIngredient.Honey,
         //Define.eIngredient.Squid,
-        Define.eIngredient.Onion
+        //Define.eIngredient.Onion,
+        Define.eIngredient.Salmon,
     };
 
     [SerializeField] private GameObject spawnPointObj;

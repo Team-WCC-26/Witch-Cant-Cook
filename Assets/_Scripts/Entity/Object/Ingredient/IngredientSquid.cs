@@ -67,7 +67,7 @@ public class IngredientSquid : IngredientTrait
     private void OnPicked()
     {
         Debug.Log($"[Squid] OnPicked 핸들러 호출됨 - {gameObject.name}");
-        holdTimer.StartLoop(holdDuration, () => TrySpray(SprayHolder));
+        holdTimer.StartLoop(holdDuration, () => TrySpray(SprayAround));
     }
     private void OnDropped()
     {
