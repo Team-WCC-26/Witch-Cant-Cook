@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: -5104553156259578466}
   - component: {fileID: 6215733895467237350}
   - component: {fileID: 5256957274881897092}
+  - component: {fileID: -384053855214374386}
+  - component: {fileID: 2893194697849916806}
   m_Layer: 0
   m_Name: Squid
   m_TagString: Untagged
@@ -159,8 +161,10 @@ MonoBehaviour:
   rb: {fileID: 7219698865940448481}
   objType: 1
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
   throwForce: 0
 --- !u!114 &5256957274881897092
 MonoBehaviour:
@@ -183,3 +187,41 @@ MonoBehaviour:
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
+--- !u!114 &-384053855214374386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055630435769749224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: 6215733895467237350}
+  playerTag: Player
+--- !u!114 &2893194697849916806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055630435769749224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
+  catchable: {fileID: 6215733895467237350}
+  meshFilter: {fileID: 2333739563307424759}
+  targetRenderer: {fileID: 542662371783880509}
+  cutParticle: {fileID: 1766117342703822864, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  gaugeUI: {fileID: 7519362936080867326, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
+  actionVisuals:
+  - action: 0
+    mesh: {fileID: 4789206286548881375, guid: 68ee6dac8367afd478b84df55c48597b, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 78bd210f9d9c0184a85628001932032c, type: 2}

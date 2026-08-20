@@ -12,6 +12,10 @@ GameObject:
   - component: {fileID: 3191308600538664531}
   - component: {fileID: 841391422208834201}
   - component: {fileID: 5976261718436651129}
+  - component: {fileID: 3163966468090185503}
+  - component: {fileID: 6799696461143793664}
+  - component: {fileID: -2649709027471576472}
+  - component: {fileID: 4784320800737997909}
   m_Layer: 7
   m_Name: Cabbage
   m_TagString: Untagged
@@ -112,3 +116,94 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.21086486, y: 0.16902749, z: 0.21405032}
   m_Center: {x: 0, y: 0.084513746, z: 0}
+--- !u!54 &3163966468090185503
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201833804755295052}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &6799696461143793664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201833804755295052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
+  catchable: {fileID: -2649709027471576472}
+  meshFilter: {fileID: 3191308600538664531}
+  targetRenderer: {fileID: 841391422208834201}
+  cutParticle: {fileID: 1766117342703822864, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  gaugeUI: {fileID: 7519362936080867326, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
+  actionVisuals:
+  - action: 0
+    mesh: {fileID: 3875361993401326352, guid: 239601dc0d91b794094e4ca41aafb412, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+  - action: 1
+    mesh: {fileID: -1542172526655982709, guid: 2497ba2bc75163f4fbcc13dfe732014c, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+--- !u!114 &-2649709027471576472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201833804755295052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
+  networkId: 0
+  col: {fileID: 5976261718436651129}
+  rb: {fileID: 3163966468090185503}
+  objType: 1
+  canBePicked: 1
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  throwForce: 5
+--- !u!114 &4784320800737997909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201833804755295052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: -2649709027471576472}
+  playerTag: Player

@@ -47,7 +47,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5393613222406266558}
-  m_Mesh: {fileID: 7444200561883379566, guid: 352f76e76f41e9746ad85bbd5b23f260, type: 3}
+  m_Mesh: {fileID: 8969138290134644396, guid: ada8039b6cc93d044ac2f82f763a9a91, type: 3}
 --- !u!23 &7645356873443844550
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -73,7 +73,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 10a6957cd2f3fc14b92d31b392661be8, type: 2}
+  - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -162,8 +162,10 @@ MonoBehaviour:
   rb: {fileID: 3883366835955713611}
   objType: 1
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
   throwForce: 0
 --- !u!114 &3754346785235192577
 MonoBehaviour:
