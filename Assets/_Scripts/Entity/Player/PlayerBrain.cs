@@ -32,6 +32,7 @@ public sealed class PlayerBrain : MonoBehaviour
     
 
     [field: Header("Animated Body")]
+    [field: SerializeField] public Transform FacingRoot { get; private set; }
     [field: SerializeField] public Animator Animator { get; private set; } = null;
 
     [field: Header("Interaction")]

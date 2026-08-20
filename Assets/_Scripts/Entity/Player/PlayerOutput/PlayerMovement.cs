@@ -47,9 +47,15 @@ public class PlayerMovement
 
     public void Move(Vector2 moveInput, bool isRun)
     {
+        Quaternion moveRotation =
+            brain.CameraController != null
+            && brain.CameraController.isActiveAndEnabled
+                ? brain.CameraController.YawRotation
+                : brain.transform.rotation;
+
         Vector3 moveDir =
-            brain.transform.right * moveInput.x +
-            brain.transform.forward * moveInput.y;
+            moveRotation * Vector3.right * moveInput.x +
+            moveRotation * Vector3.forward * moveInput.y;
 
         if (moveDir.sqrMagnitude > 1f)
         {

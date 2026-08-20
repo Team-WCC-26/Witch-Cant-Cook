@@ -109,11 +109,15 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
 
     private void SendMovementPacket()
     {
+        Quaternion facingRotation = brain.CameraController != null
+            ? brain.CameraController.YawRotation
+            : brain.transform.rotation;
+
         PlayerMovementPacket packet = new()
         {
             PlayerId = brain.PlayerId,
             Position = DataConverter.UnityToNumerics(brain.transform.position),
-            Rotation = DataConverter.UnityToNumerics(brain.transform.rotation),
+            Rotation = DataConverter.UnityToNumerics(facingRotation),
             CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(CurrentState)
         };
 
