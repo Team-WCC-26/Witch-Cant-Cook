@@ -22,10 +22,6 @@ public class PlayerAnimController
     private readonly int equipActionStateHash = Animator.StringToHash("HoldKnife");
     private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
 
-    private const float IdleSpeed = 0f;
-    private const float WalkSpeed = 4f;
-    private const float RunSpeed = 7f;
-
     public PlayerAnimController(PlayerBrain brain)
     {
         this.brain = brain;
@@ -47,19 +43,14 @@ public class PlayerAnimController
             return;
         }
 
-        float currentSpeed = IdleSpeed;
-
-        if (state.MoveDir.sqrMagnitude > 0.0001f)
-        {
-            currentSpeed = state.IsRun ? RunSpeed : WalkSpeed;
-        }
+        float currentSpeed = brain.ActionController.Movement.CurrentSpeed;
 
         animator.SetFloat(speedHash, currentSpeed);
     }
 
     public void ForceIdle()
     {
-        animator.SetFloat(speedHash, IdleSpeed);
+        animator.SetFloat(speedHash, 0f);
         animator.SetTrigger(toIdleHash);
         animator.Update(0f);
     }
