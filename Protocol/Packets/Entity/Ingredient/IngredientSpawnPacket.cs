@@ -13,3 +13,12 @@ public partial class IngredientSpawnPacket
     public Vector3 Position { get; set; }
     public Quaternion Quaternion { get; set; }
 }
+
+[MemoryPackable]
+[PacketId(PacketId.S_IngraedientConveySpawn)]
+public partial class IngredientConveySpawnPacket
+{
+    public long EntityId { get; set; }
+    public int IngredienteId { get; set; }
+    public int ConveyId { get; set; }
+}

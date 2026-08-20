@@ -6,14 +6,14 @@ namespace Server;
 public class IngredientCombinationData
 {
     [JsonProperty("id")]
-    public int Id;
+    public int Id { get; init; }
 
     [JsonProperty("ingID")]
-    public int ResultId;
+    public int ResultId { get; init; }
 
     [JsonProperty("comID1")]
-    public int IngredientId;
+    public int IngredientId { get; init; }
 
     [JsonProperty("conditionFlag")]
-    public IngredientState ConditionFlag;
+    public IngredientState ConditionFlag { get; init; }
 }

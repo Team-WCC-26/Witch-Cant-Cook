@@ -32,6 +32,7 @@ public class RoomManager
             _rooms.TryAdd(id, room);
         }
 
+        room.Init();
         _shardManager.RegisterRoom(room);
 
         return room;
