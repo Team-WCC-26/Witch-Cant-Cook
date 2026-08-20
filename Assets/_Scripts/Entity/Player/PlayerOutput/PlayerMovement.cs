@@ -79,7 +79,6 @@ public class PlayerMovement
         rb.angularVelocity = Vector3.zero;
 
         CurrentSpeed = newSpeed;
-        Debug.Log($"newSpeed: {CurrentSpeed}, velocity: {rb.linearVelocity}");
     }
 
     public void Stop()
