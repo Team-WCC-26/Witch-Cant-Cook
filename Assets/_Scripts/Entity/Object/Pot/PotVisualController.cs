@@ -1,71 +1,71 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PotVisualController : MonoBehaviour
 {
     [SerializeField] private PotItemContainer soupContainer;
     [SerializeField] private PotItemContainer stewContainer;
-    [SerializeField] private PotVisualData[] potVisuals;
 
-    private Dictionary<int, PotVisualData> soupVisualDict = new();
-    private Dictionary<int, PotVisualData> stewVisualDict = new();
+    private CatchableObj primary;
+    private CatchableObj secondary;
 
     private void Awake()
     {
-        foreach (var visual in potVisuals)
-        {
-            if (visual == null) continue;
-
-            switch (visual.PotType)
-            {
-                case PotType.Soup:
-                    soupVisualDict[visual.IngredientId] = visual;
-                    break;
-
-                case PotType.Stew:
-                    stewVisualDict[visual.IngredientId] = visual;
-                    break;
-            }
-        }
-
+        DisableLegacyMesh(soupContainer);
+        DisableLegacyMesh(stewContainer);
         HideAll();
     }
 
-    public void UpdateVisual(int ingredientId, bool isDone = false)
+    public void ShowPrimary(CatchableObj entity)
     {
-        HideAll();
+        // Slot A
+        if (entity == null) return;
 
-        Dictionary<int, PotVisualData> targetDict = isDone ? stewVisualDict : soupVisualDict;
+        primary = entity;
+        secondary = null;
+        PlaceAt(primary.transform, soupContainer.transform);
+    }
 
-        if (!targetDict.TryGetValue(ingredientId, out PotVisualData visualData))
-        {
-            Debug.LogWarning($"Pot visual data not found. IngredientId: {ingredientId}, IsDone: {isDone}");
-            return;
-        }
+    public void ShowCombined(CatchableObj result, CatchableObj combinedVisual)
+    {
+        // Slot B
+        ShowPrimary(result);
+        if (combinedVisual == null) return;
 
-        if (isDone) SetStewVisual(visualData);
-        else SetSoupVisual(visualData);
+        secondary = combinedVisual;
+        secondary.transform.SetParent(primary.transform, true);
+        secondary.transform.SetPositionAndRotation(
+            stewContainer.transform.position,
+            stewContainer.transform.rotation);
+    }
+
+    public void ApplyCookedVisual()
+    {
+        ApplyBoiled(primary);
+        ApplyBoiled(secondary);
     }
 
     public void HideAll()
     {
-        soupContainer.gameObject.SetActive(false);
-        stewContainer.gameObject.SetActive(false);
-    }   
-
-    private void SetSoupVisual(PotVisualData visualData)
-    {
-        soupContainer.PotMeshFilter.sharedMesh = visualData.PotMesh;
-        soupContainer.PotMeshRenderer.sharedMaterials = visualData.PotMaterials;
-        soupContainer.transform.localScale = visualData.Scale;
-        soupContainer.gameObject.SetActive(true);
+        primary = null;
+        secondary = null;
     }
 
-    private void SetStewVisual(PotVisualData visualData)
+    private static void PlaceAt(Transform target, Transform slot)
     {
-        stewContainer.PotMeshFilter.sharedMesh = visualData.PotMesh;
-        stewContainer.PotMeshRenderer.sharedMaterials = visualData.PotMaterials;
-        stewContainer.transform.localScale = visualData.Scale;
-        stewContainer.gameObject.SetActive(true);
+        target.SetParent(slot, false);
+        target.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+    }
+
+    private static void ApplyBoiled(CatchableObj entity)
+    {
+        if (entity != null && entity.TryGetComponent(out IngredientReaction reaction))
+            reaction.ApplyServerAction(IngredientAction.Boil);
+    }
+
+    private static void DisableLegacyMesh(PotItemContainer container)
+    {
+        if (container == null) return;
+        if (container.PotMeshRenderer != null)
+            container.PotMeshRenderer.enabled = false;
     }
 }

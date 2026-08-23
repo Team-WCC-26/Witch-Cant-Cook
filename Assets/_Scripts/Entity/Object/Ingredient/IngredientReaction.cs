@@ -129,6 +129,14 @@ public class IngredientReaction : MonoBehaviour
 
         return false;
     }
+
+    public void ApplyServerAction(IngredientAction action)
+    {
+        // Server visual
+        completedActions |= action;
+        lastAction = action;
+        ApplyVisual(completedActions);
+    }
     
     private bool IsActionBlocked(IngredientAction action)
     {

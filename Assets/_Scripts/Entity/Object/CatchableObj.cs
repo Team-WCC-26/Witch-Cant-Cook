@@ -51,6 +51,8 @@ public class CatchableObj : MonoBehaviour
         set => networkId = value;
     }
 
+    public long ParentEntityId { get; set; }
+
     public CatchableData Data { get; set; }
 
     [SerializeField] private Collider col;
@@ -77,6 +79,7 @@ public class CatchableObj : MonoBehaviour
 
     private Vector3 worldScaleBeforeHold = Vector3.one;
     private bool hasHoldScaleSnapshot;
+    private CatchableObj combinedVisual;
 
     public event Action OnPicked;
     public event Action OnDropped;
@@ -118,8 +121,10 @@ public class CatchableObj : MonoBehaviour
 
     private void ResetObj()
     {
+        ReleaseCombinedVisual();
         canBePicked = true;
         networkId = 0;
+        ParentEntityId = 0;
     }
 
     public void OnPick(PlayerBrain holder)
@@ -183,6 +188,23 @@ public class CatchableObj : MonoBehaviour
     public void ChangePickState(bool isPick)
     {
         canBePicked = isPick;
+    }
+
+    public void AttachCombinedVisual(CatchableObj visual)
+    {
+        // Owned visual
+        combinedVisual = visual;
+    }
+
+    public void ReleaseCombinedVisual()
+    {
+        // Child cleanup
+        if (combinedVisual == null) return;
+
+        CatchableObj visual = combinedVisual;
+        combinedVisual = null;
+        visual.transform.SetParent(null, true);
+        ObjectPoolManager.Instance.Push(visual.gameObject);
     }
 
     public void ApplyThrow(EntityThrowPacket packet)
