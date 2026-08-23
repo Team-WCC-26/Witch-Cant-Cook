@@ -1,4 +1,6 @@
-﻿namespace Server;
+﻿using System.Numerics;
+
+namespace Server;
 
 public class Dish() : ContainerTool(new SingleSlotStorage())
 {
@@ -7,29 +9,34 @@ public class Dish() : ContainerTool(new SingleSlotStorage())
 
     public override bool Interact(Player player)
     {
-        if (player.HoldingEntity == null)
-        {
-            player.HoldingEntity = this;
-            Parent = player;
-        }
-        else if (player.HoldingEntity is Dish dish)
+        if (player.HoldingEntity != null) return Insert(player.HoldingEntity);
+
+        player.HoldingEntity = this;
+        Parent = player;
+
+        return true;
+    }
+
+    public override bool Insert(Entity entity)
+    {
+        if (entity is Dish dish)
         {
             if (TryCombine(dish.Ingredient))
             {
                 dish.Clear();
             }
-            else if(dish.TryCombine(Ingredient))
+            else if (dish.TryCombine(Ingredient))
             {
                 _storage.Clear();
             }
 
             return false;
         }
-        else if (player.HoldingEntity is Pan pan)
+        else if (entity is Pan pan)
         {
             if (!TryCombine(pan.Ingredient)) return false;
         }
-        else if (player.HoldingEntity is Ingredient ingredient)
+        else if (entity is Ingredient ingredient)
         {
             TryCombine(ingredient);
         }
@@ -39,11 +46,6 @@ public class Dish() : ContainerTool(new SingleSlotStorage())
         }
 
         return true;
-    }
-
-    public override bool Insert(Entity entity)
-    {
-        return false; // insert 없음
     }
 
     public bool TryCombine(Ingredient ingredient)
