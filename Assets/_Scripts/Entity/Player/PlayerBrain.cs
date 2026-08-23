@@ -32,6 +32,7 @@ public sealed class PlayerBrain : MonoBehaviour
     
 
     [field: Header("Animated Body")]
+    [field: SerializeField] public Transform FacingRoot { get; private set; }
     [field: SerializeField] public Animator Animator { get; private set; } = null;
 
     [field: Header("Interaction")]
@@ -40,11 +41,13 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
     [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
     [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
-    [field: SerializeField] public bool DebugInteraction { get; private set; } = false; 
-    
+    [field: SerializeField] public bool DebugInteraction { get; private set; } = false;
+
     [field: Header("Base Move")]
-    [field: SerializeField] public float MoveSpeed { get; private set; } = 5.0f;
-    [field: SerializeField] public float RunMultiplier { get; private set; } = 1.5f;
+    [field: SerializeField] public float MoveSpeed { get; private set; }
+    [field: SerializeField] public float RunMultiplier { get; private set; } 
+    [field: SerializeField, Min(0f)] public float Acceleration { get; private set; } 
+    [field: SerializeField, Min(0f)] public float Deceleration { get; private set; }
 
     [field: Header("Action")]
     [field: SerializeField, Min(0f)] public float RecoveryDelay { get; private set; } = 0.1f;

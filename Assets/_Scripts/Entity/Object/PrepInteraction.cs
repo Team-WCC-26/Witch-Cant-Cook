@@ -1,12 +1,16 @@
+using Protocol;
+using Server;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class PrepInteraction : MapObjInteraction
+public class PrepInteraction : MapObjInteraction, IEntityParentReceiver
 {
     [SerializeField] private Transform itemSlot;
     [SerializeField] private Transform knifeSlot;
 
     private CatchableObj currentItem;
     private CatchableObj currentKnife;
+    private readonly HashSet<long> pendingEntities = new();
 
     private void OnCollisionEnter(Collision collision)
     {
@@ -16,8 +20,36 @@ public class PrepInteraction : MapObjInteraction
         }
         if (catchable.IsHold) return;
         if (!IsRegistered) return;
+        if (ServerManager.Instance == null) return;
+        if (catchable.NetworkId == 0) return;
+        if (!pendingEntities.Add(catchable.NetworkId)) return;
 
-        Router?.RequestPut(this, catchable);
+        // Insert request
+        EntityInsertPacket packet = new()
+        {
+            SubjectEntityId = catchable.NetworkId,
+            TargetEntityId = NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (!collision.gameObject.TryGetComponent(out CatchableObj catchable)) return;
+        pendingEntities.Remove(catchable.NetworkId);
+    }
+
+    public void HandleEntityAdded(CatchableObj entity)
+    {
+        // Parent result
+        pendingEntities.Remove(entity.NetworkId);
+        ApplyPut(entity);
+    }
+
+    public void HandleEntityRemoved(CatchableObj entity)
+    {
+        Release(entity);
     }
 
     public void ApplyPut(CatchableObj catchable)

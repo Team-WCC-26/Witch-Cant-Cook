@@ -9,7 +9,7 @@ namespace Server
     {
         public Action<IReadOnlyList<PingResultPacket>> OnPing;
         public Action<IReadOnlyList<EntityPickupPacket>> OnEntityPickup;
-        public Action<IReadOnlyList<EntityChangeParentPacket>> OnEntityInserted;
+        public Action<IReadOnlyList<EntityChangeParentPacket>> OnEntityParentChanged;
         public Action<IReadOnlyList<EntityDestroyPacket>> OnEntityDestroyed;
         public Action<IReadOnlyList<PlayerMovementPacket>> OnPlayerMoved;
         public Action<IReadOnlyList<CookCompletePacket>> OnCookCompleted;
@@ -30,9 +30,10 @@ namespace Server
         {
             var packet = MemoryPackSerializer.Deserialize<WorldStatePacket>(data.Span);
 
+            // World state dispatch
             OnPing?.Invoke(packet.Pings);
             OnEntityPickup?.Invoke(packet.PickupEntities);
-            OnEntityInserted?.Invoke(packet.ParentChangedEntities);
+            OnEntityParentChanged?.Invoke(packet.ParentChangedEntities);
             OnEntityDestroyed?.Invoke(packet.DestroyedEntities);
             OnPlayerMoved?.Invoke(packet.Players);
             OnCookCompleted?.Invoke(packet.CookCompleteIngredients);

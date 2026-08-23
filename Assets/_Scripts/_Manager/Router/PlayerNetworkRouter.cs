@@ -1,65 +1,74 @@
 using Protocol;
 using Server;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class PlayerNetworkRouter : MonoBehaviour
 {
-    private IEnumerator Start()
-    {
-        yield return new WaitForSeconds(0.3f);
-        ServerManager.Instance.Router.OnPlayer += RoutePlayerState;
-        ServerManager.Instance.RegisterHandler(PacketId.S_EntityPickup, RouteEntityPickup);
-    }
+    private Coroutine subscribeRoutine;
+    private bool isSubscribed;
 
     private void OnEnable()
     {
-        //Debug.Log("PlayerNetworkRouter Enabled");
-        //ServerManager.Instance.Router.OnPlayer += RoutePlayerState;
-        //ServerManager.Instance.RegisterHandler(PacketId.S_EntityPickup, RouteEntityPickup);
+        subscribeRoutine = StartCoroutine(SubscribeWhenReady());
     }
 
     private void OnDisable()
     {
-        if (ServerManager.Instance == null) return;
+        if (subscribeRoutine != null)
+        {
+            StopCoroutine(subscribeRoutine);
+            subscribeRoutine = null;
+        }
+        if (!isSubscribed || ServerManager.Instance == null) return;
 
-        ServerManager.Instance.Router.OnPlayer -= RoutePlayerState;
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityPickup);
+        ServerManager.Instance.Router.OnPlayerMoved -= RoutePlayerState;
+        ServerManager.Instance.Router.OnEntityPickup -= RouteEntityPickup;
+        isSubscribed = false;
     }
 
-    private void RoutePlayerState(IReadOnlyList<PlayerMovementPacket> list)
+    private IEnumerator SubscribeWhenReady()
     {
+        // World state subscription
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+
+        ServerManager.Instance.Router.OnPlayerMoved += RoutePlayerState;
+        ServerManager.Instance.Router.OnEntityPickup += RouteEntityPickup;
+        isSubscribed = true;
+        subscribeRoutine = null;
+    }
+
+    private void RoutePlayerState(IReadOnlyList<PlayerMovementPacket> packets)
+    {
+        // Movement fan-out
         if (PlayerSpawnManager.Instance == null) return;
 
         foreach (PlayerBrain player in PlayerSpawnManager.Instance.Players)
-        {
-            player.StateResolver.ApplyRemotePacket(list);
-        }
+            player.StateResolver.ApplyRemotePacket(packets);
     }
 
-    private void RouteEntityPickup(ReadOnlyMemory<byte> data)
+    private void RouteEntityPickup(IReadOnlyList<EntityPickupPacket> packets)
     {
-        EntityPickupPacket packet =
-            PacketSerializer.Deserialize<EntityPickupPacket>(data.Span);
-
+        // Pickup authority
         if (PlayerSpawnManager.Instance == null) return;
 
-        if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerID, out PlayerBrain player))
+        foreach (EntityPickupPacket packet in packets)
         {
-            Debug.Log("Player 부재");
-            return;
+            if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerID, out PlayerBrain player))
+            {
+                Debug.LogError($"Player not found. PlayerID: {packet.PlayerID}");
+                continue;
+            }
+
+            if (!ObjectNetworkRouter.Instance.TryGet(packet.EntityId, out CatchableObj target))
+            {
+                Debug.LogError($"Pickup target not found. EntityId: {packet.EntityId}");
+                continue;
+            }
+
+            GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
+            player.Interact.ApplyPicked(target);
         }
-
-        if (!ObjectNetworkRouter.Instance.TryGet(packet.EntityId, out CatchableObj target))
-        {
-            Debug.Log("Catch Target 부재");
-            return;
-        }
-
-        GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
-
-        player.Interact.ApplyPicked(target);
     }
 }

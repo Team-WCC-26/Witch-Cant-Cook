@@ -37,6 +37,17 @@ public static class SlashAnimationGenerator
         new("Right Arm Twist In-Out", -0.13433f, -0.13433f, -0.0664f),
         new("Right Forearm Stretch", 0.96324f, 0f, 0.96324f),
         new("Right Hand In-Out", 0.01080f, 0.01080f, 0.4772f),
+
+        // Keep the unused arm in the measured relaxed idle pose throughout the slash.
+        new("Left Shoulder Down-Up", 0.01671f, 0.01671f, 0.01671f),
+        new("Left Shoulder Front-Back", 0.23102f, 0.23102f, 0.23102f),
+        new("Left Arm Down-Up", -0.4143f, -0.4143f, -0.4143f),
+        new("Left Arm Front-Back", -0.0012f, -0.0012f, -0.0012f),
+        new("Left Arm Twist In-Out", -0.7465f, -0.7465f, -0.7465f),
+        new("Left Forearm Stretch", 0.87162f, 0.87162f, 0.87162f),
+        new("Left Forearm Twist In-Out", 0.76548f, 0.76548f, 0.76548f),
+        new("Left Hand Down-Up", -0.1509f, -0.1509f, -0.1509f),
+        new("Left Hand In-Out", 0.13197f, 0.13197f, 0.13197f),
     };
 
     [MenuItem("Tools/Player Animation/Generate Slash Animation")]

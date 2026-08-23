@@ -1,11 +1,14 @@
 using UnityEngine;
 
-public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction
+public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction, IEntityParentReceiver
 {
     [SerializeField] private GameObject tempFoodVisual;
 
+    private CatchableObj currentFood;
+
     private void OnEnable()
     {
+        currentFood = null;
         if (tempFoodVisual == null) return;
 
         tempFoodVisual.SetActive(false);
@@ -18,6 +21,30 @@ public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction
 
         tempFoodVisual.SetActive(true);
         DisableTempFoodColliders();
+    }
+
+    public void HandleEntityAdded(CatchableObj entity)
+    {
+        // Parent result
+        if (entity == null || !entity.TryGetComponent(out IngredientReaction reaction)) return;
+
+        currentFood = entity;
+        entity.ChangePickState(false);
+        entity.SetPhysicsState(false);
+        entity.transform.SetParent(transform, false);
+        entity.transform.localPosition = reaction.PlateOffsetPos;
+        entity.transform.localRotation = Quaternion.Euler(reaction.PlateOffsetEuler);
+
+        if (tempFoodVisual != null)
+            tempFoodVisual.SetActive(false);
+    }
+
+    public void HandleEntityRemoved(CatchableObj entity)
+    {
+        if (entity == null || entity != currentFood) return;
+
+        entity.transform.SetParent(null, true);
+        currentFood = null;
     }
 
     private void DisableTempFoodColliders()

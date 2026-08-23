@@ -10,6 +10,10 @@ public class PlayerMovement
     private readonly float moveSpeed;
     private readonly float runMultiplier;
     private readonly float jumpPower;
+
+    //baseFrictionAccel 여기에 먹힘 : 가속도와 감속도
+    private readonly float acceleration;
+    private readonly float deceleration;
     #endregion
 
     private Rigidbody rb => brain.Rb;
@@ -26,31 +30,32 @@ public class PlayerMovement
     /// </summary>
     public float FrictionMultiplier { get; set; } = 1f;
 
-    // FrictionMultiplier = 1일 때 사실상 한 프레임 안에 목표 속도에 도달하도록 잡은 기준 가속도.
-    private readonly float baseFrictionAccel;
-
     private float lastGroundedTime = float.NegativeInfinity;
     public bool CanJump =>
         IsGroundedNow ||
         Time.time - lastGroundedTime <= brain.CoyoteTime;
 
-    public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower)
+    public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower, float acceleration, float deceleration)
     {
         this.brain = brain;
         this.moveSpeed = moveSpeed;
         this.runMultiplier = runMultiplier;
         this.jumpPower = jumpPower;
-
-        // moveSpeed에 비례한 큰 값으로 잡아, FrictionMultiplier가 1일 때는
-        // 한 프레임 안에 목표 속도로 스냅되던 기존 느낌을 그대로 유지한다.
-        baseFrictionAccel = moveSpeed * runMultiplier * 40f;
+        this.acceleration = acceleration;
+        this.deceleration = deceleration;
     }
 
     public void Move(Vector2 moveInput, bool isRun)
     {
+        Quaternion moveRotation =
+            brain.CameraController != null
+            && brain.CameraController.isActiveAndEnabled
+                ? brain.CameraController.YawRotation
+                : brain.transform.rotation;
+
         Vector3 moveDir =
-            brain.transform.right * moveInput.x +
-            brain.transform.forward * moveInput.y;
+            moveRotation * Vector3.right * moveInput.x +
+            moveRotation * Vector3.forward * moveInput.y;
 
         if (moveDir.sqrMagnitude > 1f)
         {
@@ -65,12 +70,13 @@ public class PlayerMovement
         // 목표 속도가 현재보다 커지는 "가속" 상황은 항상 즉각 반응하게 두고(입력이 먹통처럼 느껴지지 않게),
         // 목표 속도가 현재보다 작아지는 "감속/정지" 상황에서만 FrictionMultiplier를 적용해
         // 관성이 남아 미끄러지는 느낌을 낸다. (빙판: 밀 때는 평소처럼, 멈추거나 방향을 바꿀 때만 미끄러짐)
-        bool isDecelerating = targetVelocity.sqrMagnitude <= currentHorizontal.sqrMagnitude;
-        float frictionForThisFrame = isDecelerating ? FrictionMultiplier : 1f;
-
-        float maxDelta = baseFrictionAccel * frictionForThisFrame * Time.fixedDeltaTime;
-        Vector3 newHorizontal = Vector3.MoveTowards(currentHorizontal, targetVelocity, maxDelta);
-
+        bool hasMoveInput = moveDir.sqrMagnitude > 0.0001f;
+        float targetSpeed = hasMoveInput ? targetVelocity.magnitude : 0f;
+        float currentSpeed = CurrentSpeed;
+        float velocityDelta = targetSpeed > currentSpeed ? acceleration : deceleration * FrictionMultiplier;
+        float newSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, velocityDelta * Time.fixedDeltaTime);
+        Vector3 velocityDirection = hasMoveInput ? moveDir.normalized : currentHorizontal.normalized;
+        Vector3 newHorizontal = velocityDirection * newSpeed;
         rb.linearVelocity = new Vector3(
             newHorizontal.x,
             rb.linearVelocity.y,
@@ -78,7 +84,7 @@ public class PlayerMovement
         );
         rb.angularVelocity = Vector3.zero;
 
-        CurrentSpeed = newHorizontal.magnitude;
+        CurrentSpeed = newSpeed;
     }
 
     public void Stop()
