@@ -100,8 +100,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_ServeDish = 402,
     S_ServeDish = 403,
 
-    C_ClearDish = 403,
-    S_ClearDish = 404,
+    C_ClearDish = 404,
+    S_ClearDish = 405,
 
     // 기타 패킷 (00~)
     // ...

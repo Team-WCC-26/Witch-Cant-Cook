@@ -27,9 +27,12 @@ public class Ingredient() : Entity, ICookable, IInteractable
 
         var DB = ServerContext.Instance.DataBase;
 
-        if (!DB.IngredientCombinations.TryGetValue(new(this, other), out var resId)) return false;
+        if (!DB.IngredientCombinations.TryGetValue(new(this, other), out var resId))
+        {
+            resId = 99999;
+        }
 
-        result = Room.GenerateIngredient(resId, out _);
+        result = Room.GenerateIngredient(resId, out var entityId);
 
         other.Destroy();
         Destroy();

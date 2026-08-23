@@ -34,6 +34,8 @@ public class CounterTop() : ContainerTool(new SingleSlotStorage()), IFixedTool
     {
         if (player.HoldingEntity == null) return false;
 
+        if (player.HoldingEntity is ContainerTool ct && ct is not IFixedTool && First is Ingredient ingredient) return ct.Insert(ingredient);
+
         if (!Insert(player.HoldingEntity)) return false;
 
         player.HoldingEntity.Parent = this;
