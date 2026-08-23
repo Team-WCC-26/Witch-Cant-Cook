@@ -148,6 +148,9 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
 
     protected virtual void Cook()
     {
-        Ingredient?.TryCook(_cookState);
+        if (Ingredient != null && !Ingredient.TryCook(_cookState))
+        {
+
+        }
     }
 }
