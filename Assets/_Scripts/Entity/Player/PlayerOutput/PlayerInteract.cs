@@ -52,10 +52,9 @@ public class PlayerInteract
         if (obj.IsHold) return;
         if (!obj.CanBePicked) return;
 
-        EntityPickupPacket packet = new()
+        EntityInteractPacket packet = new()
         {
-            EntityId = obj.NetworkId,
-            PlayerID = brain.PlayerId
+            TargetEntityId = obj.NetworkId
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
@@ -138,19 +137,27 @@ public class PlayerInteract
     #region User Input Helper
     private void RequestDrop()
     {
-        ForceDropHeld();
+        RequestDropHeld();
+    }
+
+    public void RequestDropHeld()
+    {
+        if (!IsHolding) return;
+
+        CatchableObj target = HeldObj;
+        EntityThrowPacket packet = new()
+        {
+            EntityId = target.NetworkId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(target.transform.position),
+            Velocity = System.Numerics.Vector3.Zero
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     public void ForceDropHeld()
     {
-        brain.ActionController.CancelAction();
-        if (!IsHolding) return;
-
-        CatchableObj target = HeldObj;
-        HeldObj = null;
-
-        target.transform.SetParent(null, true);
-        target.OnDrop();
+        RequestDropHeld();
     }
 
     private void RequestThrow()
@@ -170,8 +177,6 @@ public class PlayerInteract
             Position = ProtocolTypeConverter.ToNumericsVector3(throwPosition),
             Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
         };
-
-        HeldObj = null;
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
@@ -251,6 +256,14 @@ public class PlayerInteract
         target.transform.localRotation = Quaternion.Euler(holdTransform.LocalEulerAngles);
         target.transform.localScale = holdTransform.LocalScale;
         HeldObj = target;
+    }
+
+    public void ApplyThrown(CatchableObj target)
+    {
+        if (target == null || HeldObj != target) return;
+
+        brain.ActionController.CancelAction();
+        HeldObj = null;
     }
     #endregion
 

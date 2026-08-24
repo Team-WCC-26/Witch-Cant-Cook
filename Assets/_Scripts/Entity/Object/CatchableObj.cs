@@ -147,6 +147,7 @@ public class CatchableObj : MonoBehaviour
         Holder = null;
 
         IsHold = false;
+        canBePicked = true;
         RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
@@ -157,6 +158,7 @@ public class CatchableObj : MonoBehaviour
         Holder = null;
 
         IsHold = false;
+        canBePicked = true;
         RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
