@@ -34,5 +34,17 @@ public class Define
         Trash = 99999
     }
 
+    public enum eToolId
+    {
+        KitchenKnife = 10,
+        FryingPan = 20,
+        GasRange = 30,
+        Pot = 40,
+        Plate = 50,
+        PrepTable = 60,
+        Oven = 80,
+        Stove = 90,
+    }
+
 }
 

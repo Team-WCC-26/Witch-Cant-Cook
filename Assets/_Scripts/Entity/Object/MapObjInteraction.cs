@@ -14,14 +14,14 @@ public enum ToolId
 
 public abstract class MapObjInteraction : MonoBehaviour
 {
-    [SerializeField] private ToolId toolId;
+    [SerializeField] private Define.eToolId eToolId;
 
     private long networkId;
 
     protected MapObjNetworkRouter Router { get; private set; }
 
-    public int ToolId => (int)toolId;
-    public ToolId ToolType => toolId;
+    public int ToolId => (int)eToolId;
+    public Define.eToolId ToolType => (Define.eToolId)eToolId;
     public long NetworkId => networkId;
     public bool IsRegistered => networkId != 0;
 
