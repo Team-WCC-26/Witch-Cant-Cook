@@ -46,20 +46,20 @@ public class ToolHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_ClearDish)]
-    public static void ClearDish(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<ServeDishPacket>(package.Body);
-        var room = session.Player.Room;
+    //[PacketHandler(PacketId.C_ClearDish)]
+    //public static void ClearDish(Session session, PacketPackageInfo package)
+    //{
+    //    var packet = DeSerialize<ServeDishPacket>(package.Body);
+    //    var room = session.Player.Room;
 
-        room.PushJob(() =>
-        {
-            if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
-            if (entity is not Dish dish) return;
+    //    room.PushJob(() =>
+    //    {
+    //        if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
+    //        if (entity is not Dish dish) return;
 
-            dish.Clear();
+    //        dish.Clear();
 
-            room.BroadCast(PacketSerializer.Serialize(packet, true));
-        });
-    }
+    //        room.BroadCast(PacketSerializer.Serialize(packet, true));
+    //    });
+    //}
 }

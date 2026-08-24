@@ -10,6 +10,7 @@ namespace Protocol;
 //}
 
 [MemoryPackable]
+[PacketId(PacketId.S_DishState)]
 public partial class DishStatePacket
 {
     public int RecipeId { get; set; }
@@ -24,13 +25,13 @@ public partial class ServeDishPacket
     public long EntityId { get; set; }
 }
 
-[MemoryPackable]
-[PacketId(PacketId.C_ClearDish)]
-[PacketId(PacketId.S_ClearDish)]
-public partial class ClearDishPacket
-{
-    public long EntityId { get; set; }
-}
+//[MemoryPackable]
+//[PacketId(PacketId.C_ClearDish)]
+//[PacketId(PacketId.S_ClearDish)]
+//public partial class ClearDishPacket
+//{
+//    public long EntityId { get; set; }
+//}
 
 public enum DishState
 {
