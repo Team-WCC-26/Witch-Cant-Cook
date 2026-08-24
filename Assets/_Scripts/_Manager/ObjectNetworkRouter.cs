@@ -120,6 +120,7 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
             return;
         }
 
+        catchable.Holder?.Interact.ApplyThrown(catchable);
         catchable.ParentEntityId = 0;
         catchable.ApplyThrow(packet);
     }
