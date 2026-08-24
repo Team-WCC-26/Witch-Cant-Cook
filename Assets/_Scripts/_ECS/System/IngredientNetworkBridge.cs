@@ -13,15 +13,15 @@ public class IngredientNetworkBridge : MonoBehaviour
     public static IngredientNetworkBridge Instance { get; private set; }
     [Header("Spawn Settings")]
     private readonly Define.eIngredient[] ingredientIDs = {
-        //Define.eIngredient.Mushroom,
-        //Define.eIngredient.Carrot,
-        //Define.eIngredient.Tomato,
-        //Define.eIngredient.Fish,
-        //Define.eIngredient.Meat,
-        //Define.eIngredient.Corn,
-        //Define.eIngredient.Honey,
-        //Define.eIngredient.Squid,
-        //Define.eIngredient.Onion,
+        Define.eIngredient.Mushroom,
+        Define.eIngredient.Carrot,
+        Define.eIngredient.Tomato,
+        Define.eIngredient.Fish,
+        Define.eIngredient.Meat,
+        Define.eIngredient.Corn,
+        Define.eIngredient.Honey,
+        Define.eIngredient.Squid,
+        Define.eIngredient.Onion,
         Define.eIngredient.Salmon,
     };
 

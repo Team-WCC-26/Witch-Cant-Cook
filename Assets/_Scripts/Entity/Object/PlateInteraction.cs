@@ -59,7 +59,8 @@ public class PlateInteraction : MonoBehaviour, IHeldPrimaryAction, IEntityParent
     {
         if (interact == null) return false;
 
-        return interact.TryServePlate(this);
+        IServePlate target = interact.FindInteractTarget<IServePlate>();
+        return target != null && target.TryServePlate(this);
     }
 
     private void OnCollisionEnter(Collision collision)

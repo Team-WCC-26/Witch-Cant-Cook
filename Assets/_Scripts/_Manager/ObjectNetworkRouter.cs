@@ -120,6 +120,7 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
             return;
         }
 
+        catchable.Holder?.Interact.ApplyThrown(catchable);
         catchable.ParentEntityId = 0;
         catchable.ApplyThrow(packet);
     }
@@ -142,11 +143,17 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
     {
         ToolSpawnPacket packet = MemoryPackSerializer.Deserialize<ToolSpawnPacket>(data.Span)!;
 
+        if (!Define.TryGetCatchableObjType((Define.eToolId)packet.ToolId, out CatchableObjType toolType))
+        {
+            Debug.LogError($"Unsupported spawned tool ID: {packet.ToolId}");
+            return;
+        }
+
         string toolName = ((CatchableObjType)packet.ToolId).ToString(); // enum �̸��� prefab key�� ��ġ�Ѵٰ� ����
         Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
         Quaternion rot = Quaternion.identity;
 
-        GameObject go = ObjectPoolManager.Instance.Pop(toolName, pos, rot);
+        GameObject go = ObjectPoolManager.Instance.Pop(toolType.ToString(), pos, rot);
         if (go == null) return;
 
         if (go.TryGetComponent(out CatchableObj catchable))
