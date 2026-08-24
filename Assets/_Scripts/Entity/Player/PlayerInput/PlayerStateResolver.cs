@@ -1,6 +1,5 @@
 using UnityEngine;
 using Protocol;
-using System.Collections.Generic;
 public class PlayerStateResolver
 {
     protected readonly PlayerBrain brain;
@@ -32,7 +31,7 @@ public class PlayerStateResolver
     {
     }
 
-    public virtual void ApplyRemotePacket(IReadOnlyList<PlayerMovementPacket> list)
+    public virtual void ApplyRemotePacket(PlayerMovementPacket packet)
     {
     }
 
