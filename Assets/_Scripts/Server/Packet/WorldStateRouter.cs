@@ -7,13 +7,13 @@ namespace Server
 {
     public class WorldStateRouter
     {
-        public Action<IReadOnlyList<PingResultPacket>> OnPing;
-        public Action<IReadOnlyList<EntityPickupPacket>> OnEntityPickup;
-        public Action<IReadOnlyList<EntityChangeParentPacket>> OnEntityParentChanged;
-        public Action<IReadOnlyList<EntityDestroyPacket>> OnEntityDestroyed;
-        public Action<IReadOnlyList<PlayerMovementPacket>> OnPlayerMoved;
-        public Action<IReadOnlyList<CookCompletePacket>> OnCookCompleted;
-        public Action<IReadOnlyList<CookProcessPacket>> OnCookProcessChanged;
+        public event Action<IReadOnlyList<PingResultPacket>> OnPing;
+        public event Action<IReadOnlyList<EntityPickupPacket>> OnEntityPickup;
+        public event Action<IReadOnlyList<EntityChangeParentPacket>> OnEntityParentChanged;
+        public event Action<IReadOnlyList<EntityDestroyPacket>> OnEntityDestroyed;
+        public event Action<IReadOnlyList<PlayerMovementPacket>> OnPlayerMoved;
+        public event Action<IReadOnlyList<CookCompletePacket>> OnCookCompleted;
+        public event Action<IReadOnlyList<CookProcessPacket>> OnCookProcessChanged;
 
         private PacketId _worldStateId => PacketId.S_WorldState;
 

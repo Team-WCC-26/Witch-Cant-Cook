@@ -26,6 +26,8 @@ public class Player : Entity
         get => _position;
         set
         {
+            if (_position == value) return;
+
             _position = value;
             MakeDirty(DirtyMask.Transform);
         }
