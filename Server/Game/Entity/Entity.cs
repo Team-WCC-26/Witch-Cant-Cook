@@ -95,7 +95,7 @@ public abstract class Entity
 
         _dirtyMask |= mask;
 
-        Room.MakeDirty(this);
+        Room?.MakeDirty(this);
     }
 }
 
