@@ -44,8 +44,19 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
         // Movement fan-out
         if (PlayerSpawnManager.Instance == null) return;
 
-        foreach (PlayerBrain player in PlayerSpawnManager.Instance.Players)
-            player.StateResolver.ApplyRemotePacket(packets);
+        foreach (PlayerMovementPacket packet in packets)
+        {
+            if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
+                continue;
+
+            if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player))
+            {
+                Debug.LogWarning($"Player not found. PlayerID: {packet.PlayerId}");
+                continue;
+            }
+
+            player.StateResolver.ApplyRemotePacket(packet);
+        }
     }
 
     private void RouteEntityPickup(IReadOnlyList<EntityPickupPacket> packets)

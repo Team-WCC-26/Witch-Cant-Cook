@@ -1,5 +1,4 @@
 using Protocol;
-using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class RemotePlayerStateResolver : PlayerStateResolver
@@ -53,16 +52,15 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
     }
 
-    public override void ApplyRemotePacket(IReadOnlyList<PlayerMovementPacket> list)
+    public override void ApplyRemotePacket(PlayerMovementPacket packet)
     {
-        if (list == null || list.Count == 0) return;
-        var player = list[1];
+        if (packet == null) return;
 
         ApplyRemoteState(
-            ProtocolTypeConverter.ToClientCombinedState(player.CombinedState)
+            ProtocolTypeConverter.ToClientCombinedState(packet.CombinedState)
         );
 
-        ApplyRemoteTransform(player.Position, player.Rotation);
+        ApplyRemoteTransform(packet.Position, packet.Rotation);
     }
 
     public void ApplyRemoteState(PlayerCombinedState remoteState)
