@@ -63,6 +63,9 @@ public class EntityHandler : PacketHandlerBase
 
         room.PushJob(() =>
         {
+            if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
+
+            entity.Parent = null;
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
