@@ -23,14 +23,16 @@ public class Player : Entity
     public Entity? HoldingEntity { get; set; }
     public Vector3 Position
     {
-        get;
+        get => _position;
         set
         {
-            Position = value;
+            _position = value;
             MakeDirty(DirtyMask.Transform);
         }
     }
     public Quaternion Rotation { get; set; }
+
+    private Vector3 _position;
 
     private PacketBatch _batch = new();
 
