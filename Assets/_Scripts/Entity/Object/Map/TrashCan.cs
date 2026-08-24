@@ -52,6 +52,12 @@ public class TrashCan : MonoBehaviour
     {
         if (catchable.IsRespawning) return;
 
+        if (!Define.TryGetToolId(catchable.ObjType, out Define.eToolId toolId))
+        {
+            Debug.LogError($"Trash respawn is not supported for object type: {catchable.ObjType}");
+            return;
+        }
+
         catchable.IsRespawning = true;
 
         Debug.Log("HandleTool - Start");
@@ -67,7 +73,7 @@ public class TrashCan : MonoBehaviour
         ToolSpawnPacket toolSpawnPacket = new()
         {
             EntityId = 0,
-            ToolId = (int)catchable.ObjType,
+            ToolId = (int)toolId,
             Position = new System.Numerics.Vector3(kitchenSpawnPoint.position.x, kitchenSpawnPoint.position.y, kitchenSpawnPoint.position.z),
             Quaternion = new System.Numerics.Quaternion(kitchenSpawnPoint.rotation.x, kitchenSpawnPoint.rotation.y, kitchenSpawnPoint.rotation.z, kitchenSpawnPoint.rotation.w)
         };

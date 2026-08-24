@@ -38,13 +38,49 @@ public class Define
     {
         KitchenKnife = 10,
         FryingPan = 20,
-        GasRange = 30,
+        Stove = 30,
         Pot = 40,
         Plate = 50,
         PrepTable = 60,
         Oven = 80,
-        Stove = 90,
     }
 
+    public static bool TryGetToolId(CatchableObjType objType, out eToolId toolId)
+    {
+        switch (objType)
+        {
+            case CatchableObjType.Knife:
+                toolId = eToolId.KitchenKnife;
+                return true;
+            case CatchableObjType.Pan:
+                toolId = eToolId.FryingPan;
+                return true;
+            case CatchableObjType.Plate:
+                toolId = eToolId.Plate;
+                return true;
+            default:
+                toolId = default;
+                return false;
+        }
+    }
+
+    public static bool TryGetCatchableObjType(eToolId toolId, out CatchableObjType objType)
+    {
+        switch (toolId)
+        {
+            case eToolId.KitchenKnife:
+                objType = CatchableObjType.Knife;
+                return true;
+            case eToolId.FryingPan:
+                objType = CatchableObjType.Pan;
+                return true;
+            case eToolId.Plate:
+                objType = CatchableObjType.Plate;
+                return true;
+            default:
+                objType = CatchableObjType.Default;
+                return false;
+        }
+    }
 }
 
