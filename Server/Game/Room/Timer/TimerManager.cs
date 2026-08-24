@@ -47,7 +47,14 @@ public sealed class TimerManager
 
             _timers.Remove(timer.Id);
 
-            timer.Invoke();
+            try
+            {
+                timer.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
     }
 

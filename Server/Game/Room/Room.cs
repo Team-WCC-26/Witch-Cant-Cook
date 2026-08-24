@@ -54,7 +54,7 @@ public class Room
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
         _doors[DoorId.Kitchen] = new(DoorId.Kitchen, 2, 3, _timerManager, HandleDoorOpened);
 
-        _ingredientSpanwer.SetStage(1);
+        SetStage(1);
     }
 
     public void Start()
@@ -113,6 +113,12 @@ public class Room
     public void MakeDirty(Entity entity)
     {
         _dirtyEntities.Add(entity);
+    }
+
+    public void SetStage(int stage)
+    {
+        _ingredientSpanwer.SetStage(stage);
+        _dishManager.SetStage(stage);
     }
 
     public Ingredient GenerateIngredient(int id, out long entityId)
@@ -296,6 +302,7 @@ public class Room
 
         var ingredient = dish.Ingredient;
         _dishManager.SubmitDish(new(ingredient.IngredientId, ingredient.ProcessState));
+        dish.Destroy();
 
         return true;
     }
