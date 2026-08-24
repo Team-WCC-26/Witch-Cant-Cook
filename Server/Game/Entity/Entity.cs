@@ -11,6 +11,8 @@ public abstract class Entity
         get => _parent;
         set
         {
+            if (_parent == value) return;
+
             if (_parent is ContainerTool ct)
             {
                 ct.Remvoe(this);
