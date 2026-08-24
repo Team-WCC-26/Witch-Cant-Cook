@@ -52,20 +52,12 @@ public class PlayerInteract
         if (obj.IsHold) return;
         if (!obj.CanBePicked) return;
 
-        EntityInteractPacket packet = new()
-        {
-            TargetEntityId = obj.NetworkId
-        };
-
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        RequestEntityInteract(obj.NetworkId);
     }
 
     private void RequestHeldPrimaryAction()
     {
-        if (!IsHolding)
-        {
-            return;
-        }
+        if (!IsHolding) return;
 
         if (TryUseHeldPrimaryAction()) return;
         if (TryUseHeldObjectReceiver()) return;
@@ -181,24 +173,14 @@ public class PlayerInteract
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    public bool TryServePlate(PlateInteraction plate)
+    public void RequestEntityInteract(long targetEntityId)
     {
-        if (plate == null) return false;
+        EntityInteractPacket packet = new()
+        {
+            TargetEntityId = targetEntityId
+        };
 
-        IServePlate target = FindInteractTarget<IServePlate>();
-        if (target == null) return false;
-
-        return target.TryServePlate(plate);
-    }
-
-    public bool TryCutTarget()
-    {
-        CatchableObj target = FindInteractTarget<CatchableObj>();
-        if (target == null) return false;
-        if (!target.TryGetComponent(out IngredientReaction ingredientReaction)) return false;
-
-        ingredientReaction.Interact(IngredientAction.Cut);
-        return true;
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     public bool TryUseEquipment()
@@ -402,5 +384,3 @@ public class PlayerInteract
     }
     #endregion
 }
-
-
