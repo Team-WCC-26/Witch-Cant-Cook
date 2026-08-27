@@ -5669,6 +5669,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 710904785}
+  - component: {fileID: 710904786}
   m_Layer: 0
   m_Name: SP_Ingredients
   m_TagString: Untagged
@@ -5691,6 +5692,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1302476899}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &710904786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 710904784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41370955d81d8ad4bbc8a15941b58bec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConveyorSpawnPoint
+  beltId: 80001
 --- !u!1 &715536921
 GameObject:
   m_ObjectHideFlags: 0
@@ -17756,6 +17770,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c581b8f359b07f40911f78e7494397a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConveyorBeltController
+  beltId: 0
   path: {fileID: 616137331}
   beltSpeed: 2
   beltRenderer: {fileID: 0}

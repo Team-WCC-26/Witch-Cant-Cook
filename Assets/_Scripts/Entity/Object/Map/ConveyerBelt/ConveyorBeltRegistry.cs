@@ -13,18 +13,33 @@ using UnityEngine;
 public static class ConveyorBeltRegistry
 {
     private static readonly List<ConveyorBeltController> activeBelts = new();
+    private static readonly Dictionary<int, ConveyorBeltController> beltsById = new();
     private static readonly Dictionary<long, ConveyorBeltController> itemOwner = new();
 
     public static void RegisterBelt(ConveyorBeltController belt)
     {
         if (!activeBelts.Contains(belt))
             activeBelts.Add(belt);
+
+        if (beltsById.TryGetValue(belt.BeltId, out var existing) && existing != belt)
+        {
+            Debug.LogWarning($"[ConveyorBeltRegistry] beltId {belt.BeltId} 중복 등록 감지. " +
+                              $"기존: {existing.name}, 새로: {belt.name}. beltId를 확인하세요.");
+        }
+        beltsById[belt.BeltId] = belt;
     }
 
     public static void UnregisterBelt(ConveyorBeltController belt)
     {
         activeBelts.Remove(belt);
+
+        if (beltsById.TryGetValue(belt.BeltId, out var current) && current == belt)
+            beltsById.Remove(belt.BeltId);
     }
+
+    /// <summary>DB의 beltID로 대응하는 ConveyorBeltController를 찾는다. 스폰 시스템에서 사용.</summary>
+    public static bool TryGetBeltById(int beltId, out ConveyorBeltController belt)
+        => beltsById.TryGetValue(beltId, out belt);
 
     /// <summary>
     /// worldPos(보통 스폰 지점 위치)에서 가장 가까운 시작점(waypoints[0])을 가진 벨트를 찾는다.
