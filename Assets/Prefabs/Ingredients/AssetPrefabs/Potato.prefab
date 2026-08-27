@@ -14,6 +14,8 @@ GameObject:
   - component: {fileID: 4126795806365919038}
   - component: {fileID: -341929741550271498}
   - component: {fileID: -2636729341739224782}
+  - component: {fileID: -5372810678010353467}
+  - component: {fileID: 4421413023149403772}
   m_Layer: 7
   m_Name: Potato
   m_TagString: Untagged
@@ -158,6 +160,50 @@ MonoBehaviour:
   rb: {fileID: -341929741550271498}
   objType: 1
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
   throwForce: 5
+--- !u!114 &-5372810678010353467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7684211704048314985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26738c8ecaf57b54c93cbab6864d1428, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
+  catchable: {fileID: -2636729341739224782}
+  playerTag: Player
+--- !u!114 &4421413023149403772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7684211704048314985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
+  catchable: {fileID: -2636729341739224782}
+  meshFilter: {fileID: 6217156531181174646}
+  targetRenderer: {fileID: 8188443133036284860}
+  cutParticle: {fileID: 1766117342703822864, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  gaugeUI: {fileID: 7519362936080867326, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
+  actionVisuals:
+  - action: 0
+    mesh: {fileID: -953564686093839086, guid: daf8c0c1674aaa94abee71e202d0efc2, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+  - action: 0
+    mesh: {fileID: 5156236442672316251, guid: efa93528e179c8348a72afff626d3af6, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}

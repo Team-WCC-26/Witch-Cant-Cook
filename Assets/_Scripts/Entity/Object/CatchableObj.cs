@@ -14,6 +14,34 @@ public enum CatchableObjType
     Broom,
     Bucket
 }
+
+[Serializable]
+public struct LocalTransformData
+{
+    [SerializeField] private Vector3 localPosition;
+    [SerializeField] private Vector3 localEulerAngles;
+    [SerializeField] private Vector3 localScale;
+
+    public Vector3 LocalPosition => localPosition;
+    public Vector3 LocalEulerAngles => localEulerAngles;
+    public Vector3 LocalScale => localScale;
+
+    public static LocalTransformData Identity => new(
+        Vector3.zero,
+        Vector3.zero,
+        Vector3.one);
+
+    public LocalTransformData(
+        Vector3 localPosition,
+        Vector3 localEulerAngles,
+        Vector3 localScale)
+    {
+        this.localPosition = localPosition;
+        this.localEulerAngles = localEulerAngles;
+        this.localScale = localScale;
+    }
+}
+
 public class CatchableObj : MonoBehaviour
 {
     [SerializeField] private long networkId;
@@ -23,6 +51,8 @@ public class CatchableObj : MonoBehaviour
         set => networkId = value;
     }
 
+    public long ParentEntityId { get; set; }
+
     public CatchableData Data { get; set; }
 
     [SerializeField] private Collider col;
@@ -31,19 +61,39 @@ public class CatchableObj : MonoBehaviour
     [Header("Obj Settings")]
     [SerializeField] private CatchableObjType objType = CatchableObjType.Ingredient;
     [SerializeField] private bool canBePicked = true;
-    [SerializeField] private Vector3 holdLocalPosition = Vector3.zero;
-    [SerializeField] private Vector3 holdLocalEulerAngles = Vector3.zero;
+    [SerializeField] private LocalTransformData holdTransform = LocalTransformData.Identity;
     [SerializeField] private float throwForce = 0;
+
 
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
     public CatchableObjType ObjType => objType;
-    public Vector3 HoldLocalPosition => holdLocalPosition;
-    public Vector3 HoldLocalEulerAngles => holdLocalEulerAngles;
+    public LocalTransformData HoldTransform => holdTransform;
     public float ThrowForce => throwForce;
+    public bool IsEquipment { get; private set; }
+    public PlayerBrain Holder { get; private set; }
 
     public bool IsHold { get; private set; } = false;
+    public bool IsRespawning { get; set; } = false;
+
+    private Vector3 worldScaleBeforeHold = Vector3.one;
+    private bool hasHoldScaleSnapshot;
+    private CatchableObj combinedVisual;
+
+    public event Action OnPicked;
+    public event Action OnDropped;
+
+    private void Awake()
+    {
+        foreach (MonoBehaviour behaviour in GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is not IEquipment) continue;
+
+            IsEquipment = true;
+            break;
+        }
+    }
 
     private void OnEnable()
     {
@@ -71,31 +121,55 @@ public class CatchableObj : MonoBehaviour
 
     private void ResetObj()
     {
+        ReleaseCombinedVisual();
         canBePicked = true;
         networkId = 0;
+        ParentEntityId = 0;
     }
 
-    public void OnPick()
+    public void OnPick(PlayerBrain holder)
     {
+        Holder = holder;
+
+        worldScaleBeforeHold = transform.lossyScale;
+        hasHoldScaleSnapshot = true;
+
         releaseFromPrep?.Invoke(this);
         releaseFromPrep = null;
 
         IsHold = true;
         SetPhysicsState(false);
+        OnPicked?.Invoke();
     }
 
     public void OnDrop()
     {
-        IsHold = false;
+        Holder = null;
 
+        IsHold = false;
+        canBePicked = true;
+        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
+        OnDropped?.Invoke();
     }
 
     public void OnThrow()
     {
-        IsHold = false;
+        Holder = null;
 
+        IsHold = false;
+        canBePicked = true;
+        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
+        OnDropped?.Invoke();
+    }
+
+    public void RestoreWorldScaleAfterHold()
+    {
+        if (!hasHoldScaleSnapshot) return;
+
+        transform.localScale = worldScaleBeforeHold;
+        hasHoldScaleSnapshot = false;
     }
 
     public void SetPhysicsState(bool enablePhysics)
@@ -116,6 +190,23 @@ public class CatchableObj : MonoBehaviour
     public void ChangePickState(bool isPick)
     {
         canBePicked = isPick;
+    }
+
+    public void AttachCombinedVisual(CatchableObj visual)
+    {
+        // Owned visual
+        combinedVisual = visual;
+    }
+
+    public void ReleaseCombinedVisual()
+    {
+        // Child cleanup
+        if (combinedVisual == null) return;
+
+        CatchableObj visual = combinedVisual;
+        combinedVisual = null;
+        visual.transform.SetParent(null, true);
+        ObjectPoolManager.Instance.Push(visual.gameObject);
     }
 
     public void ApplyThrow(EntityThrowPacket packet)

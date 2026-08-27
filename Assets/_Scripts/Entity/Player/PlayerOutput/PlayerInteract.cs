@@ -7,8 +7,6 @@ public class PlayerInteract
 {
     private readonly PlayerBrain brain;
 
-    private static readonly bool DebugInteraction = true;
-
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
 
@@ -45,47 +43,42 @@ public class PlayerInteract
     {
         if (IsHolding) return;
 
-        CatchableObj obj = FindCatchable();
-        if (obj == null) return;
+        CatchableObj obj = FindInteractTarget<CatchableObj>();
+        if (obj == null)
+        {
+            brain.ActionController.PunchAction();
+            return;
+        }
         if (obj.IsHold) return;
         if (!obj.CanBePicked) return;
 
-        EntityPickupPacket packet = new()
-        {
-            EntityId = obj.NetworkId,
-            PlayerID = brain.PlayerId
-        };
-
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        RequestEntityInteract(obj.NetworkId);
     }
 
     private void RequestHeldPrimaryAction()
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+        if (!IsHolding) return;
 
-        switch (objType)
-        {
-            case CatchableObjType.Default:
-                Debug.Log("주먹질");
-                break;
-            case CatchableObjType.Knife:
-                //재료 자르기
-                CatchableObj target = FindCatchable();
-                if (target == null) break;
-                if (!target.TryGetComponent(out IngredientReaction ingredientReaction))
-                    break;
+        if (TryUseHeldPrimaryAction()) return;
+        if (TryUseHeldObjectReceiver()) return;
 
-                ingredientReaction.Interact(IngredientAction.Cut);
-                break;
-            case CatchableObjType.Plate:
-                if (TryServePotToPlate()) break;
+        RequestDrop();
+    }
 
-                RequestDrop();
-                break;
-            default:
-                RequestDrop();
-                break;
-        }
+    private bool TryUseHeldPrimaryAction()
+    {
+        if (TryGetHeldComponent(out IHeldPrimaryAction action))
+            return action.TryUsePrimary(this);
+
+        return false;
+    }
+
+    private bool TryUseHeldObjectReceiver()
+    {
+        IHeldObjectReceiver receiver = FindInteractTarget<IHeldObjectReceiver>();
+        if (receiver == null) return false;
+
+        return receiver.TryReceiveHeldObject(HeldObj, this);
     }
     
     private void RequestSecondaryAction()
@@ -95,7 +88,6 @@ public class PlayerInteract
         switch (objType)
         {
             case CatchableObjType.Default:
-                Debug.Log("아무일도... 없었다!");
                 break;
             default:
                 RequestThrow();
@@ -137,17 +129,32 @@ public class PlayerInteract
     #region User Input Helper
     private void RequestDrop()
     {
+        RequestDropHeld();
+    }
+
+    public void RequestDropHeld()
+    {
         if (!IsHolding) return;
 
         CatchableObj target = HeldObj;
-        HeldObj = null;
+        EntityThrowPacket packet = new()
+        {
+            EntityId = target.NetworkId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(target.transform.position),
+            Velocity = System.Numerics.Vector3.Zero
+        };
 
-        target.transform.SetParent(null, true);
-        target.OnDrop();
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    public void ForceDropHeld()
+    {
+        RequestDropHeld();
     }
 
     private void RequestThrow()
     {
+        brain.ActionController.CancelAction();
         if (!IsHolding) return;
 
         CatchableObj target = HeldObj;
@@ -163,20 +170,54 @@ public class PlayerInteract
             Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
         };
 
-        HeldObj = null;
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    public void RequestEntityInteract(long targetEntityId)
+    {
+        EntityInteractPacket packet = new()
+        {
+            TargetEntityId = targetEntityId
+        };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    private bool TryServePotToPlate()
+    public bool TryUseEquipment()
     {
         if (!IsHolding) return false;
-        if (!HeldObj.TryGetComponent(out PlateInteraction plate)) return false;
+        if (!HeldObj.IsEquipment) return false;
 
-        PotInteraction pot = FindPotInteraction();
-        if (pot == null) return false;
+        return brain.ActionController.TryEquipAction();
+    }
 
-        return pot.TryServeToPlate(plate);
+    public bool TryReleaseHeld(CatchableObj target)
+    {
+        if (target == null) return false;
+        if (HeldObj != target) return false;
+
+        brain.ActionController.CancelAction();
+        HeldObj = null;
+        target.transform.SetParent(null, true);
+        target.RestoreWorldScaleAfterHold();
+        return true;
+    }
+
+    private bool TryGetHeldComponent<T>(out T component) where T : class
+    {
+        component = null;
+
+        if (!IsHolding) return false;
+
+        foreach (MonoBehaviour behaviour in HeldObj.GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is not T target) continue;
+
+            component = target;
+            return true;
+        }
+
+        return false;
     }
     #endregion
 
@@ -185,11 +226,26 @@ public class PlayerInteract
     {
         if (target == null) return;
 
-        target.OnPick();
-        target.transform.SetParent(brain.ItemHoldParent, false);
-        target.transform.localPosition = target.HoldLocalPosition;
-        target.transform.localRotation = Quaternion.Euler(target.HoldLocalEulerAngles);
+        brain.ActionController.CancelAction();
+        target.OnPick(brain);
+        Transform holdParent = target.IsEquipment
+            ? brain.EquipPoint
+            : brain.ItemPoint;
+
+        target.transform.SetParent(holdParent, false);
+        LocalTransformData holdTransform = target.HoldTransform;
+        target.transform.localPosition = holdTransform.LocalPosition;
+        target.transform.localRotation = Quaternion.Euler(holdTransform.LocalEulerAngles);
+        target.transform.localScale = holdTransform.LocalScale;
         HeldObj = target;
+    }
+
+    public void ApplyThrown(CatchableObj target)
+    {
+        if (target == null || HeldObj != target) return;
+
+        brain.ActionController.CancelAction();
+        HeldObj = null;
     }
     #endregion
 
@@ -218,73 +274,56 @@ public class PlayerInteract
     }
     #endregion
 
+    #region Find Interactable Target
+    public T FindInteractTarget<T>() where T : class
+    {
+        Ray ray = BuildInteractRay();
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            GetInteractRadius(),
+            ray.direction,
+            brain.InteractDistance);
+
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            Collider hitCollider = hit.collider;
+            if (hitCollider == null) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
+
+            T target = GetComponentInParent<T>(hitCollider);
+            if (target == null) continue;
+
+            return target;
+        }
+
+        return null;
+    }
+
+    private static T GetComponentInParent<T>(Collider collider) where T : class
+    {
+        if (typeof(Component).IsAssignableFrom(typeof(T)))
+            return collider.GetComponentInParent(typeof(T)) as T;
+
+        foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
+        {
+            if (behaviour is T target)
+                return target;
+        }
+
+        return null;
+    }
+    #endregion
+
     #region Interact Ray
-    private CatchableObj FindCatchable()
-    {
-        Ray ray = BuildInteractRay();
-        RaycastHit[] hits = Physics.SphereCastAll(
-            ray.origin,
-            GetInteractRadius(),
-            ray.direction,
-            brain.InteractDistance);
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            Collider hitCollider = hits[i].collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
-
-            if (!hitCollider.TryGetComponent(out CatchableObj catchable))
-            {
-                DebugLog($"Hit non-catchable object: {hitCollider.name}");
-                continue;
-            }
-
-            DebugLog($"Hit catchable object: {catchable.name}");
-            return catchable;
-        }
-
-        return null;
-    }
-
-    private PotInteraction FindPotInteraction()
-    {
-        Ray ray = BuildInteractRay();
-        RaycastHit[] hits = Physics.SphereCastAll(
-            ray.origin,
-            GetInteractRadius(),
-            ray.direction,
-            brain.InteractDistance);
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            Collider hitCollider = hits[i].collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
-
-            PotInteraction pot = hitCollider.GetComponentInParent<PotInteraction>();
-            if (pot == null)
-            {
-                DebugLog($"Hit non-pot object: {hitCollider.name}");
-                continue;
-            }
-
-            DebugLog($"Hit pot object: {pot.name}");
-            return pot;
-        }
-
-        return null;
-    }
-
     private Ray BuildInteractRay()
     {
         Transform origin = brain.PlayerCam != null
             ? brain.PlayerCam.transform
             : brain.transform;
 
-        Vector3 start = origin.position + origin.forward * brain.InteractRayStartOffset;
+        Vector3 start = origin.position + origin.TransformDirection(brain.InteractRayStartOffset);
         return new Ray(start, origin.forward);
     }
 
@@ -295,7 +334,7 @@ public class PlayerInteract
 
     private void DrawDebugInteractRay()
     {
-        if (!DebugInteraction) return;
+        if (!brain.DebugInteraction) return;
 
         Ray ray = BuildInteractRay();
         float radius = GetInteractRadius();
@@ -342,13 +381,6 @@ public class PlayerInteract
 
         right.Normalize();
         up = Vector3.Cross(right, direction).normalized;
-    }
-
-    private static void DebugLog(string message)
-    {
-        if (!DebugInteraction) return;
-
-        Debug.Log($"[PlayerInteract] {message}");
     }
     #endregion
 }

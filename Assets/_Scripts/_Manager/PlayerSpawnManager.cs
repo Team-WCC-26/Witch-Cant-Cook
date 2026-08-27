@@ -23,6 +23,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
     //Packet Ids
     private PacketId _joinMemberID => PacketId.S_PlayerEnter;
+    private PacketId _leaveMemberID => PacketId.S_PlayerLeave;
 
     protected override void Awake()
     {
@@ -32,11 +33,13 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     private void OnEnable()
     {
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
+        ServerManager.Instance.RegisterHandler(_leaveMemberID, MemberLeft);
     }
 
     private void OnDisable()
     {
         ServerManager.Instance.UnRegisterHandler(_joinMemberID);
+        ServerManager.Instance.UnRegisterHandler(_leaveMemberID);
     }
 
     public string MyID
@@ -119,4 +122,25 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         UIManager.Hide<LobbyRouterUI>();
     }
 
+    private void MemberLeft(ReadOnlyMemory<byte> data)
+    {
+        PlayerLeavePacket packet = MemoryPackSerializer.Deserialize<PlayerLeavePacket>(data.Span);
+
+        if (!players.TryGetValue(packet.PlayerID, out PlayerBrain player)) return;
+        Destroy(player.gameObject);
+    }
+
+    public bool RespawnPlayer(string playerId, Transform spawnPoint = null)
+    {
+        if (!players.TryGetValue(playerId, out PlayerBrain player))
+            return false;
+
+        Transform point = spawnPoint != null ? spawnPoint : spawnRoot;
+
+        player.transform.SetPositionAndRotation(
+            point.position,
+            point.rotation);
+
+        return true;
+    }
 }

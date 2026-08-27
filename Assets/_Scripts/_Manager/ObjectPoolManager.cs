@@ -27,7 +27,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         }
     }
 
-    public GameObject Pop(string key, Transform parent = null)
+    public GameObject Pop(string key, Transform spawnPoint = null)
     {
         if (!_poolDic.TryGetValue(key, out var queue))
         {
@@ -39,31 +39,49 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         if (go != null)
         {
-            go.transform.SetParent(parent);
+            if (spawnPoint != null)
+            {
+                go.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            }
+
             go.SetActive(true);
         }
+
         return go;
     }
-
     public GameObject Pop(string key, Vector3 position, Quaternion rotation, Transform parent = null)
     {
         GameObject go = Pop(key, parent);
         if (go != null)
         {
+            if (go.TryGetComponent(out Rigidbody rb))
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
             go.transform.SetPositionAndRotation(position, rotation);
         }
         return go;
     }
-
     public void Push(GameObject go)
     {
         if (go == null) return;
-
         string key = go.name;
-
         if (_poolDic.TryGetValue(key, out var queue))
         {
-            InitRoot(); // 반납할 때 루트가 있는지 확인
+            InitRoot();
+
+            if (go.TryGetComponent(out Rigidbody rb))
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.Sleep(); // 안전하게 물리 상태 완전 정지
+            }
+
+            if (go.TryGetComponent(out CatchableObj catchable))
+            {
+                catchable.IsRespawning = false;
+            }
 
             go.SetActive(false);
             go.transform.SetParent(_poolRoot);
@@ -74,7 +92,6 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
             UnityEngine.Object.Destroy(go);
         }
     }
-
     public void ClearPool(string key)
     {
         if (_poolDic.TryGetValue(key, out var queue))

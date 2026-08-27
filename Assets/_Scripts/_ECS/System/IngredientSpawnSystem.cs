@@ -8,14 +8,12 @@ public partial class IngredientSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        Debug.Log("[TEST] IngredientSpawnSystem Update");
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (request, requestEntity) in SystemAPI.Query<RefRO<IngredientSpawnRequest>>().WithEntityAccess())
         {
-            Debug.Log("[TEST] SpawnRequest Query 진입");
             int reqID = request.ValueRO.IngredientID;
             long netID = request.ValueRO.NetworkID;
             Vector3 reqPos = request.ValueRO.Position;
@@ -33,7 +31,7 @@ public partial class IngredientSpawnSystem : SystemBase
 
             // 프리팹 생성 요청
             GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey, reqPos, reqRot);
-            Debug.Log($"[TEST] Spawned Object: {spawnedObj}");
+            Debug.Log($"[TEST] Spawned Object: {spawnedObj} pos: {reqPos}");
 
             if (spawnedObj != null)
             {
@@ -51,6 +49,12 @@ public partial class IngredientSpawnSystem : SystemBase
                 if (spawnedObj.TryGetComponent(out CatchableObj catchObj))
                 {
                     catchObj.Data = ingredientRaw;
+                }
+
+                var belt = ConveyorBeltRegistry.FindBeltNearStart(reqPos);
+                if (belt != null)
+                {
+                    belt.RegisterItem(netID, spawnedObj.transform, spawnedObj);
                 }
             }
             else

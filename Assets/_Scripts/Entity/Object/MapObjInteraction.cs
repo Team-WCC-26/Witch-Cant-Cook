@@ -8,19 +8,20 @@ public enum ToolId
     Pot = 40,
     Plate = 50,
     PrepTable = 60,
-    Oven = 80
+    Oven = 80,
+    Stove = 90,
 }
 
 public abstract class MapObjInteraction : MonoBehaviour
 {
-    [SerializeField] private ToolId toolId;
+    [SerializeField] private Define.eToolId eToolId;
 
     private long networkId;
 
     protected MapObjNetworkRouter Router { get; private set; }
 
-    public int ToolId => (int)toolId;
-    public ToolId ToolType => toolId;
+    public int ToolId => (int)eToolId;
+    public Define.eToolId ToolType => (Define.eToolId)eToolId;
     public long NetworkId => networkId;
     public bool IsRegistered => networkId != 0;
 

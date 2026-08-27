@@ -5,6 +5,7 @@ public class PlayerInputFSM
     public Vector2 MoveDir { get; private set; }
     public bool IsRun { get; private set; }
     public PlayerInteraction CurrentInteraction { get; private set; }
+    public bool CurrentJumpRequested { get; private set; }
 
     //ref
     private readonly PlayerBrain brain;
@@ -12,6 +13,7 @@ public class PlayerInputFSM
 
     //key input buffer
     private KeyInput pendingKeyInput = KeyInput.None;
+    private bool pendingJumpRequested = false;
 
     //move option
     private float minMoveDirSqrMagnitude = 0.0001f;
@@ -32,10 +34,17 @@ public class PlayerInputFSM
         MoveDir = ResolveMoveDir();
         IsRun = ResolveRun();
         CurrentInteraction = ResolveInteraction();
+        CurrentJumpRequested = ResolveJumpRequested();
     }
 
     private void OnInputPerformed(KeyInput keyInput)
     {
+        if (keyInput == KeyInput.Jump)
+        {
+            pendingJumpRequested = true;
+            return;
+        }
+
         if (pendingKeyInput == KeyInput.None)
         {
             pendingKeyInput = keyInput;
@@ -114,6 +123,16 @@ public class PlayerInputFSM
         }
 
         return PlayerInteraction.None;
+    }
+    #endregion
+
+    #region Jump Resolution
+    // Consumes jump as a one-frame movement request.
+    private bool ResolveJumpRequested()
+    {
+        bool jumpRequested = pendingJumpRequested;
+        pendingJumpRequested = false;
+        return jumpRequested;
     }
     #endregion
 }

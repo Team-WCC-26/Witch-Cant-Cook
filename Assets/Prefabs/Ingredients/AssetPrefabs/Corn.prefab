@@ -14,6 +14,9 @@ GameObject:
   - component: {fileID: 4390229893110300088}
   - component: {fileID: 5520676652034953291}
   - component: {fileID: -3950667264815616381}
+  - component: {fileID: -3125523404196810924}
+  - component: {fileID: -4382154072363871665}
+  - component: {fileID: 1884550583794083550}
   m_Layer: 7
   m_Name: Corn
   m_TagString: Untagged
@@ -30,8 +33,8 @@ Transform:
   m_GameObject: {fileID: 389937913496221644}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalPosition: {x: -0, y: 0.2355, z: 0}
+  m_LocalScale: {x: 40, y: 40, z: 40}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -43,7 +46,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 389937913496221644}
-  m_Mesh: {fileID: -4191331470173962938, guid: 5b92ba4f31cbf8c408ce782f98ccf0f4, type: 3}
+  m_Mesh: {fileID: 4729104733280329583, guid: a4846db259b7a3542b672699321eb7d7, type: 3}
 --- !u!23 &2191469642156447257
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -112,8 +115,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.06402658, y: 0.1712265, z: 0.063822635}
-  m_Center: {x: 0, y: 0.08561325, z: 0}
+  m_Size: {x: 0.01583432, y: 0.014167947, z: 0.0117030665}
+  m_Center: {x: 0.0002491433, y: 0.0004166603, z: 0.00020513758}
 --- !u!54 &5520676652034953291
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -158,6 +161,76 @@ MonoBehaviour:
   rb: {fileID: 5520676652034953291}
   objType: 1
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 40, y: 40, z: 40}
   throwForce: 5
+--- !u!114 &-3125523404196810924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389937913496221644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1584a53f8d19f2d408c5d0e25a9dd569, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientCorn
+  catchable: {fileID: -3950667264815616381}
+  initialWaitDuration: 2
+  holdDuration: 3
+  abandonDuration: 10
+--- !u!114 &-4382154072363871665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389937913496221644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23d0d8f48e576a346885047af8b38011, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitExplode
+  explosionVFXPrefab: {fileID: 2948390974073299325, guid: 90e0ecf246aa4d345b1b9f58490435d1, type: 3}
+  explosionFragment: {fileID: 271539983981087086, guid: a193717f12b63de46888f34f395b7ff4, type: 3}
+  fragmentCount: 10
+  fragmentForce: 8
+  blastRadius: 4
+  blastForce: 12
+  upwardModifier: 2
+  blastMask:
+    serializedVersion: 2
+    m_Bits: 192
+  explosionVFX: {fileID: 0}
+  explosionSFX: {fileID: 0}
+--- !u!114 &1884550583794083550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389937913496221644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
+  catchable: {fileID: -3950667264815616381}
+  meshFilter: {fileID: 4147073424668844755}
+  targetRenderer: {fileID: 2191469642156447257}
+  cutParticle: {fileID: 1766117342703822864, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  gaugeUI: {fileID: 7519362936080867326, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
+  actionVisuals:
+  - action: 0
+    mesh: {fileID: 4729104733280329583, guid: a4846db259b7a3542b672699321eb7d7, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+  - action: 1
+    mesh: {fileID: -6380304942738169725, guid: ce5249ff6750bd640ba0074fb28bc8b9, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}

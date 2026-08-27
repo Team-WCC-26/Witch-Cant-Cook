@@ -12,50 +12,36 @@ public class AnythingSpawner : MonoBehaviour
 
     private void Update()
     {
-        // О©╫й╧О©╫ О©╫с╫О©╫О©╫О©╫
         if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
         {
-            SpawnTool("Knife");
+            Debug.Log($"[AnythingSpawner] f2 е╟ ют╥б");
+
+            SpawnTool((int)Define.eToolId.KitchenKnife);
         }
         if (Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame)
         {
-            SpawnTool("Plate");
-        }
+            Debug.Log($"[AnythingSpawner] f3 е╟ ют╥б");
 
+            SpawnTool((int)(int)Define.eToolId.Plate);
+        }
+        if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
+        {
+            Debug.Log($"[AnythingSpawner] f4 е╟ ют╥б");
+
+            SpawnTool((int)(int)Define.eToolId.FryingPan);
+        }
     }
 
-    private void SpawnTool(string tool)
+    private void SpawnTool(int toolKey)
     {
         ToolSpawnPacket packet = new()
         {
-            EntityId = 0, // О©╫О©╫О©╫О©╫О©╫О©╫ О©╫н©О©╫
-            ToolId = tool switch
-            {
-                "Knife" => (int)CatchableObjType.Knife,
-                "Plate" => (int)CatchableObjType.Plate
-            },
+            EntityId = 0, 
+            ToolId = toolKey,
             Position = new System.Numerics.Vector3(SpawnPos.transform.position.x, SpawnPos.transform.position.y, SpawnPos.transform.position.z),
-            Quaternion = new System.Numerics.Quaternion(SpawnPos.transform.rotation.x, SpawnPos.transform.rotation.y, SpawnPos.transform.rotation.z, SpawnPos.transform.rotation.w)
+            Quaternion = System.Numerics.Quaternion.Identity
         };
+        Debug.Log($"[AnythingSpawner] Sending ToolSpawnPacket: ToolId={packet.ToolId}, Position={packet.Position}");
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-
-        //GameObject go = ObjectPoolManager.Instance.Pop(tool, SpawnPos.transform.position, SpawnPos.transform.rotation);
-        //Debug.Log(go);
-        //if (go.TryGetComponent(out CatchableObj catchable))
-        //{
-        //    catchable.NetworkId = Time.frameCount;
-        //    ObjectNetworkRouter.Instance.Add(catchable.NetworkId, catchable);
-        //    ObjectPoolManager.Instance.activeObjDict.Add(catchable.NetworkId, go);
-        //}
-
-        //ToolSpawnPacket packet = new()
-        //{
-        //    EntityId = go.GetComponent<CatchableObj>().NetworkId,
-        //    ToolId = (int)CatchableObjType.Knife,
-        //    Position = new System.Numerics.Vector3(go.transform.position.x, go.transform.position.y, go.transform.position.z),
-        //    Quaternion = new System.Numerics.Quaternion(go.transform.rotation.x, go.transform.rotation.y, go.transform.rotation.z, go.transform.rotation.w)
-        //};
-
-        //_ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 }

@@ -78,6 +78,12 @@ public class Room
             Tick = _tick
         };
 
+        foreach (var player in _players)
+        {
+            var mask = player.ConsumeDirtyMask();
+            player.WriteSnapShot(packet, mask);
+        }
+
         foreach (var entity in _dirtyEntities)
         {
             var mask = entity.ConsumeDirtyMask();

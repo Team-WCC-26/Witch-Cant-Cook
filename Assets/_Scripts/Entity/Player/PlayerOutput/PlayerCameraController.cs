@@ -21,6 +21,10 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private float yawDeg = 0f;
     private float pitchDeg = 0f;
+    public Quaternion YawRotation => Quaternion.Euler(0f, yawDeg, 0f);
+
+    private Vector3 itemPointLocalPosition;
+    private Quaternion itemPointLocalRotation = Quaternion.identity;
 
     private bool canControlCursor = false;
 
@@ -35,6 +39,15 @@ public sealed class PlayerCameraController : MonoBehaviour
         input = brain.Input;
 
         yawDeg = NormalizeAngle(brain.transform.eulerAngles.y);
+
+        if (brain.ItemPoint != null)
+        {
+            itemPointLocalPosition = brain.transform.InverseTransformPoint(
+                brain.ItemPoint.position
+            );
+            itemPointLocalRotation = Quaternion.Inverse(brain.transform.rotation)
+                * brain.ItemPoint.rotation;
+        }
 
         if (yawRoot == null)
         {
@@ -112,9 +125,23 @@ public sealed class PlayerCameraController : MonoBehaviour
             pitchDeg = Mathf.Clamp(pitchDeg + pitchDelta, minPitch, maxPitch);
         }
 
-        brain.transform.rotation = Quaternion.Euler(0f, yawDeg, 0f);
-        yawRoot.localRotation = Quaternion.identity;
+        Quaternion yawRotation = YawRotation;
+
+        yawRoot.rotation = yawRotation;
         pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
+
+        if (brain.Animator != null && brain.Animator.enabled)
+        {
+            brain.Animator.transform.rotation = yawRotation;
+        }
+
+        if (brain.ItemPoint != null)
+        {
+            brain.ItemPoint.SetPositionAndRotation(
+                brain.transform.position + yawRotation * itemPointLocalPosition,
+                yawRotation * itemPointLocalRotation
+            );
+        }
     }
 
     private void OnApplicationFocus(bool focus)

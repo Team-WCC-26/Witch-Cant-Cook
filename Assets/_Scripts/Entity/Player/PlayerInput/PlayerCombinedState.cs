@@ -26,6 +26,7 @@ public readonly partial struct PlayerCombinedState
     public readonly bool IsRun;
     public readonly PlayerInteraction Interaction;
     public readonly CatchableObjType HeldObjType;
+    public readonly bool JumpRequested;
 
     
     public PlayerCombinedState(
@@ -33,12 +34,18 @@ public readonly partial struct PlayerCombinedState
         Vector2 moveDir = default,
         bool isRun = false,
         PlayerInteraction interaction = PlayerInteraction.None,
-        CatchableObjType heldObjType = CatchableObjType.Default)
+        CatchableObjType heldObjType = CatchableObjType.Default,
+        bool jumpRequested = false)
     {
         PhysicalMode = physicalMode;
         MoveDir = moveDir;
         IsRun = isRun;
         Interaction = interaction;
         HeldObjType = heldObjType;
+        JumpRequested = jumpRequested;
     }
+
+    #region Jump State
+    // JumpRequested is consumed once by the movement controller.
+    #endregion
 }

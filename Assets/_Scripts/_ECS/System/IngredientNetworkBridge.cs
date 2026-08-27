@@ -10,25 +10,31 @@ using UnityEngine.InputSystem;
 
 public class IngredientNetworkBridge : MonoBehaviour
 {
+    public static IngredientNetworkBridge Instance { get; private set; }
     public static event Action<CookCompletePacket> CookCompleted;
 
     [Header("Spawn Settings")]
-    private readonly int[] ingredientIDs = {
-        10600,
-        10900,
-        12100,
-        12300
+    private readonly Define.eIngredient[] ingredientIDs = {
+        //Define.eIngredient.Mushroom,
+        //Define.eIngredient.Carrot,
+        //Define.eIngredient.Tomato,
+        Define.eIngredient.Fish,
+        Define.eIngredient.Meat,
+        //Define.eIngredient.Corn,
+        //Define.eIngredient.Honey,
+        //Define.eIngredient.Squid,
     };
 
     [SerializeField] private GameObject spawnPointObj;
 
     private void OnEnable()
     {
+        Instance = this;
+
         if (ServerManager.Instance != null)
         {
             ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSpawn, OnIngredientSpawnReceived);
-            ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, OnThrowReceived);
-            ServerManager.Instance.RegisterHandler(PacketId.S_CookComplete, OnCookCompleteReceived);
+            ServerManager.Instance.RegisterHandler(PacketId.S_IngraedientConveySpawn, OnConveySpawnReceived);
 
             Debug.Log("[Network] Packet handlers registered.");
         }
@@ -43,8 +49,7 @@ public class IngredientNetworkBridge : MonoBehaviour
         if (ServerManager.Instance != null)
         {
             ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSpawn);
-            ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityThrow);
-            ServerManager.Instance.UnRegisterHandler(PacketId.S_CookComplete);
+            ServerManager.Instance.UnRegisterHandler(PacketId.S_IngraedientConveySpawn); 
         }
     }
 
@@ -52,7 +57,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
-            int randomID = ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
+            int randomID = (int)ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
             SendSpawnPacketToServer(randomID);
         }
 
@@ -90,22 +95,33 @@ public class IngredientNetworkBridge : MonoBehaviour
         }
     }
 
-    public static void RequestCookStart(long entityId, IngredientState cookType)
+    public void SendSpawnPacketToServer(int ingredientID, float3 pos)
     {
-        if (ServerManager.Instance == null)
-        {
-            Debug.LogWarning("Cannot request cook start because ServerManager.Instance is null.");
-            return;
-        }
+        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
-        CookStartPacket packet = new()
+        float3 targetPosition = pos;
+
+        IngredientSpawnPacket spawnPacket = new()
         {
-            EntityId = entityId,
-            CookType = cookType
+            EntityId = 0,
+            IngredientID = ingredientID,
+            Position = new System.Numerics.Vector3(targetPosition.x, targetPosition.y, targetPosition.z),
+            Quaternion = System.Numerics.Quaternion.Identity
         };
 
-        ServerManager.Instance.SendData(PacketSerializer.Serialize(packet)).Forget();
+        byte[] sendBuffer = PacketSerializer.Serialize(spawnPacket);
+
+        if (ServerManager.Instance != null)
+        {
+            ServerManager.Instance.SendData(sendBuffer).Forget();
+            Debug.Log($"[Network Send] Ingredient spawn requested. ID: {ingredientID}, Position: {targetPosition}");
+        }
+        else
+        {
+            Debug.LogError("[Network Error] ServerManager.Instance not found.");
+        }
     }
+
 
     private float3 GetSpawnPosition()
     {
@@ -126,28 +142,39 @@ public class IngredientNetworkBridge : MonoBehaviour
             IngredientID = packet.IngredientID,
             NetworkID = packet.EntityId,
             Position = new float3(packet.Position.X, packet.Position.Y, packet.Position.Z),
-            Rotation = new quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W)
+            Rotation = new quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W),
+            ConveyId = 0 // 컨베이어 벨트용 스폰이 아니므로 사용 안 함 (기존 스폰 경로 유지)
         });
-
-        Debug.Log($"[Network Recv] Ingredient spawned. ID: {packet.IngredientID}, NetID: {packet.EntityId}");
     }
 
-    private void OnThrowReceived(ReadOnlyMemory<byte> data)
+    /// <summary>
+    /// 컨베이어 벨트 위 재료 스폰 전용 핸들러.
+    /// 이 패킷엔 Position/Rotation이 없으므로, ConveyId로 ConveyorSpawnPoint를 찾아
+    /// 그 지점의 좌표/회전값을 대신 채워서 기존 IngredientSpawnRequest 흐름에 태운다.
+    /// </summary>
+    public void OnConveySpawnReceived(ReadOnlyMemory<byte> data)
     {
-        EntityThrowPacket packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
+        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
-        if (!ObjectNetworkRouter.Instance.TryGet(packet.EntityId, out CatchableObj catchable))
+        IngredientConveySpawnPacket packet = MemoryPackSerializer.Deserialize<IngredientConveySpawnPacket>(data.Span);
+        Debug.Log($"[Network] ConveySpawnPacket received. ConveyId: {packet.ConveyId}, IngredienteId: {packet.IngredienteId}, EntityId: {packet.EntityId}");
+
+        if (!ConveyorSpawnPointRegistry.TryGetSpawnPoint(packet.ConveyId, out var spawnPoint))
         {
-            Debug.LogWarning($"NetworkID {packet.EntityId} not found.");
+            Debug.LogWarning($"[Network] ConveyId {packet.ConveyId}에 해당하는 스폰 포인트를 씬에서 찾을 수 없습니다.");
             return;
         }
 
-        catchable.ApplyThrow(packet);
-    }
+        EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+        Entity requestEntity = entityManager.CreateEntity(typeof(IngredientSpawnRequest));
 
-    private void OnCookCompleteReceived(ReadOnlyMemory<byte> data)
-    {
-        CookCompletePacket packet = MemoryPackSerializer.Deserialize<CookCompletePacket>(data.Span);
-        CookCompleted?.Invoke(packet);
+        entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
+        {
+            IngredientID = packet.IngredienteId,
+            NetworkID = packet.EntityId,
+            Position = (float3)spawnPoint.Position,
+            Rotation = (quaternion)spawnPoint.Rotation,
+            ConveyId = packet.ConveyId
+        });
     }
 }

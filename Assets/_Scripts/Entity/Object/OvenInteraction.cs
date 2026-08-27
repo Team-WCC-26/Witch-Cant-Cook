@@ -1,122 +1,108 @@
 using Protocol;
-using System.Collections;
+using Server;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class OvenInteraction : MapObjInteraction
+public class OvenInteraction : MapObjInteraction,
+    IEntityParentReceiver,
+    ICookReceiver,
+    IServePlate
 {
-    [SerializeField] private float cookDuration = 2f;
-
-    private readonly Dictionary<Collider, OvenCookState> currentIngredients = new();
-
-    private void OnEnable()
-    {
-        IngredientNetworkBridge.CookCompleted += OnCookComplete;
-    }
+    private readonly Dictionary<long, IngredientReaction> currentIngredients = new();
+    private readonly HashSet<long> pendingEntities = new();
 
     private void OnDisable()
     {
-        IngredientNetworkBridge.CookCompleted -= OnCookComplete;
-        StopAllCooking();
-    }
-
-    private void OnDestroy()
-    {
-        StopAllCooking();
+        HideAllGauges();
+        currentIngredients.Clear();
+        pendingEntities.Clear();
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (currentIngredients.ContainsKey(other)) return;
-        if (!TryGetIngredient(other, out IngredientReaction reaction, out CatchableObj catchable)) return;
+        if (!IsRegistered || ServerManager.Instance == null) return;
+        if (!TryGetIngredient(other, out CatchableObj catchable)) return;
+        if (catchable.NetworkId == 0) return;
+        if (!pendingEntities.Add(catchable.NetworkId)) return;
 
-        Coroutine coroutine = StartCoroutine(CookIngredient(reaction, catchable));
-        currentIngredients[other] = new OvenCookState(reaction, catchable.NetworkId, coroutine);
+        // Insert only
+        EntityInsertPacket packet = new()
+        {
+            SubjectEntityId = catchable.NetworkId,
+            TargetEntityId = NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!currentIngredients.TryGetValue(other, out OvenCookState state)) return;
-
-        StopCooking(state);
-        currentIngredients.Remove(other);
+        if (!TryGetIngredient(other, out CatchableObj catchable)) return;
+        pendingEntities.Remove(catchable.NetworkId);
     }
 
-    private IEnumerator CookIngredient(IngredientReaction reaction, CatchableObj catchable)
+    public void HandleEntityAdded(CatchableObj entity)
     {
-        reaction.GaugeUI?.StartFill(cookDuration);
-        IngredientNetworkBridge.RequestCookStart(catchable.NetworkId, IngredientState.Roasted);
+        // Parent result
+        if (entity == null || !entity.TryGetComponent(out IngredientReaction reaction)) return;
 
-        yield return new WaitForSeconds(cookDuration);
+        pendingEntities.Remove(entity.NetworkId);
+        currentIngredients[entity.NetworkId] = reaction;
+        entity.ChangePickState(false);
+        entity.SetPhysicsState(false);
     }
 
-    private void OnCookComplete(CookCompletePacket packet)
+    public void HandleEntityRemoved(CatchableObj entity)
     {
-        if (packet.CookType != IngredientState.Roasted) return;
+        if (entity == null) return;
+        if (!currentIngredients.Remove(entity.NetworkId, out IngredientReaction reaction)) return;
 
-        Collider completedCollider = null;
-        OvenCookState completedState = default;
-
-        foreach (var kvp in currentIngredients)
-        {
-            OvenCookState state = kvp.Value;
-            if (state.EntityId != packet.EntityId) continue;
-
-            completedCollider = kvp.Key;
-            completedState = state;
-            break;
-        }
-
-        if (completedCollider == null) return;
-
-        completedState.Reaction.GaugeUI?.Hide();
-        completedState.Reaction.Interact(IngredientAction.Cook, int.MaxValue);
-        currentIngredients.Remove(completedCollider);
+        reaction.GaugeUI?.Hide();
     }
 
-    private bool TryGetIngredient(Collider other, out IngredientReaction reaction, out CatchableObj catchable)
+    public void HandleCookStart(CookStartPacket packet)
     {
-        reaction = other.GetComponentInParent<IngredientReaction>();
-        catchable = null;
+        // Server start
+        float duration = packet.CookingTimeMs / 1000f;
+        foreach (IngredientReaction reaction in currentIngredients.Values)
+            reaction.GaugeUI?.StartFill(duration);
+    }
 
-        if (reaction == null) return false;
+    public void HandleCookPause(CookPausePacket packet)
+    {
+        HideAllGauges();
+    }
 
-        catchable = reaction.Catchable;
-        if (catchable == null) return false;
-        if (catchable.ObjType != CatchableObjType.Ingredient) return false;
+    public void HandleCookComplete(CookCompletePacket packet)
+    {
+        if ((packet.CookType & IngredientState.Roasted) == 0) return;
+        if (!currentIngredients.TryGetValue(packet.IngredientEntityId, out IngredientReaction reaction)) return;
 
+        reaction.GaugeUI?.Hide();
+        reaction.ApplyServerAction(IngredientAction.Cook);
+    }
+
+    public bool TryServePlate(PlateInteraction plate)
+    {
+        if (plate == null || currentIngredients.Count == 0) return false;
+        if (ServerManager.Instance == null) return false;
+
+        // Server transfer
+        EntityInteractPacket packet = new() { TargetEntityId = NetworkId };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
         return true;
     }
 
-    private void StopAllCooking()
+    private static bool TryGetIngredient(Collider other, out CatchableObj catchable)
     {
-        foreach (OvenCookState state in currentIngredients.Values)
-        {
-            StopCooking(state);
-        }
-
-        currentIngredients.Clear();
+        IngredientReaction reaction = other.GetComponentInParent<IngredientReaction>();
+        catchable = reaction != null ? reaction.Catchable : null;
+        return catchable != null && catchable.ObjType == CatchableObjType.Ingredient;
     }
 
-    private void StopCooking(OvenCookState state)
+    private void HideAllGauges()
     {
-        if (state.Coroutine != null)
-            StopCoroutine(state.Coroutine);
-
-        state.Reaction.GaugeUI?.Hide();
-    }
-
-    private readonly struct OvenCookState
-    {
-        public readonly IngredientReaction Reaction;
-        public readonly long EntityId;
-        public readonly Coroutine Coroutine;
-
-        public OvenCookState(IngredientReaction reaction, long entityId, Coroutine coroutine)
-        {
-            Reaction = reaction;
-            EntityId = entityId;
-            Coroutine = coroutine;
-        }
+        foreach (IngredientReaction reaction in currentIngredients.Values)
+            reaction.GaugeUI?.Hide();
     }
 }

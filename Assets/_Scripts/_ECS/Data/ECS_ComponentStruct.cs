@@ -34,7 +34,6 @@ public struct IngredientPhysics : IComponentData
 public struct IngredientCombat : IComponentData
 {
     public int Damage;
-    // 태그의 경우 enum이나 정수형 ID로 관리하는 것이 최적화에 좋습니다.
     public FixedString32Bytes Tag;
 }
 public struct IngredientSpawnRequest : IComponentData
@@ -43,5 +42,6 @@ public struct IngredientSpawnRequest : IComponentData
     public long NetworkID;     // 서버가 부여한 고유 번호 (로컬은 0)
     public float3 Position;    // 생성 위치
     public quaternion Rotation; // 생성 회전 (쿼터니언)
+    public int ConveyId;
 }
 

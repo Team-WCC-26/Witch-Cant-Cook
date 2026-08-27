@@ -8,19 +8,21 @@ public abstract class Entity
     public Room Room { get; private set; }
     public Entity? Parent
     {
-        get; 
+        get => _parent;
         set
         {
-            if (Parent is ContainerTool ct)
+            if (_parent == value) return;
+
+            if (_parent is ContainerTool ct)
             {
                 ct.Remvoe(this);
             }
-            else if (Parent is Player player)
+            else if (_parent is Player player)
             {
                 player.HoldingEntity = null;
             }
 
-            Parent = value;
+            _parent = value;
 
             MakeDirty(DirtyMask.Parent);
         }
@@ -28,6 +30,7 @@ public abstract class Entity
 
     public bool IsDestroyed => _dirtyMask.HasFlag(DirtyMask.Destroy);
 
+    private Entity? _parent;
     private DirtyMask _dirtyMask = DirtyMask.None;
 
     internal void InitEntityId(long id)
@@ -94,7 +97,7 @@ public abstract class Entity
 
         _dirtyMask |= mask;
 
-        Room.MakeDirty(this);
+        Room?.MakeDirty(this);
     }
 }
 
