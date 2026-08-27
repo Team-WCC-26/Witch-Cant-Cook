@@ -39,7 +39,7 @@ public class Room
         Name = name;
         Password = password;
 
-        _ingredientSpanwer = new(this, _timerManager, 3000);
+        _ingredientSpanwer = new(this, _timerManager, 3);
         _dishManager = new(this, _timerManager);
     }
 

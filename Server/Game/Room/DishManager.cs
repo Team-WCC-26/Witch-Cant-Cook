@@ -114,7 +114,7 @@ internal class DishManager
 
         BroadCastDishState(recipeId, DishState.Order);
 
-        ScheduleSelect(dishData.SpawnDelay * 1000);
+        ScheduleSelect(dishData.SpawnDelay);
     }
 
     private void OnDishFaild(IngredientStatePair dish)
