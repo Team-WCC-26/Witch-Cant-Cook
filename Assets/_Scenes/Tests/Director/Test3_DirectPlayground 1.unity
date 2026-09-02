@@ -8790,6 +8790,32 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
   m_Center: {x: 7.509842, y: 5.6829567, z: -4.0379402e-14}
+--- !u!1 &733337469 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b184a51de931c8b4cabd36a0a94e5960, type: 3}
+  m_PrefabInstance: {fileID: 2147093651}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &733337470
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 733337469}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.5039498, y: 0.06017542, z: 1.45}
+  m_Center: {x: -0.75197583, y: 0.03008771, z: 0.7250004}
 --- !u!1 &737330670
 GameObject:
   m_ObjectHideFlags: 0
@@ -21094,6 +21120,32 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1307474930}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1308434904 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b184a51de931c8b4cabd36a0a94e5960, type: 3}
+  m_PrefabInstance: {fileID: 2144133720}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1308434905
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1308434904}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.5039498, y: 0.06017542, z: 1.45}
+  m_Center: {x: -0.75197583, y: 0.03008771, z: 0.7250004}
 --- !u!1 &1319245985
 GameObject:
   m_ObjectHideFlags: 0
@@ -24426,6 +24478,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c581b8f359b07f40911f78e7494397a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConveyorBeltController
+  beltId: 0
   path: {fileID: 616137331}
   beltSpeed: 2
   beltRenderer: {fileID: 0}
@@ -31482,7 +31535,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b184a51de931c8b4cabd36a0a94e5960, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1308434905}
   m_SourcePrefab: {fileID: 100100000, guid: b184a51de931c8b4cabd36a0a94e5960, type: 3}
 --- !u!1 &2144548001
 GameObject:
@@ -31589,7 +31645,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b184a51de931c8b4cabd36a0a94e5960, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 733337470}
   m_SourcePrefab: {fileID: 100100000, guid: b184a51de931c8b4cabd36a0a94e5960, type: 3}
 --- !u!1001 &479685200110228638
 PrefabInstance:

@@ -37,6 +37,7 @@ public class ConveyorItemState
 /// </summary>
 public class ConveyorBeltController : MonoBehaviour
 {
+    [SerializeField] private int beltId; // DB의 beltID와 동일한 값을 인스펙터에서 입력
     [SerializeField] private ConveyorPath path;
     [SerializeField] private float beltSpeed = 2f;
     [SerializeField] private Renderer beltRenderer;
@@ -44,6 +45,7 @@ public class ConveyorBeltController : MonoBehaviour
     [SerializeField] private float maxLateralOffset = 0.35f; // 벨트 폭 절반 정도로, 실제 벨트 폭에 맞춰 조정
     [SerializeField] private float settleDuration = 0.2f;    // 착지 순간 -> 경로 추종 시작까지 보간 시간
 
+    public int BeltId => beltId;
     public ConveyorPath Path => path;
     public float Speed => beltSpeed;
 
@@ -141,7 +143,7 @@ public class ConveyorBeltController : MonoBehaviour
     void Update()
     {
         MoveItemsOnBelt();
-        ScrollBeltTexture();
+        //ScrollBeltTexture();
     }
 
     private void MoveItemsOnBelt()
