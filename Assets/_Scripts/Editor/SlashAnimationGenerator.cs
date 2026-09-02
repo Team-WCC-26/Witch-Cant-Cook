@@ -1,122 +1,66 @@
+using System.Collections.Generic;
 using UnityEditor;
-using UnityEngine;
 
-public static class SlashAnimationGenerator
+public sealed class SlashMotionDefinition : HumanoidMotionDefinition
 {
-    private const string OutputFolder = "Assets/Animations/Player/Upper/Generated";
-    private const string OutputClipPath = OutputFolder + "/Slash.anim";
-
+    // Times and values below are the preserved production Slash motion.
     private const float BaseTime = 0f;
-    private const float PreparationTime = 0.28f;
-    private const float PreparationHoldTime = 0.34f;
-    private const float ResultTime = 0.55f;
-    private const float ResultHoldTime = 0.62f;
-    private const float RecoveryTime = 0.95f;
+    private const float PreparationTime = 0.30f;
+    private const float PreparationHoldTime = 0.38f;
+    private const float ResultTime = 0.52f;
+    private const float ResultHoldTime = 0.58f;
+    private const float RecoveryTime = 0.92f;
 
-    private readonly struct MuscleTrack
+    public override string DisplayName => "Slash";
+    public override string ClipName => "Slash";
+    public override string OutputFolder => "Assets/Animations/Player/Upper/Generated";
+    public override float Duration => RecoveryTime;
+
+    private static readonly HumanoidMuscleCurve[] MotionCurves =
     {
-        public readonly string Name;
-        public readonly float Base;
-        public readonly float Preparation;
-        public readonly float Result;
+        SlashMuscle("Right Arm Down-Up", -0.6432f, 0f, -0.15185f),
+        SlashMuscle("Right Arm Front-Back", 0.13627f, -0.4f, 0.02630f),
+        SlashMuscle("Right Arm Twist In-Out", -0.13433f, -0.13433f, -0.0664f),
+        SlashMuscle("Right Forearm Stretch", 0.96324f, 0f, 0.96324f),
+        SlashMuscle("Right Hand In-Out", 0.01080f, 0.01080f, 0.4772f),
 
-        public MuscleTrack(string name, float baseValue, float preparation, float result)
-        {
-            Name = name;
-            Base = baseValue;
-            Preparation = preparation;
-            Result = result;
-        }
-    }
-
-    // Only the muscles explicitly measured from the three reference poses are animated.
-    private static readonly MuscleTrack[] Tracks =
-    {
-        new("Right Arm Down-Up", -0.6432f, 0f, -0.15185f),
-        new("Right Arm Front-Back", 0.13627f, -0.4f, 0.02630f),
-        new("Right Arm Twist In-Out", -0.13433f, -0.13433f, -0.0664f),
-        new("Right Forearm Stretch", 0.96324f, 0f, 0.96324f),
-        new("Right Hand In-Out", 0.01080f, 0.01080f, 0.4772f),
-
-        // Keep the unused arm in the measured relaxed idle pose throughout the slash.
-        new("Left Shoulder Down-Up", 0.01671f, 0.01671f, 0.01671f),
-        new("Left Shoulder Front-Back", 0.23102f, 0.23102f, 0.23102f),
-        new("Left Arm Down-Up", -0.4143f, -0.4143f, -0.4143f),
-        new("Left Arm Front-Back", -0.0012f, -0.0012f, -0.0012f),
-        new("Left Arm Twist In-Out", -0.7465f, -0.7465f, -0.7465f),
-        new("Left Forearm Stretch", 0.87162f, 0.87162f, 0.87162f),
-        new("Left Forearm Twist In-Out", 0.76548f, 0.76548f, 0.76548f),
-        new("Left Hand Down-Up", -0.1509f, -0.1509f, -0.1509f),
-        new("Left Hand In-Out", 0.13197f, 0.13197f, 0.13197f),
+        // The unused arm stays in the measured relaxed pose on the upper-body layer.
+        SlashMuscle("Left Shoulder Down-Up", 0.01671f, 0.01671f, 0.01671f),
+        SlashMuscle("Left Shoulder Front-Back", 0.23102f, 0.23102f, 0.23102f),
+        SlashMuscle("Left Arm Down-Up", -0.4143f, -0.4143f, -0.4143f),
+        SlashMuscle("Left Arm Front-Back", -0.0012f, -0.0012f, -0.0012f),
+        SlashMuscle("Left Arm Twist In-Out", -0.7465f, -0.7465f, -0.7465f),
+        SlashMuscle("Left Forearm Stretch", 0.87162f, 0.87162f, 0.87162f),
+        SlashMuscle("Left Forearm Twist In-Out", 0.76548f, 0.76548f, 0.76548f),
+        SlashMuscle("Left Hand Down-Up", -0.1509f, -0.1509f, -0.1509f),
+        SlashMuscle("Left Hand In-Out", 0.13197f, 0.13197f, 0.13197f),
     };
 
+    public override IReadOnlyList<HumanoidMuscleCurve> Curves => MotionCurves;
+
+    private static HumanoidMuscleCurve SlashMuscle(
+        string muscleName,
+        float baseValue,
+        float preparationValue,
+        float resultValue)
+    {
+        return Muscle(
+            muscleName,
+            Key(BaseTime, baseValue),
+            Key(PreparationTime, preparationValue),
+            Key(PreparationHoldTime, preparationValue),
+            Key(ResultTime, resultValue),
+            Key(ResultHoldTime, resultValue),
+            Key(RecoveryTime, baseValue));
+    }
+}
+
+// Retains the original menu command while using the shared generation pipeline.
+public static class SlashAnimationGenerator
+{
     [MenuItem("Tools/Player Animation/Generate Slash Animation")]
     private static void Generate()
     {
-        AnimationClip clip = LoadOrCreateOutputClip();
-
-        foreach (MuscleTrack track in Tracks)
-        {
-            AnimationCurve curve = new(
-                new Keyframe(BaseTime, track.Base),
-                new Keyframe(PreparationTime, track.Preparation),
-                new Keyframe(PreparationHoldTime, track.Preparation),
-                new Keyframe(ResultTime, track.Result),
-                new Keyframe(ResultHoldTime, track.Result),
-                new Keyframe(RecoveryTime, track.Base));
-
-            SetMuscleCurve(clip, track.Name, curve);
-        }
-
-        EditorUtility.SetDirty(clip);
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        Selection.activeObject = clip;
-        Debug.Log("Generated Slash.anim from the measured muscle values.");
-    }
-
-    private static AnimationClip LoadOrCreateOutputClip()
-    {
-        EnsureOutputFolder();
-        AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(OutputClipPath);
-
-        if (clip == null)
-        {
-            clip = new AnimationClip { frameRate = 30f };
-            AssetDatabase.CreateAsset(clip, OutputClipPath);
-        }
-        else
-        {
-            clip.ClearCurves();
-            clip.frameRate = 30f;
-        }
-
-        AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(clip);
-        settings.loopTime = false;
-        settings.stopTime = RecoveryTime;
-        AnimationUtility.SetAnimationClipSettings(clip, settings);
-        return clip;
-    }
-
-    private static void SetMuscleCurve(AnimationClip clip, string muscleName, AnimationCurve curve)
-    {
-        for (int i = 0; i < curve.length; i++)
-        {
-            AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
-            AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
-        }
-
-        EditorCurveBinding binding = EditorCurveBinding.FloatCurve(
-            string.Empty,
-            typeof(Animator),
-            muscleName);
-        AnimationUtility.SetEditorCurve(clip, binding, curve);
-    }
-
-    private static void EnsureOutputFolder()
-    {
-        const string parentFolder = "Assets/Animations/Player/Upper";
-        if (!AssetDatabase.IsValidFolder(OutputFolder))
-            AssetDatabase.CreateFolder(parentFolder, "Generated");
+        HumanoidAnimationClipBuilder.TryGenerate(new SlashMotionDefinition(), out _);
     }
 }

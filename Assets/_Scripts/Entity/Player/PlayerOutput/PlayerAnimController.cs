@@ -19,7 +19,7 @@ public class PlayerAnimController
     private readonly int jumpEndHash = Animator.StringToHash("JumpEnd");
 
     private readonly int emptyStateHash = Animator.StringToHash("Empty");
-    private readonly int equipActionStateHash = Animator.StringToHash("HoldKnife");
+    private readonly int equipActionStateHash = Animator.StringToHash("Slash");
     private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
 
     public PlayerAnimController(PlayerBrain brain)
