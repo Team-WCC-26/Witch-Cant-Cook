@@ -72,6 +72,8 @@ public abstract class Entity
 
         if (mask.HasFlag(DirtyMask.Parent))
         {
+            if (Parent == null) return;
+
             if (Parent is Player player)
             {
                 packet.PickupEntities.Add(new()
