@@ -12,7 +12,7 @@ public interface IEntityParentReceiver
     void HandleEntityRemoved(CatchableObj entity);
 }
 
-public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
+public class ObjectNetworkRouter : MonoBehaviour
 {
     private const int TrashIngredientId = 99999;
 
@@ -22,6 +22,12 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
 
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
+
+    private void Awake()
+    {
+        if (mapObjRouter == null)
+            mapObjRouter = GetComponent<MapObjNetworkRouter>();
+    }
 
     private void OnEnable()
     {
@@ -168,6 +174,7 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
     public void Add(long networkId, CatchableObj obj)
     {
         catchableDics[networkId] = obj;
+        obj.SetNetworkRouter(this);
     }
 
     public void Remove(long networkId)
@@ -286,6 +293,7 @@ public class ObjectNetworkRouter : Singleton<ObjectNetworkRouter>
     private void Register(long entityId, CatchableObj catchable)
     {
         catchableDics[entityId] = catchable;
+        catchable.SetNetworkRouter(this);
         ObjectPoolManager.Instance.activeObjDict[entityId] = catchable.gameObject;
     }
 }

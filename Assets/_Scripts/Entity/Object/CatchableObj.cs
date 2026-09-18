@@ -80,6 +80,7 @@ public class CatchableObj : MonoBehaviour
     private Vector3 worldScaleBeforeHold = Vector3.one;
     private bool hasHoldScaleSnapshot;
     private CatchableObj combinedVisual;
+    private ObjectNetworkRouter objectRouter;
 
     public event Action OnPicked;
     public event Action OnDropped;
@@ -112,11 +113,17 @@ public class CatchableObj : MonoBehaviour
         if (objType == CatchableObjType.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
-        if (ObjectNetworkRouter.Instance.TryGet(NetworkId, out CatchableObj registered) &&
+        if (objectRouter != null &&
+            objectRouter.TryGet(NetworkId, out CatchableObj registered) &&
             registered == this)
         {
-            ObjectNetworkRouter.Instance.Remove(NetworkId);
+            objectRouter.Remove(NetworkId);
         }
+    }
+
+    public void SetNetworkRouter(ObjectNetworkRouter router)
+    {
+        objectRouter = router;
     }
 
     private void ResetObj()

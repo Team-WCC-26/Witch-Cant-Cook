@@ -6,9 +6,14 @@ using UnityEngine;
 //[UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class IngredientSpawnSystem : SystemBase
 {
+    private ObjectNetworkRouter objectRouter;
     protected override void OnUpdate()
     {
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
+
+        if (objectRouter == null)
+            objectRouter = Object.FindFirstObjectByType<ObjectNetworkRouter>();
+        if (objectRouter == null) return;
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -76,7 +81,7 @@ public partial class IngredientSpawnSystem : SystemBase
         if (catchable != null)
         {
             catchable.NetworkId = networkID;
-            ObjectNetworkRouter.Instance.Add(networkID, catchable);
+            objectRouter.Add(networkID, catchable);
         }
         else
         {
