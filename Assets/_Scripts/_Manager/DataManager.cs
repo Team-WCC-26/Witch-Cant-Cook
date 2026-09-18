@@ -60,7 +60,7 @@ public class DataManager : Singleton<DataManager>
 
             if (gspreadReader == null)
             {
-                Debug.LogError("[DataManager] gspreadReader is not assigned.");
+                Debug.LogError("[DataManager] GSpreadReader is not assigned.");
                 yield break;
             }
 
@@ -91,14 +91,14 @@ public class DataManager : Singleton<DataManager>
 
             if (!task.Result)
             {
-                Debug.LogError("[DataManager] GSpread Init failed.");
+                Debug.LogError("[DataManager] GSpread initialization failed.");
                 yield break;
             }
 
             // GSpread 결과 -> GameData<T> 바인딩 + Resources Json 저장(에디터)
             if (!TryBindAllGameData_FromGSpread(progressTextCallback, progressValueCallback))
             {
-                Debug.LogError("[DataManager] Bind from GSpread failed.");
+                Debug.LogError("[DataManager] Binding GSpread data failed.");
                 yield break;
             }
 
@@ -112,7 +112,7 @@ public class DataManager : Singleton<DataManager>
         {
             if (!TryBindAllGameData_FromResourcesJson(progressTextCallback, progressValueCallback))
             {
-                Debug.LogError("[DataManager] Bind from Resources Json failed.");
+                Debug.LogError("[DataManager] Binding Resources JSON failed.");
                 yield break;
             }
         }
@@ -146,7 +146,7 @@ public class DataManager : Singleton<DataManager>
         MethodInfo importMi = typeof(GSpreadReader).GetMethod("ImportData", BindingFlags.Public | BindingFlags.Instance);
         if (importMi == null)
         {
-            Debug.LogError("[DataManager] GSpreadReader.ImportData<T>() not found.");
+            Debug.LogError("[DataManager] GSpreadReader.ImportData was not found.");
             return false;
         }
 
@@ -162,7 +162,7 @@ public class DataManager : Singleton<DataManager>
             object gameDataObj = field.GetValue(this);
             if (gameDataObj == null)
             {
-                Debug.LogError($"[DataManager] GameData field is null: {field.Name}");
+                Debug.LogError($"[DataManager] GameData instance is null: {dataType.Name}");
                 return false;
             }
 
@@ -173,7 +173,7 @@ public class DataManager : Singleton<DataManager>
             MethodInfo setDataMi = field.FieldType.GetMethod("SetData", BindingFlags.Public | BindingFlags.Instance);
             if (setDataMi == null)
             {
-                Debug.LogError($"[DataManager] SetData(List<T>) not found on {field.FieldType.Name}. field={field.Name}");
+                Debug.LogError($"[DataManager] SetData was not found: {dataType.Name}");
                 return false;
             }
 
@@ -183,7 +183,6 @@ public class DataManager : Singleton<DataManager>
 #if UNITY_EDITOR
             try
             {
-                Debug.Log($"[DataManager] Saving json: {dataType.Name}");
 
                 // ListWrapper<T>(List<T>)
                 Type wrapperType = typeof(ListWrapper<>).MakeGenericType(dataType);
@@ -195,7 +194,7 @@ public class DataManager : Singleton<DataManager>
             }
             catch (Exception e)
             {
-                Debug.LogError($"[DataManager] Json save failed: {dataType.Name}. {e.Message}");
+                Debug.LogError($"[DataManager] Failed to save JSON for {dataType.Name}: {e.Message}");
                 return false;
             }
 #endif
@@ -224,7 +223,7 @@ public class DataManager : Singleton<DataManager>
             object gameDataObj = field.GetValue(this);
             if (gameDataObj == null)
             {
-                Debug.LogError($"[DataManager] GameData field is null: {field.Name}");
+                Debug.LogError($"[DataManager] GameData instance is null: {dataType.Name}");
                 return false;
             }
 
@@ -232,7 +231,7 @@ public class DataManager : Singleton<DataManager>
             TextAsset asset = Resources.Load<TextAsset>($"Json/{dataType.Name}");
             if (asset == null)
             {
-                Debug.LogError($"[DataManager] Resource Json not found: Resources/Json/{dataType.Name}.json");
+                Debug.LogError($"[DataManager] Resources JSON is missing: {dataType.Name}");
                 return false;
             }
 
@@ -241,7 +240,7 @@ public class DataManager : Singleton<DataManager>
             object wrapperObj = JsonUtility.FromJson(asset.text, wrapperType);
             if (wrapperObj == null)
             {
-                Debug.LogError($"[DataManager] Json deserialize failed: {dataType.Name}");
+                Debug.LogError($"[DataManager] Failed to deserialize JSON: {dataType.Name}");
                 return false;
             }
 
@@ -249,7 +248,7 @@ public class DataManager : Singleton<DataManager>
             FieldInfo listField = wrapperType.GetField("list", BindingFlags.Public | BindingFlags.Instance);
             if (listField == null)
             {
-                Debug.LogError($"[DataManager] Wrapper.list not found: {wrapperType.Name}");
+                Debug.LogError($"[DataManager] JSON wrapper list field is missing: {dataType.Name}");
                 return false;
             }
 
@@ -259,7 +258,7 @@ public class DataManager : Singleton<DataManager>
             MethodInfo setDataMi = field.FieldType.GetMethod("SetData", BindingFlags.Public | BindingFlags.Instance);
             if (setDataMi == null)
             {
-                Debug.LogError($"[DataManager] SetData(List<T>) not found on {field.FieldType.Name}. field={field.Name}");
+                Debug.LogError($"[DataManager] SetData was not found: {dataType.Name}");
                 return false;
             }
 
@@ -283,7 +282,7 @@ public class DataManager : Singleton<DataManager>
             return result;
         }
 
-        Debug.LogWarning($"[EnumParse] '{value}'는 {typeof(T).Name}에 정의되지 않은 값입니다. 기본값({defaultValue})으로 설정합니다.");
+        Debug.LogWarning($"[DataManager] Failed to parse enum {typeof(T).Name}: {value}");
         return defaultValue;
     }
 

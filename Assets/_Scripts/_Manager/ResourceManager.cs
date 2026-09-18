@@ -20,7 +20,7 @@ public class ResourceManager : Singleton<ResourceManager>
         base.Awake();
         if (IsInitialized)
         {
-            Debug.LogWarning("[ResourceManager] 이미 인스턴스가 존재합니다. 중복 생성 방지.");
+            Debug.LogWarning("[ResourceManager] Duplicate instance initialization was prevented.");
             return;
         }
     }
@@ -40,7 +40,6 @@ public class ResourceManager : Singleton<ResourceManager>
 
         await initHandle.ToUniTask();
 
-        Debug.Log("[ResourceManager] Addressables 초기화 완료");
     }
 
     /// <summary>
@@ -52,7 +51,6 @@ public class ResourceManager : Singleton<ResourceManager>
         // 전체 preload
         await LoadAllAddressablesAsync();
 
-        Debug.Log("[ResourceManager] Preload 완료");
     }
 
     /// <summary>
@@ -65,7 +63,7 @@ public class ResourceManager : Singleton<ResourceManager>
             return asset as T;
         }
 
-        Debug.LogWarning($"[ResourceManager] 캐시에 존재하지 않는 에셋: {key}");
+        Debug.LogWarning($"[ResourceManager] Asset is not cached: {key}");
         return null;
     }
 
@@ -86,21 +84,20 @@ public class ResourceManager : Singleton<ResourceManager>
             await handle.ToUniTask();
             if (handle.Status == AsyncOperationStatus.Failed)
             {
-                Debug.LogError($"[ResourceManager] 에셋 로드 실패: {key}");
+                Debug.LogError($"[ResourceManager] Failed to load asset: {key}");
                 return null;
             }
 
             // 두 dict 상태 동기화
             _handleCache.Add(key, handle);
             _assetCache.Add(key, handle.Result);
-            Debug.Log($"[ResourceManager] 에셋 로드 성공: {key}");
 
             return handle.Result;
 
         }
         catch (Exception e)
         {
-            Debug.LogError($"[ResourceManager] 에셋 로드 예외: {key} - {e.Message}");
+            Debug.LogError($"[ResourceManager] Failed to load asset: {key} - {e.Message}");
             return null;
         }
     }
@@ -128,7 +125,6 @@ public class ResourceManager : Singleton<ResourceManager>
 
         await UniTask.WhenAll(loadTasks);
 
-        Debug.Log("[ResourceManager] 모든 Addressable 에셋 로드 완료");
         return true;
     }
 
@@ -146,7 +142,6 @@ public class ResourceManager : Singleton<ResourceManager>
             _handleCache.Remove(key);     
             _assetCache.Remove(key);      
 
-            Debug.Log($"[ResourceManager] 에셋 캐시 및 메모리 완전 해제: {key}");
         }
     }
 
@@ -164,7 +159,6 @@ public class ResourceManager : Singleton<ResourceManager>
         _handleCache.Clear();
         _assetCache.Clear();
 
-        Debug.Log("[ResourceManager] 전체 에셋 해제 완료");
     }
 
 

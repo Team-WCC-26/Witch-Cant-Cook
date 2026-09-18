@@ -44,7 +44,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
         if (string.IsNullOrEmpty(url))
         {
-            Debug.LogError("[GSpread] URL is not set");
+            Debug.LogError("[GSpread] URL is not set.");
             OnLoadFailed?.Invoke("URL이 설정되지 않았습니다.");
             return false;
         }
@@ -61,7 +61,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
             bool success = await LoadSheet(sheet);
             if (!success)
             {
-                Debug.LogError($"[GSpread] Failed to load: {sheet.className}");
+                Debug.LogError($"[GSpread] Failed to load sheet: {sheet.className}");
                 OnLoadFailed?.Invoke($"{sheet.className} 로딩 실패");
                 return false;
             }
@@ -74,7 +74,6 @@ public class GSpreadReader : Singleton<GSpreadReader>
         OnLoadProgress?.Invoke(1f, "완료");
         OnLoadComplete?.Invoke();
 
-        Debug.Log($"[GSpread] Loaded {successCount}/{sheets.Count} sheets");
         return true;
     }
 

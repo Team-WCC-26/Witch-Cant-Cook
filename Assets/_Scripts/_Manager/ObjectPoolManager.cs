@@ -109,8 +109,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         GameObject prefab = ResourceManager.Instance.GetAsset<GameObject>(key);
         if (prefab == null)
         {
-            Debug.Log($"[Pool Create] key : {key}");
-            Debug.LogError($"[Pool] 리소스 매니저에 '{key}' 에셋이 로드되어 있지 않습니다.");
+            Debug.LogError($"[Pool] Prefab is not loaded for key: {key}");
             return null;
         }
 
@@ -135,7 +134,6 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
                 Push(go); // 생성 후 바로 큐에 넣음
             }
         }
-        Debug.Log($"[Pool] {key} 풀이 {count}개만큼 프리웜되었습니다.");
     }
 
 }

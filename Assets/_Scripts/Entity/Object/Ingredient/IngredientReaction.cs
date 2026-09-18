@@ -77,7 +77,6 @@ public class IngredientReaction : MonoBehaviour
     {
         if (IsActionBlocked(action))
         {
-            Debug.Log("Action is blocked for this ingredient.");
             return false;
         }
 
@@ -88,7 +87,6 @@ public class IngredientReaction : MonoBehaviour
         }
         else if (curHP <= 0)
         {
-            Debug.Log("Action already completed.");
             return false;
         }
 
@@ -106,19 +104,14 @@ public class IngredientReaction : MonoBehaviour
             switch (action)
             {
                 case IngredientAction.Cut:
-                    Debug.Log("Cutting Completed.");
                     break;
                 case IngredientAction.Grill:
-                    Debug.Log("Grilling Completed.");
                     break;
                 case IngredientAction.Boil:
-                    Debug.Log("Boiling Completed.");
                     break;
                 case IngredientAction.Cook:
-                    Debug.Log("Cooking Completed.");
                     break;
                 default:
-                    Debug.Log("Unknown action.");
                     break;
             }
 

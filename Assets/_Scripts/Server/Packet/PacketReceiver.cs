@@ -71,7 +71,6 @@ namespace Server
                 Array.Copy(_buffer, _readPos + HEADER_SIZE, packet, 0, length);
                 var body = new ReadOnlyMemory<byte>(packet);
 
-                Debug.Log($"<color=#87CEEB>[Network Receive]</color> Packet Received ID: {id} {(PacketId)id}, Size: {length} bytes");
                 ServerManager.Instance.DispatchPacket((PacketId)id, body);
 
                 _readPos += length + 6;
