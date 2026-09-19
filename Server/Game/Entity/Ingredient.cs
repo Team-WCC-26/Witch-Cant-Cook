@@ -1,4 +1,5 @@
 ﻿using Protocol;
+using System.Numerics;
 
 namespace Server;
 
@@ -8,6 +9,7 @@ public class Ingredient() : Entity, ICookable, IInteractable
     public IngredientState ProcessState { get; private set; }
     public int Hp { get; private set; }
     public IngredientStatData Stat { get; private set; }
+    public IngredientBehaviour? IngredientBehaviour { get; private set; }
     
     internal void InitIngredientId(int id)
     {
@@ -19,6 +21,19 @@ public class Ingredient() : Entity, ICookable, IInteractable
         {
             Stat = stat;
         }
+
+        IngredientBehaviour = id switch
+        {
+            _ => null
+        };
+    }
+
+    public override void Destroy()
+    {
+        base.Destroy();
+
+        IngredientBehaviour?.Clear();
+        IngredientBehaviour = null; // Pool 사용하게 되면 반환
     }
 
     public bool TryCombine(Ingredient other, out Ingredient result)
@@ -105,7 +120,7 @@ public class Ingredient() : Entity, ICookable, IInteractable
         {
             packet.CookCompleteIngredients.Add(new()
             {
-                ToolEntityId = Parent.EntityId,
+                ToolEntityId = (Parent == null) ? -1 : Parent.EntityId,
                 IngredientEntityId = EntityId,
                 CookType = ProcessState
             });
@@ -120,7 +135,34 @@ public class Ingredient() : Entity, ICookable, IInteractable
         }
     }
 
-    public virtual void OnPickup(Player player) { }
-    public virtual void OnDrop() { }
-    public virtual void OnCollision() { }
+    public void OnPickup(Player player)
+    {
+        if (IngredientBehaviour is IPickupHandler handler)
+        {
+            BroadCastResult(handler.OnPickUp(player));
+        }
+    }
+
+    public void OnDrop()
+    {
+        if (IngredientBehaviour is IDropHandler handler)
+        {
+            BroadCastResult(handler.OnDrop());
+        }
+    }
+
+    public void OnCollision()
+    {
+        if (IngredientBehaviour is ICollisionHandler handler)
+        {
+            BroadCastResult(handler.OnCollision());
+        }
+    }
+
+    private void BroadCastResult(byte[] packet)
+    {
+        if (packet == null) return;
+
+        Room.BroadCast(packet);
+    }
 }

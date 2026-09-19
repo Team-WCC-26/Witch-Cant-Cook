@@ -29,7 +29,9 @@ public class Room
 
     private readonly Dictionary<DoorId, Door> _doors = new();
 
+    public TimerManager TimerManager => _timerManager;
     private TimerManager _timerManager = new();
+
     private IngredientSpawner _ingredientSpanwer;
     private DishManager _dishManager;
 

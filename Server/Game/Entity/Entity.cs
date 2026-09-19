@@ -44,7 +44,7 @@ public abstract class Entity
         Room = room;
     }
 
-    public void Destroy()
+    public virtual void Destroy()
     {
         Parent = null;
         MakeDirty(DirtyMask.Destroy);
