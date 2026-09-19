@@ -17,7 +17,7 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
     //private float _process = 0;
     //private bool _bIsProcessing = false;
 
-    protected TimerManager _timerManager;
+    protected TimerManager _timerManager => Room.TimerManager;
     protected TimerHandle _cookTimer;
 
     //public void Tick(long deltaTime)
