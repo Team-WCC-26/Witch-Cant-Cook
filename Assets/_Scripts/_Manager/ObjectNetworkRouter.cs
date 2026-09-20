@@ -286,8 +286,24 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void Unregister(long entityId)
     {
+        ReleaseNetworkBoundState(entityId);
         catchableDics.Remove(entityId);
         ObjectPoolManager.Instance.activeObjDict.Remove(entityId);
+    }
+
+    /// <summary>
+    /// NetworkID가 교체되거나 오브젝트가 풀로 돌아가기 전에 이전 런타임 상태를 해제합니다.
+    /// </summary>
+    private static void ReleaseNetworkBoundState(long entityId)
+    {
+        if (entityId <= 0) return;
+
+        if (ConveyorBeltRegistry.TryGetOwner(entityId, out ConveyorBeltController belt))
+        {
+            belt.UnregisterItem(entityId);
+        }
+
+        IngredientEntityLifecycle.RequestDestroy(entityId);
     }
 
     private void Register(long entityId, CatchableObj catchable)

@@ -72,6 +72,8 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
     {
         if (go == null) return;
 
+        ReleaseNetworkBoundState(go);
+
         string key = go.name;
         if (_poolDic.TryGetValue(key, out var queue))
         {
@@ -160,5 +162,24 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         {
             collider.enabled = true;
         }
+    }
+
+    /// <summary>
+    /// 모든 풀 반환 경로에서 컨베이어와 ECS의 NetworkID 상태를 먼저 정리합니다.
+    /// 오브젝트가 비활성화된 뒤에도 이전 벨트가 같은 Transform을 이동시키는 것을 방지합니다.
+    /// </summary>
+    private static void ReleaseNetworkBoundState(GameObject go)
+    {
+        if (!go.TryGetComponent(out CatchableObj catchable)) return;
+
+        long networkId = catchable.NetworkId;
+        if (networkId <= 0) return;
+
+        if (ConveyorBeltRegistry.TryGetOwner(networkId, out ConveyorBeltController belt))
+        {
+            belt.UnregisterItem(networkId);
+        }
+
+        IngredientEntityLifecycle.RequestDestroy(networkId);
     }
 }
