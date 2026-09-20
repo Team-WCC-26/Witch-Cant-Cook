@@ -29,17 +29,17 @@ public class IngredientCorn : IngredientTrait
         explodeTrait = GetComponent<IngredientTraitExplode>();
     }
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
 
-        // È°¼ºÈ­ Á÷ÈÄ¿¡´Â hold/abandonÀ» ¹Ù·Î ½ÃÀÛÇÏÁö ¾Ê°í
-        // ÃÊ±â ´ë±â ½Ã°£ºÎÅÍ ½ÃÀÛÇÑ´Ù.
+        // í™œì„±í™” ì§í›„ì—ëŠ” hold/abandonì„ ë°”ë¡œ ì‹œì‘í•˜ì§€ ì•Šê³ 
+        // ì´ˆê¸° ëŒ€ê¸° ì‹œê°„ë¶€í„° ì‹œì‘í•œë‹¤.
         StartInitialWait();
     }
 
-    private void OnDisable()
+    protected override void StopTrait()
     {
         catchable.OnPicked -= OnPicked;
         catchable.OnDropped -= OnDropped;
@@ -59,7 +59,7 @@ public class IngredientCorn : IngredientTrait
 
     private void OnPicked()
     {
-        // ´ë±â ÁßÀÌ¾ú´Ù¸é ´ë±â¸¦ Ãë¼ÒÇÏ°í ¹Ù·Î hold·Î ÀüÈ¯
+        // ëŒ€ê¸° ì¤‘ì´ì—ˆë‹¤ë©´ ëŒ€ê¸°ë¥¼ ì·¨ì†Œí•˜ê³  ë°”ë¡œ holdë¡œ ì „í™˜
         waitTimer.Stop();
         abandonTimer.Stop();
         StartHoldTimer();
@@ -67,7 +67,7 @@ public class IngredientCorn : IngredientTrait
 
     private void OnDropped()
     {
-        // ´ë±â ÁßÀÌ¾ú´Ù¸é ´ë±â¸¦ Ãë¼ÒÇÏ°í ¹Ù·Î abandonÀ¸·Î ÀüÈ¯
+        // ëŒ€ê¸° ì¤‘ì´ì—ˆë‹¤ë©´ ëŒ€ê¸°ë¥¼ ì·¨ì†Œí•˜ê³  ë°”ë¡œ abandonìœ¼ë¡œ ì „í™˜
         waitTimer.Stop();
         holdTimer.Stop();
         StartAbandonTimer();
@@ -80,7 +80,7 @@ public class IngredientCorn : IngredientTrait
 
     private void OnInitialWaitComplete()
     {
-        // ´ë±â°¡ ³¡³­ ½ÃÁ¡ÀÇ »óÅÂ¸¦ ±âÁØÀ¸·Î hold/abandon Å¸ÀÌ¸Ó ½ÃÀÛ
+        // ëŒ€ê¸°ê°€ ëë‚œ ì‹œì ì˜ ìƒíƒœë¥¼ ê¸°ì¤€ìœ¼ë¡œ hold/abandon íƒ€ì´ë¨¸ ì‹œì‘
         if (catchable.IsHold)
         {
             StartHoldTimer();

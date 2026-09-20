@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitExplode : MonoBehaviour
+public class IngredientTraitExplode : IngredientTrait
 {
     [Header("Fragments")]
     [SerializeField] private GameObject explosionVFXPrefab;
@@ -22,7 +22,7 @@ public class IngredientTraitExplode : MonoBehaviour
     private bool exploded = false;
 
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         exploded = false;
     }
@@ -38,7 +38,7 @@ public class IngredientTraitExplode : MonoBehaviour
 
         SpawnExplosionParticle(origin);
 
-        // ÇÊ¿äÇÏ¸é »ç¿ë
+        // í•„ìš”í•˜ë©´ ì‚¬ìš©
         // PlayVFX(origin);
         // PlaySFX();
 
@@ -62,6 +62,12 @@ public class IngredientTraitExplode : MonoBehaviour
 
             if (hit.TryGetComponent(out PlayerBrain player))
             {
+                if (player.Interact.HeldObj != null &&
+                    player.Interact.HeldObj.gameObject != gameObject)
+                {
+                    player.Interact.ForceDropHeld();
+                }
+
                 ApplyPlayerKnockback(player.Rb);
                 continue;
             }
@@ -69,7 +75,7 @@ public class IngredientTraitExplode : MonoBehaviour
             if (hit.TryGetComponent(out CatchableObj catchable))
             {
                 if (catchable.IsHold)
-                    catchable.SetPhysicsState(true);
+                    continue;
 
                 Rigidbody rb = catchable.Rb ?? hit.attachedRigidbody;
 
