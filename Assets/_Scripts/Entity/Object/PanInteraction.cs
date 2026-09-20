@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IHeldObjectReceiver
+public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectReceiver
 {
     [SerializeField] private CatchableObj catchable;
     [SerializeField] private Transform ingredientSlot;
@@ -63,11 +63,6 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
     {
         if (interact == null) return false;
 
-        // Serve food first when the player is aiming at a plate.
-        PlateInteraction plate = interact.FindInteractTarget<PlateInteraction>();
-        if (plate != null && TryServePlate(plate))
-            return true;
-
         // Place the pan on a stove when the player is aiming at one.
         StoveInteraction stove = interact.FindInteractTarget<StoveInteraction>();
         if (stove != null && stove.TryPlacePan(this, interact))
@@ -86,16 +81,6 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
         if (!interact.TryReleaseHeld(heldObj)) return false;
 
         AttachIngredient(ingredient, heldObj);
-        return true;
-    }
-
-    public bool TryServePlate(PlateInteraction plate)
-    {
-        if (plate == null) return false;
-        if (currentIngredient == null) return false;
-
-        plate.ShowTempFood();
-        ConsumeIngredient();
         return true;
     }
 
@@ -201,26 +186,6 @@ public class PanInteraction : MonoBehaviour, IServePlate, IHeldPrimaryAction, IH
         ingredientCatchable.Rb.linearVelocity = Vector3.zero;
         ingredientCatchable.Rb.angularVelocity = Vector3.zero;
         ingredientCatchable.Rb.AddForce(impulse, ForceMode.Impulse);
-    }
-
-    private void ConsumeIngredient()
-    {
-        IngredientReaction ingredient = currentIngredient;
-        StopGrill();
-        currentIngredient = null;
-
-        CatchableObj ingredientCatchable = ingredient.Catchable;
-        RestoreIngredientTransform(ingredient);
-        ingredientCatchable.ChangePickState(false);
-        ingredientCatchable.SetPhysicsState(false);
-
-        if (ObjectPoolManager.Instance != null)
-        {
-            ObjectPoolManager.Instance.Push(ingredientCatchable.gameObject);
-            return;
-        }
-
-        ingredientCatchable.gameObject.SetActive(false);
     }
 
     private void RestoreIngredientTransform(IngredientReaction ingredient)

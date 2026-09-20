@@ -5,8 +5,7 @@ using UnityEngine;
 
 public class OvenInteraction : MapObjInteraction,
     IEntityParentReceiver,
-    ICookReceiver,
-    IServePlate
+    ICookReceiver
 {
     private readonly Dictionary<long, IngredientReaction> currentIngredients = new();
     private readonly HashSet<long> pendingEntities = new();
@@ -80,17 +79,6 @@ public class OvenInteraction : MapObjInteraction,
 
         reaction.GaugeUI?.Hide();
         reaction.ApplyServerAction(IngredientAction.Cook);
-    }
-
-    public bool TryServePlate(PlateInteraction plate)
-    {
-        if (plate == null || currentIngredients.Count == 0) return false;
-        if (ServerManager.Instance == null) return false;
-
-        // Server transfer
-        EntityInteractPacket packet = new() { TargetEntityId = NetworkId };
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-        return true;
     }
 
     private static bool TryGetIngredient(Collider other, out CatchableObj catchable)
