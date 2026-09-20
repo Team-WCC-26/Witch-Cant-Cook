@@ -1,16 +1,25 @@
 using UnityEngine;
 
-public class PlateInteraction : MonoBehaviour, IEntityParentReceiver
+public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable
 {
     private CatchableObj currentFood;
 
     public bool IsEmpty => currentFood == null;
 
-    private void OnEnable()
+    // Pool 반환 시 음식 정리
+    public void ResetForPool()
     {
+        if (currentFood == null) return;
+
+        CatchableObj food = currentFood;
         currentFood = null;
+        food.transform.SetParent(null, true);
+
+        if (ObjectPoolManager.Instance != null)
+            ObjectPoolManager.Instance.Push(food.gameObject);
     }
 
+    // 완성 음식 그릇 귀속
     public void HandleEntityAdded(CatchableObj entity)
     {
         // Parent result
@@ -24,6 +33,7 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver
         entity.transform.localRotation = Quaternion.Euler(reaction.PlateOffsetEuler);
     }
 
+    // 귀속 음식 분리
     public void HandleEntityRemoved(CatchableObj entity)
     {
         if (entity == null || entity != currentFood) return;
