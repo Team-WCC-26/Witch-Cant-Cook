@@ -55,10 +55,10 @@ public partial class IngredientSpawnSystem : SystemBase
                     catchObj.Data = ingredientRaw;
                 }
 
-                var belt = ConveyorBeltRegistry.FindBeltNearStart(reqPos);
-                if (belt != null)
+                var belt = ConveyorBeltRegistry.TryGetBeltById(request.ValueRO.ConveyId, out ConveyorBeltController beltController);
+                if (beltController != null)
                 {
-                    belt.RegisterItem(netID, spawnedObj.transform, spawnedObj);
+                    beltController.RegisterItem(netID, spawnedObj.transform, spawnedObj);
                 }
             }
             else
