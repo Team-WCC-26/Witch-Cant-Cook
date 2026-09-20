@@ -24,7 +24,7 @@ public class IngredientActionVisual
     public Material[] Materials => materials;
 }
 
-public class IngredientReaction : MonoBehaviour
+public class IngredientReaction : MonoBehaviour, IPoolable
 {
     [SerializeField] private CatchableObj catchable;
     public CatchableObj Catchable => catchable;
@@ -60,16 +60,16 @@ public class IngredientReaction : MonoBehaviour
     private void Awake()
     {
         InitializeGauge();
-
-        // TODO: Load mesh and shader data from ResourceManager.
     }
 
-    private void OnEnable()
+    public void ResetForPool()
     {
         InitializeGauge();
         lastAction = IngredientAction.None;
         completedActions = IngredientAction.None;
 
+        gaugeUI?.Hide();
+        cutParticle?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ApplyVisual(IngredientAction.None);
     }
 

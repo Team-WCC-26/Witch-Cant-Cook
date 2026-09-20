@@ -1,6 +1,4 @@
-using MemoryPack;
 using Protocol;
-using Server;
 using System;
 using UnityEngine;
 
@@ -20,29 +18,24 @@ public struct LocalTransformData
 {
     [SerializeField] private Vector3 localPosition;
     [SerializeField] private Vector3 localEulerAngles;
-    [SerializeField] private Vector3 localScale;
 
     public Vector3 LocalPosition => localPosition;
     public Vector3 LocalEulerAngles => localEulerAngles;
-    public Vector3 LocalScale => localScale;
 
     public static LocalTransformData Identity => new(
         Vector3.zero,
-        Vector3.zero,
-        Vector3.one);
+        Vector3.zero);
 
     public LocalTransformData(
         Vector3 localPosition,
-        Vector3 localEulerAngles,
-        Vector3 localScale)
+        Vector3 localEulerAngles)
     {
         this.localPosition = localPosition;
         this.localEulerAngles = localEulerAngles;
-        this.localScale = localScale;
     }
 }
 
-public class CatchableObj : MonoBehaviour
+public class CatchableObj : MonoBehaviour, IPoolable
 {
     [SerializeField] private long networkId;
     public long NetworkId
@@ -77,8 +70,6 @@ public class CatchableObj : MonoBehaviour
     public bool IsHold { get; private set; } = false;
     public bool IsRespawning { get; set; } = false;
 
-    private Vector3 worldScaleBeforeHold = Vector3.one;
-    private bool hasHoldScaleSnapshot;
     private CatchableObj combinedVisual;
     private ObjectNetworkRouter objectRouter;
 
@@ -93,18 +84,6 @@ public class CatchableObj : MonoBehaviour
 
             IsEquipment = true;
             break;
-        }
-    }
-
-    private void OnEnable()
-    {
-        ResetObj();
-    }
-    private void OnDisable()
-    {
-        if (ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) && registered == this)
-        {
-            ObjectPoolManager.Instance.activeObjDict.Remove(NetworkId);
         }
     }
 
@@ -126,10 +105,29 @@ public class CatchableObj : MonoBehaviour
         objectRouter = router;
     }
 
-    private void ResetObj()
+    public void ResetForPool()
     {
+        if (ObjectPoolManager.Instance != null &&
+            ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) &&
+            registered == gameObject)
+        {
+            ObjectPoolManager.Instance.activeObjDict.Remove(NetworkId);
+        }
+
+        if (objectRouter != null &&
+            objectRouter.TryGet(NetworkId, out CatchableObj routed) &&
+            routed == this)
+        {
+            objectRouter.Remove(NetworkId);
+        }
+
         ReleaseCombinedVisual();
+        Holder = null;
+        IsHold = false;
+        IsRespawning = false;
         canBePicked = true;
+        releaseFromPrep = null;
+
         networkId = 0;
         ParentEntityId = 0;
     }
@@ -137,9 +135,6 @@ public class CatchableObj : MonoBehaviour
     public void OnPick(PlayerBrain holder)
     {
         Holder = holder;
-
-        worldScaleBeforeHold = transform.lossyScale;
-        hasHoldScaleSnapshot = true;
 
         releaseFromPrep?.Invoke(this);
         releaseFromPrep = null;
@@ -155,7 +150,6 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = false;
         canBePicked = true;
-        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
     }
@@ -166,17 +160,8 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = false;
         canBePicked = true;
-        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
-    }
-
-    public void RestoreWorldScaleAfterHold()
-    {
-        if (!hasHoldScaleSnapshot) return;
-
-        transform.localScale = worldScaleBeforeHold;
-        hasHoldScaleSnapshot = false;
     }
 
     public void SetPhysicsState(bool enablePhysics)

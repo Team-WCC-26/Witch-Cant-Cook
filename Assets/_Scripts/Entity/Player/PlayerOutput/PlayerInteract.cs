@@ -199,7 +199,6 @@ public class PlayerInteract
         brain.ActionController.CancelAction();
         HeldObj = null;
         target.transform.SetParent(null, true);
-        target.RestoreWorldScaleAfterHold();
         return true;
     }
 
@@ -236,7 +235,6 @@ public class PlayerInteract
         LocalTransformData holdTransform = target.HoldTransform;
         target.transform.localPosition = holdTransform.LocalPosition;
         target.transform.localRotation = Quaternion.Euler(holdTransform.LocalEulerAngles);
-        target.transform.localScale = holdTransform.LocalScale;
         HeldObj = target;
     }
 
