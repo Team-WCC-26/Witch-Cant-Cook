@@ -3,6 +3,11 @@ using Server;
 using System;
 using UnityEngine;
 
+public interface IPunchReceiver
+{
+    void OnPunched(PlayerBrain player);
+}
+
 public class PlayerInteract
 {
     private readonly PlayerBrain brain;
@@ -47,6 +52,7 @@ public class PlayerInteract
         if (obj == null)
         {
             brain.ActionController.PunchAction();
+            FindInteractTarget<IPunchReceiver>()?.OnPunched(brain);
             return;
         }
         if (obj.IsHold) return;
