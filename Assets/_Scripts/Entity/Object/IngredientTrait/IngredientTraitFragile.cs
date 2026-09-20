@@ -9,7 +9,7 @@ public class IngredientTraitFragile : IngredientTrait
     [SerializeField] private CatchableObj catchable;
 
     [Header("Break")]
-    [SerializeField] private float breakImpactThreshold = 2f; // 충격량이 이 값 이상이면 깨짐
+    [SerializeField] private float breakImpactThreshold = 1f; // 충격량이 이 값 이상이면 깨짐
 
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;
@@ -36,6 +36,11 @@ public class IngredientTraitFragile : IngredientTrait
 
     private void OnCollisionEnter(Collision collision)
     {
+        // Only the last holder's client may request the replacement and destruction.
+        // Check before latching isBroken so remote collisions cannot consume a later pickup.
+        if (catchable == null || !catchable.IsLocalOwner)
+            return;
+
         if (isBroken)
             return;
 

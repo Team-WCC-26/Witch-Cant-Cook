@@ -50,6 +50,7 @@ public class TrashCan : MonoBehaviour
     }
     void HandleTool(CatchableObj catchable)
     {
+        if (!catchable.IsLocalOwner) return;
         if (catchable.IsRespawning) return;
 
         if (!Define.TryGetToolId(catchable.ObjType, out Define.eToolId toolId))

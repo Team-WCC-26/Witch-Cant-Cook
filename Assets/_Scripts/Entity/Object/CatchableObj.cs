@@ -67,6 +67,13 @@ public class CatchableObj : MonoBehaviour, IPoolable
     public bool IsEquipment { get; private set; }
     public PlayerBrain Holder { get; private set; }
 
+    // Keep collision authority after OnDrop/OnThrow clears Holder.
+    public string LastHolderPlayerId { get; private set; }
+    public bool IsLocalOwner =>
+        !string.IsNullOrEmpty(LastHolderPlayerId) &&
+        PlayerSpawnManager.Instance != null &&
+        PlayerSpawnManager.Instance.IsMine(LastHolderPlayerId);
+
     public bool IsHold { get; private set; } = false;
     public bool IsRespawning { get; set; } = false;
 
@@ -129,6 +136,7 @@ public class CatchableObj : MonoBehaviour, IPoolable
         }
 
         Holder = null;
+        LastHolderPlayerId = null;
         IsHold = false;
         IsRespawning = false;
         canBePicked = true;
@@ -141,6 +149,7 @@ public class CatchableObj : MonoBehaviour, IPoolable
     public void OnPick(PlayerBrain holder)
     {
         Holder = holder;
+        LastHolderPlayerId = holder != null ? holder.PlayerId : null;
 
         releaseFromPrep?.Invoke(this);
         releaseFromPrep = null;

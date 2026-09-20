@@ -9,8 +9,7 @@ public class IngredientTraitAreaCreator : MonoBehaviour
     /// </summary>
     public void CreateArea(Define.eIngredient eIngredient)
     {
-        Debug.Log($"SpawnTearArea - Position: {transform.position}");
-
+        Debug.Log($"[AreaCreator] 康开 积己  instance={GetInstanceID()}, pos={transform.position}, frame={Time.frameCount}");
         // 积己 夸没 菩哦 傈价
         IngredientNetworkBridge.Instance.SendSpawnPacketToServer(
             (int)eIngredient,
