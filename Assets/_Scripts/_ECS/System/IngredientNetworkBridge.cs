@@ -13,17 +13,17 @@ public class IngredientNetworkBridge : MonoBehaviour
     public static IngredientNetworkBridge Instance { get; private set; }
     public static event Action<CookCompletePacket> CookCompleted;
 
-    [Header("Spawn Settings")]
-    private readonly Define.eIngredient[] ingredientIDs = {
-        Define.eIngredient.Mushroom,
-        Define.eIngredient.Carrot,
-        Define.eIngredient.Tomato,
-        Define.eIngredient.Fish,
-        Define.eIngredient.Meat,
-        Define.eIngredient.Corn,
-        Define.eIngredient.Honey,
-        Define.eIngredient.Squid,
-    };
+    //[Header("Spawn Settings")]
+    //private readonly Define.eIngredient[] ingredientIDs = {
+    //    Define.eIngredient.Mushroom,
+    //    Define.eIngredient.Carrot,
+    //    Define.eIngredient.Tomato,
+    //    Define.eIngredient.Fish,
+    //    Define.eIngredient.Meat,
+    //    Define.eIngredient.Corn,
+    //    Define.eIngredient.Honey,
+    //    Define.eIngredient.Squid,
+    //};
 
     [SerializeField] private GameObject spawnPointObj;
 
@@ -53,20 +53,20 @@ public class IngredientNetworkBridge : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
-        {
-            int randomID = (int)ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
-            SendSpawnPacketToServer(randomID);
-        }
+    //private void Update()
+    //{
+    //    if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
+    //    {
+    //        int randomID = (int)ingredientIDs[UnityEngine.Random.Range(0, ingredientIDs.Length)];
+    //        SendSpawnPacketToServer(randomID);
+    //    }
 
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-    }
+    //    if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+    //    {
+    //        Cursor.lockState = CursorLockMode.None;
+    //        Cursor.visible = true;
+    //    }
+    //}
 
     public void SendSpawnPacketToServer(int ingredientID)
     {

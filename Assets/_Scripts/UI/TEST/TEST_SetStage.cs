@@ -3,6 +3,7 @@ using Server;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
@@ -43,7 +44,13 @@ public class TEST_SetStage : MonoBehaviour
         RegisterStagePacketHandler();
         UpdateCurrentStage(1);
     }
-
+    private void Update()
+    {
+        if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
+        {
+            OpenInputPanel();
+        }
+    }
     private void OnDestroy()
     {
         if (instance == this) instance = null;
