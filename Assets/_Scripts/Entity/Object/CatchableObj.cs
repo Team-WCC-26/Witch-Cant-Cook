@@ -122,6 +122,12 @@ public class CatchableObj : MonoBehaviour, IPoolable
         }
 
         ReleaseCombinedVisual();
+
+        if (Holder != null)
+        {
+            Holder.Interact.TryReleaseHeld(this);
+        }
+
         Holder = null;
         IsHold = false;
         IsRespawning = false;

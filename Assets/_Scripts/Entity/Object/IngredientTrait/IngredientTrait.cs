@@ -2,10 +2,23 @@ using Protocol;
 using Server;
 using UnityEngine;
 
-public class IngredientTrait : MonoBehaviour
+public abstract class IngredientTrait : MonoBehaviour
 {
+    private void OnEnable()
+    {
+        StartTrait();
+    }
+
+    private void OnDisable()
+    {
+        StopTrait();
+    }
+
+    protected virtual void StartTrait() { }
+    protected virtual void StopTrait() { }
+
     /// <summary>
-    /// ¿ÀºêÁ§Æ® Ç®·Î Ingredient¸¦ ¹İ³³ÇÔ - ½ÇÁ¦·Î´Â Destroy ÆĞÅ¶ Àü¼Û¸¸ ÇÔ
+    /// ì˜¤ë¸Œì íŠ¸ í’€ë¡œ Ingredientë¥¼ ë°˜ë‚©í•¨ - ì‹¤ì œë¡œëŠ” Destroy íŒ¨í‚· ì „ì†¡ë§Œ í•¨
     /// </summary>
     /// <param name="catchable"></param>
     public void PushIngredientToPool(CatchableObj catchable)

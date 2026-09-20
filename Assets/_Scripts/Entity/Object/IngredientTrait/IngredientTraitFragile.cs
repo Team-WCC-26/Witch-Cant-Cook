@@ -3,13 +3,13 @@ using System;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitFragile : MonoBehaviour
+public class IngredientTraitFragile : IngredientTrait
 {
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
 
     [Header("Break")]
-    [SerializeField] private float breakImpactThreshold = 2f; // Ãæ°İ·®ÀÌ ÀÌ °ª ÀÌ»óÀÌ¸é ±úÁü
+    [SerializeField] private float breakImpactThreshold = 2f; // ì¶©ê²©ëŸ‰ì´ ì´ ê°’ ì´ìƒì´ë©´ ê¹¨ì§
 
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;
@@ -29,7 +29,7 @@ public class IngredientTraitFragile : MonoBehaviour
             catchable = GetComponent<CatchableObj>();
     }
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         isBroken = false;
     }
@@ -55,7 +55,7 @@ public class IngredientTraitFragile : MonoBehaviour
         {
             spawnPos = hit.point;
         }
-        // ±úÁø À§Ä¡¿¡ ¿µ¿ª »ı¼ºÇØ¾ßÇÔ. ¿µ¿ª »ı¼ºÀº ÅëÇÕÆ¯¼º ½ºÅ©¸³Æ®¿¡¼­ È£ÃâÇÏ´Âµ¥.. 
+        // ê¹¨ì§„ ìœ„ì¹˜ì— ì˜ì—­ ìƒì„±í•´ì•¼í•¨. ì˜ì—­ ìƒì„±ì€ í†µí•©íŠ¹ì„± ìŠ¤í¬ë¦½íŠ¸ì—ì„œ í˜¸ì¶œí•˜ëŠ”ë°..
         OnBroken?.Invoke();
     }
 }
