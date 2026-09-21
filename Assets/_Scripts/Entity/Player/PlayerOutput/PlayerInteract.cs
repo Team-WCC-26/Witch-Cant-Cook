@@ -48,11 +48,11 @@ public class PlayerInteract
     {
         if (IsHolding) return;
 
-        CatchableObj obj = FindInteractTarget<CatchableObj>();
-        if (obj == null)
+        IInteractTarget target = FindInteractTarget();
+        if (target is not CatchableObj obj)
         {
             brain.ActionController.PunchAction();
-            FindInteractTarget<IPunchReceiver>()?.OnPunched(brain);
+            GetTargetComponent<IPunchReceiver>(target)?.OnPunched(brain);
             return;
         }
         if (obj.IsHold) return;
@@ -81,7 +81,8 @@ public class PlayerInteract
 
     private bool TryUseHeldObjectReceiver()
     {
-        IHeldObjectReceiver receiver = FindInteractTarget<IHeldObjectReceiver>();
+        IInteractTarget target = FindInteractTarget();
+        IHeldObjectReceiver receiver = GetTargetComponent<IHeldObjectReceiver>(target);
         if (receiver == null) return false;
 
         return receiver.TryReceiveHeldObject(HeldObj, this);
@@ -279,34 +280,44 @@ public class PlayerInteract
     #endregion
 
     #region Find Interactable Target
-    public T FindInteractTarget<T>() where T : class
+    public IInteractTarget FindInteractTarget()
     {
+        if (brain.InteractDistance <= 0f)
+        {
+            throw new InvalidOperationException("InteractDistance must be greater than 0.");
+        }
+
         Ray ray = BuildInteractRay();
         RaycastHit[] hits = Physics.SphereCastAll(
             ray.origin,
             GetInteractRadius(),
             ray.direction,
-            brain.InteractDistance);
+            brain.InteractDistance,
+            brain.InteractLayerMask,
+            QueryTriggerInteraction.Collide); // trigger collider도 상호작용 가능하도록 설정
 
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        IInteractTarget bestTarget = null;
+        float bestScore = float.PositiveInfinity;
 
         foreach (RaycastHit hit in hits)
         {
             Collider hitCollider = hit.collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue; // Ignore self-collisions
 
-            T target = GetComponentInParent<T>(hitCollider);
+            // Check if IInteractTarget is acceptable
+            IInteractTarget target = GetInteractTargetInParent(hitCollider);
             if (target == null) continue;
+            if (!target.Accepts(GetSourceCategory())) continue;
 
-            IInteractTarget interactTarget = GetComponentInParent<IInteractTarget>(hitCollider);
-            if (interactTarget == null) continue;
-            if (!interactTarget.Accepts(GetSourceCategory())) continue;
+            float score = GetTargetScore(ray, hitCollider, hit.distance);
 
-            return target;
+            if (score >= bestScore) continue;
+
+            bestTarget = target;
+            bestScore = score;
         }
 
-        return null;
+        return bestTarget;
     }
 
     private EntityCategory GetSourceCategory()
@@ -316,19 +327,51 @@ public class PlayerInteract
             : EntityCategory.Player;
     }
 
-    private static T GetComponentInParent<T>(Collider collider) where T : class
+    private float GetTargetScore(Ray ray, Collider targetCollider, float distance)
     {
-        if (typeof(Component).IsAssignableFrom(typeof(T)))
-            return collider.GetComponentInParent(typeof(T)) as T;
+        Vector3 targetCenter = targetCollider.bounds.center;
+        Vector3 castCenter = ray.GetPoint(Mathf.Max(0f, Vector3.Dot(targetCenter - ray.origin, ray.direction)));
 
+        //ray 중심으로부터 얼마나 벗어났는가
+        float offset = Vector3.Distance(castCenter, targetCenter);
+        float offsetScore = Mathf.Clamp01(offset / GetInteractRadius());
+
+        //ray 시작점과의 거리
+        float distanceRatio = Mathf.Clamp01(distance / brain.InteractDistance);
+        int distanceScore = Mathf.Min(Mathf.FloorToInt(distanceRatio * 3f), 2);
+
+        float targetScore = offsetScore + distanceScore;
+        return targetScore;
+    }
+
+    private static T GetTargetComponent<T>(IInteractTarget target) where T : class
+    {
+        if (target is T directTarget)
+            return directTarget;
+
+        if (target is not Component component)
+            return null;
+
+        foreach (MonoBehaviour behaviour in component.GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is T targetComponent)
+                return targetComponent;
+        }
+
+        return null;
+    }
+
+    private static IInteractTarget GetInteractTargetInParent(Collider collider)
+    {
         foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
         {
-            if (behaviour is T target)
+            if (behaviour is IInteractTarget target)
                 return target;
         }
 
         return null;
     }
+
     #endregion
 
     #region Interact Ray

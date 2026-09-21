@@ -64,8 +64,8 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         if (interact == null) return false;
 
         // Place the pan on a stove when the player is aiming at one.
-        StoveInteraction stove = interact.FindInteractTarget<StoveInteraction>();
-        if (stove != null && stove.TryPlacePan(this, interact))
+        IInteractTarget target = interact.FindInteractTarget();
+        if (target is StoveInteraction stove && stove.TryPlacePan(this, interact))
             return true;
 
         TossIngredient();
