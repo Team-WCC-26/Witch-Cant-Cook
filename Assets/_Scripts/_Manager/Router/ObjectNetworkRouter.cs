@@ -99,9 +99,25 @@ public class ObjectNetworkRouter : MonoBehaviour
                 continue;
 
             NotifyParent(previousParentId, catchable, false);
+
+            if (catchable.Holder != null)
+            {
+                catchable.Holder.Interact.TryReleaseHeld(catchable);
+                catchable.OnDrop();
+            }
+
             catchable.ParentEntityId = packet.ParentEntityId;
             NotifyParent(packet.ParentEntityId, catchable, true);
         }
+    }
+
+    // 엔티티를 기존 부모에서 분리한다.
+    public void HandleEntityPicked(CatchableObj catchable)
+    {
+        if (catchable == null) return;
+
+        NotifyParent(catchable.ParentEntityId, catchable, false);
+        catchable.ParentEntityId = 0;
     }
 
     private void HandleCookProcessChanged(IReadOnlyList<CookProcessPacket> packets)

@@ -87,6 +87,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
             }
 
             GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
+            objectRouter.HandleEntityPicked(target);
             player.Interact.ApplyPicked(target);
         }
     }

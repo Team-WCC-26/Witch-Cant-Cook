@@ -1,7 +1,9 @@
 using System.Collections;
+using Protocol;
+using Server;
 using UnityEngine;
 
-public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectReceiver
+public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectReceiver, IEntityParentReceiver
 {
     [SerializeField] private CatchableObj catchable;
 
@@ -9,6 +11,7 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
     private IngredientReaction currentIngredient;
     private Vector3 currentIngredientOriginalScale;
     private StoveInteraction currentStove;
+    private long pendingIngredientId;
 
     public CatchableObj Catchable => catchable;
     public bool HasIngredient => currentIngredient != null;
@@ -42,12 +45,35 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
 
     private void OnTriggerEnter(Collider other)
     {
-        if (currentIngredient != null) return; //중복 아이템 방지
-        if (Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.z)) > maxInsertAngle) return;
-        if (!TryGetItem(other, out IngredientReaction ingredient, out CatchableObj ingredientCatchable)) return;
-        if (ingredientCatchable.IsHold) return;
+        // 팬의 유효성 확인
+        if (catchable == null || catchable.NetworkId == 0) return;
 
-        AttachItem(ingredient, ingredientCatchable);
+        if (currentIngredient != null) return; //중복 아이템 방지
+        if (pendingIngredientId != 0) return; //이미 서버에 요청 중인 재료가 있음
+
+        // 팬이 위를 향해야 함.
+        if (Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.z)) > maxInsertAngle) return;
+
+        // 아이템 유효성 확인
+        if (!TryGetItem(other, out IngredientReaction _, out CatchableObj ingredientCatchable)) return;
+        if (ingredientCatchable.NetworkId == 0) return;
+
+        // 들고 있는 상태의 재료는 팬에 넣을 수 없음
+        if (ingredientCatchable.IsHold) return;
+        // 이 클라이언트가 마지막으로 던진 재료만 서버에 삽입 요청
+        if (!ingredientCatchable.IsLocalOwner) return;
+
+
+        pendingIngredientId = ingredientCatchable.NetworkId;
+        RequestInsert(ingredientCatchable);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!TryGetItem(other, out _, out CatchableObj ingredientCatchable)) return;
+        if (ingredientCatchable.NetworkId != pendingIngredientId) return;
+
+        pendingIngredientId = 0;
     }
 
     #endregion
@@ -94,6 +120,18 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         if (ingredientCatchable.Category != EntityCategory.Ingredient) return false;
 
         return true;
+    }
+
+    // 재료를 팬에 넣어 달라고 서버에 요청한다.
+    private void RequestInsert(CatchableObj ingredient)
+    {
+        EntityInsertPacket packet = new()
+        {
+            SubjectEntityId = ingredient.NetworkId,
+            TargetEntityId = catchable.NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     // 팬에 든 음식을 빈 그릇으로 옮긴다.
@@ -299,11 +337,52 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         if (interact == null) return false;
 
         if (currentIngredient != null) return false; //팬에 이미 재료가 있음
-        if (!heldObj.TryGetComponent(out IngredientReaction ingredient)) return false; //재료가 아님
-        if (!interact.TryReleaseHeld(heldObj)) return false; //플레이어가 재료를 놓을 수 없음
+        if (pendingIngredientId != 0) return false; //이미 서버에 요청 중인 재료가 있음
+        if (!heldObj.TryGetComponent(out IngredientReaction _)) return false; //재료가 아님
+        if (heldObj.NetworkId == 0) return false;
+        if (catchable == null || catchable.NetworkId == 0) return false;
 
-        AttachItem(ingredient, heldObj);
+        pendingIngredientId = heldObj.NetworkId;
+        interact.RequestEntityInteract(catchable.NetworkId);
         return true;
+    }
+
+    // IEntityParentReceiver: 서버가 팬에 추가한 재료를 부착한다.
+    public void HandleEntityAdded(CatchableObj entity)
+    {
+        // Validate argument
+        if (entity == null) return;
+
+        if (currentIngredient != null)
+        {
+            Debug.LogError("[Client Sync Error] Pan already contains an ingredient.");
+            return;
+        }
+
+        if (!entity.TryGetComponent(out IngredientReaction ingredient)) return;
+
+        pendingIngredientId = 0;
+        AttachItem(ingredient, entity);
+    }
+
+    // IEntityParentReceiver: 서버가 팬에서 제거한 재료를 분리한다.
+    public void HandleEntityRemoved(CatchableObj entity)
+    {
+        // Validate argument
+        if (entity == null) return;
+
+        if (currentIngredient == null) return;
+        if (currentIngredient.Catchable != entity)
+        {
+            Debug.LogError("[Client Sync Error] Removed item does not match the item in the pan.");
+            return;
+        }
+
+        pendingIngredientId = 0;
+        StopGrill();
+        IngredientReaction ingredient = currentIngredient;
+        currentIngredient = null;
+        DetachItem(ingredient);
     }
 
     #endregion
