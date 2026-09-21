@@ -17,11 +17,13 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     {
         if (pan == null) return false;
         if (player == null) return false;
+        if (!IsRegistered) return false;
         if (currentItem != null) return false;
         if (pan.Catchable == null) return false;
-        if (!player.TryReleaseHeld(pan.Catchable)) return false;
+        if (pan.Catchable.NetworkId == 0) return false;
+        if (!pendingEntities.Add(pan.Catchable.NetworkId)) return false;
 
-        TryAttachItem(pan.Catchable);
+        player.RequestEntityInteract(NetworkId);
         return true;
     }
 
@@ -32,6 +34,7 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
             return;
         }
         if (catchable.IsHold) return;
+        if (currentItem == catchable || currentKnife == catchable) return;
         if (!IsRegistered) return;
         if (ServerManager.Instance == null) return;
         if (catchable.NetworkId == 0) return;
@@ -51,10 +54,37 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     {
         if (!collision.gameObject.TryGetComponent(out CatchableObj catchable)) return;
         pendingEntities.Remove(catchable.NetworkId);
+
+        if (currentItem != catchable) return;
+        if (catchable.Category != EntityCategory.Pan) return;
+        if (!catchable.IsLocalOwner) return;
+        if (catchable.NetworkId == 0) return;
+        if (ServerManager.Instance == null) return;
+
+        RequestDetach(catchable);
+    }
+
+    // 조리대에서 벗어난 팬의 부모 해제를 서버에 요청한다.
+    private static void RequestDetach(CatchableObj pan)
+    {
+        Vector3 velocity = pan.Rb != null
+            ? pan.Rb.linearVelocity
+            : Vector3.zero;
+
+        EntityThrowPacket packet = new()
+        {
+            EntityId = pan.NetworkId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(pan.transform.position),
+            Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     public void HandleEntityAdded(CatchableObj entity)
     {
+        if (entity == null) return;
+
         // Parent result
         pendingEntities.Remove(entity.NetworkId);
         ApplyPut(entity);
@@ -75,7 +105,23 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
             return;
         }
 
+        if (catchable.Category == EntityCategory.Pan &&
+            catchable.TryGetComponent(out PanInteraction pan))
+        {
+            TryAttachPan(pan);
+            return;
+        }
+
         TryAttachItem(catchable);
+    }
+
+    // 팬을 아이템 슬롯에 동적 물리 상태로 배치한다.
+    private void TryAttachPan(PanInteraction pan)
+    {
+        if (currentItem != null) return;
+
+        currentItem = pan.Catchable;
+        pan.PlaceOnPrep(itemSlot);
     }
 
     private void TryAttachItem(CatchableObj catchable)

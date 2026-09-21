@@ -236,7 +236,7 @@ public class PanInteraction : MonoBehaviour,
 
     #endregion
 
-    #region Stove Cooking
+    #region Pan Placement
 
     // 팬을 화구 슬롯에 배치하고 조리를 시작한다.
     public void PlaceOnStove(StoveInteraction stove, Transform slot)
@@ -253,6 +253,12 @@ public class PanInteraction : MonoBehaviour,
         if (currentStove != stove) return;
 
         currentStove = null;
+    }
+
+    // 팬을 조리대 슬롯에 배치하고 물리 움직임을 유지한다.
+    public void PlaceOnPrep(Transform slot)
+    {
+        AttachPan(slot);
     }
 
     // 현재 재료의 조리 게이지를 숨긴다.
