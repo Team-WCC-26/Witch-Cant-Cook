@@ -97,11 +97,6 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         SendMovementPacket();
     }
 
-    public override void NotifyCollision(Collision collision)
-    {
-        physicalFSM.NotifyCollision(collision);
-    }
-
     public void EnterRagdoll()
     {
         physicalFSM.EnterRagdoll();

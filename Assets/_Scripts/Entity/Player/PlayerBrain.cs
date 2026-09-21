@@ -131,15 +131,6 @@ public sealed class PlayerBrain : MonoBehaviour
         actionController.FixedTick(stateResolver.CurrentState);
     }
 
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (!isInitialized) return;
-        if (!PlayerSpawnManager.Instance.IsMine(PlayerId)) return;
-        if (stateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default) return;
-
-        stateResolver.NotifyCollision(collision);
-    }
-
     private void OnDestroy()
     {
         if (Health != null)

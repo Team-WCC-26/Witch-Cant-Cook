@@ -27,10 +27,6 @@ public class PlayerStateResolver
     {
     }
 
-    public virtual void NotifyCollision(Collision collision)
-    {
-    }
-
     public virtual void ApplyRemotePacket(PlayerMovementPacket packet)
     {
     }

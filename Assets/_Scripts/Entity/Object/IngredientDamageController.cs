@@ -29,7 +29,9 @@ public class IngredientDamageController : MonoBehaviour
         if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;
 
         int tempDmg = CalculateDamage();
+        float healthBefore = brain.Health.CurHealth;
         brain.Health.TakeDamage(tempDmg);
+        float healthAfter = brain.Health.CurHealth;
     }
     #endregion
 
