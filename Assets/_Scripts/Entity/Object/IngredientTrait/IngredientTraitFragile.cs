@@ -14,7 +14,7 @@ public class IngredientTraitFragile : IngredientTrait
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;
 
-    public event Action OnBroken;
+    public event Action<Vector3, Vector3> OnBroken;
 
     private bool isBroken;
 
@@ -47,20 +47,15 @@ public class IngredientTraitFragile : IngredientTrait
         if (collision.relativeVelocity.magnitude < breakImpactThreshold)
             return;
 
-        Break();
+        if (collision.contactCount == 0) return;
+        ContactPoint contact = collision.GetContact(0);
+        Break(contact.point, contact.normal);
     }
 
-    private void Break()
+    private void Break(Vector3 point, Vector3 normal)
     {
         isBroken = true;
 
-        Vector3 spawnPos = transform.position;
-
-        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 2f))
-        {
-            spawnPos = hit.point;
-        }
-        // 깨진 위치에 영역 생성해야함. 영역 생성은 통합특성 스크립트에서 호출하는데..
-        OnBroken?.Invoke();
+        OnBroken?.Invoke(point, normal);
     }
 }

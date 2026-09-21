@@ -36,14 +36,14 @@ public class IngredientHoneyBottle : IngredientTrait
         areaCreated = false;
     }
 
-    private void OnBroken()
+    private void OnBroken(Vector3 point, Vector3 normal)
     {
         if (areaCreated) return;
         areaCreated = true;
 
         if (areaCreator != null)
         {
-            areaCreator.CreateArea(eArea);
+            areaCreator.CreateArea(eArea, point, normal);
             PushIngredientToPool(catchable);
         }
     }
