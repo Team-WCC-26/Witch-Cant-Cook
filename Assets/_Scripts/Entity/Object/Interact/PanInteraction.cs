@@ -3,7 +3,12 @@ using Protocol;
 using Server;
 using UnityEngine;
 
-public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectReceiver, IEntityParentReceiver
+public class PanInteraction : MonoBehaviour,
+    IHeldPrimaryAction,
+    IHeldObjectReceiver,
+    IEntityParentReceiver,
+    IEntityThrowParentReceiver,
+    ICookReceiver
 {
     [SerializeField] private CatchableObj catchable;
 
@@ -12,6 +17,8 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
     private Vector3 currentIngredientOriginalScale;
     private StoveInteraction currentStove;
     private long pendingIngredientId;
+    private long pendingTossId;
+    private float pendingCookDuration = -1f;
 
     public CatchableObj Catchable => catchable;
     public bool HasIngredient => currentIngredient != null;
@@ -38,7 +45,10 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
     private void OnDisable()
     {
         RestorePanTriggerNow();
-        StopGrill();
+        HideCookGauge();
+        pendingIngredientId = 0;
+        pendingCookDuration = -1f;
+        pendingTossId = 0;
         currentStove?.ReleasePan(this);
         currentStove = null;
     }
@@ -97,7 +107,10 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         ingredientCatchable.ChangePickState(false);
         ingredientCatchable.SetPhysicsState(false);
 
-        currentStove?.BeginCook(this);
+        if (pendingCookDuration < 0f) return;
+
+        ingredient.GaugeUI?.StartFill(pendingCookDuration);
+        pendingCookDuration = -1f;
     }
 
     // 재료를 팬에서 분리하고 기존 크기를 복원한다.
@@ -145,7 +158,7 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         CatchableObj ingredientCatchable = ingredient.Catchable;
         if (ingredientCatchable == null) return false;
 
-        StopGrill();
+        HideCookGauge();
         currentIngredient = null;
         DetachItem(ingredient);
         plate.HandleEntityAdded(ingredientCatchable);
@@ -164,32 +177,32 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
 
     private Coroutine triggerRestoreCoroutine;
 
-    // 팬에서 재료를 무작위 방향으로 튕겨낸다.
+    // 팬의 재료를 고정된 방향으로 배출해 달라고 서버에 요청한다.
     private void TossItem()
     {
         if (currentIngredient == null) return;
+        if (pendingTossId != 0) return;
 
-        IngredientReaction ingredient = currentIngredient;
-        CatchableObj ingredientCatchable = ingredient.Catchable;
-        StopGrill();
-        currentIngredient = null;
+        CatchableObj ingredient = currentIngredient.Catchable;
+        if (ingredient == null || ingredient.NetworkId == 0) return;
+        if (ServerManager.Instance == null) return;
 
-        DisablePanTrigger();
-        DetachItem(ingredient);
-        ingredientCatchable.ChangePickState(true);
-        ingredientCatchable.OnThrow();
+        Vector3 direction = catchable.Holder != null
+            ? catchable.Holder.transform.forward
+            : transform.forward;
+        direction.y = 0f;
+        direction = direction.sqrMagnitude > 0f ? direction.normalized : Vector3.forward;
 
-        if (ingredientCatchable.TryGetComponent(out IngredientDamageController damageController))
-            damageController.DisableDamageFor(damageImmuneDuration);
+        EntityThrowPacket packet = new()
+        {
+            EntityId = ingredient.NetworkId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(ingredient.transform.position),
+            Velocity = ProtocolTypeConverter.ToNumericsVector3(
+                direction * tossForce + Vector3.up * tossUpForce)
+        };
 
-        if (ingredientCatchable.Rb == null) return;
-
-        Vector2 random = Random.insideUnitCircle.normalized;
-        Vector3 direction = new Vector3(random.x, 0f, random.y);
-        Vector3 impulse = direction * tossForce + Vector3.up * tossUpForce;
-        ingredientCatchable.Rb.linearVelocity = Vector3.zero;
-        ingredientCatchable.Rb.angularVelocity = Vector3.zero;
-        ingredientCatchable.Rb.AddForce(impulse, ForceMode.Impulse);
+        pendingTossId = ingredient.NetworkId;
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     private void DisablePanTrigger()
@@ -225,8 +238,6 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
 
     #region Stove Cooking
 
-    private Coroutine grillCoroutine;
-
     // 팬을 화구 슬롯에 배치하고 조리를 시작한다.
     public void PlaceOnStove(StoveInteraction stove, Transform slot)
     {
@@ -234,7 +245,6 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         currentStove = stove;
 
         AttachPan(slot);
-        currentStove?.BeginCook(this);
     }
 
     // 현재 화구에서 팬을 분리하고 조리를 중단한다.
@@ -242,47 +252,13 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
     {
         if (currentStove != stove) return;
 
-        StopGrill();
         currentStove = null;
     }
 
-    // 지정된 시간 동안 팬 내부 재료의 굽기를 시작한다.
-    public void StartGrill(float duration)
+    // 현재 재료의 조리 게이지를 숨긴다.
+    private void HideCookGauge()
     {
-        if (currentIngredient == null) return;
-        if (currentIngredient.IsActionCompleted(IngredientAction.Grill)) return;
-        if (grillCoroutine != null) return;
-
-        currentIngredient.GaugeUI?.StartFill(duration);
-        grillCoroutine = StartCoroutine(GrillRoutine(duration));
-    }
-
-    // 진행 중인 굽기와 게이지 표시를 중단한다.
-    public void StopGrill()
-    {
-        if (grillCoroutine != null)
-        {
-            StopCoroutine(grillCoroutine);
-            grillCoroutine = null;
-        }
-
         currentIngredient?.GaugeUI?.Hide();
-    }
-
-    // 조리 시간이 끝난 뒤 굽기를 완료한다.
-    private IEnumerator GrillRoutine(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        CompleteGrill();
-    }
-
-    // 팬 내부 재료에 굽기 완료 상태를 적용한다.
-    private void CompleteGrill()
-    {
-        if (currentIngredient == null) return;
-
-        currentIngredient.Interact(IngredientAction.Grill, int.MaxValue);
-        grillCoroutine = null;
     }
 
     // 팬을 슬롯 위치로 보정하고 물리 움직임을 활성화한다.
@@ -379,10 +355,53 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
         }
 
         pendingIngredientId = 0;
-        StopGrill();
+        pendingCookDuration = -1f;
+        HideCookGauge();
         IngredientReaction ingredient = currentIngredient;
         currentIngredient = null;
         DetachItem(ingredient);
+    }
+
+    // IEntityThrowParentReceiver: 팬에서 배출된 재료의 예외 처리를 적용한다.
+    public void HandleEntityThrown(CatchableObj entity)
+    {
+        if (entity == null) return;
+        if (currentIngredient == null || currentIngredient.Catchable != entity) return;
+
+        pendingTossId = 0;
+        DisablePanTrigger();
+
+        if (entity.TryGetComponent(out IngredientDamageController damageController))
+            damageController.DisableDamageFor(damageImmuneDuration);
+    }
+
+    // ICookReceiver: 서버가 전달한 남은 시간으로 조리 게이지를 시작한다.
+    public void HandleCookStart(CookStartPacket packet)
+    {
+        float duration = packet.CookingTimeMs / 1000f;
+        if (currentIngredient == null)
+        {
+            pendingCookDuration = duration;
+            return;
+        }
+
+        currentIngredient.GaugeUI?.StartFill(duration);
+    }
+
+    // ICookReceiver: 서버의 조리 일시정지를 반영한다.
+    public void HandleCookPause(CookPausePacket packet)
+    {
+        pendingCookDuration = -1f;
+        HideCookGauge();
+    }
+
+    // ICookReceiver: 서버의 굽기 완료를 반영한다.
+    public void HandleCookComplete(CookCompletePacket packet)
+    {
+        if ((packet.CookType & IngredientState.Grilled) == 0) return;
+
+        pendingCookDuration = -1f;
+        HideCookGauge();
     }
 
     #endregion

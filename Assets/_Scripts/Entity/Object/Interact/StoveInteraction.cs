@@ -100,21 +100,6 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
 
     #endregion
 
-    #region Cooking
-
-    [SerializeField] private float cookDuration = 2f;
-
-    // 팬에 재료가 있으면 굽기를 시작한다.
-    public void BeginCook(PanInteraction pan)
-    {
-        if (currentPan != pan) return; // 팬이 화구에 없으면 무시
-        if (!pan.HasIngredient) return; // 팬에 재료가 없으면 무시 
-
-        pan.StartGrill(cookDuration);
-    }
-
-    #endregion
-
     #region Interface Implementations
 
     // IPanPrimaryReceiver: 들고 있는 팬을 화구에 배치한다.

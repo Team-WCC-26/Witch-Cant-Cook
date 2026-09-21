@@ -6,12 +6,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public interface IEntityParentReceiver
-{
-    void HandleEntityAdded(CatchableObj entity);
-    void HandleEntityRemoved(CatchableObj entity);
-}
-
 public class ObjectNetworkRouter : MonoBehaviour
 {
     private const int TrashIngredientId = 99999;
@@ -142,6 +136,14 @@ public class ObjectNetworkRouter : MonoBehaviour
             return;
         }
 
+        long previousParentId = catchable.ParentEntityId;
+        if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
+            receiver is IEntityThrowParentReceiver throwReceiver)
+        {
+            throwReceiver.HandleEntityThrown(catchable);
+        }
+
+        NotifyParent(previousParentId, catchable, false);
         catchable.Holder?.Interact.ApplyThrown(catchable);
         catchable.ParentEntityId = 0;
         catchable.ApplyThrow(packet);
