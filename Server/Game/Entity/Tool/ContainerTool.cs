@@ -23,7 +23,7 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
         return true;
     }
 
-    public bool Remvoe(Entity entity)
+    public bool Remove(Entity entity)
     {
         return _storage.TryRemove(entity);
     }

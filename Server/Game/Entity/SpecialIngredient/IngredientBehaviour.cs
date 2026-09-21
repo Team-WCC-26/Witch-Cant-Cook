@@ -2,8 +2,28 @@
 
 public abstract class IngredientBehaviour
 {
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            _enabled = value;
+
+            if (value)
+            {
+                OnEnable();
+            }
+            else
+            {
+                OnDisable();
+            }
+        }
+    }
+
     private TimerManager? _timerManager;
     private TimerHandle _handle;
+
+    private bool _enabled = true;
 
     public void Init(TimerManager timerManager)
     {
@@ -14,6 +34,9 @@ public abstract class IngredientBehaviour
     {
         _timerManager = null;
     }
+
+    public virtual void OnEnable() { }
+    public virtual void OnDisable() { }
 }
 
 public interface IPickupHandler

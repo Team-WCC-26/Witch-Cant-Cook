@@ -24,7 +24,7 @@ public class Stove() : ContainerTool(new SingleSlotStorage()), IFixedTool
 
     public override bool Insert(Entity entity)
     {
-        if (entity is Pan pan && _storage.TryInsert(pan))
+        if (entity is Pan pan && base.Insert(pan))
         {
             pan.Parent = this;
             pan.SetCookEnable(true);

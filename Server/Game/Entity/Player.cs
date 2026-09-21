@@ -10,11 +10,11 @@ public class Player : Entity
     public IAppSession Session { get; set; }
     public float LastPingTime { get; set; }
     public float Ping 
-    { 
-        get; 
+    {
+        get => _ping;
         set
         {
-            Ping = value;
+            _ping = value;
             MakeDirty(DirtyMask.Ping);
         }
     }
@@ -34,6 +34,7 @@ public class Player : Entity
     }
     public Quaternion Rotation { get; set; }
 
+    private float _ping;
     private Vector3 _position;
 
     private PacketBatch _batch = new();
