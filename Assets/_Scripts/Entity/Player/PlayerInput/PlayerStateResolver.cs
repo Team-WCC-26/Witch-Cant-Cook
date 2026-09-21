@@ -15,7 +15,7 @@ public class PlayerStateResolver
             Vector2.zero,
             false,
             PlayerInteraction.None,
-            CatchableObjType.Default
+            EntityCategory.Player
         );
     }
 

@@ -1,10 +1,10 @@
 using System;
 
 [Flags]
-public enum InteractCategory
+public enum EntityCategory
 {
     None = 0,
-    EmptyHand = 1 << 0,
+    Player = 1 << 0,
     Ingredient = 1 << 1,
     Pan = 1 << 2,
     Knife = 1 << 3,
@@ -21,26 +21,26 @@ public enum InteractCategory
 
 public interface IInteractTarget
 {
-    InteractCategory Category { get; } // ÇØ´ç ¿ÀºêÁ§Æ®ÀÇ Á¾·ù
-    InteractCategory AcceptedCategories { get; } //ÀÌ ¿ÀºêÁ§Æ®°¡ Çã¿ëÇÏ´Â »ó´ë Á¾·ù
+    EntityCategory Category { get; } // í•´ë‹¹ ì˜¤ë¸Œì íŠ¸ì˜ ì¢…ë¥˜
+    EntityCategory AcceptedCategories { get; } //ì´ ì˜¤ë¸Œì íŠ¸ê°€ í—ˆìš©í•˜ëŠ” ìƒëŒ€ ì¢…ë¥˜
 }
 
 public static class InteractTargetExtensions
 {
-    // »ó´ë ±âÁØ: »ó´ë°¡ ³ª¸¦ Çã¿ëÇÏ´Â°¡
-    // »ó´ë <- ³ª
+    // ìƒëŒ€ ê¸°ì¤€: ìƒëŒ€ê°€ ë‚˜ë¥¼ í—ˆìš©í•˜ëŠ”ê°€
+    // ìƒëŒ€ <- ë‚˜
     public static bool Accepts(
         this IInteractTarget target,
-        InteractCategory sourceCategory)
+        EntityCategory sourceCategory)
     {
         if (target == null) return false;
-        if (sourceCategory == InteractCategory.None) return false;
+        if (sourceCategory == EntityCategory.None) return false;
 
         return (target.AcceptedCategories & sourceCategory) != 0;
     }
 
-    // ³ª ±âÁØ: ³»°¡ »ó´ë¿Í »óÈ£ÀÛ¿ëÇÒ ¼ö ÀÖ´Â°¡
-    // ³ª -> »ó´ë
+    // ë‚˜ ê¸°ì¤€: ë‚´ê°€ ìƒëŒ€ì™€ ìƒí˜¸ì‘ìš©í•  ìˆ˜ ìˆëŠ”ê°€
+    // ë‚˜ -> ìƒëŒ€
     public static bool CanInteractWith(
         this IInteractTarget source,
         IInteractTarget target)

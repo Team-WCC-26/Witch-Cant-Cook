@@ -45,17 +45,17 @@ public class Define
         Oven = 80,
     }
 
-    public static bool TryGetToolId(CatchableObjType objType, out eToolId toolId)
+    public static bool TryGetToolId(EntityCategory category, out eToolId toolId)
     {
-        switch (objType)
+        switch (category)
         {
-            case CatchableObjType.Knife:
+            case EntityCategory.Knife:
                 toolId = eToolId.KitchenKnife;
                 return true;
-            case CatchableObjType.Pan:
+            case EntityCategory.Pan:
                 toolId = eToolId.FryingPan;
                 return true;
-            case CatchableObjType.Plate:
+            case EntityCategory.Plate:
                 toolId = eToolId.Plate;
                 return true;
             default:
@@ -64,21 +64,21 @@ public class Define
         }
     }
 
-    public static bool TryGetCatchableObjType(eToolId toolId, out CatchableObjType objType)
+    public static bool TryGetEntityCategory(eToolId toolId, out EntityCategory category)
     {
         switch (toolId)
         {
             case eToolId.KitchenKnife:
-                objType = CatchableObjType.Knife;
+                category = EntityCategory.Knife;
                 return true;
             case eToolId.FryingPan:
-                objType = CatchableObjType.Pan;
+                category = EntityCategory.Pan;
                 return true;
             case eToolId.Plate:
-                objType = CatchableObjType.Plate;
+                category = EntityCategory.Plate;
                 return true;
             default:
-                objType = CatchableObjType.Default;
+                category = EntityCategory.None;
                 return false;
         }
     }

@@ -236,7 +236,7 @@ public class PanInteraction : MonoBehaviour, IHeldPrimaryAction, IHeldObjectRece
 
         ingredientCatchable = ingredient.Catchable;
         if (ingredientCatchable == null) return false;
-        if (ingredientCatchable.ObjType != CatchableObjType.Ingredient) return false;
+        if (ingredientCatchable.Category != EntityCategory.Ingredient) return false;
 
         return true;
     }

@@ -89,11 +89,11 @@ public class PlayerInteract
     
     private void RequestSecondaryAction()
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+        EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
-        switch (objType)
+        switch (category)
         {
-            case CatchableObjType.Default:
+            case EntityCategory.Player:
                 break;
             default:
                 RequestThrow();
@@ -103,29 +103,29 @@ public class PlayerInteract
 
     private void RequestKeyInteract()
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+        EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
-        switch (objType)
+        switch (category)
         {
-            case CatchableObjType.Default:
+            case EntityCategory.Player:
                 //TODO : 빈손 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Ingredient:
+            case EntityCategory.Ingredient:
                 //TODO : 재료 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Pan:
+            case EntityCategory.Pan:
                 //TODO : 프라이팬 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Knife:
+            case EntityCategory.Knife:
                 //TODO : 칼 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Plate:
+            case EntityCategory.Plate:
                 //TODO : 그릇 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Broom:
+            case EntityCategory.Broom:
                 //TODO : 빗자루 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Bucket:
+            case EntityCategory.Bucket:
                 //TODO : 양동이 F키 상호작용 처리 필요
                 break;
         }
@@ -299,10 +299,21 @@ public class PlayerInteract
             T target = GetComponentInParent<T>(hitCollider);
             if (target == null) continue;
 
+            IInteractTarget interactTarget = GetComponentInParent<IInteractTarget>(hitCollider);
+            if (interactTarget == null) continue;
+            if (!interactTarget.Accepts(GetSourceCategory())) continue;
+
             return target;
         }
 
         return null;
+    }
+
+    private EntityCategory GetSourceCategory()
+    {
+        return HeldObj != null
+            ? HeldObj.Category
+            : EntityCategory.Player;
     }
 
     private static T GetComponentInParent<T>(Collider collider) where T : class

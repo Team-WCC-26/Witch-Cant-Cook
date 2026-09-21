@@ -56,7 +56,7 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver
     {
         if (catchable == null) return;
 
-        if (catchable.ObjType == CatchableObjType.Knife)
+        if (catchable.Category == EntityCategory.Knife)
         {
             TryAttachKnife(catchable);
             return;

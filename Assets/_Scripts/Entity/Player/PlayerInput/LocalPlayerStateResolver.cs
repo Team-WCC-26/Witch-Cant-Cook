@@ -27,7 +27,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         CacheJumpRequest(physicalMode);
 
         PlayerInteraction interaction = inputFSM.CurrentInteraction;
-        CatchableObjType heldObjType = ResolveHeldObjType();
+        EntityCategory heldEntityCategory = ResolveHeldEntityCategory();
 
         Vector2 moveDir = brain.Input.RawMoveDir;
         bool isRun = brain.Input.RawIsRunning;
@@ -50,7 +50,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             moveDir,
             isRun,
             interaction,
-            heldObjType
+            heldEntityCategory
         ));
     }
 
@@ -62,7 +62,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
 
         Vector2 moveDir = CurrentState.MoveDir;
         bool isRun = CurrentState.IsRun;
-        CatchableObjType heldObjType = ResolveHeldObjType();
+        EntityCategory heldEntityCategory = ResolveHeldEntityCategory();
         bool jumpRequested = ConsumeJumpRequest(physicalMode);
 
         if (physicalMode != PlayerPhysicalMode.Default)
@@ -82,7 +82,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             moveDir,
             isRun,
             PlayerInteraction.None,
-            heldObjType,
+            heldEntityCategory,
             jumpRequested
         ));
 
@@ -119,11 +119,11 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    private CatchableObjType ResolveHeldObjType()
+    private EntityCategory ResolveHeldEntityCategory()
     {
         return brain.Interact.IsHolding
-            ? brain.Interact.HeldObj.ObjType
-            : CatchableObjType.Default;
+            ? brain.Interact.HeldObj.Category
+            : EntityCategory.Player;
     }
 
     #region Jump State

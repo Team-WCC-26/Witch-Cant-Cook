@@ -159,10 +159,12 @@ MonoBehaviour:
   networkId: 0
   col: {fileID: 4247187198980872897}
   rb: {fileID: 4268600552986204514}
-  objType: 2
+  category: 4
+  acceptedCategories: 19
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
 --- !u!114 &-235027315568877701
 MonoBehaviour:
@@ -178,6 +180,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PanInteraction
   catchable: {fileID: 5058207579791732192}
   ingredientSlot: {fileID: 2976135767223971141}
+  triggerDisableDuration: 0.5
   tossForce: 3
   tossUpForce: 2
 --- !u!65 &540803491445441954

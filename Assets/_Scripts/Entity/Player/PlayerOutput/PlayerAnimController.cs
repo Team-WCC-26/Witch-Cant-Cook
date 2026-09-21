@@ -30,7 +30,7 @@ public class PlayerAnimController
 
     public void UpdateTick(PlayerCombinedState state, bool isGrounded, float vSpeed)
     {
-        bool isHolding = state.HeldObjType != CatchableObjType.Default;
+        bool isHolding = state.HeldEntityCategory != EntityCategory.Player;
         bool isEquipped = brain.Interact.IsHolding && brain.Interact.HeldObj.IsEquipment;
 
         animator.SetBool(onHoldHash, isHolding && !isEquipped);

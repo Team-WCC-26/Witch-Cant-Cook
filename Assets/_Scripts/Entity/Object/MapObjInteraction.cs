@@ -1,29 +1,36 @@
 using UnityEngine;
 
-public enum ToolId
+public abstract class MapObjInteraction : MonoBehaviour, IInteractTarget
 {
-    KitchenKnife = 10,
-    FryingPan = 20,
-    GasRange = 30,
-    Pot = 40,
-    Plate = 50,
-    PrepTable = 60,
-    Oven = 80,
-    Stove = 90,
-}
+    #region enum fields
 
-public abstract class MapObjInteraction : MonoBehaviour
-{
     [SerializeField] private Define.eToolId eToolId;
+    [SerializeField] private EntityCategory acceptedCategories = EntityCategory.None;
 
-    private long networkId;
+    public Define.eToolId ToolType => (Define.eToolId)eToolId;
+    public EntityCategory Category => eToolId switch
+    {
+        Define.eToolId.Stove => EntityCategory.Stove,
+        Define.eToolId.Pot => EntityCategory.Pot,
+        Define.eToolId.PrepTable => EntityCategory.PrepTable,
+        Define.eToolId.Oven => EntityCategory.Oven,
+        _ => EntityCategory.None
+    };
+    public EntityCategory AcceptedCategories => acceptedCategories;
+
+    #endregion
+
+    #region network fields
 
     protected MapObjNetworkRouter Router { get; private set; }
 
     public int ToolId => (int)eToolId;
-    public Define.eToolId ToolType => (Define.eToolId)eToolId;
+    private long networkId;
     public long NetworkId => networkId;
+
     public bool IsRegistered => networkId != 0;
+
+    #endregion
 
     public virtual void InitializeRouter(MapObjNetworkRouter router)
     {

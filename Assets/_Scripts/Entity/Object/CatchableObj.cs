@@ -2,17 +2,6 @@ using Protocol;
 using System;
 using UnityEngine;
 
-public enum CatchableObjType
-{
-    Default,
-    Ingredient,
-    Pan,
-    Knife,
-    Plate,
-    Broom,
-    Bucket
-}
-
 [Serializable]
 public struct LocalTransformData
 {
@@ -35,7 +24,7 @@ public struct LocalTransformData
     }
 }
 
-public class CatchableObj : MonoBehaviour, IPoolable
+public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 {
     [SerializeField] private long networkId;
     public long NetworkId
@@ -52,7 +41,10 @@ public class CatchableObj : MonoBehaviour, IPoolable
     [SerializeField] private Rigidbody rb;
 
     [Header("Obj Settings")]
-    [SerializeField] private CatchableObjType objType = CatchableObjType.Ingredient;
+    [Tooltip("obj type")]
+    [SerializeField] private EntityCategory category = EntityCategory.None;
+    [Tooltip("Interactable 여부")]
+    [SerializeField] private EntityCategory acceptedCategories = EntityCategory.None;
     [SerializeField] private bool canBePicked = true;
     [SerializeField] private LocalTransformData holdTransform = LocalTransformData.Identity;
     [SerializeField] private float throwForce = 0;
@@ -61,11 +53,22 @@ public class CatchableObj : MonoBehaviour, IPoolable
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
-    public CatchableObjType ObjType => objType;
+    public EntityCategory Category => category;
+    public EntityCategory AcceptedCategories =>
+        Category == EntityCategory.Ingredient && acceptedCategories == EntityCategory.None
+            ? GetDefaultIngredientAcceptedCategories()
+            : acceptedCategories;
     public LocalTransformData HoldTransform => holdTransform;
     public float ThrowForce => throwForce;
     public bool IsEquipment { get; private set; }
     public PlayerBrain Holder { get; private set; }
+
+    private static EntityCategory GetDefaultIngredientAcceptedCategories()
+    {
+        return EntityCategory.Player |
+               EntityCategory.Knife |
+               EntityCategory.Plate;
+    }
 
     // Keep collision authority after OnDrop/OnThrow clears Holder.
     public string LastHolderPlayerId { get; private set; }
@@ -96,7 +99,7 @@ public class CatchableObj : MonoBehaviour, IPoolable
 
     private void OnDestroy()
     {
-        if (objType == CatchableObjType.Ingredient) return;
+        if (Category == EntityCategory.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
         if (objectRouter != null &&

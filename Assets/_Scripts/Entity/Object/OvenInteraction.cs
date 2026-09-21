@@ -85,7 +85,7 @@ public class OvenInteraction : MapObjInteraction,
     {
         IngredientReaction reaction = other.GetComponentInParent<IngredientReaction>();
         catchable = reaction != null ? reaction.Catchable : null;
-        return catchable != null && catchable.ObjType == CatchableObjType.Ingredient;
+        return catchable != null && catchable.Category == EntityCategory.Ingredient;
     }
 
     private void HideAllGauges()
