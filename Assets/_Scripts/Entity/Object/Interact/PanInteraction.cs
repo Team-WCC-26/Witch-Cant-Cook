@@ -61,8 +61,10 @@ public class PanInteraction : MonoBehaviour,
         if (currentIngredient != null) return; //중복 아이템 방지
         if (pendingIngredientId != 0) return; //이미 서버에 요청 중인 재료가 있음
 
-        // 팬이 위를 향해야 함.
-        if (Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.z)) > maxInsertAngle) return;
+        // 팬의 X축과 Z축이 허용 범위 안에 있어야 함.
+        float xAngle = Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.x));
+        float zAngle = Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.z));
+        if (xAngle > maxInsertAngle || zAngle > maxInsertAngle) return;
 
         // 아이템 유효성 확인
         if (!TryGetItem(other, out IngredientReaction _, out CatchableObj ingredientCatchable)) return;
