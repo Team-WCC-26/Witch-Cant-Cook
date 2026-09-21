@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 3815184607605592974}
   - component: {fileID: 2732370119084029115}
   - component: {fileID: 2315128876890474523}
-  - component: {fileID: 6139505129538893879}
   - component: {fileID: 2163630630141849168}
+  - component: {fileID: 193979722822649536}
   m_Layer: 10
   m_Name: Stove
   m_TagString: Untagged
@@ -115,22 +115,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.6172806, y: 1.0051655, z: 0.5094581}
   m_Center: {x: 0, y: 0.5025827, z: 0}
---- !u!114 &6139505129538893879
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 938374107877951416}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fcf89ab9e661477885c1fb0d166083d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StoveInteraction
-  eToolId: 30
-  acceptedCategories: 4
-  panSlot: {fileID: 3997144832072939827}
-  cookDuration: 2
 --- !u!65 &2163630630141849168
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -152,6 +136,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.3, y: 0.1, z: 0.3}
   m_Center: {x: 0, y: 1.055, z: 0}
+--- !u!114 &193979722822649536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 938374107877951416}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c083721530dd4c8408b5985fb1934525, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StoveInteraction
+  eToolId: 30
+  acceptedCategories: 4
+  panSlot: {fileID: 3997144832072939827}
+  cookDuration: 2
 --- !u!1 &8117078095484281601
 GameObject:
   m_ObjectHideFlags: 0

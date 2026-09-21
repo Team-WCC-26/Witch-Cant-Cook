@@ -1,29 +1,4 @@
-using System;
-
-[Flags]
-public enum EntityCategory
-{
-    None = 0,
-    Player = 1 << 0,
-    Ingredient = 1 << 1,
-    Pan = 1 << 2,
-    Knife = 1 << 3,
-    Plate = 1 << 4,
-    Broom = 1 << 5,
-    Bucket = 1 << 6,
-    Stove = 1 << 7,
-    PrepTable = 1 << 8,
-    Oven = 1 << 9,
-    Pot = 1 << 10,
-
-    All = ~0
-}
-
-public interface IInteractTarget
-{
-    EntityCategory Category { get; } // 해당 오브젝트의 종류
-    EntityCategory AcceptedCategories { get; } //이 오브젝트가 허용하는 상대 종류
-}
+using UnityEngine;
 
 public static class InteractTargetExtensions
 {
@@ -48,5 +23,24 @@ public static class InteractTargetExtensions
         if (source == null || target == null) return false;
 
         return target.Accepts(source.Category);
+    }
+
+    // 대상과 같은 오브젝트에 있는 컴포넌트를 찾기
+    public static T GetTargetComponent<T>(
+        this IInteractTarget target) where T : class
+    {
+        if (target is T directTarget)
+            return directTarget;
+
+        if (target is not Component component)
+            return null;
+
+        foreach (MonoBehaviour behaviour in component.GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is T targetComponent)
+                return targetComponent;
+        }
+
+        return null;
     }
 }

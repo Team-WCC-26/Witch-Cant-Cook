@@ -88,6 +88,20 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     private void Awake()
     {
+        if (col == null || col.isTrigger)
+        {
+            foreach (Collider candidate in GetComponentsInChildren<Collider>())
+            {
+                if (candidate.isTrigger) continue;
+
+                col = candidate;
+                break;
+            }
+        }
+
+        if (col == null)
+            throw new InvalidOperationException($"{name} requires a non-trigger Collider.");
+
         foreach (MonoBehaviour behaviour in GetComponents<MonoBehaviour>())
         {
             if (behaviour is not IEquipment) continue;

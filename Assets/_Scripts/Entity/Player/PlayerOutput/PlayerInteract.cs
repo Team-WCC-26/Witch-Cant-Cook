@@ -3,11 +3,6 @@ using Server;
 using System;
 using UnityEngine;
 
-public interface IPunchReceiver
-{
-    void OnPunched(PlayerBrain player);
-}
-
 public class PlayerInteract
 {
     private readonly PlayerBrain brain;
@@ -52,7 +47,7 @@ public class PlayerInteract
         if (target is not CatchableObj obj)
         {
             brain.ActionController.PunchAction();
-            GetTargetComponent<IPunchReceiver>(target)?.OnPunched(brain);
+            target.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
             return;
         }
         if (obj.IsHold) return;
@@ -82,7 +77,7 @@ public class PlayerInteract
     private bool TryUseHeldObjectReceiver()
     {
         IInteractTarget target = FindInteractTarget();
-        IHeldObjectReceiver receiver = GetTargetComponent<IHeldObjectReceiver>(target);
+        IHeldObjectReceiver receiver = target.GetTargetComponent<IHeldObjectReceiver>();
         if (receiver == null) return false;
 
         return receiver.TryReceiveHeldObject(HeldObj, this);
@@ -344,23 +339,7 @@ public class PlayerInteract
         return targetScore;
     }
 
-    private static T GetTargetComponent<T>(IInteractTarget target) where T : class
-    {
-        if (target is T directTarget)
-            return directTarget;
-
-        if (target is not Component component)
-            return null;
-
-        foreach (MonoBehaviour behaviour in component.GetComponents<MonoBehaviour>())
-        {
-            if (behaviour is T targetComponent)
-                return targetComponent;
-        }
-
-        return null;
-    }
-
+    // Collider의 부모 계층에서 상호작용 대상을 찾는다.
     private static IInteractTarget GetInteractTargetInParent(Collider collider)
     {
         foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())

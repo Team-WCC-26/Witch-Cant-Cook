@@ -1,10 +1,19 @@
 using UnityEngine;
 
-public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable
+public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable, IPanPrimaryReceiver
 {
     private CatchableObj currentFood;
 
     public bool IsEmpty => currentFood == null;
+
+    // 팬에 든 음식을 빈 그릇으로 전달받는다.
+    public bool TryReceivePanPrimary(PanInteraction pan, PlayerInteract player)
+    {
+        if (pan == null) return false;
+        if (player == null) return false;
+
+        return pan.TryMoveToPlate(this);
+    }
 
     // Pool 반환 시 음식 정리
     public void ResetForPool()

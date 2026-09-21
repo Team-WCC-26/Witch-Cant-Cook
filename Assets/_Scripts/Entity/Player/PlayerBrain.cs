@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public sealed class PlayerBrain : MonoBehaviour
@@ -38,7 +37,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: Header("Interaction")]
     [field: SerializeField] public LayerMask InteractLayerMask { get; private set; } = (1 << 7) | (1 << 10);
     [field: SerializeField] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
-    [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
+    [field: SerializeField, Min(0.01f)] public float InteractDistance { get; private set; } = 3.0f;
     [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
     [field: SerializeField] public bool DebugInteraction { get; private set; } = false;
     [field: SerializeField] public Transform ItemPoint { get; private set; } = null;

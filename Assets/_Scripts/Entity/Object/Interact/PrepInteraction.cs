@@ -3,7 +3,7 @@ using Server;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PrepInteraction : MapObjInteraction, IEntityParentReceiver
+public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver
 {
     [SerializeField] private Transform itemSlot;
     [SerializeField] private Transform knifeSlot;
@@ -11,6 +11,19 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver
     private CatchableObj currentItem;
     private CatchableObj currentKnife;
     private readonly HashSet<long> pendingEntities = new();
+
+    // 들고 있는 팬을 조리대의 아이템 슬롯에 배치한다.
+    public bool TryReceivePanPrimary(PanInteraction pan, PlayerInteract player)
+    {
+        if (pan == null) return false;
+        if (player == null) return false;
+        if (currentItem != null) return false;
+        if (pan.Catchable == null) return false;
+        if (!player.TryReleaseHeld(pan.Catchable)) return false;
+
+        TryAttachItem(pan.Catchable);
+        return true;
+    }
 
     private void OnCollisionEnter(Collision collision)
     {

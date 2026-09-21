@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
@@ -12,6 +13,8 @@ public class IngredientDamageController : MonoBehaviour
 
     private float impactSpeed;
     private IngredientStat stat;
+    private bool canDamage = true;
+    private Coroutine damageRestoreCoroutine;
     private int damage => stat.damage;
 
     #region Unity Methods
@@ -22,6 +25,7 @@ public class IngredientDamageController : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+        if (!canDamage) return;
         if (!collision.gameObject.CompareTag(playerTag)) return;
         if (stat == null) SetIngredinetStat();
 
@@ -33,7 +37,36 @@ public class IngredientDamageController : MonoBehaviour
         brain.Health.TakeDamage(tempDmg);
         float healthAfter = brain.Health.CurHealth;
     }
+
+    private void OnDisable()
+    {
+        if (damageRestoreCoroutine != null)
+        {
+            StopCoroutine(damageRestoreCoroutine);
+            damageRestoreCoroutine = null;
+        }
+
+        canDamage = true;
+    }
     #endregion
+
+    // 지정된 시간 동안 재료의 충돌 피해를 비활성화한다.
+    public void DisableDamageFor(float duration)
+    {
+        if (damageRestoreCoroutine != null)
+            StopCoroutine(damageRestoreCoroutine);
+
+        canDamage = false;
+        damageRestoreCoroutine = StartCoroutine(RestoreDamageRoutine(duration));
+    }
+
+    // 대기 시간이 지나면 재료의 충돌 피해를 다시 활성화한다.
+    private IEnumerator RestoreDamageRoutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        canDamage = true;
+        damageRestoreCoroutine = null;
+    }
 
     private void SetIngredinetStat()
     {
