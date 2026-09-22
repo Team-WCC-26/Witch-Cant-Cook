@@ -162,10 +162,11 @@ MonoBehaviour:
   networkId: 0
   col: {fileID: 759561449717819131}
   rb: {fileID: 229093935088154368}
-  objType: 1
+  category: 2
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 0
 --- !u!114 &-7213826803370546512
 MonoBehaviour:
@@ -179,7 +180,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6de1913c69af454b9421f1befe83b4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientHoneyBottle
-  eArea: 99999
+  eArea: 50002
 --- !u!114 &4835016729146804557
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,6 +208,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5cb2fffe38cc1f4487f4db4f1127177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitAreaCreator
+  spawnHeightOffset: 0.15
+  surfaceOffset: 0.1
 --- !u!114 &-7750319739028657001
 MonoBehaviour:
   m_ObjectHideFlags: 0

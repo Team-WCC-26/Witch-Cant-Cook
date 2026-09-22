@@ -34,8 +34,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.6981154, z: 0, w: 0.71598524}
   m_LocalPosition: {x: 41.183243, y: 0.577, z: -27.982166}
-  m_LocalScale: {x: 0.4489025, y: 0.44890234, z: 0.4489025}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -88.552, z: 0}
@@ -46,7 +46,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4455335733293047946}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 7682724294687611154, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
 --- !u!23 &2133647802544071194
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -72,7 +72,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: -5620918211782827528, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -176,12 +176,11 @@ MonoBehaviour:
   networkId: 0
   col: {fileID: 7137090684485242824}
   rb: {fileID: 2194554968496521147}
-  objType: 1
+  category: 2
   canBePicked: 1
   holdTransform:
     localPosition: {x: 0, y: 0, z: 0}
     localEulerAngles: {x: 0, y: 0, z: 0}
-    localScale: {x: 1, y: 1, z: 1}
   throwForce: 0
 --- !u!114 &3713424704699584209
 MonoBehaviour:
@@ -220,8 +219,8 @@ MonoBehaviour:
   - action: 0
     mesh: {fileID: 7682724294687611154, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
     materials:
-    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+    - {fileID: -5620918211782827528, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
   - action: 1
     mesh: {fileID: 2624874180674271982, guid: a6ccbcc89a646f944916d88b27ec54f5, type: 3}
     materials:
-    - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+    - {fileID: -5620918211782827528, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}

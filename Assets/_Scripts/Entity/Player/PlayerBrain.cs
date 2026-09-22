@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public sealed class PlayerBrain : MonoBehaviour
@@ -36,12 +35,13 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public Animator Animator { get; private set; } = null;
 
     [field: Header("Interaction")]
-    [field: SerializeField] public Transform ItemPoint { get; private set; } = null;
-    [field: SerializeField] public Transform EquipPoint { get; private set; } = null;
+    [field: SerializeField] public LayerMask InteractLayerMask { get; private set; } = (1 << 7) | (1 << 10);
     [field: SerializeField] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
-    [field: SerializeField] public float InteractDistance { get; private set; } = 3.0f;
+    [field: SerializeField, Min(0.01f)] public float InteractDistance { get; private set; } = 3.0f;
     [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
     [field: SerializeField] public bool DebugInteraction { get; private set; } = false;
+    [field: SerializeField] public Transform ItemPoint { get; private set; } = null;
+    [field: SerializeField] public Transform EquipPoint { get; private set; } = null;
 
     [field: Header("Base Move")]
     [field: SerializeField] public float MoveSpeed { get; private set; }
@@ -129,15 +129,6 @@ public sealed class PlayerBrain : MonoBehaviour
 
         stateResolver.FixedTick();
         actionController.FixedTick(stateResolver.CurrentState);
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (!isInitialized) return;
-        if (!PlayerSpawnManager.Instance.IsMine(PlayerId)) return;
-        if (stateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default) return;
-
-        stateResolver.NotifyCollision(collision);
     }
 
     private void OnDestroy()

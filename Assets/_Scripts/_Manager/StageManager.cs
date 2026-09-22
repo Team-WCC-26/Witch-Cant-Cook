@@ -85,19 +85,16 @@ public class StageManager : Singleton<StageManager>
     private void NextRound()
     {
         currentStageIndex++;
-        Debug.Log($"{currentStageIndex + 1} 스테이지로 이동합니다.");
         ChangePhase(prepPhase);
     }
 
     private void GameClear()
     {
-        Debug.Log("게임 클리어");
         PlayEndingScene();
     }
 
     private void GameOver()
     {
-        Debug.Log("게임 오버");
     }
 
     private void PlayEndingScene()
@@ -109,7 +106,6 @@ public class StageManager : Singleton<StageManager>
     {
         if (isGameStarted) return; // 이미 시작했다면 중복 실행 방지
 
-        Debug.Log("<color=green>▶ 게임 시작!</color>");
         isGameStarted = true;
 
         ChangePhase(prepPhase);
@@ -127,7 +123,6 @@ public class StageManager : Singleton<StageManager>
 
     private void OnOpenDoor(ReadOnlyMemory<byte> data)
     {
-        Debug.Log("문 열기 패킷 수신");
         OpenDoorPacket packet = PacketSerializer.Deserialize<OpenDoorPacket>(data);
 
         switch (packet.DoorId)

@@ -11,13 +11,13 @@ public class IngredientSalmon : IngredientTrait
     [SerializeField] private Rigidbody rb;
 
     [Header("Fly Timing")]
-    [Tooltip("½ºÆù ÈÄ(¶Ç´Â ³»·Á³õÀº ÈÄ) ºñÇàÀ» ½ÃÀÛÇÏ±â±îÁö ´ë±â ½Ã°£.")]
+    [Tooltip("ìŠ¤í° í›„(ë˜ëŠ” ë‚´ë ¤ë†“ì€ í›„) ë¹„í–‰ì„ ì‹œì‘í•˜ê¸°ê¹Œì§€ ëŒ€ê¸° ì‹œê°„.")]
     [SerializeField] private float delayBeforeFly = 2f;
 
     [Header("Stun")]
-    [Tooltip("¹°¸®Àû Ãæµ¹À» ¹Ş¾ÒÀ» ¶§ ±âÀıÇÏ´Â ½Ã°£.")]
+    [Tooltip("ë¬¼ë¦¬ì  ì¶©ëŒì„ ë°›ì•˜ì„ ë•Œ ê¸°ì ˆí•˜ëŠ” ì‹œê°„.")]
     [SerializeField] private float stunDuration = 10f;
-    [Tooltip("ÀÌ ¼Óµµ(m/s) ÀÌ»óÀÇ Ãæµ¹¸¸ ±âÀı·Î Ã³¸®ÇÑ´Ù. ³·À¸¸é ±×³É ³»·Á³õ°í ÂøÁöÇÏ´Â °Íµµ ±âÀı·Î ÀâÈù´Ù.")]
+    [Tooltip("ì´ ì†ë„(m/s) ì´ìƒì˜ ì¶©ëŒë§Œ ê¸°ì ˆë¡œ ì²˜ë¦¬í•œë‹¤. ë‚®ìœ¼ë©´ ê·¸ëƒ¥ ë‚´ë ¤ë†“ê³  ì°©ì§€í•˜ëŠ” ê²ƒë„ ê¸°ì ˆë¡œ ì¡íŒë‹¤.")]
     [SerializeField] private float minStunImpactSpeed = 3f;
 
     private readonly IngredientTraitTimer flyDelayTimer = new();
@@ -37,15 +37,17 @@ public class IngredientSalmon : IngredientTrait
             rb = GetComponent<Rigidbody>();
     }
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
 
+        isStunned = false;
+        flyTrait.StopFlying();
         BeginFlyDelay();
     }
 
-    private void OnDisable()
+    protected override void StopTrait()
     {
         catchable.OnPicked -= OnPicked;
         catchable.OnDropped -= OnDropped;
@@ -66,8 +68,8 @@ public class IngredientSalmon : IngredientTrait
         if (isStunned)
             return;
 
-        // »ìÂ¦ ³»·Á³õ°í ÂøÁöÇÏ´Â Á¤µµÀÇ ¾àÇÑ Ãæµ¹Àº ¹«½ÃÇÏ°í,
-        // ÀÏÁ¤ ¼Óµµ ÀÌ»óÀ¸·Î ºÎµúÇûÀ» ¶§¸¸ ±âÀı Ã³¸®ÇÑ´Ù.
+        // ì‚´ì§ ë‚´ë ¤ë†“ê³  ì°©ì§€í•˜ëŠ” ì •ë„ì˜ ì•½í•œ ì¶©ëŒì€ ë¬´ì‹œí•˜ê³ ,
+        // ì¼ì • ì†ë„ ì´ìƒìœ¼ë¡œ ë¶€ë”ªí˜”ì„ ë•Œë§Œ ê¸°ì ˆ ì²˜ë¦¬í•œë‹¤.
         if (collision.relativeVelocity.magnitude < minStunImpactSpeed)
             return;
 
@@ -85,7 +87,7 @@ public class IngredientSalmon : IngredientTrait
         if (isStunned)
             return;
 
-        // ºñÇà Áß¿¡´Â ½ºÅ©¸³Æ®°¡ Á÷Á¢ À§Ä¡¸¦ ¿Å±â¹Ç·Î, ¹°¸® ÈûÀÇ ¿µÇâÀ» ¹ŞÁö ¾Ê°Ô kinematicÀ¸·Î ÀüÈ¯.
+        // ë¹„í–‰ ì¤‘ì—ëŠ” ìŠ¤í¬ë¦½íŠ¸ê°€ ì§ì ‘ ìœ„ì¹˜ë¥¼ ì˜®ê¸°ë¯€ë¡œ, ë¬¼ë¦¬ í˜ì˜ ì˜í–¥ì„ ë°›ì§€ ì•Šê²Œ kinematicìœ¼ë¡œ ì „í™˜.
         rb.isKinematic = true;
         flyTrait.StartFlying();
     }
@@ -99,7 +101,7 @@ public class IngredientSalmon : IngredientTrait
         flyDelayTimer.Stop();
         flyTrait.StopFlying();
 
-        // kinematicÀ» Ç®¾î Áß·ÂÀÌ ÀÛ¿ëÇÏ°Ô ÇØ¼­ ¹Ù´ÚÀ¸·Î ¶³¾îÁöµµ·Ï ÇÑ´Ù.
+        // kinematicì„ í’€ì–´ ì¤‘ë ¥ì´ ì‘ìš©í•˜ê²Œ í•´ì„œ ë°”ë‹¥ìœ¼ë¡œ ë–¨ì–´ì§€ë„ë¡ í•œë‹¤.
         rb.isKinematic = false;
 
         stunTimer.StartTimer(stunDuration, RecoverFromStun);
@@ -109,7 +111,7 @@ public class IngredientSalmon : IngredientTrait
     {
         isStunned = false;
 
-        // ´Ù½Ã ´ë±â ÈÄ ºñÇàÀ» Àç°³ÇÑ´Ù. ±âÀı ÈÄ °è¼Ó ¹Ù´Ú¿¡ µÎ°í ½Í´Ù¸é ÀÌ ÁÙÀ» Áö¿ì¸é µÈ´Ù.
+        // ë‹¤ì‹œ ëŒ€ê¸° í›„ ë¹„í–‰ì„ ì¬ê°œí•œë‹¤. ê¸°ì ˆ í›„ ê³„ì† ë°”ë‹¥ì— ë‘ê³  ì‹¶ë‹¤ë©´ ì´ ì¤„ì„ ì§€ìš°ë©´ ëœë‹¤.
         BeginFlyDelay();
     }
     #endregion
@@ -117,7 +119,7 @@ public class IngredientSalmon : IngredientTrait
     #region Catchable
     private void OnPicked()
     {
-        // µé°í ÀÖ´Â µ¿¾È¿¡´Â ºñÇà/´ë±â/±âÀı »óÅÂ°¡ ÀüºÎ ÀÇ¹Ì ¾øÀ¸¹Ç·Î ¸ğµÎ Á¤Áö½ÃÅ²´Ù.
+        // ë“¤ê³  ìˆëŠ” ë™ì•ˆì—ëŠ” ë¹„í–‰/ëŒ€ê¸°/ê¸°ì ˆ ìƒíƒœê°€ ì „ë¶€ ì˜ë¯¸ ì—†ìœ¼ë¯€ë¡œ ëª¨ë‘ ì •ì§€ì‹œí‚¨ë‹¤.
         flyDelayTimer.Stop();
         stunTimer.Stop();
         isStunned = false;
@@ -127,12 +129,12 @@ public class IngredientSalmon : IngredientTrait
 
     private void OnDropped()
     {
-        // ¼Õ¿¡¼­ ³õÀ¸¸é ¹°¸®(Áß·Â)°¡ Àû¿ëµÇµµ·Ï kinematicÀ» ÇØÁ¦ÇÑ´Ù.
-        // ÀÌ°É ¾È ÇØÁÖ¸é CatchableObj°¡ µé°í ÀÖ´Â µ¿¾È ÄÑµĞ kinematicÀÌ ±×´ë·Î ³²¾Æ
-        // ³õÀº ÀÚ¸®¿¡ ±×´ë·Î ¹ÚÁ¦µÈ °ÍÃ³·³ º¸ÀÎ´Ù.
+        // ì†ì—ì„œ ë†“ìœ¼ë©´ ë¬¼ë¦¬(ì¤‘ë ¥)ê°€ ì ìš©ë˜ë„ë¡ kinematicì„ í•´ì œí•œë‹¤.
+        // ì´ê±¸ ì•ˆ í•´ì£¼ë©´ CatchableObjê°€ ë“¤ê³  ìˆëŠ” ë™ì•ˆ ì¼œë‘” kinematicì´ ê·¸ëŒ€ë¡œ ë‚¨ì•„
+        // ë†“ì€ ìë¦¬ì— ê·¸ëŒ€ë¡œ ë°•ì œëœ ê²ƒì²˜ëŸ¼ ë³´ì¸ë‹¤.
         rb.isKinematic = false;
 
-        // ³»·Á³õÀ¸¸é ½ºÆù Á÷ÈÄ¿Í µ¿ÀÏÇÏ°Ô ´ë±â ÈÄ ´Ù½Ã ºñÇàÀ» ½ÃÀÛÇÑ´Ù.
+        // ë‚´ë ¤ë†“ìœ¼ë©´ ìŠ¤í° ì§í›„ì™€ ë™ì¼í•˜ê²Œ ëŒ€ê¸° í›„ ë‹¤ì‹œ ë¹„í–‰ì„ ì‹œì‘í•œë‹¤.
         BeginFlyDelay();
     }
     #endregion

@@ -1,16 +1,20 @@
-using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
-using Unity.Entities;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
+
+/// <summary>
+/// í’€ë§ ê°€ëŠ¥í•œ ì˜¤ë¸Œì íŠ¸ë¥¼ ë‚˜íƒ€ë‚´ëŠ” ì¸í„°í˜ì´ìŠ¤.
+/// </summary>
+public interface IPoolable
+{
+    void ResetForPool();
+}
 
 public class ObjectPoolManager : Singleton<ObjectPoolManager>
 {
-    public Dictionary<long, UnityEngine.Object> activeObjDict = new();
+    public Dictionary<long, Object> activeObjDict = new();
     private readonly Dictionary<string, Queue<GameObject>> _poolDic = new();
 
-    // Ç® °ü¸®¿ë ·çÆ® Æ®·£½ºÆû
+    // í’€ ê´€ë¦¬ìš© ë£¨íŠ¸ íŠ¸ëœìŠ¤í¼
     private Transform _poolRoot;
 
     private void Start()
@@ -21,7 +25,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
     {
         if (_poolRoot == null)
         {
-            // ¿©±â DontDestroyOnLoadÀÏ ÇÊ¿ä°¡ ¾øÁö¾Ê³ª
+            // ì—¬ê¸° DontDestroyOnLoadì¼ í•„ìš”ê°€ ì—†ì§€ì•Šë‚˜
             _poolRoot = new GameObject("@ObjectPool_Root").transform;
             DontDestroyOnLoad(_poolRoot);
         }
@@ -63,25 +67,19 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         }
         return go;
     }
+
     public void Push(GameObject go)
     {
         if (go == null) return;
+
+        ReleaseNetworkBoundState(go);
+
         string key = go.name;
         if (_poolDic.TryGetValue(key, out var queue))
         {
-            InitRoot();
+            InitRoot(); //ë°©ì–´ì½”ë“œ
 
-            if (go.TryGetComponent(out Rigidbody rb))
-            {
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-                rb.Sleep(); // ¾ÈÀüÇÏ°Ô ¹°¸® »óÅÂ ¿ÏÀü Á¤Áö
-            }
-
-            if (go.TryGetComponent(out CatchableObj catchable))
-            {
-                catchable.IsRespawning = false;
-            }
+            ResetPoolable(go);
 
             go.SetActive(false);
             go.transform.SetParent(_poolRoot);
@@ -89,9 +87,10 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         }
         else
         {
-            UnityEngine.Object.Destroy(go);
+            Destroy(go);
         }
     }
+
     public void ClearPool(string key)
     {
         if (_poolDic.TryGetValue(key, out var queue))
@@ -109,21 +108,21 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         GameObject prefab = ResourceManager.Instance.GetAsset<GameObject>(key);
         if (prefab == null)
         {
-            Debug.Log($"[Pool Create] key : {key}");
-            Debug.LogError($"[Pool] ¸®¼Ò½º ¸Å´ÏÀú¿¡ '{key}' ¿¡¼ÂÀÌ ·ÎµåµÇ¾î ÀÖÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogError($"[Pool] Prefab is not loaded for key: {key}");
             return null;
         }
 
-        InitRoot(); // »ı¼ºÇÒ ¶§ ·çÆ®°¡ ÀÖ´ÂÁö È®ÀÎ
+        InitRoot(); // ìƒì„±í•  ë•Œ ë£¨íŠ¸ê°€ ìˆëŠ”ì§€ í™•ì¸
 
-        // ÃÖÃÊ »ı¼º ½ÃÁ¡¿¡µµ ·çÆ® ¿ÀºêÁ§Æ® ¹Ø¿¡ ¹èÄ¡µÇµµ·Ï ¼³Á¤
+        // ìµœì´ˆ ìƒì„± ì‹œì ì—ë„ ë£¨íŠ¸ ì˜¤ë¸Œì íŠ¸ ë°‘ì— ë°°ì¹˜ë˜ë„ë¡ ì„¤ì •
         GameObject go = UnityEngine.Object.Instantiate(prefab, _poolRoot);
-        go.name = key; // ÀÌ¸§À» Å°°ªÀ¸·Î °­Á¦ °íÁ¤
+        go.name = key; // ì´ë¦„ì„ í‚¤ê°’ìœ¼ë¡œ ê°•ì œ ê³ ì •
+        ResetPoolable(go);
         return go;
     }
 
     /// <summary>
-    /// ÁöÁ¤ÇÑ °³¼ö¸¸Å­ ¹Ì¸® ÀÎ½ºÅÏ½º¸¦ »ı¼ºÇØ¼­ Ç®¿¡ ÀúÀåÇÑ´Ù.
+    /// ì§€ì •í•œ ê°œìˆ˜ë§Œí¼ ë¯¸ë¦¬ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ìƒì„±í•´ì„œ í’€ì— ì €ì¥í•œë‹¤.
     /// </summary>
     public void PrewarmPool(string key, int count)
     {
@@ -132,10 +131,55 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
             GameObject go = CreateNewInstance(key);
             if (go != null)
             {
-                Push(go); // »ı¼º ÈÄ ¹Ù·Î Å¥¿¡ ³ÖÀ½
+                Push(go); // ìƒì„± í›„ ë°”ë¡œ íì— ë„£ìŒ
             }
         }
-        Debug.Log($"[Pool] {key} Ç®ÀÌ {count}°³¸¸Å­ ÇÁ¸®¿úµÇ¾ú½À´Ï´Ù.");
     }
 
+    /// <summary>
+    /// í’€ì—ì„œ ì¬ì‚¬ìš©í•˜ê¸° ì „ì— ìƒíƒœ ì´ˆê¸°í™”
+    /// </summary>
+    private static void ResetPoolable(GameObject go)
+    {
+        foreach (MonoBehaviour behaviour in go.GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is IPoolable poolable)
+            {
+                poolable.ResetForPool();
+            }
+        }
+
+        if (go.TryGetComponent(out Rigidbody rb))
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.Sleep();
+        }
+
+        foreach (Collider collider in go.GetComponents<Collider>())
+        {
+            collider.enabled = true;
+        }
+    }
+
+    /// <summary>
+    /// ëª¨ë“  í’€ ë°˜í™˜ ê²½ë¡œì—ì„œ ì»¨ë² ì´ì–´ì™€ ECSì˜ NetworkID ìƒíƒœë¥¼ ë¨¼ì € ì •ë¦¬í•©ë‹ˆë‹¤.
+    /// ì˜¤ë¸Œì íŠ¸ê°€ ë¹„í™œì„±í™”ëœ ë’¤ì—ë„ ì´ì „ ë²¨íŠ¸ê°€ ê°™ì€ Transformì„ ì´ë™ì‹œí‚¤ëŠ” ê²ƒì„ ë°©ì§€í•©ë‹ˆë‹¤.
+    /// </summary>
+    private static void ReleaseNetworkBoundState(GameObject go)
+    {
+        if (!go.TryGetComponent(out CatchableObj catchable)) return;
+
+        long networkId = catchable.NetworkId;
+        if (networkId <= 0) return;
+
+        if (ConveyorBeltRegistry.TryGetOwner(networkId, out ConveyorBeltController belt))
+        {
+            belt.UnregisterItem(networkId);
+        }
+
+        IngredientEntityLifecycle.RequestDestroy(networkId);
+    }
 }

@@ -6,8 +6,16 @@ using UnityEngine;
 
 public sealed class PlayerNetworkRouter : MonoBehaviour
 {
+    [SerializeField] private ObjectNetworkRouter objectRouter;
+
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
+
+    private void Awake()
+    {
+        if (objectRouter == null)
+            objectRouter = GetComponent<ObjectNetworkRouter>();
+    }
 
     private void OnEnable()
     {
@@ -72,13 +80,14 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
                 continue;
             }
 
-            if (!ObjectNetworkRouter.Instance.TryGet(packet.EntityId, out CatchableObj target))
+            if (objectRouter == null || !objectRouter.TryGet(packet.EntityId, out CatchableObj target))
             {
                 Debug.LogError($"Pickup target not found. EntityId: {packet.EntityId}");
                 continue;
             }
 
             GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
+            objectRouter.HandleEntityPicked(target);
             player.Interact.ApplyPicked(target);
         }
     }

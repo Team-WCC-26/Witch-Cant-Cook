@@ -48,10 +48,6 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
     }
 
-    public override void NotifyCollision(Collision collision)
-    {
-    }
-
     public override void ApplyRemotePacket(PlayerMovementPacket packet)
     {
         if (packet == null) return;

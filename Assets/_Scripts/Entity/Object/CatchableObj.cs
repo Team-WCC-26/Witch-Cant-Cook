@@ -1,48 +1,30 @@
-using MemoryPack;
 using Protocol;
-using Server;
 using System;
 using UnityEngine;
-
-public enum CatchableObjType
-{
-    Default,
-    Ingredient,
-    Pan,
-    Knife,
-    Plate,
-    Broom,
-    Bucket
-}
 
 [Serializable]
 public struct LocalTransformData
 {
     [SerializeField] private Vector3 localPosition;
     [SerializeField] private Vector3 localEulerAngles;
-    [SerializeField] private Vector3 localScale;
 
     public Vector3 LocalPosition => localPosition;
     public Vector3 LocalEulerAngles => localEulerAngles;
-    public Vector3 LocalScale => localScale;
 
     public static LocalTransformData Identity => new(
         Vector3.zero,
-        Vector3.zero,
-        Vector3.one);
+        Vector3.zero);
 
     public LocalTransformData(
         Vector3 localPosition,
-        Vector3 localEulerAngles,
-        Vector3 localScale)
+        Vector3 localEulerAngles)
     {
         this.localPosition = localPosition;
         this.localEulerAngles = localEulerAngles;
-        this.localScale = localScale;
     }
 }
 
-public class CatchableObj : MonoBehaviour
+public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 {
     [SerializeField] private long networkId;
     public long NetworkId
@@ -59,7 +41,10 @@ public class CatchableObj : MonoBehaviour
     [SerializeField] private Rigidbody rb;
 
     [Header("Obj Settings")]
-    [SerializeField] private CatchableObjType objType = CatchableObjType.Ingredient;
+    [Tooltip("obj type")]
+    [SerializeField] private EntityCategory category = EntityCategory.None;
+    [Tooltip("Interactable 여부")]
+    [SerializeField] private EntityCategory acceptedCategories = EntityCategory.None;
     [SerializeField] private bool canBePicked = true;
     [SerializeField] private LocalTransformData holdTransform = LocalTransformData.Identity;
     [SerializeField] private float throwForce = 0;
@@ -68,24 +53,55 @@ public class CatchableObj : MonoBehaviour
     public Collider Col => col;
     public Rigidbody Rb => rb;
     public bool CanBePicked => canBePicked;
-    public CatchableObjType ObjType => objType;
+    public EntityCategory Category => category;
+    public EntityCategory AcceptedCategories =>
+        Category == EntityCategory.Ingredient && acceptedCategories == EntityCategory.None
+            ? GetDefaultIngredientAcceptedCategories()
+            : acceptedCategories;
     public LocalTransformData HoldTransform => holdTransform;
     public float ThrowForce => throwForce;
     public bool IsEquipment { get; private set; }
     public PlayerBrain Holder { get; private set; }
 
+    private static EntityCategory GetDefaultIngredientAcceptedCategories()
+    {
+        return EntityCategory.Player |
+               EntityCategory.Knife |
+               EntityCategory.Plate;
+    }
+
+    // Keep collision authority after OnDrop/OnThrow clears Holder.
+    public string LastHolderPlayerId { get; private set; }
+    public bool IsLocalOwner =>
+        !string.IsNullOrEmpty(LastHolderPlayerId) &&
+        PlayerSpawnManager.Instance != null &&
+        PlayerSpawnManager.Instance.IsMine(LastHolderPlayerId);
+
     public bool IsHold { get; private set; } = false;
     public bool IsRespawning { get; set; } = false;
 
-    private Vector3 worldScaleBeforeHold = Vector3.one;
-    private bool hasHoldScaleSnapshot;
     private CatchableObj combinedVisual;
+    private ObjectNetworkRouter objectRouter;
 
     public event Action OnPicked;
     public event Action OnDropped;
 
     private void Awake()
     {
+        if (col == null || col.isTrigger)
+        {
+            foreach (Collider candidate in GetComponentsInChildren<Collider>())
+            {
+                if (candidate.isTrigger) continue;
+
+                col = candidate;
+                break;
+            }
+        }
+
+        if (col == null)
+            throw new InvalidOperationException($"{name} requires a non-trigger Collider.");
+
         foreach (MonoBehaviour behaviour in GetComponents<MonoBehaviour>())
         {
             if (behaviour is not IEquipment) continue;
@@ -95,34 +111,54 @@ public class CatchableObj : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    private void OnDestroy()
     {
-        ResetObj();
+        if (Category == EntityCategory.Ingredient) return;
+        if (ObjectPoolManager.Instance == null) return;
+
+        if (objectRouter != null &&
+            objectRouter.TryGet(NetworkId, out CatchableObj registered) &&
+            registered == this)
+        {
+            objectRouter.Remove(NetworkId);
+        }
     }
-    private void OnDisable()
+
+    public void SetNetworkRouter(ObjectNetworkRouter router)
     {
-        if (ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) && registered == this)
+        objectRouter = router;
+    }
+
+    public void ResetForPool()
+    {
+        if (ObjectPoolManager.Instance != null &&
+            ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) &&
+            registered == gameObject)
         {
             ObjectPoolManager.Instance.activeObjDict.Remove(NetworkId);
         }
-    }
 
-    private void OnDestroy()
-    {
-        if (objType == CatchableObjType.Ingredient) return;
-        if (ObjectPoolManager.Instance == null) return;
-
-        if (ObjectNetworkRouter.Instance.TryGet(NetworkId, out CatchableObj registered) &&
-            registered == this)
+        if (objectRouter != null &&
+            objectRouter.TryGet(NetworkId, out CatchableObj routed) &&
+            routed == this)
         {
-            ObjectNetworkRouter.Instance.Remove(NetworkId);
+            objectRouter.Remove(NetworkId);
         }
-    }
 
-    private void ResetObj()
-    {
         ReleaseCombinedVisual();
+
+        if (Holder != null)
+        {
+            Holder.Interact.TryReleaseHeld(this);
+        }
+
+        Holder = null;
+        LastHolderPlayerId = null;
+        IsHold = false;
+        IsRespawning = false;
         canBePicked = true;
+        releaseFromPrep = null;
+
         networkId = 0;
         ParentEntityId = 0;
     }
@@ -130,9 +166,7 @@ public class CatchableObj : MonoBehaviour
     public void OnPick(PlayerBrain holder)
     {
         Holder = holder;
-
-        worldScaleBeforeHold = transform.lossyScale;
-        hasHoldScaleSnapshot = true;
+        LastHolderPlayerId = holder != null ? holder.PlayerId : null;
 
         releaseFromPrep?.Invoke(this);
         releaseFromPrep = null;
@@ -148,7 +182,6 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = false;
         canBePicked = true;
-        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
     }
@@ -159,17 +192,8 @@ public class CatchableObj : MonoBehaviour
 
         IsHold = false;
         canBePicked = true;
-        RestoreWorldScaleAfterHold();
         SetPhysicsState(true);
         OnDropped?.Invoke();
-    }
-
-    public void RestoreWorldScaleAfterHold()
-    {
-        if (!hasHoldScaleSnapshot) return;
-
-        transform.localScale = worldScaleBeforeHold;
-        hasHoldScaleSnapshot = false;
     }
 
     public void SetPhysicsState(bool enablePhysics)

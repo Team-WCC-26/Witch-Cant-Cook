@@ -3,18 +3,18 @@ using System;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj))]
-public class IngredientTraitFragile : MonoBehaviour
+public class IngredientTraitFragile : IngredientTrait
 {
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
 
     [Header("Break")]
-    [SerializeField] private float breakImpactThreshold = 2f; // Ãæ°İ·®ÀÌ ÀÌ °ª ÀÌ»óÀÌ¸é ±úÁü
+    [SerializeField] private float breakImpactThreshold = 1f; // ì¶©ê²©ëŸ‰ì´ ì´ ê°’ ì´ìƒì´ë©´ ê¹¨ì§
 
     [Header("Effect")]
     [SerializeField] private ParticleSystem breakEffect;
 
-    public event Action OnBroken;
+    public event Action<Vector3, Vector3> OnBroken;
 
     private bool isBroken;
 
@@ -29,33 +29,33 @@ public class IngredientTraitFragile : MonoBehaviour
             catchable = GetComponent<CatchableObj>();
     }
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         isBroken = false;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        // Only the last holder's client may request the replacement and destruction.
+        // Check before latching isBroken so remote collisions cannot consume a later pickup.
+        if (catchable == null || !catchable.IsLocalOwner)
+            return;
+
         if (isBroken)
             return;
 
         if (collision.relativeVelocity.magnitude < breakImpactThreshold)
             return;
 
-        Break();
+        if (collision.contactCount == 0) return;
+        ContactPoint contact = collision.GetContact(0);
+        Break(contact.point, contact.normal);
     }
 
-    private void Break()
+    private void Break(Vector3 point, Vector3 normal)
     {
         isBroken = true;
 
-        Vector3 spawnPos = transform.position;
-
-        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 2f))
-        {
-            spawnPos = hit.point;
-        }
-        // ±úÁø À§Ä¡¿¡ ¿µ¿ª »ı¼ºÇØ¾ßÇÔ. ¿µ¿ª »ı¼ºÀº ÅëÇÕÆ¯¼º ½ºÅ©¸³Æ®¿¡¼­ È£ÃâÇÏ´Âµ¥.. 
-        OnBroken?.Invoke();
+        OnBroken?.Invoke(point, normal);
     }
 }

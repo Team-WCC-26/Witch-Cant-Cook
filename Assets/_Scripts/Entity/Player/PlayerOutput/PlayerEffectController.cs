@@ -31,9 +31,6 @@ public class PlayerEffectController : MonoBehaviour
     /// </summary>
     public void ApplyBlind(float duration)
     {
-        Debug.Log($"brain : {brain}");
-        Debug.Log($"spawnManager : {PlayerSpawnManager.Instance}");
-        Debug.Log($"playerId : {brain?.PlayerId}");
 
         if (!PlayerSpawnManager.Instance.IsMine(brain.PlayerId))
             return;

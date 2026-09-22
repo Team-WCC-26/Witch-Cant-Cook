@@ -14,19 +14,16 @@ public class AnythingSpawner : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
         {
-            Debug.Log($"[AnythingSpawner] f2 키 입력");
 
             SpawnTool((int)Define.eToolId.KitchenKnife);
         }
         if (Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame)
         {
-            Debug.Log($"[AnythingSpawner] f3 키 입력");
 
             SpawnTool((int)(int)Define.eToolId.Plate);
         }
         if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
         {
-            Debug.Log($"[AnythingSpawner] f4 키 입력");
 
             SpawnTool((int)(int)Define.eToolId.FryingPan);
         }
@@ -41,7 +38,6 @@ public class AnythingSpawner : MonoBehaviour
             Position = new System.Numerics.Vector3(SpawnPos.transform.position.x, SpawnPos.transform.position.y, SpawnPos.transform.position.z),
             Quaternion = System.Numerics.Quaternion.Identity
         };
-        Debug.Log($"[AnythingSpawner] Sending ToolSpawnPacket: ToolId={packet.ToolId}, Position={packet.Position}");
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 }

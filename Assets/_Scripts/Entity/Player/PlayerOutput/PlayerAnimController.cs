@@ -19,7 +19,7 @@ public class PlayerAnimController
     private readonly int jumpEndHash = Animator.StringToHash("JumpEnd");
 
     private readonly int emptyStateHash = Animator.StringToHash("Empty");
-    private readonly int equipActionStateHash = Animator.StringToHash("HoldKnife");
+    private readonly int equipActionStateHash = Animator.StringToHash("Slash");
     private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
 
     public PlayerAnimController(PlayerBrain brain)
@@ -30,7 +30,7 @@ public class PlayerAnimController
 
     public void UpdateTick(PlayerCombinedState state, bool isGrounded, float vSpeed)
     {
-        bool isHolding = state.HeldObjType != CatchableObjType.Default;
+        bool isHolding = state.HeldEntityCategory != EntityCategory.Player;
         bool isEquipped = brain.Interact.IsHolding && brain.Interact.HeldObj.IsEquipment;
 
         animator.SetBool(onHoldHash, isHolding && !isEquipped);

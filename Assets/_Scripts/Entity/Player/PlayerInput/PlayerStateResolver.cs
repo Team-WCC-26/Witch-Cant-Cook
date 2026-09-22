@@ -15,7 +15,7 @@ public class PlayerStateResolver
             Vector2.zero,
             false,
             PlayerInteraction.None,
-            CatchableObjType.Default
+            EntityCategory.Player
         );
     }
 
@@ -24,10 +24,6 @@ public class PlayerStateResolver
     }
 
     public virtual void FixedTick()
-    {
-    }
-
-    public virtual void NotifyCollision(Collision collision)
     {
     }
 

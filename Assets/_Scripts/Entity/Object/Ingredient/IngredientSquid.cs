@@ -35,7 +35,7 @@ public class IngredientSquid : IngredientTrait
             catchable = GetComponent<CatchableObj>();
     }
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         Debug.Log($"[Squid] OnEnable called Start");
 
@@ -46,7 +46,7 @@ public class IngredientSquid : IngredientTrait
 
     }
 
-    private void OnDisable()
+    protected override void StopTrait()
     {
         catchable.OnPicked -= OnPicked;
         catchable.OnDropped -= OnDropped;
@@ -66,7 +66,7 @@ public class IngredientSquid : IngredientTrait
 
     private void OnPicked()
     {
-        Debug.Log($"[Squid] OnPicked ÇÚµé·¯ È£ÃâµÊ - {gameObject.name}");
+        Debug.Log($"[Squid] OnPicked í•¸ë“¤ëŸ¬ í˜¸ì¶œë¨ - {gameObject.name}");
         holdTimer.StartLoop(holdDuration, () => TrySpray(SprayAround));
     }
     private void OnDropped()
@@ -93,7 +93,7 @@ public class IngredientSquid : IngredientTrait
     }
 
     /// <summary>
-    /// µé°í ÀÖ´Â ÇÃ·¹ÀÌ¾î¿¡°Ô ¸Ô¹°
+    /// ë“¤ê³  ìˆëŠ” í”Œë ˆì´ì–´ì—ê²Œ ë¨¹ë¬¼
     /// </summary>
     private void SprayHolder()
     {
@@ -107,7 +107,7 @@ public class IngredientSquid : IngredientTrait
     }
 
     /// <summary>
-    /// ÁÖº¯ ÇÃ·¹ÀÌ¾î ¸ğµÎ¿¡°Ô ¸Ô¹° - È¤½Ã ¸ô¶ó¼­ ±¸Çö
+    /// ì£¼ë³€ í”Œë ˆì´ì–´ ëª¨ë‘ì—ê²Œ ë¨¹ë¬¼ - í˜¹ì‹œ ëª°ë¼ì„œ êµ¬í˜„
     /// </summary>
     private void SprayAround()
     {

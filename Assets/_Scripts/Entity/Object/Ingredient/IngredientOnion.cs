@@ -7,9 +7,9 @@ public class IngredientOnion : IngredientTrait
     [SerializeField] private CatchableObj catchable;
 
     [Header("Time Settings")]
-    [Tooltip("µé°í ÀÖ´Â »óÅÂ·Î ÀÌ ½Ã°£ÀÌ Áö³ª¸é Ã³À½ È°¼ºÈ­µÇ¾î ¿µ¿ªÀ» »ı¼ºÇÑ´Ù.")]
+    [Tooltip("ë“¤ê³  ìˆëŠ” ìƒíƒœë¡œ ì´ ì‹œê°„ì´ ì§€ë‚˜ë©´ ì²˜ìŒ í™œì„±í™”ë˜ì–´ ì˜ì—­ì„ ìƒì„±í•œë‹¤.")]
     [SerializeField] private float initialHoldDuration = 3f;
-    [Tooltip("Ã¹ È°¼ºÈ­ ÀÌÈÄ, ¿µ¿ªÀ» ¹İº¹ »ı¼ºÇÏ´Â ÁÖ±â(ÄğÅ¸ÀÓ).")]
+    [Tooltip("ì²« í™œì„±í™” ì´í›„, ì˜ì—­ì„ ë°˜ë³µ ìƒì„±í•˜ëŠ” ì£¼ê¸°(ì¿¨íƒ€ì„).")]
     [SerializeField] private float spawnCooldown = 2f;
 
     private readonly IngredientTraitTimer holdTimer = new();
@@ -26,14 +26,14 @@ public class IngredientOnion : IngredientTrait
         areaCreator = GetComponent<IngredientTraitAreaCreator>();
     }
 
-    private void OnEnable()
+    protected override void StartTrait()
     {
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
 
     }
 
-    private void OnDisable()
+    protected override void StopTrait()
     {
         catchable.OnPicked -= OnPicked;
         catchable.OnDropped -= OnDropped;
@@ -59,7 +59,7 @@ public class IngredientOnion : IngredientTrait
 
     private void StartHoldTimer()
     {
-        // 1´Ü°è: Ã³À½ initialHoldDuration(3ÃÊ)¸¸Å­ µé°í ÀÖ¾î¾ß È°¼ºÈ­µÈ´Ù.
+        // 1ë‹¨ê³„: ì²˜ìŒ initialHoldDuration(3ì´ˆ)ë§Œí¼ ë“¤ê³  ìˆì–´ì•¼ í™œì„±í™”ëœë‹¤.
         holdTimer.StartTimer(
             initialHoldDuration,
             ActivateSpawnLoop
@@ -68,8 +68,8 @@ public class IngredientOnion : IngredientTrait
 
     private void ActivateSpawnLoop()
     {
-        // 3ÃÊ¸¦ Ã¤¿î ½ÃÁ¡¿¡ Ã¹ ¿µ¿ªÀ» »ı¼ºÇÏ°í,
-        // 2´Ü°è: ÀÌÈÄ·Î´Â spawnCooldown(2ÃÊ)¸¶´Ù ¹İº¹ »ı¼ºÇÑ´Ù.
+        // 3ì´ˆë¥¼ ì±„ìš´ ì‹œì ì— ì²« ì˜ì—­ì„ ìƒì„±í•˜ê³ ,
+        // 2ë‹¨ê³„: ì´í›„ë¡œëŠ” spawnCooldown(2ì´ˆ)ë§ˆë‹¤ ë°˜ë³µ ìƒì„±í•œë‹¤.
         SpawnTearArea();
         holdTimer.StartLoop(spawnCooldown, SpawnTearArea);
     }

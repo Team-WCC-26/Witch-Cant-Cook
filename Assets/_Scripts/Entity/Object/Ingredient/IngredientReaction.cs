@@ -24,7 +24,7 @@ public class IngredientActionVisual
     public Material[] Materials => materials;
 }
 
-public class IngredientReaction : MonoBehaviour
+public class IngredientReaction : MonoBehaviour, IPoolable
 {
     [SerializeField] private CatchableObj catchable;
     public CatchableObj Catchable => catchable;
@@ -60,16 +60,16 @@ public class IngredientReaction : MonoBehaviour
     private void Awake()
     {
         InitializeGauge();
-
-        // TODO: Load mesh and shader data from ResourceManager.
     }
 
-    private void OnEnable()
+    public void ResetForPool()
     {
         InitializeGauge();
         lastAction = IngredientAction.None;
         completedActions = IngredientAction.None;
 
+        gaugeUI?.Hide();
+        cutParticle?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ApplyVisual(IngredientAction.None);
     }
 
@@ -77,7 +77,6 @@ public class IngredientReaction : MonoBehaviour
     {
         if (IsActionBlocked(action))
         {
-            Debug.Log("Action is blocked for this ingredient.");
             return false;
         }
 
@@ -88,7 +87,6 @@ public class IngredientReaction : MonoBehaviour
         }
         else if (curHP <= 0)
         {
-            Debug.Log("Action already completed.");
             return false;
         }
 
@@ -106,19 +104,14 @@ public class IngredientReaction : MonoBehaviour
             switch (action)
             {
                 case IngredientAction.Cut:
-                    Debug.Log("Cutting Completed.");
                     break;
                 case IngredientAction.Grill:
-                    Debug.Log("Grilling Completed.");
                     break;
                 case IngredientAction.Boil:
-                    Debug.Log("Boiling Completed.");
                     break;
                 case IngredientAction.Cook:
-                    Debug.Log("Cooking Completed.");
                     break;
                 default:
-                    Debug.Log("Unknown action.");
                     break;
             }
 

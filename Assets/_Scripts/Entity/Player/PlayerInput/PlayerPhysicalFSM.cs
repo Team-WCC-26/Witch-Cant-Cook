@@ -32,21 +32,6 @@ public class PlayerPhysicalFSM
         }
     }
 
-    public void NotifyCollision(Collision collision)
-    {
-        if (CurrentMode != PlayerPhysicalMode.Default)
-        {
-            return;
-        }
-
-        if (!IsObstacleCollision(collision))
-        {
-            return;
-        }
-
-        EnterRagdoll();
-    }
-
     public void EnterRagdoll()
     {
         if (CurrentMode != PlayerPhysicalMode.Default)
@@ -55,11 +40,6 @@ public class PlayerPhysicalFSM
         }
 
         SetMode(PlayerPhysicalMode.Ragdoll);
-    }
-
-    private bool IsObstacleCollision(Collision collision)
-    {
-        return collision.collider.CompareTag("Obstacle");
     }
 
     private void SetMode(PlayerPhysicalMode mode)

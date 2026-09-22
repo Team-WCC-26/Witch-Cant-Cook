@@ -10,7 +10,7 @@ public static class ProtocolTypeConverter
             ToUnityVector2(state.MoveDir),
             state.IsRun,
             ToClientInteraction(state.Interaction),
-            ToClientCatchableObjType(state.HeldObjType)
+            ToClientEntityCategory(state.HeldObjType)
         );
     }
 
@@ -21,7 +21,7 @@ public static class ProtocolTypeConverter
             ToNumericsVector2(state.MoveDir),
             state.IsRun,
             ToProtocolInteraction(state.Interaction),
-            ToProtocolCatchableObjType(state.HeldObjType)
+            ToProtocolCatchableObjType(state.HeldEntityCategory)
         );
     }
 
@@ -75,32 +75,32 @@ public static class ProtocolTypeConverter
         };
     }
 
-    private static CatchableObjType ToClientCatchableObjType(Protocol.CatchableObjType objType)
+    private static EntityCategory ToClientEntityCategory(Protocol.CatchableObjType objType)
     {
         return objType switch
         {
-            Protocol.CatchableObjType.Default => CatchableObjType.Default,
-            Protocol.CatchableObjType.Ingredient => CatchableObjType.Ingredient,
-            Protocol.CatchableObjType.Plate => CatchableObjType.Plate,
-            Protocol.CatchableObjType.Knife => CatchableObjType.Knife,
-            Protocol.CatchableObjType.Pan => CatchableObjType.Pan,
-            Protocol.CatchableObjType.Broom => CatchableObjType.Broom,
-            Protocol.CatchableObjType.Bucket => CatchableObjType.Bucket,
-            _ => CatchableObjType.Default
+            Protocol.CatchableObjType.Default => EntityCategory.Player,
+            Protocol.CatchableObjType.Ingredient => EntityCategory.Ingredient,
+            Protocol.CatchableObjType.Plate => EntityCategory.Plate,
+            Protocol.CatchableObjType.Knife => EntityCategory.Knife,
+            Protocol.CatchableObjType.Pan => EntityCategory.Pan,
+            Protocol.CatchableObjType.Broom => EntityCategory.Broom,
+            Protocol.CatchableObjType.Bucket => EntityCategory.Bucket,
+            _ => EntityCategory.Player
         };
     }
 
-    private static Protocol.CatchableObjType ToProtocolCatchableObjType(CatchableObjType objType)
+    private static Protocol.CatchableObjType ToProtocolCatchableObjType(EntityCategory category)
     {
-        return objType switch
+        return category switch
         {
-            CatchableObjType.Default => Protocol.CatchableObjType.Default,
-            CatchableObjType.Ingredient => Protocol.CatchableObjType.Ingredient,
-            CatchableObjType.Plate => Protocol.CatchableObjType.Plate,
-            CatchableObjType.Knife => Protocol.CatchableObjType.Knife,
-            CatchableObjType.Pan => Protocol.CatchableObjType.Pan,
-            CatchableObjType.Broom => Protocol.CatchableObjType.Broom,
-            CatchableObjType.Bucket => Protocol.CatchableObjType.Bucket,
+            EntityCategory.Player => Protocol.CatchableObjType.Default,
+            EntityCategory.Ingredient => Protocol.CatchableObjType.Ingredient,
+            EntityCategory.Plate => Protocol.CatchableObjType.Plate,
+            EntityCategory.Knife => Protocol.CatchableObjType.Knife,
+            EntityCategory.Pan => Protocol.CatchableObjType.Pan,
+            EntityCategory.Broom => Protocol.CatchableObjType.Broom,
+            EntityCategory.Bucket => Protocol.CatchableObjType.Bucket,
             _ => Protocol.CatchableObjType.Default
         };
     }

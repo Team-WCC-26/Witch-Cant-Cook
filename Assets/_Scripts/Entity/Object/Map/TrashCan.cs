@@ -30,9 +30,9 @@ public class TrashCan : MonoBehaviour
         if (!other.TryGetComponent(out CatchableObj catchable))
             return;
 
-        switch (catchable.ObjType)
+        switch (catchable.Category)
         {
-            case CatchableObjType.Ingredient:
+            case EntityCategory.Ingredient:
                 HandleIngredient(catchable);
                 break;
 
@@ -50,11 +50,12 @@ public class TrashCan : MonoBehaviour
     }
     void HandleTool(CatchableObj catchable)
     {
+        if (!catchable.IsLocalOwner) return;
         if (catchable.IsRespawning) return;
 
-        if (!Define.TryGetToolId(catchable.ObjType, out Define.eToolId toolId))
+        if (!Define.TryGetToolId(catchable.Category, out Define.eToolId toolId))
         {
-            Debug.LogError($"Trash respawn is not supported for object type: {catchable.ObjType}");
+            Debug.LogError($"Trash respawn is not supported for entity category: {catchable.Category}");
             return;
         }
 
@@ -68,7 +69,7 @@ public class TrashCan : MonoBehaviour
         };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
 
-        Debug.Log($"HandleTool - TrashCan: {catchable.ObjType} {catchable.NetworkId} is thrown into trash can.");
+        Debug.Log($"HandleTool - TrashCan: {catchable.Category} {catchable.NetworkId} is thrown into trash can.");
 
         ToolSpawnPacket toolSpawnPacket = new()
         {

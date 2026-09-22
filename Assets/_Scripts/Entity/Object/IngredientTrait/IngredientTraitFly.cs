@@ -1,35 +1,35 @@
 using UnityEngine;
 
 /// <summary>
-/// °øÁß¿¡¼­ ¸ñÇ¥ ³ôÀÌ(ÇÃ·¹ÀÌ¾î ¸Ó¸® Á¤µµ)¸¦ À¯ÁöÇÏ¸ç ¹èÈ¸ÇÏ°í,
-/// º®ÀÌ³ª ´Ù¸¥ ¿ÀºêÁ§Æ®¿¡ °¡±î¿öÁö¸é ¹æÇâÀ» ÀüÈ¯ÇÏ´Â Àç·á ¼Ó¼º.
+/// ê³µì¤‘ì—ì„œ ëª©í‘œ ë†’ì´(í”Œë ˆì´ì–´ ë¨¸ë¦¬ ì •ë„)ë¥¼ ìœ ì§€í•˜ë©° ë°°íšŒí•˜ê³ ,
+/// ë²½ì´ë‚˜ ë‹¤ë¥¸ ì˜¤ë¸Œì íŠ¸ì— ê°€ê¹Œì›Œì§€ë©´ ë°©í–¥ì„ ì „í™˜í•˜ëŠ” ì¬ë£Œ ì†ì„±.
 ///
-/// ½ºÆù ÈÄ ºñÇàÀ» ½ÃÀÛÇÏ±â±îÁöÀÇ ´ë±â ½Ã°£Àº ÀÌ Æ®·¹ÀÕÀÌ ¾Æ´Ï¶ó
-/// IngredientSalmonÀÌ ÀÚÃ¼ IngredientTraitTimer·Î °ü¸®ÇÑ´Ù.
-/// ´ë±â°¡ ³¡³ª¸é IngredientSalmonÀÌ StartFlying()À» È£ÃâÇØ ºñÇàÀ» ½ÃÀÛ½ÃÅ²´Ù.
+/// ìŠ¤í° í›„ ë¹„í–‰ì„ ì‹œì‘í•˜ê¸°ê¹Œì§€ì˜ ëŒ€ê¸° ì‹œê°„ì€ ì´ íŠ¸ë ˆì‡ì´ ì•„ë‹ˆë¼
+/// IngredientSalmonì´ ìì²´ IngredientTraitTimerë¡œ ê´€ë¦¬í•œë‹¤.
+/// ëŒ€ê¸°ê°€ ëë‚˜ë©´ IngredientSalmonì´ StartFlying()ì„ í˜¸ì¶œí•´ ë¹„í–‰ì„ ì‹œì‘ì‹œí‚¨ë‹¤.
 /// </summary>
 public class IngredientTraitFly : IngredientTrait
 {
     [Header("Height")]
-    [Tooltip("ºñÇà ½ÃÀÛ ½ÃÁ¡(½ºÆù À§Ä¡, ¹Ù´Ú ±âÁØ)À¸·ÎºÎÅÍ ¶ç¿ï ³ôÀÌ(ÇÃ·¹ÀÌ¾î ¸Ó¸® Á¤µµ).")]
+    [Tooltip("ë¹„í–‰ ì‹œì‘ ì‹œì (ìŠ¤í° ìœ„ì¹˜, ë°”ë‹¥ ê¸°ì¤€)ìœ¼ë¡œë¶€í„° ë„ìš¸ ë†’ì´(í”Œë ˆì´ì–´ ë¨¸ë¦¬ ì •ë„).")]
     [SerializeField] private float targetHeight = 2f;
-    [Tooltip("¸ñÇ¥ ³ôÀÌ·Î º¸°£µÇ´Â ¼Óµµ. Å¬¼ö·Ï ºü¸£°Ô ³ôÀÌ¸¦ ¸ÂÃá´Ù.")]
+    [Tooltip("ëª©í‘œ ë†’ì´ë¡œ ë³´ê°„ë˜ëŠ” ì†ë„. í´ìˆ˜ë¡ ë¹ ë¥´ê²Œ ë†’ì´ë¥¼ ë§ì¶˜ë‹¤.")]
     [SerializeField] private float heightFollowSpeed = 3f;
 
     [Header("Wander")]
     [SerializeField] private float flySpeed = 3f;
-    [Tooltip("¹æÇâÀ» ¹Ù²Ü ¶§ È¸ÀüÀÌ ºÎµå·´°Ô ÀÌ¾îÁö´Â ¼Óµµ(µµ/ÃÊ).")]
+    [Tooltip("ë°©í–¥ì„ ë°”ê¿€ ë•Œ íšŒì „ì´ ë¶€ë“œëŸ½ê²Œ ì´ì–´ì§€ëŠ” ì†ë„(ë„/ì´ˆ).")]
     [SerializeField] private float turnSpeed = 90f;
-    [Tooltip("¸î ÃÊ¸¶´Ù ¹èÈ¸ ¹æÇâÀ» ·£´ıÇÏ°Ô Á¶±İ¾¿ ¹Ù²ÜÁö.")]
+    [Tooltip("ëª‡ ì´ˆë§ˆë‹¤ ë°°íšŒ ë°©í–¥ì„ ëœë¤í•˜ê²Œ ì¡°ê¸ˆì”© ë°”ê¿€ì§€.")]
     [SerializeField] private float directionChangeInterval = 3f;
-    [Tooltip("ÇÑ ¹ø¿¡ ¹æÇâÀ» ¹Ù²Ü ¶§ÀÇ ÃÖ´ë °¢µµ ¹üÀ§.")]
+    [Tooltip("í•œ ë²ˆì— ë°©í–¥ì„ ë°”ê¿€ ë•Œì˜ ìµœëŒ€ ê°ë„ ë²”ìœ„.")]
     [SerializeField] private float directionChangeRandomRange = 60f;
 
     [Header("Obstacle Avoidance")]
-    [Tooltip("ÀÌ °Å¸® ¾È¿¡ Àå¾Ö¹°ÀÌ ÀÖÀ¸¸é ¹æÇâÀ» ÀüÈ¯ÇÑ´Ù.")]
+    [Tooltip("ì´ ê±°ë¦¬ ì•ˆì— ì¥ì• ë¬¼ì´ ìˆìœ¼ë©´ ë°©í–¥ì„ ì „í™˜í•œë‹¤.")]
     [SerializeField] private float obstacleDetectRange = 2f;
     [SerializeField] private float obstacleCheckRadius = 0.3f;
-    [Tooltip("º®/Àå¾Ö¹°·Î ÆÇÁ¤ÇÒ ·¹ÀÌ¾î. ¹Ù´Ú ·¹ÀÌ¾î¿Í´Â ºĞ¸®ÇØ¼­ ¼³Á¤ ±ÇÀå.")]
+    [Tooltip("ë²½/ì¥ì• ë¬¼ë¡œ íŒì •í•  ë ˆì´ì–´. ë°”ë‹¥ ë ˆì´ì–´ì™€ëŠ” ë¶„ë¦¬í•´ì„œ ì„¤ì • ê¶Œì¥.")]
     [SerializeField] private LayerMask obstacleLayerMask = ~0;
 
     private readonly IngredientTraitTimer wanderTimer = new();
@@ -47,7 +47,7 @@ public class IngredientTraitFly : IngredientTrait
         flyDirection = transform.forward;
     }
 
-    private void OnDisable()
+    protected override void StopTrait()
     {
         StopFlying();
     }
@@ -70,7 +70,7 @@ public class IngredientTraitFly : IngredientTrait
     }
 
     /// <summary>
-    /// ºñÇàÀ» ½ÃÀÛÇÑ´Ù. IngredientSalmonÀÌ ½ºÆù ´ë±â Å¸ÀÌ¸Ó Á¾·á ½Ã È£ÃâÇÑ´Ù.
+    /// ë¹„í–‰ì„ ì‹œì‘í•œë‹¤. IngredientSalmonì´ ìŠ¤í° ëŒ€ê¸° íƒ€ì´ë¨¸ ì¢…ë£Œ ì‹œ í˜¸ì¶œí•œë‹¤.
     /// </summary>
     public void StartFlying()
     {
@@ -79,9 +79,9 @@ public class IngredientTraitFly : IngredientTrait
 
         isFlying = true;
 
-        // ÆòÁö ¸Ê ±âÁØ: ºñÇàÀ» ½ÃÀÛÇÏ´Â ½ÃÁ¡ÀÇ À§Ä¡(½ºÆù ½Ã ¹Ù´Ú À§)¸¦ ±âÁØÀ¸·Î
-        // targetHeight¸¸Å­ ¶ç¿î °íµµ¸¦ ÇÑ ¹ø¸¸ °è»êÇØ¼­ Ä³½ÌÇÑ´Ù.
-        // ÀÌÈÄ·Î´Â ·¹ÀÌÄ³½ºÆ® ¾øÀÌ ÀÌ °íÁ¤µÈ °ªÀ¸·Î °è¼Ó ¼ö·Å½ÃÅ²´Ù.
+        // í‰ì§€ ë§µ ê¸°ì¤€: ë¹„í–‰ì„ ì‹œì‘í•˜ëŠ” ì‹œì ì˜ ìœ„ì¹˜(ìŠ¤í° ì‹œ ë°”ë‹¥ ìœ„)ë¥¼ ê¸°ì¤€ìœ¼ë¡œ
+        // targetHeightë§Œí¼ ë„ìš´ ê³ ë„ë¥¼ í•œ ë²ˆë§Œ ê³„ì‚°í•´ì„œ ìºì‹±í•œë‹¤.
+        // ì´í›„ë¡œëŠ” ë ˆì´ìºìŠ¤íŠ¸ ì—†ì´ ì´ ê³ ì •ëœ ê°’ìœ¼ë¡œ ê³„ì† ìˆ˜ë ´ì‹œí‚¨ë‹¤.
         cachedDesiredY = transform.position.y + targetHeight;
 
         PickRandomDirection();
@@ -89,7 +89,7 @@ public class IngredientTraitFly : IngredientTrait
     }
 
     /// <summary>
-    /// ºñÇàÀ» ¸ØÃá´Ù. ¿¹: ÇÃ·¹ÀÌ¾î°¡ Àç·á¸¦ Áı¾úÀ» ¶§ IngredientSalmon¿¡¼­ È£Ãâ.
+    /// ë¹„í–‰ì„ ë©ˆì¶˜ë‹¤. ì˜ˆ: í”Œë ˆì´ì–´ê°€ ì¬ë£Œë¥¼ ì§‘ì—ˆì„ ë•Œ IngredientSalmonì—ì„œ í˜¸ì¶œ.
     /// </summary>
     public void StopFlying()
     {
@@ -122,12 +122,12 @@ public class IngredientTraitFly : IngredientTrait
         if (!hitSomething)
             return;
 
-        // Àå¾Ö¹° Ç¥¸é ³ë¸ÖÀ» ±âÁØÀ¸·Î ¹İ»ç½ÃÄÑ ¹æÇâÀ» ¹Ù²Û´Ù.
+        // ì¥ì• ë¬¼ í‘œë©´ ë…¸ë©€ì„ ê¸°ì¤€ìœ¼ë¡œ ë°˜ì‚¬ì‹œì¼œ ë°©í–¥ì„ ë°”ê¾¼ë‹¤.
         Vector3 reflected = Vector3.Reflect(flyDirection, hit.normal);
         reflected.y = 0f;
         reflected.Normalize();
 
-        // ¿ÏÀüÈ÷ ¹İ»ç¸¸ ½ÃÅ°¸é ¿Ô´ø °æ·Î¸¦ ±×´ë·Î ¿À°¥ ¼ö ÀÖ¾î ¾à°£ÀÇ ·£´ı¼ºÀ» ¼¯´Â´Ù.
+        // ì™„ì „íˆ ë°˜ì‚¬ë§Œ ì‹œí‚¤ë©´ ì™”ë˜ ê²½ë¡œë¥¼ ê·¸ëŒ€ë¡œ ì˜¤ê°ˆ ìˆ˜ ìˆì–´ ì•½ê°„ì˜ ëœë¤ì„±ì„ ì„ëŠ”ë‹¤.
         float randomAngle = Random.Range(-30f, 30f);
         flyDirection = (Quaternion.Euler(0f, randomAngle, 0f) * reflected).normalized;
     }

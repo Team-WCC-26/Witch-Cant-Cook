@@ -1,6 +1,8 @@
+using Protocol;
+using Server;
 using UnityEngine;
 
-public class IngredientEgg : MonoBehaviour
+public class IngredientEgg : IngredientTrait
 {
     [Header("References")]
     [SerializeField] private Define.eIngredient eArea = Define.eIngredient.EggInside;
@@ -8,24 +10,35 @@ public class IngredientEgg : MonoBehaviour
     private IngredientTraitFragile fragileTrait;
     private IngredientTraitAreaCreator areaCreator;
 
+    private CatchableObj catchable; 
+
+
     private void Awake()
     {
         fragileTrait = GetComponent<IngredientTraitFragile>();
         areaCreator = GetComponent<IngredientTraitAreaCreator>();
+        catchable = GetComponent<CatchableObj>();
 
-        fragileTrait.OnBroken += OnBroken;
+        if (fragileTrait != null)
+            fragileTrait.OnBroken += OnBroken;
     }
 
     private void OnDestroy()
     {
-        fragileTrait.OnBroken -= OnBroken;
+        if (fragileTrait != null)
+            fragileTrait.OnBroken -= OnBroken;
     }
 
-    private void OnBroken()
+    private void OnBroken(Vector3 point, Vector3 normal)
     {
+        Debug.Log($"[Egg] OnBroken called. netID = {catchable.NetworkId}, instance={GetInstanceID()}, frame={Time.frameCount}");
+
         if (areaCreator != null)
         {
-            areaCreator.CreateArea(eArea);
+            areaCreator.CreateArea(eArea, point, normal);
+            PushIngredientToPool(catchable);
+
         }
+
     }
 }

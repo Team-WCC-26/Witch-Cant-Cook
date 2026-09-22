@@ -43,10 +43,11 @@ public class PlayerInteract
     {
         if (IsHolding) return;
 
-        CatchableObj obj = FindInteractTarget<CatchableObj>();
-        if (obj == null)
+        IInteractTarget target = FindInteractTarget();
+        if (target is not CatchableObj obj)
         {
             brain.ActionController.PunchAction();
+            target.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
             return;
         }
         if (obj.IsHold) return;
@@ -75,7 +76,8 @@ public class PlayerInteract
 
     private bool TryUseHeldObjectReceiver()
     {
-        IHeldObjectReceiver receiver = FindInteractTarget<IHeldObjectReceiver>();
+        IInteractTarget target = FindInteractTarget();
+        IHeldObjectReceiver receiver = target.GetTargetComponent<IHeldObjectReceiver>();
         if (receiver == null) return false;
 
         return receiver.TryReceiveHeldObject(HeldObj, this);
@@ -83,11 +85,11 @@ public class PlayerInteract
     
     private void RequestSecondaryAction()
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+        EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
-        switch (objType)
+        switch (category)
         {
-            case CatchableObjType.Default:
+            case EntityCategory.Player:
                 break;
             default:
                 RequestThrow();
@@ -97,29 +99,29 @@ public class PlayerInteract
 
     private void RequestKeyInteract()
     {
-        CatchableObjType objType = IsHolding ? HeldObj.ObjType : CatchableObjType.Default;
+        EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
-        switch (objType)
+        switch (category)
         {
-            case CatchableObjType.Default:
+            case EntityCategory.Player:
                 //TODO : 빈손 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Ingredient:
+            case EntityCategory.Ingredient:
                 //TODO : 재료 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Pan:
+            case EntityCategory.Pan:
                 //TODO : 프라이팬 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Knife:
+            case EntityCategory.Knife:
                 //TODO : 칼 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Plate:
+            case EntityCategory.Plate:
                 //TODO : 그릇 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Broom:
+            case EntityCategory.Broom:
                 //TODO : 빗자루 F키 상호작용 처리 필요
                 break;
-            case CatchableObjType.Bucket:
+            case EntityCategory.Bucket:
                 //TODO : 양동이 F키 상호작용 처리 필요
                 break;
         }
@@ -199,7 +201,6 @@ public class PlayerInteract
         brain.ActionController.CancelAction();
         HeldObj = null;
         target.transform.SetParent(null, true);
-        target.RestoreWorldScaleAfterHold();
         return true;
     }
 
@@ -236,7 +237,6 @@ public class PlayerInteract
         LocalTransformData holdTransform = target.HoldTransform;
         target.transform.localPosition = holdTransform.LocalPosition;
         target.transform.localRotation = Quaternion.Euler(holdTransform.LocalEulerAngles);
-        target.transform.localScale = holdTransform.LocalScale;
         HeldObj = target;
     }
 
@@ -275,45 +275,82 @@ public class PlayerInteract
     #endregion
 
     #region Find Interactable Target
-    public T FindInteractTarget<T>() where T : class
+    public IInteractTarget FindInteractTarget()
     {
+        if (brain.InteractDistance <= 0f)
+        {
+            throw new InvalidOperationException("InteractDistance must be greater than 0.");
+        }
+
         Ray ray = BuildInteractRay();
         RaycastHit[] hits = Physics.SphereCastAll(
             ray.origin,
             GetInteractRadius(),
             ray.direction,
-            brain.InteractDistance);
+            brain.InteractDistance,
+            brain.InteractLayerMask,
+            QueryTriggerInteraction.Collide); // trigger collider도 상호작용 가능하도록 설정
 
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        IInteractTarget bestTarget = null;
+        float bestScore = float.PositiveInfinity;
 
         foreach (RaycastHit hit in hits)
         {
             Collider hitCollider = hit.collider;
-            if (hitCollider == null) continue;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue; // Ignore self-collisions
 
-            T target = GetComponentInParent<T>(hitCollider);
+            // Check if IInteractTarget is acceptable
+            IInteractTarget target = GetInteractTargetInParent(hitCollider);
             if (target == null) continue;
+            if (!target.Accepts(GetSourceCategory())) continue;
 
-            return target;
+            float score = GetTargetScore(ray, hitCollider, hit.distance);
+
+            if (score >= bestScore) continue;
+
+            bestTarget = target;
+            bestScore = score;
         }
 
-        return null;
+        return bestTarget;
     }
 
-    private static T GetComponentInParent<T>(Collider collider) where T : class
+    private EntityCategory GetSourceCategory()
     {
-        if (typeof(Component).IsAssignableFrom(typeof(T)))
-            return collider.GetComponentInParent(typeof(T)) as T;
+        return HeldObj != null
+            ? HeldObj.Category
+            : EntityCategory.Player;
+    }
 
+    private float GetTargetScore(Ray ray, Collider targetCollider, float distance)
+    {
+        Vector3 targetCenter = targetCollider.bounds.center;
+        Vector3 castCenter = ray.GetPoint(Mathf.Max(0f, Vector3.Dot(targetCenter - ray.origin, ray.direction)));
+
+        //ray 중심으로부터 얼마나 벗어났는가
+        float offset = Vector3.Distance(castCenter, targetCenter);
+        float offsetScore = Mathf.Clamp01(offset / GetInteractRadius());
+
+        //ray 시작점과의 거리
+        float distanceRatio = Mathf.Clamp01(distance / brain.InteractDistance);
+        int distanceScore = Mathf.Min(Mathf.FloorToInt(distanceRatio * 3f), 2);
+
+        float targetScore = offsetScore + distanceScore;
+        return targetScore;
+    }
+
+    // Collider의 부모 계층에서 상호작용 대상을 찾는다.
+    private static IInteractTarget GetInteractTargetInParent(Collider collider)
+    {
         foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
         {
-            if (behaviour is T target)
+            if (behaviour is IInteractTarget target)
                 return target;
         }
 
         return null;
     }
+
     #endregion
 
     #region Interact Ray

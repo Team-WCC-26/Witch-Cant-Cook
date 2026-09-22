@@ -29,6 +29,14 @@ public sealed class CookNetworkRouter : MonoBehaviour
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
 
+    private void Awake()
+    {
+        if (mapObjRouter == null)
+            mapObjRouter = GetComponent<MapObjNetworkRouter>();
+        if (objectRouter == null)
+            objectRouter = GetComponent<ObjectNetworkRouter>();
+    }
+
     private void OnEnable()
     {
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
@@ -38,11 +46,6 @@ public sealed class CookNetworkRouter : MonoBehaviour
     {
         // Cook packet subscription
         yield return new WaitUntil(() => ServerManager.Instance != null);
-
-        if (mapObjRouter == null)
-            mapObjRouter = FindFirstObjectByType<MapObjNetworkRouter>();
-        if (objectRouter == null)
-            objectRouter = ObjectNetworkRouter.Instance;
 
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCombine, HandleIngredientCombine);
         ServerManager.Instance.RegisterHandler(PacketId.S_CookStart, HandleCookStart);
@@ -119,9 +122,22 @@ public sealed class CookNetworkRouter : MonoBehaviour
     {
         foreach (CookCompletePacket packet in packets)
         {
+            if (objectRouter != null &&
+                objectRouter.TryGet(packet.IngredientEntityId, out CatchableObj ingredient) &&
+                ingredient.TryGetComponent(out IngredientReaction reaction))
+            {
+                reaction.ApplyServerAction((IngredientAction)packet.CookType);
+            }
+            else
+            {
+                Debug.LogError($"Cook complete ingredient not found. IngredientEntityId: {packet.IngredientEntityId}");
+            }
+
             if (!TryResolveReceiver(packet.ToolEntityId, out ICookReceiver receiver))
             {
-                Debug.LogError($"Cook complete target not found. ToolEntityId: {packet.ToolEntityId}");
+                if ((packet.CookType & IngredientState.Cut) == 0)
+                    Debug.LogError($"Cook complete target not found. ToolEntityId: {packet.ToolEntityId}");
+
                 continue;
             }
 

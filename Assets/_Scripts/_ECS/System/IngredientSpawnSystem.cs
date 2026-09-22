@@ -6,9 +6,14 @@ using UnityEngine;
 //[UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class IngredientSpawnSystem : SystemBase
 {
+    private ObjectNetworkRouter objectRouter;
     protected override void OnUpdate()
     {
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
+
+        if (objectRouter == null)
+            objectRouter = Object.FindFirstObjectByType<ObjectNetworkRouter>();
+        if (objectRouter == null) return;
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -22,7 +27,7 @@ public partial class IngredientSpawnSystem : SystemBase
             var ingredientRaw = DataManager.Instance.GetIngredient().Get(reqID);
             if (ingredientRaw == null)
             {
-                Debug.LogWarning($"[SpawnSystem] DataManager에 ID {reqID} 데이터가 없습니다.");
+                Debug.LogWarning($"[SpawnSystem] Ingredient data not found. ID: {reqID}");
                 ecb.DestroyEntity(requestEntity);
                 continue;
             }
@@ -31,7 +36,6 @@ public partial class IngredientSpawnSystem : SystemBase
 
             // 프리팹 생성 요청
             GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey, reqPos, reqRot);
-            Debug.Log($"[TEST] Spawned Object: {spawnedObj} pos: {reqPos}");
 
             if (spawnedObj != null)
             {
@@ -51,15 +55,15 @@ public partial class IngredientSpawnSystem : SystemBase
                     catchObj.Data = ingredientRaw;
                 }
 
-                var belt = ConveyorBeltRegistry.FindBeltNearStart(reqPos);
-                if (belt != null)
+                var belt = ConveyorBeltRegistry.TryGetBeltById(request.ValueRO.ConveyId, out ConveyorBeltController beltController);
+                if (beltController != null)
                 {
-                    belt.RegisterItem(netID, spawnedObj.transform, spawnedObj);
+                    beltController.RegisterItem(netID, spawnedObj.transform, spawnedObj);
                 }
             }
             else
             {
-                Debug.LogError($"[SpawnSystem] 풀링 스폰 실패. 리소스가 로드되지 않았습니다: {targetKey}");
+                Debug.LogError($"[SpawnSystem] Pool spawn failed. Key: {targetKey}");
             }
 
             ecb.DestroyEntity(requestEntity);
@@ -76,11 +80,11 @@ public partial class IngredientSpawnSystem : SystemBase
         if (catchable != null)
         {
             catchable.NetworkId = networkID;
-            ObjectNetworkRouter.Instance.Add(networkID, catchable);
+            objectRouter.Add(networkID, catchable);
         }
         else
         {
-            Debug.LogWarning($"[SpawnSystem] CatchableObj 없음. NetworkID: {networkID}, Object: {spawnedObj.name}");
+            Debug.LogWarning($"[SpawnSystem] CatchableObj missing. NetworkID: {networkID}, Object: {spawnedObj.name}");
         }
 
         var ingredientRaw = DataManager.Instance.GetIngredient().Get(ingredientID);

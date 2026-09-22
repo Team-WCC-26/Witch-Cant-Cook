@@ -46,7 +46,6 @@ public class GameManager : Singleton<GameManager>
         InitManager<UIManager>();
         //InitManager<StageManager>();
 
-        InitManager<ObjectNetworkRouter>();
     }
 
     
