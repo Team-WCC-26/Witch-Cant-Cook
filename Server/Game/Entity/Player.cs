@@ -21,6 +21,7 @@ public class Player : Entity
     public Room? Room { get; set; }
     public PlayerCombinedState State { get; set; }
     public Entity? HoldingEntity { get; set; }
+    public Pot? InsidePot { get; set; }
     public Vector3 Position
     {
         get => _position;

@@ -30,7 +30,7 @@ public class Pan() : CookingTool(new SingleSlotStorage())
 
         if (player.HoldingEntity is Dish dish && _timerManager.RemainingTime(_cookTimer) <= 0)
         {
-            return dish.TryCombine(Ingredient);
+            return dish.Insert(Ingredient);
         }
 
         return Insert(player.HoldingEntity);
