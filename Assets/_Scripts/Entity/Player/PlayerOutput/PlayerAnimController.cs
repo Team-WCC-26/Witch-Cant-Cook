@@ -8,19 +8,28 @@ public class PlayerAnimController
     private readonly int speedHash = Animator.StringToHash("Speed");
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
 
-    private readonly int onHoldHash = Animator.StringToHash("OnHold");
-    private readonly int equipActionHash = Animator.StringToHash("EquipAction");
-    private readonly int punchHash = Animator.StringToHash("Punch");
+    private readonly int heldCategoryHash = Animator.StringToHash("HeldCategory");
+    private readonly int primaryActionHash = Animator.StringToHash("Primary Action");
+    private readonly int jumpHash = Animator.StringToHash("Jump");
     
     private readonly int groundedHash = Animator.StringToHash("IsGrounded");
-    private readonly int vSpeedHash = Animator.StringToHash("VSpeed");
+    private readonly int fallingHash = Animator.StringToHash("IsFalling");
     private readonly int jumpStartHash = Animator.StringToHash("JumpStart");
-    private readonly int jumpMiddleHash = Animator.StringToHash("JumpMiddle");
+    private readonly int fallHash = Animator.StringToHash("Fall");
     private readonly int jumpEndHash = Animator.StringToHash("JumpEnd");
 
     private readonly int emptyStateHash = Animator.StringToHash("Empty");
-    private readonly int equipActionStateHash = Animator.StringToHash("Slash");
-    private readonly int punchStateHash = Animator.StringToHash("Attack_hand_1_(left)");
+    private readonly int[] primaryActionStateHashes =
+    {
+        Animator.StringToHash("Punch Action"),
+        Animator.StringToHash("Ingredient Action"),
+        Animator.StringToHash("Pan Action"),
+        Animator.StringToHash("Knife Action"),
+        Animator.StringToHash("Plate Action"),
+        Animator.StringToHash("Broom Action"),
+        Animator.StringToHash("Bucket Action"),
+        Animator.StringToHash("Default Action")
+    };
 
     public PlayerAnimController(PlayerBrain brain)
     {
@@ -28,14 +37,11 @@ public class PlayerAnimController
         animator = brain.Animator;
     }
 
-    public void UpdateTick(PlayerCombinedState state, bool isGrounded, float vSpeed)
+    public void UpdateTick(PlayerCombinedState state, bool isGrounded, bool isFalling)
     {
-        bool isHolding = state.HeldEntityCategory != EntityCategory.Player;
-        bool isEquipped = brain.Interact.IsHolding && brain.Interact.HeldObj.IsEquipment;
-
-        animator.SetBool(onHoldHash, isHolding && !isEquipped);
+        animator.SetInteger(heldCategoryHash, (int)state.HeldEntityCategory);
         animator.SetBool(groundedHash, isGrounded);
-        animator.SetFloat(vSpeedHash, vSpeed);
+        animator.SetBool(fallingHash, isFalling);
 
         if (state.PhysicalMode != PlayerPhysicalMode.Default)
         {
@@ -55,54 +61,44 @@ public class PlayerAnimController
         animator.Update(0f);
     }
 
-    public void PlayPunchAnim()
+    public void PlayPrimaryAction()
     {
-        animator.SetTrigger(punchHash);
+        animator.SetTrigger(primaryActionHash);
     }
 
-    public void PlayEquipAnim()
+    public void PlayJumpAnim()
     {
-        animator.SetTrigger(equipActionHash);
+        animator.SetTrigger(jumpHash);
     }
 
     public void CancelAction()
     {
         const int UpperBodyLayer = 1;
 
-        animator.ResetTrigger(punchHash);
-        animator.ResetTrigger(equipActionHash);
+        animator.ResetTrigger(primaryActionHash);
         animator.CrossFade(emptyStateHash, 0f, UpperBodyLayer);
     }
 
-    public bool IsEquipActionPlaying()
-    {
-        const int EquipmentLayer = 1;
-
-        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(EquipmentLayer);
-        if (current.shortNameHash == equipActionStateHash) return true;
-        if (!animator.IsInTransition(EquipmentLayer)) return false;
-
-        AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(EquipmentLayer);
-        return next.shortNameHash == equipActionStateHash;
-    }
-
-    public bool IsPunchMotionPlaying()
+    public bool IsPrimaryActionPlaying()
     {
         const int UpperBodyLayer = 1;
 
-        AnimatorStateInfo current =
-            animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
+        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
+        if (IsPrimaryActionState(current.shortNameHash)) return true;
+        if (!animator.IsInTransition(UpperBodyLayer)) return false;
 
-        if (current.shortNameHash == punchStateHash)
-            return true;
+        AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(UpperBodyLayer);
+        return IsPrimaryActionState(next.shortNameHash);
+    }
 
-        if (!animator.IsInTransition(UpperBodyLayer))
-            return false;
+    private bool IsPrimaryActionState(int stateHash)
+    {
+        foreach (int actionStateHash in primaryActionStateHashes)
+        {
+            if (stateHash == actionStateHash) return true;
+        }
 
-        AnimatorStateInfo next =
-            animator.GetNextAnimatorStateInfo(UpperBodyLayer);
-
-        return next.shortNameHash == punchStateHash;
+        return false;
     }
 
     public bool IsJumpMotionPlaying()
@@ -125,7 +121,7 @@ public class PlayerAnimController
             return stateInfo.normalizedTime < 1f;
         }
 
-        return stateHash == jumpStartHash || stateHash == jumpMiddleHash;
+        return stateHash == jumpStartHash || stateHash == fallHash;
     }
 }
 

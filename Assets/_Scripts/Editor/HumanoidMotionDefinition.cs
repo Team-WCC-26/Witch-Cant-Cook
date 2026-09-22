@@ -33,6 +33,11 @@ public abstract class HumanoidMotionDefinition
     public abstract float Duration { get; }
     public virtual float FrameRate => 30f;
     public virtual bool Loop => false;
+    public virtual string SourceClipPath => string.Empty;
+    public virtual float SourceTimeScale => 1f;
+    public virtual float CutStartTime => 0f;
+    public virtual float CutEndTime => 0f;
+    public virtual float CutSeamDuration => 0f;
     public abstract IReadOnlyList<HumanoidMuscleCurve> Curves { get; }
 
     public string OutputPath => $"{OutputFolder}/{ClipName}.anim";

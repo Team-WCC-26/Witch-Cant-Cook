@@ -60,6 +60,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [field: Header("Jump Validation")]
     [field: SerializeField] public float GroundCheckDistance { get; private set; } = 0.08f;
+    [field: SerializeField, Min(0f)] public float FallCheckDistance { get; private set; } = 0.3f;
     [field: SerializeField] public bool DebugGroundCheck { get; private set; } = false;
 
     [field: Header("Throw")]

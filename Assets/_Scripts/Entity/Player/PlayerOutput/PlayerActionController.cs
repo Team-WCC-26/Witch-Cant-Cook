@@ -36,7 +36,7 @@ public class PlayerActionController
         // Update default locomotion and airborne animation parameters.
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
-            animController.UpdateTick(state, movement.IsGroundedNow, movement.VerticalSpeed);
+            animController.UpdateTick(state, movement.IsGroundedNow, IsFalling());
         }
 
         // Apply physical mode changes once per transition.
@@ -66,8 +66,8 @@ public class PlayerActionController
     {
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
-            // ÀÔ·ÂÀÌ ¾ø¾îµµ Move(0, ...)¸¦ È£ÃâÇØ ¸¶Âû(FrictionMultiplier) ±â¹Ý °¨¼ÓÀ» Å¸°Ô ÇÑ´Ù.
-            // Stop()À¸·Î ¹Ù·Î °¡¸é Áï½Ã 0À¸·Î ½º³ÀµÇ¾î ºùÆÇ µîÀÇ ¹Ì²ô·¯Áü È¿°ú°¡ ¹«½ÃµÈ´Ù.
+            // ìž…ë ¥ì´ ì—†ì–´ë„ Move(0, ...)ë¥¼ í˜¸ì¶œí•´ ë§ˆì°°(FrictionMultiplier) ê¸°ë°˜ ê°ì†ì„ íƒ€ê²Œ í•œë‹¤.
+            // Stop()ìœ¼ë¡œ ë°”ë¡œ ê°€ë©´ ì¦‰ì‹œ 0ìœ¼ë¡œ ìŠ¤ëƒ…ë˜ì–´ ë¹™íŒ ë“±ì˜ ë¯¸ë„ëŸ¬ì§ íš¨ê³¼ê°€ ë¬´ì‹œëœë‹¤.
             movement.Move(state.MoveDir, state.IsRun);
             ApplyJump(state);
             movement.ApplyFallGravity();
@@ -83,7 +83,7 @@ public class PlayerActionController
     {
         if (!canAction) return;
 
-        animController.PlayPunchAnim();
+        animController.PlayPrimaryAction();
         canAction = false;
     }
 
@@ -91,16 +91,14 @@ public class PlayerActionController
     {
         if (!canAction) return false;
 
-        animController.PlayEquipAnim();
+        animController.PlayPrimaryAction();
         canAction = false;
         return true;
     }
 
     private void UpdateActionState()
     {
-        bool isPlaying =
-            animController.IsPunchMotionPlaying()
-            || animController.IsEquipActionPlaying();
+        bool isPlaying = animController.IsPrimaryActionPlaying();
 
         if (isPlaying) return;
 
@@ -131,6 +129,26 @@ public class PlayerActionController
     {
         if (!state.JumpRequested) return;
         movement.Jump();
+        animController.PlayJumpAnim();
+    }
+
+    private bool IsFalling()
+    {
+        if (brain.Rb.linearVelocity.y >= 0f || brain.Col == null) return false;
+
+        Bounds bounds = brain.Col.bounds;
+        float radius = Mathf.Min(bounds.extents.x, bounds.extents.z) * 0.9f;
+        float distance = bounds.extents.y - radius + brain.FallCheckDistance;
+
+        return !Physics.SphereCast(
+            bounds.center,
+            radius,
+            Vector3.down,
+            out _,
+            distance,
+            brain.GroundLayerMask,
+            QueryTriggerInteraction.Ignore
+        );
     }
     #endregion
 }
