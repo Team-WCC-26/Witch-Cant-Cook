@@ -1,5 +1,4 @@
 ﻿using Protocol;
-using System.Numerics;
 
 namespace Server;
 
@@ -34,35 +33,6 @@ public class Ingredient() : Entity, ICookable, IInteractable
 
         IngredientBehaviour?.Clear();
         IngredientBehaviour = null; // Pool 사용하게 되면 반환
-    }
-
-    public bool TryCombine(Ingredient other, out Ingredient result)
-    {
-        result = null;
-
-        var DB = ServerContext.Instance.DataBase;
-
-        if (!DB.IngredientCombinations.TryGetValue(new(this, other), out var resId))
-        {
-            resId = 99999;
-        }
-
-        result = Room.GenerateIngredient(resId, out var entityId);
-
-        other.Destroy();
-        Destroy();
-
-        IngredientCombinePacket packet = new()
-        {
-            SubjectEntityId = EntityId,
-            TargetEntityId = other.EntityId,
-            NewEntityId = result.EntityId,
-            ResultIngredientId = resId
-        };
-
-        Room.BroadCast(PacketSerializer.Serialize(packet, true));
-
-        return true;
     }
 
     public bool TryCook(IngredientState state)
@@ -102,7 +72,7 @@ public class Ingredient() : Entity, ICookable, IInteractable
 
         if (player.HoldingEntity is Dish dish)
         {
-            return dish.TryCombine(this);
+            return dish.Insert(this);
         }
 
         //if (player.HoldingEntity is not ICombinable combinable) return false;
@@ -122,7 +92,8 @@ public class Ingredient() : Entity, ICookable, IInteractable
             {
                 ToolEntityId = (Parent == null) ? -1 : Parent.EntityId,
                 IngredientEntityId = EntityId,
-                CookType = ProcessState
+                CookType = ProcessState,
+                EjectSeed = (int)TimeUtil.NowMs()
             });
         }
         else if (mask.HasFlag(DirtyMask.Process))

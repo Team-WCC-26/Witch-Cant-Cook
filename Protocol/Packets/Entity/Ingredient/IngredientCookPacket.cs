@@ -30,6 +30,7 @@ public partial class CookCompletePacket
     public long ToolEntityId { get; set; }
     public long IngredientEntityId { get; set; }
     public IngredientState CookType { get; set; }
+    public int EjectSeed { get; set; }
 }
 
 [Flags]

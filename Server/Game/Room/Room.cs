@@ -190,7 +190,10 @@ public class Room
 
     public void DestroyIngredient(long id)
     {
-        _entities.Remove(id);
+        if (_entities.Remove(id, out var entity))
+        {
+            entity.Parent = null;
+        }
     }
 
     //public void CombineEntity(long resultId, long removeId, Entity entity)
@@ -231,6 +234,8 @@ public class Room
     {
         _players.Remove(player);
         player.Room = null;
+
+        player.InsidePot?.RemovePlayer(player);
 
         if (--_playerCnt <= 0)
         {
@@ -286,11 +291,37 @@ public class Room
     public bool InsertEntity(long targetId, long subjectId)
     {
         if (!_entities.TryGetValue(targetId, out var target) || target.IsDestroyed) return false;
-        if (!_entities.TryGetValue(subjectId, out var subject) || target.IsDestroyed) return false;
+        if (!_entities.TryGetValue(subjectId, out var subject) || subject.IsDestroyed) return false;
 
         if (target is not ContainerTool containerTool) return false;
 
         return containerTool.Insert(subject);
+    }
+
+    public bool EnterPot(long potId, Player player)
+    {
+        if (!_entities.TryGetValue(potId, out var entity) || entity.IsDestroyed) return false;
+        if (entity is not Pot pot) return false;
+
+        return pot.AddPlayer(player);
+    }
+
+    public bool ForceEjectPot(long potId)
+    {
+        if (!_entities.TryGetValue(potId, out var entity) || entity.IsDestroyed) return false;
+        if (entity is not Pot pot) return false;
+
+        pot.ForceEject();
+
+        return true;
+    }
+
+    public bool LeaveStove(long panId)
+    {
+        if (!_entities.TryGetValue(panId, out var entity) || entity.IsDestroyed) return false;
+        if (entity is not Pan pan) return false;
+
+        return pan.LeaveStove();
     }
 
     public void InteractDoor(DoorId doorId, string playerId)

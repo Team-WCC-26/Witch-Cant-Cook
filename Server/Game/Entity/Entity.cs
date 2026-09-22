@@ -15,7 +15,7 @@ public abstract class Entity
 
             if (_parent is ContainerTool ct)
             {
-                ct.Remvoe(this);
+                ct.Remove(this);
             }
             else if (_parent is Player player)
             {
