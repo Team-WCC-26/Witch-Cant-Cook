@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor;
 
 public sealed class SlashMotionDefinition : HumanoidMotionDefinition
 {
@@ -64,15 +63,5 @@ public sealed class SlashMotionDefinition : HumanoidMotionDefinition
             Key(ResultTime, resultValue),
             Key(ResultHoldTime, resultValue),
             Key(RecoveryTime, baseValue));
-    }
-}
-
-// Retains the original menu command while using the shared generation pipeline.
-public static class SlashAnimationGenerator
-{
-    [MenuItem("Tools/Player Animation/Generate Slash Animation")]
-    private static void Generate()
-    {
-        HumanoidAnimationClipBuilder.TryGenerate(new SlashMotionDefinition(), out _);
     }
 }

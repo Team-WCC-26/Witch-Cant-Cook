@@ -60,6 +60,24 @@ public static class HumanoidAnimationClipBuilder
         if (!IsFinite(motion.FrameRate) || motion.FrameRate <= 0f)
             AddError(issues, "Frame rate must be a finite value greater than zero.");
 
+        bool copiesSourceClip = !string.IsNullOrWhiteSpace(motion.SourceClipPath);
+        if (copiesSourceClip)
+        {
+            AnimationClip source = AssetDatabase.LoadAssetAtPath<AnimationClip>(motion.SourceClipPath);
+            if (source == null)
+                AddError(issues, $"Source AnimationClip was not found: '{motion.SourceClipPath}'.");
+            bool removesRange = motion.CutEndTime > motion.CutStartTime;
+            if (motion.CutStartTime < 0f || motion.CutEndTime < 0f)
+                AddError(issues, "Source clip cut range cannot be negative.");
+            if (source != null && removesRange && motion.CutEndTime > source.length)
+                AddError(issues, "Source clip cut range exceeds its duration.");
+            if (motion.CutSeamDuration < 0f)
+                AddError(issues, "Cut seam duration cannot be negative.");
+            if (!IsFinite(motion.SourceTimeScale) || motion.SourceTimeScale <= 0f)
+                AddError(issues, "Source time scale must be greater than zero.");
+            return issues;
+        }
+
         if (motion.Curves == null || motion.Curves.Count == 0)
         {
             AddError(issues, "At least one muscle curve is required.");
@@ -105,6 +123,17 @@ public static class HumanoidAnimationClipBuilder
         }
 
         EnsureAssetFolder(motion.OutputFolder);
+        AnimationClip sourceClip = string.IsNullOrWhiteSpace(motion.SourceClipPath)
+            ? null
+            : AssetDatabase.LoadAssetAtPath<AnimationClip>(motion.SourceClipPath);
+        EditorCurveBinding[] sourceBindings = sourceClip == null
+            ? Array.Empty<EditorCurveBinding>()
+            : AnimationUtility.GetCurveBindings(sourceClip);
+        AnimationCurve[] sourceCurves = new AnimationCurve[sourceBindings.Length];
+        for (int i = 0; i < sourceBindings.Length; i++)
+            sourceCurves[i] = AnimationUtility.GetEditorCurve(sourceClip, sourceBindings[i]);
+        float sourceFrameRate = sourceClip == null ? motion.FrameRate : sourceClip.frameRate;
+
         clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(motion.OutputPath);
 
         if (clip == null)
@@ -119,10 +148,20 @@ public static class HumanoidAnimationClipBuilder
         }
 
         clip.name = motion.ClipName;
-        clip.frameRate = motion.FrameRate;
 
-        foreach (HumanoidMuscleCurve muscleCurve in motion.Curves)
-            SetMuscleCurve(clip, muscleCurve);
+        if (!string.IsNullOrWhiteSpace(motion.SourceClipPath))
+        {
+            clip.frameRate = sourceFrameRate;
+            CopySourceCurvesWithCut(clip, sourceBindings, sourceCurves, motion);
+            foreach (HumanoidMuscleCurve muscleCurve in motion.Curves)
+                SetMuscleCurve(clip, muscleCurve);
+        }
+        else
+        {
+            clip.frameRate = motion.FrameRate;
+            foreach (HumanoidMuscleCurve muscleCurve in motion.Curves)
+                SetMuscleCurve(clip, muscleCurve);
+        }
 
         AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(clip);
         settings.loopTime = motion.Loop;
@@ -136,6 +175,70 @@ public static class HumanoidAnimationClipBuilder
         EditorGUIUtility.PingObject(clip);
         Debug.Log($"Generated Humanoid animation: {motion.OutputPath}");
         return true;
+    }
+
+    private static void CopySourceCurvesWithCut(
+        AnimationClip destination,
+        IReadOnlyList<EditorCurveBinding> sourceBindings,
+        IReadOnlyList<AnimationCurve> sourceCurves,
+        HumanoidMotionDefinition motion)
+    {
+        float cutStart = motion.CutStartTime;
+        float cutEnd = motion.CutEndTime;
+        float seamEnd = cutStart + motion.CutSeamDuration;
+        float removedTime = cutEnd - seamEnd;
+        bool removesRange = cutEnd > cutStart;
+
+        for (int bindingIndex = 0; bindingIndex < sourceBindings.Count; bindingIndex++)
+        {
+            EditorCurveBinding binding = sourceBindings[bindingIndex];
+            AnimationCurve sourceCurve = sourceCurves[bindingIndex];
+
+            if (!removesRange)
+            {
+                Keyframe[] scaledKeys = sourceCurve.keys;
+                for (int keyIndex = 0; keyIndex < scaledKeys.Length; keyIndex++)
+                {
+                    scaledKeys[keyIndex].time *= motion.SourceTimeScale;
+                    scaledKeys[keyIndex].inTangent /= motion.SourceTimeScale;
+                    scaledKeys[keyIndex].outTangent /= motion.SourceTimeScale;
+                }
+                AnimationUtility.SetEditorCurve(
+                    destination, binding, new AnimationCurve(scaledKeys));
+                continue;
+            }
+
+            List<Keyframe> keys = new();
+
+            foreach (Keyframe key in sourceCurve.keys)
+            {
+                if (key.time < cutStart)
+                    keys.Add(key);
+            }
+
+            keys.Add(new Keyframe(cutStart, sourceCurve.Evaluate(cutStart)));
+            keys.Add(new Keyframe(seamEnd, sourceCurve.Evaluate(cutEnd)));
+
+            foreach (Keyframe sourceKey in sourceCurve.keys)
+            {
+                if (sourceKey.time <= cutEnd) continue;
+
+                Keyframe shiftedKey = sourceKey;
+                shiftedKey.time -= removedTime;
+                keys.Add(shiftedKey);
+            }
+
+            AnimationCurve destinationCurve = new(keys.ToArray());
+            for (int i = 0; i < destinationCurve.length; i++)
+            {
+                AnimationUtility.SetKeyLeftTangentMode(
+                    destinationCurve, i, AnimationUtility.TangentMode.ClampedAuto);
+                AnimationUtility.SetKeyRightTangentMode(
+                    destinationCurve, i, AnimationUtility.TangentMode.ClampedAuto);
+            }
+
+            AnimationUtility.SetEditorCurve(destination, binding, destinationCurve);
+        }
     }
 
     private static void ValidateKeys(
