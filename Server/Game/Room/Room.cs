@@ -316,6 +316,14 @@ public class Room
         return true;
     }
 
+    public bool LeaveStove(long panId)
+    {
+        if (!_entities.TryGetValue(panId, out var entity) || entity.IsDestroyed) return false;
+        if (entity is not Pan pan) return false;
+
+        return pan.LeaveStove();
+    }
+
     public void InteractDoor(DoorId doorId, string playerId)
     {
         _doors[doorId].BeginInteract(playerId);

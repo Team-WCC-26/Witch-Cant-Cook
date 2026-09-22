@@ -115,6 +115,10 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_PotCookComplete = 415,
 
+    // Pan
+    C_PanStoveExit = 416,
+    S_PanStoveExit = 417,
+
     // 기타 패킷 (00~)
     // ...
 }

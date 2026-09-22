@@ -1,5 +1,4 @@
 ﻿using Protocol;
-using System.Numerics;
 
 namespace Server;
 
@@ -93,7 +92,8 @@ public class Ingredient() : Entity, ICookable, IInteractable
             {
                 ToolEntityId = (Parent == null) ? -1 : Parent.EntityId,
                 IngredientEntityId = EntityId,
-                CookType = ProcessState
+                CookType = ProcessState,
+                EjectSeed = (int)TimeUtil.NowMs()
             });
         }
         else if (mask.HasFlag(DirtyMask.Process))

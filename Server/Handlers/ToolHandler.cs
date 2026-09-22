@@ -73,6 +73,18 @@ public class ToolHandler : PacketHandlerBase
         });
     }
 
+    [PacketHandler(PacketId.C_PanStoveExit)]
+    public static void PanStoveExit(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<PanStoveExitPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            room.LeaveStove(packet.PanEntityId);
+        });
+    }
+
     //[PacketHandler(PacketId.C_ClearDish)]
     //public static void ClearDish(Session session, PacketPackageInfo package)
     //{

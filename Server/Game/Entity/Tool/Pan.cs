@@ -13,17 +13,7 @@ public class Pan() : CookingTool(new SingleSlotStorage())
             player.HoldingEntity = this;
             Parent = player;
 
-            SetCookEnable(false);
-            
-            if (_timerManager.Pause(_cookTimer))
-            {
-                CookPausePacket packet = new()
-                {
-                    ToolEntityId = EntityId,
-                };
-
-                Room.BroadCast(PacketSerializer.Serialize(packet, true));
-            }
+            PauseCook();
 
             return true;
         }
@@ -43,5 +33,31 @@ public class Pan() : CookingTool(new SingleSlotStorage())
         StartCook();
 
         return true;
+    }
+
+    public bool LeaveStove()
+    {
+        if (Parent is not Stove) return false;
+
+        Parent = null;
+
+        PauseCook();
+
+        return true;
+    }
+
+    private void PauseCook()
+    {
+        SetCookEnable(false);
+
+        if (_timerManager.Pause(_cookTimer))
+        {
+            CookPausePacket pausePacket = new()
+            {
+                ToolEntityId = EntityId
+            };
+
+            Room.BroadCast(PacketSerializer.Serialize(pausePacket, true));
+        }
     }
 }
