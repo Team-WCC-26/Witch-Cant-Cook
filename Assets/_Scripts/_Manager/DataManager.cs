@@ -22,9 +22,11 @@ public class DataManager : Singleton<DataManager>
     [Header("Data Fields")]
     [SerializeField] private GameData<Ingredient> ingredient = new();
     [SerializeField] private GameData<IngredientStat> ingredientStat = new();
+    [SerializeField] private GameData<Recipe> recipe = new();
 
     public GameData<Ingredient> GetIngredient() => ingredient;
     public GameData<IngredientStat> GetIngredientStat() => ingredientStat;
+    public GameData<Recipe> GetRecipe() => recipe;
 
     public bool IsDataLoaded { get; private set; }
 

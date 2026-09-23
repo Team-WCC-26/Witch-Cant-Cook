@@ -49,6 +49,8 @@ MonoBehaviour:
   useGSpread: 1
   gspreadReader: {fileID: 8302323175505027827}
   destroyGSpreadReaderAfterInit: 0
+  recipe:
+    data: []
 --- !u!114 &8302323175505027827
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68,4 +70,6 @@ MonoBehaviour:
     sheetId: 839193165
   - className: IngredientStat
     sheetId: 22111017
+  - className: Recipe
+    sheetId: 784575298
   timeoutSeconds: 30
