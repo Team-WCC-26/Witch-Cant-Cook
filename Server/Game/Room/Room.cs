@@ -254,7 +254,10 @@ public class Room
         _players.Remove(player);
         player.Room = null;
 
-        player.InsidePot?.RemovePlayer(player);
+        if (player.Parent is CookingTool cookingTool)
+        {
+            cookingTool.RemovePlayer(player);
+        }
 
         if (--_playerCnt <= 0)
         {
@@ -317,22 +320,30 @@ public class Room
         return containerTool.Insert(subject);
     }
 
-    public bool EnterPot(long potId, Player player)
+    public bool EnterToolPlayer(long toolId, Player player)
     {
-        if (!_entities.TryGetValue(potId, out var entity) || entity.IsDestroyed) return false;
-        if (entity is not Pot pot) return false;
+        if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        return pot.AddPlayer(player);
+        if (entity is CookingTool cookingTool) // 프라이팬 예외 필요 시 추가
+        {
+            return cookingTool.AddPlayer(player);
+        }
+
+        return false;
     }
 
-    public bool ForceEjectPot(long potId)
+    public bool ForceEjectTool(long toolId)
     {
-        if (!_entities.TryGetValue(potId, out var entity) || entity.IsDestroyed) return false;
-        if (entity is not Pot pot) return false;
+        if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        pot.ForceEject();
+        if (entity is Pot pot)
+        {
+            pot.ForceEject();
 
-        return true;
+            return true;
+        }
+
+        return false;
     }
 
     public bool LeaveStove(long panId)

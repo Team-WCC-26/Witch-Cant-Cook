@@ -59,10 +59,10 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
     //    return true;
     //}
 
-    public void StartCook()
+    public bool StartCook()
     {
-        if (!_cookable) return;
-        if (_storage.Count <= 0) return;
+        if (!_cookable) return false;
+        if (_storage.Count <= 0) return false;
 
         if (!_timerManager.Resume(_cookTimer))
         {
@@ -99,6 +99,8 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
         };
 
         Room.BroadCast(PacketSerializer.Serialize(packet, true));
+
+        return true;
     }
 
     public void SetCookEnable(bool enable)

@@ -54,6 +54,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_PlayerMove = 302,
 
+    C_PlayerDamage = 304,
+
     C_StageSet = 310,
     S_StageSet = 311,
 
@@ -121,8 +123,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_PotForceEject = 410,
     S_PotEject = 411,
 
-    C_PotPlayerEnter = 412,
-    S_PotPlayerEnter = 413,
+    C_ToolPlayerEnter = 412,
+    S_ToolPlayerEnter = 413,
 
     S_PotCookComplete = 415,
 

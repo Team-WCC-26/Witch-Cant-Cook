@@ -10,15 +10,6 @@ public partial class PotForceEjectPacket
 }
 
 [MemoryPackable]
-[PacketId(PacketId.C_PotPlayerEnter)]
-[PacketId(PacketId.S_PotPlayerEnter)]
-public partial class PotPlayerEnterPacket
-{
-    public long PotEntityId { get; set; }
-    public string PlayerId { get; set; }
-}
-
-[MemoryPackable]
 [PacketId(PacketId.S_PotEject)]
 public partial class PotEjectPacket
 {
