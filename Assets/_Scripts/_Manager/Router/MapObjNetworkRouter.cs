@@ -3,6 +3,7 @@ using Server;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using MemoryPack;
 using UnityEngine;
 
 public sealed class MapObjNetworkRouter : MonoBehaviour
@@ -20,6 +21,8 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private bool isSubscribed;
     private bool isRegisterOwner;
 
+    #region unity cycle
+
     private void OnEnable()
     {
         StageManager.DoorOpened += OnDoorOpened;
@@ -31,6 +34,9 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         // Delayed subscription
         yield return new WaitUntil(() => ServerManager.Instance != null);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotPlayerEnter, OnPotPlayerEntered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -48,8 +54,13 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         if (!isSubscribed || ServerManager.Instance == null) return;
 
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolRegister);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PotPlayerEnter);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PotEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
         isSubscribed = false;
     }
+
+    #endregion
 
     #region Map Object Getters
     public bool TryGetMapObject(long entityId, out MapObjInteraction mapObj)
@@ -186,6 +197,44 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
         return null;
     }
+    #endregion
+
+    #region Pot Packet Routing
+
+    // 솥 플레이어 진입 패킷 전달
+    private void OnPotPlayerEntered(ReadOnlyMemory<byte> data)
+    {
+        PotPlayerEnterPacket packet = MemoryPackSerializer.Deserialize<PotPlayerEnterPacket>(data.Span);
+        if (TryGetPotReceiver(packet.PotEntityId, out IPotNetworkReceiver receiver))
+            receiver.HandlePotPlayerEnter(packet);
+    }
+
+    // 솥 배출 패킷 전달
+    private void OnPotEjected(ReadOnlyMemory<byte> data)
+    {
+        PotEjectPacket packet = MemoryPackSerializer.Deserialize<PotEjectPacket>(data.Span);
+        if (TryGetPotReceiver(packet.PotEntityId, out IPotNetworkReceiver receiver))
+            receiver.HandlePotEject(packet);
+    }
+
+    // 솥 조리 완료 패킷 전달
+    private void OnPotCookCompleted(ReadOnlyMemory<byte> data)
+    {
+        PotCookCompletePacket packet = MemoryPackSerializer.Deserialize<PotCookCompletePacket>(data.Span);
+        if (TryGetPotReceiver(packet.PotEntityId, out IPotNetworkReceiver receiver))
+            receiver.HandlePotCookComplete(packet);
+    }
+
+    // 솥 네트워크 수신 대상 조회
+    private bool TryGetPotReceiver(long potEntityId, out IPotNetworkReceiver receiver)
+    {
+        receiver = null;
+        if (!TryGetMapObject(potEntityId, out PotInteraction pot)) return false;
+
+        receiver = pot;
+        return true;
+    }
+
     #endregion
 
 }

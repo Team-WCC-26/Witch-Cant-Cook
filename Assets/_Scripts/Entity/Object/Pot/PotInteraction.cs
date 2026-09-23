@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using Protocol;
+using Server;
 using UnityEngine;
 
 public enum PotState
@@ -9,14 +11,14 @@ public enum PotState
     Ejecting
 }
 
-public enum PotEjectType
+public class PotInteraction : MapObjInteraction,
+    IPunchReceiver,
+    IEntityParentReceiver,
+    ICookReceiver,
+    IPotNetworkReceiver
 {
-    Completed,
-    Forced
-}
+    #region Inspecter
 
-public class PotInteraction : MapObjInteraction, IPunchReceiver
-{
     [Header("Storage")]
     [SerializeField] private Transform parentRecipe;
     [SerializeField] private Transform parentETC;
@@ -24,32 +26,40 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
 
-    private readonly HashSet<CatchableObj> pendingObjects = new(); // 진입 대기 오브젝트 집합
-    private readonly HashSet<CatchableObj> storedObjects = new(); // 보관 오브젝트 집합
-    private readonly HashSet<long> receivedEntryIndices = new(); // 수신된 진입 인덱스 집합
-    private readonly Dictionary<CatchableObj, long> entryIndices = new(); // 오브젝트별 진입 인덱스 매핑
-    private readonly List<CatchableObj> recipeObjects = new(); // 조리 대상 오브젝트 리스트
-    private readonly List<CatchableObj> etcObjects = new(); // 배출 대상 오브젝트 리스트
-    private readonly HashSet<CatchableObj> idleAutoEjectObjects = new(); // 대기 중 자동 배출 오브젝트 집합
-    private readonly List<PlayerBrain> trappedPlayers = new(); // 갇힌 플레이어 리스트
-    private readonly Dictionary<PlayerBrain, int> playerOverlapCounts = new(); // 플레이어 겹침 횟수 추적
+    #endregion
 
     private PotState state = PotState.Idle;
-
-    private CatchableObj cookingBowl;
-
-    private long cookingRecipeLastEntryIndex;
-    private long lastProcessedEntryIndex;
-
     public PotState State => state;
 
+    // Object storage
+    private readonly HashSet<CatchableObj> pendingObjects = new(); // Awaiting server response
+    private readonly HashSet<CatchableObj> storedObjects = new(); // Total Input
+    private readonly List<CatchableObj> recipeObjects = new(); // During Idle State
+    private readonly List<CatchableObj> etcObjects = new(); // During Cooking State
+    private readonly List<CatchableObj> postEjectObjects = new(); // During Ejecting
+    private CatchableObj cookingBowl; // Cooking Trigger
+
+    // Player entry
+    private readonly List<PlayerBrain> trappedPlayers = new();
+    private readonly HashSet<string> pendingPlayerEntries = new(); // Awaiting server response
+
+    // Network 
+    private ObjectNetworkRouter objectRouter;
+    private PotCookCompletePacket pendingCookCompletePacket;
+    private float? pendingCookingDuration;
+
     #region Lifecycle
+
+    // 솥 패킷에서 오브젝트를 찾을 라우터 연결
+    public override void InitializeRouter(MapObjNetworkRouter router)
+    {
+        base.InitializeRouter(router);
+        objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
+    }
 
     // 솥 활성화 초기화
     private void OnEnable()
     {
-        receivedEntryIndices.Clear();
-        lastProcessedEntryIndex = 0;
         ResetPotData();
     }
 
@@ -59,40 +69,44 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         StopPotCoroutines();
         ClearObjects();
         ResetPotData();
-
-        receivedEntryIndices.Clear();
-        lastProcessedEntryIndex = 0;
     }
 
     // 솥 데이터 초기화
     private void ResetPotData()
     {
-        gaugeUI?.Hide();
+        state = PotState.Idle;
+
+        // Object storage
         pendingObjects.Clear();
         storedObjects.Clear();
-        entryIndices.Clear();
         recipeObjects.Clear();
         etcObjects.Clear();
-        idleAutoEjectObjects.Clear();
-        trappedPlayers.Clear();
-        playerOverlapCounts.Clear();
+        postEjectObjects.Clear();
         cookingBowl = null;
-        cookingCoroutine = null;
-        idleEjectCoroutine = null;
+
+        // Player entry
+        trappedPlayers.Clear();
+        pendingPlayerEntries.Clear();
+
+        // Network
+        pendingCookCompletePacket = null;
+        pendingCookingDuration = null;
+
+        // Ejection
         ejectCoroutine = null;
-        cookingRecipeLastEntryIndex = 0;
-        state = PotState.Idle;
+        pendingEjectPackets.Clear();
+        activeEjectPlayers.Clear();
+        activeEjectObjects.Clear();
+        ejectRandom = null;
+
+        gaugeUI?.Hide();
     }
 
     // 실행 중 솥 코루틴 중단
     private void StopPotCoroutines()
     {
-        if (cookingCoroutine != null) StopCoroutine(cookingCoroutine);
-        if (idleEjectCoroutine != null) StopCoroutine(idleEjectCoroutine);
         if (ejectCoroutine != null) StopCoroutine(ejectCoroutine);
 
-        cookingCoroutine = null;
-        idleEjectCoroutine = null;
         ejectCoroutine = null;
     }
 
@@ -108,16 +122,12 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         }
     }
 
-    #endregion
-
-    #region Trigger
-
     // 진입 대상 서버 요청
     private void OnTriggerEnter(Collider other)
     {
         if (TryGetPlayer(other, out PlayerBrain player))
         {
-            RegisterPlayer(player);
+            RequestPlayerEntry(player);
             return;
         }
 
@@ -125,101 +135,99 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         if (catchable == null) return;
         if (storedObjects.Contains(catchable) || !pendingObjects.Add(catchable)) return;
 
-        RequestObjectEntry(catchable);
-    }
-
-    // 플레이어 이탈 추적
-    private void OnTriggerExit(Collider other)
-    {
-        if (!TryGetPlayer(other, out PlayerBrain player)) return;
-        if (!playerOverlapCounts.TryGetValue(player, out int overlapCount)) return;
-
-        overlapCount--;
-        if (overlapCount > 0)
-        {
-            playerOverlapCounts[player] = overlapCount;
-            return;
-        }
-
-        playerOverlapCounts.Remove(player);
-        trappedPlayers.Remove(player);
+        RequestObjEntry(catchable);
     }
 
     #endregion
 
-    #region Server Stub
+    #region Server
 
-    // 솥 진입 패킷 전송 위치
-    private void RequestObjectEntry(CatchableObj catchable)
+    // 솥 진입 패킷 전송
+    private void RequestObjEntry(CatchableObj catchable)
     {
-        // TODO: PotObjectEntryRequest 전송
-        SimulateObjectEntry(catchable);
+        if (catchable == null) return;
+        if (NetworkId == 0 || catchable.NetworkId == 0 || ServerManager.Instance == null)
+        {
+            pendingObjects.Remove(catchable);
+            return;
+        }
+
+        EntityInsertPacket packet = new()
+        {
+            SubjectEntityId = catchable.NetworkId,
+            TargetEntityId = NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    // 솥 진입 결과 수신 처리
-    public void ReceiveObjectEntry(CatchableObj catchable, long entryIndex, PotState entryState)
+    // 솥 진입 결과 수신
+    public void ReceiveObjEntry(CatchableObj catchable, PotState entryState)
     {
         if (catchable == null) return;
 
         pendingObjects.Remove(catchable);
-        if (!receivedEntryIndices.Add(entryIndex)) return;
         if (storedObjects.Contains(catchable)) return;
-
-        lastProcessedEntryIndex = System.Math.Max(lastProcessedEntryIndex, entryIndex);
-        entryIndices[catchable] = entryIndex;
 
         if (entryState == PotState.Idle)
             HandleIdleEntry(catchable);
         else
-            StoreETC(catchable, false);
+        {
+            StoreETC(catchable);
+            if (entryState == PotState.Ejecting)
+                postEjectObjects.Add(catchable);
+        }
     }
 
-    // 솥 조리 시작 패킷 전송 위치
-    private void RequestCookingStart(CatchableObj bowl)
-    {
-        // TODO: PotCookingStartRequest 전송
-        SimulateCookingStart(bowl);
-    }
-
-    // 솥 조리 시작 결과 수신 처리
-    public void ReceiveCookingStarted(CatchableObj bowl, long lastRecipeEntryIndex, float duration)
+    // 솥 조리 시작 결과 수신
+    public void ReceiveCookStarted(CatchableObj bowl, float duration)
     {
         if (state != PotState.Idle) return;
         if (bowl == null || bowl != cookingBowl) return;
         if (recipeObjects.Count == 0) return;
 
-        cookingRecipeLastEntryIndex = lastRecipeEntryIndex;
         ChangeState(PotState.Cooking);
         gaugeUI?.StartFill(duration);
-        cookingCoroutine = StartCoroutine(CookingRoutine(duration));
     }
 
-    // 강제 배출 패킷 전송 위치
+    // 강제 배출 패킷 전송
     private void RequestForceEject()
     {
-        // TODO: PotForceEjectRequest 전송
-        SimulateForceEjectApproval();
+        if (NetworkId == 0 || ServerManager.Instance == null) return;
+
+        PotForceEjectPacket packet = new()
+        {
+            PotEntityId = NetworkId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    // 강제 배출 승인 수신 처리
-    public void ReceiveForceEjectApproved(long approvedEntryIndex)
+    // 재료와 그릇 수신 후 대기 중인 조리 시작
+    private void TryStartCooking()
     {
-        if (state == PotState.Ejecting) return;
-        lastProcessedEntryIndex = System.Math.Max(lastProcessedEntryIndex, approvedEntryIndex);
-        BeginEjection(PotEjectType.Forced, null);
+        if (!pendingCookingDuration.HasValue) return;
+        if (cookingBowl == null || recipeObjects.Count == 0) return;
+
+        float duration = pendingCookingDuration.Value;
+        pendingCookingDuration = null;
+        ReceiveCookStarted(cookingBowl, duration);
     }
 
-    // 솥 조리 완료 결과 수신 처리
-    public void ReceiveCookingCompleted(
-        CatchableObj result,
-        CatchableObj bowl,
-        long completedEntryIndex)
+    // 서버가 소비한 조리 재료를 솥 보관 목록에서 제거
+    private void RemoveConsumedObj()
     {
-        if (state != PotState.Cooking) return;
-        if (bowl == null || bowl != cookingBowl) return;
+        CatchableObj[] consumedObjects = recipeObjects.ToArray();
+        recipeObjects.Clear();
 
-        lastProcessedEntryIndex = System.Math.Max(lastProcessedEntryIndex, completedEntryIndex);
-        BeginEjection(PotEjectType.Completed, result);
+        foreach (CatchableObj catchable in consumedObjects)
+        {
+            if (catchable == null) continue;
+
+            pendingObjects.Remove(catchable);
+            storedObjects.Remove(catchable);
+            postEjectObjects.Remove(catchable);
+        }
     }
 
     #endregion
@@ -237,18 +245,17 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
 
         if (catchable.TryGetComponent(out PlateInteraction plate) && plate.IsEmpty)
         {
-            if (recipeObjects.Count == 0)
+            if (recipeObjects.Count == 0 && !pendingCookingDuration.HasValue)
             {
-                StoreETC(catchable, true);
+                StoreETC(catchable);
                 return;
             }
 
             StoreCookingBowl(catchable);
-            RequestCookingStart(catchable);
             return;
         }
 
-        StoreETC(catchable, true);
+        StoreETC(catchable);
     }
 
     // 조리 대상 재료 보관
@@ -257,7 +264,6 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         if (!TryStoreObject(catchable, parentRecipe)) return;
 
         recipeObjects.Add(catchable);
-        SortByEntryIndex(recipeObjects);
     }
 
     // 조리 시작 그릇 보관
@@ -268,16 +274,11 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
     }
 
     // 배출 대상 오브젝트 보관
-    private void StoreETC(CatchableObj catchable, bool autoEject)
+    private void StoreETC(CatchableObj catchable)
     {
         if (!TryStoreObject(catchable, parentETC)) return;
 
         etcObjects.Add(catchable);
-        SortByEntryIndex(etcObjects);
-
-        if (!autoEject) return;
-        idleAutoEjectObjects.Add(catchable);
-        EnsureIdleEjectRoutine();
     }
 
     // 오브젝트 비활성 보관
@@ -287,7 +288,6 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         {
             Debug.LogError("Pot storage parent is not assigned.");
             pendingObjects.Remove(catchable);
-            entryIndices.Remove(catchable);
             return false;
         }
 
@@ -301,33 +301,13 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         return true;
     }
 
-    // 진입 인덱스 기준 정렬
-    private void SortByEntryIndex(List<CatchableObj> objects)
-    {
-        objects.Sort((left, right) => GetEntryIndex(left).CompareTo(GetEntryIndex(right)));
-    }
-
-    // 오브젝트 진입 인덱스 조회
-    private long GetEntryIndex(CatchableObj catchable)
-    {
-        return catchable != null && entryIndices.TryGetValue(catchable, out long index)
-            ? index
-            : long.MaxValue;
-    }
-
-    // 마지막 조리 재료 인덱스 조회
-    private long GetLastRecipeEntryIndex()
-    {
-        return recipeObjects.Count == 0 ? 0 : GetEntryIndex(recipeObjects[^1]);
-    }
-
     #endregion
 
     #region Ejection
 
     [Header("Ejection")]
     [SerializeField] private Transform ejectPoint;
-    [SerializeField, Min(0f)] private float ejectDelay = 1f;
+    [SerializeField, Min(0f)] private float ejectInterval = 0.15f;
     [SerializeField] private Vector3 ejectBaseDirection = new(0f, 1f, 1f);
     [SerializeField, Min(0f)] private float ejectRandomRangeX = 0.3f;
     [SerializeField] private float ejectRandomRangeYMin = -0.05f;
@@ -338,146 +318,75 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
     [SerializeField, Min(0f)] private float playerEjectForce = 8f;
     [SerializeField, Min(0.1f)] private float ejectGizmoLength = 2f;
 
-    private Coroutine idleEjectCoroutine;
     private Coroutine ejectCoroutine;
+    private readonly Queue<PotEjectPacket> pendingEjectPackets = new();
+    private readonly Queue<PlayerBrain> activeEjectPlayers = new();
+    private readonly Queue<CatchableObj> activeEjectObjects = new();
+    private System.Random ejectRandom;
 
-    // Idle 자동 배출 코루틴 시작
-    private void EnsureIdleEjectRoutine()
+    // 서버 목록 기준 배출 큐 생성
+    private void BeginPacketEjection(PotEjectPacket packet)
     {
-        if (idleEjectCoroutine != null) return;
-        idleEjectCoroutine = StartCoroutine(IdleEjectRoutine());
-    }
+        activeEjectPlayers.Clear();
+        activeEjectObjects.Clear();
 
-    // Idle 진입 오브젝트 순차 배출
-    private IEnumerator IdleEjectRoutine()
-    {
-        while (TryGetNextIdleEjectObject(out CatchableObj catchable))
+        foreach (string playerId in packet.PlayerIds)
         {
-            yield return new WaitForSeconds(ejectDelay);
-
-            if (state == PotState.Ejecting) break;
-            if (!idleAutoEjectObjects.Remove(catchable)) continue;
-            if (!storedObjects.Contains(catchable)) continue;
-
-            EjectObject(catchable, ejectForce);
+            PlayerBrain player = null;
+            PlayerSpawnManager.Instance?.TryGetPlayer(playerId, out player);
+            activeEjectPlayers.Enqueue(player);
         }
 
-        idleEjectCoroutine = null;
-    }
-
-    // 다음 Idle 자동 배출 대상 조회
-    private bool TryGetNextIdleEjectObject(out CatchableObj result)
-    {
-        result = null;
-
-        foreach (CatchableObj catchable in etcObjects)
+        foreach (long entityId in packet.EntityIds)
         {
-            if (catchable == null || !idleAutoEjectObjects.Contains(catchable)) continue;
-            result = catchable;
-            return true;
+            CatchableObj catchable = null;
+            objectRouter?.TryGet(entityId, out catchable);
+            activeEjectObjects.Enqueue(catchable);
         }
 
-        return false;
-    }
-
-    // 솥 배출 단계 시작
-    private void BeginEjection(PotEjectType ejectType, CatchableObj result)
-    {
-        if (cookingCoroutine != null)
-        {
-            StopCoroutine(cookingCoroutine);
-            cookingCoroutine = null;
-        }
-
-        if (idleEjectCoroutine != null)
-        {
-            StopCoroutine(idleEjectCoroutine);
-            idleEjectCoroutine = null;
-        }
-
+        ejectRandom = new System.Random(packet.EjectSeed);
+        pendingCookingDuration = null;
         gaugeUI?.Hide();
         ChangeState(PotState.Ejecting);
-        ejectCoroutine = StartCoroutine(EjectRoutine(ejectType, result));
+        ejectCoroutine = StartCoroutine(EjectRoutine());
     }
 
-    // 배출 우선순위 순차 처리
-    private IEnumerator EjectRoutine(PotEjectType ejectType, CatchableObj result)
+    // 서버 배출 순서대로 순차 처리
+    private IEnumerator EjectRoutine()
     {
-        if (ejectType == PotEjectType.Completed)
-            CompleteRecipe(result);
-
-        while (true)
+        while (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
         {
-            if (TryEjectPlayer())
-            {
-                yield return new WaitForSeconds(ejectDelay);
-                continue;
-            }
+            Vector3 direction = GetEjectDirection();
 
-            CatchableObj next = GetNextEjectObject(ejectType);
-            if (next != null)
+            if (activeEjectPlayers.Count > 0)
             {
-                bool isCompletedBowl =
-                    ejectType == PotEjectType.Completed &&
-                    result != null &&
-                    next == cookingBowl;
+                EjectPlayer(activeEjectPlayers.Dequeue(), direction);
+            }
+            else
+            {
+                CatchableObj next = activeEjectObjects.Dequeue();
+                bool isCompletedBowl = pendingCookCompletePacket != null &&
+                    next != null &&
+                    next.NetworkId == pendingCookCompletePacket.DishEntityId;
                 float force = isCompletedBowl ? bowlEjectForce : ejectForce;
-                EjectObject(next, force);
-                yield return new WaitForSeconds(ejectDelay);
-                continue;
+                EjectObject(next, force, direction);
             }
 
-            if (trappedPlayers.Count == 0 && storedObjects.Count == 0) break;
+            if ((activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0) && ejectInterval > 0f)
+                yield return new WaitForSeconds(ejectInterval);
         }
 
         ejectCoroutine = null;
-        ResetPotData();
-    }
-
-    // 정상 완료 재료 소비 및 결과 귀속
-    private void CompleteRecipe(CatchableObj result)
-    {
-        CatchableObj[] ingredients = recipeObjects.ToArray();
-        foreach (CatchableObj ingredient in ingredients)
-        {
-            RemoveStoredObject(ingredient);
-            if (ingredient == null) continue;
-
-            if (ObjectPoolManager.Instance != null)
-                ObjectPoolManager.Instance.Push(ingredient.gameObject);
-        }
-
-        recipeObjects.Clear();
-
-        if (result == null || cookingBowl == null) return;
-        if (!cookingBowl.TryGetComponent(out PlateInteraction plate)) return;
-        plate.HandleEntityAdded(result);
-    }
-
-    // 다음 배출 대상 우선순위 조회
-    private CatchableObj GetNextEjectObject(PotEjectType ejectType)
-    {
-        if (ejectType == PotEjectType.Forced && recipeObjects.Count > 0)
-            return recipeObjects[0];
-
-        if (cookingBowl != null && storedObjects.Contains(cookingBowl))
-            return cookingBowl;
-
-        foreach (CatchableObj catchable in etcObjects)
-        {
-            if (catchable != null && storedObjects.Contains(catchable))
-                return catchable;
-        }
-
-        return null;
+        FinishPacketEjection();
     }
 
     // 보관 오브젝트 물리 배출
-    private void EjectObject(CatchableObj catchable, float force)
+    private void EjectObject(CatchableObj catchable, float force, Vector3 direction)
     {
         if (catchable == null) return;
 
         RemoveStoredObject(catchable);
+        pendingObjects.Remove(catchable);
         catchable.transform.SetParent(null, false);
         catchable.transform.SetPositionAndRotation(
             GetEjectPosition(),
@@ -490,7 +399,7 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
 
         catchable.Rb.linearVelocity = Vector3.zero;
         catchable.Rb.angularVelocity = Vector3.zero;
-        catchable.Rb.AddForce(GetEjectDirection() * force, ForceMode.Impulse);
+        catchable.Rb.AddForce(direction * force, ForceMode.Impulse);
     }
 
     // 배출 기준 위치 조회
@@ -505,10 +414,9 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         if (catchable == null) return;
 
         storedObjects.Remove(catchable);
-        entryIndices.Remove(catchable);
         recipeObjects.Remove(catchable);
         etcObjects.Remove(catchable);
-        idleAutoEjectObjects.Remove(catchable);
+        postEjectObjects.Remove(catchable);
 
         if (cookingBowl == catchable)
             cookingBowl = null;
@@ -520,9 +428,9 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
         float randomYMin = Mathf.Min(ejectRandomRangeYMin, ejectRandomRangeYMax);
         float randomYMax = Mathf.Max(ejectRandomRangeYMin, ejectRandomRangeYMax);
         Vector3 randomOffset = new(
-            Random.Range(-ejectRandomRangeX, ejectRandomRangeX),
-            Random.Range(randomYMin, randomYMax),
-            Random.Range(-ejectRandomRangeZ, ejectRandomRangeZ));
+            NextEjectRange(-ejectRandomRangeX, ejectRandomRangeX),
+            NextEjectRange(randomYMin, randomYMax),
+            NextEjectRange(-ejectRandomRangeZ, ejectRandomRangeZ));
 
         Vector3 localDirection = ejectBaseDirection + randomOffset;
         if (localDirection.sqrMagnitude < 0.0001f)
@@ -531,6 +439,38 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
                 : Vector3.up;
 
         return transform.TransformDirection(localDirection).normalized;
+    }
+
+    // 배출 전용 난수 범위 계산
+    private float NextEjectRange(float min, float max)
+    {
+        ejectRandom ??= new System.Random(0);
+        return min + (float)ejectRandom.NextDouble() * (max - min);
+    }
+
+    // 현재 배출 완료 및 신규 진입 보존
+    private void FinishPacketEjection()
+    {
+        CatchableObj[] enteredDuringEjection = postEjectObjects.ToArray();
+        postEjectObjects.Clear();
+        ChangeState(PotState.Idle);
+
+        foreach (CatchableObj catchable in enteredDuringEjection)
+        {
+            if (catchable == null || !storedObjects.Contains(catchable)) continue;
+
+            storedObjects.Remove(catchable);
+            recipeObjects.Remove(catchable);
+            etcObjects.Remove(catchable);
+
+            HandleIdleEntry(catchable);
+        }
+
+        TryStartCooking();
+        pendingCookCompletePacket = null;
+
+        if (pendingEjectPackets.Count > 0)
+            BeginPacketEjection(pendingEjectPackets.Dequeue());
     }
 
     // 선택 시 배출 기준 방향과 랜덤 범위 표시
@@ -602,51 +542,79 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
     public void DebugForceEject()
     {
         if (ejectCoroutine != null) return;
-        BeginEjection(PotEjectType.Forced, null);
+
+        PotEjectPacket packet = new()
+        {
+            PotEntityId = NetworkId,
+            EjectSeed = System.Environment.TickCount,
+            EjectDelayMs = 0
+        };
+
+        foreach (PlayerBrain player in trappedPlayers)
+        {
+            if (player != null) packet.PlayerIds.Add(player.PlayerId);
+        }
+
+        foreach (CatchableObj catchable in recipeObjects)
+        {
+            if (catchable != null) packet.EntityIds.Add(catchable.NetworkId);
+        }
+
+        if (cookingBowl != null)
+            packet.EntityIds.Add(cookingBowl.NetworkId);
+
+        foreach (CatchableObj catchable in etcObjects)
+        {
+            if (catchable != null && catchable != cookingBowl)
+                packet.EntityIds.Add(catchable.NetworkId);
+        }
+
+        BeginPacketEjection(packet);
     }
 
     #endregion
 
     #region Player
 
-    // 플레이어 진입 등록
-    private void RegisterPlayer(PlayerBrain player)
+    // 로컬 플레이어 솥 진입 전송
+    private void RequestPlayerEntry(PlayerBrain player)
     {
-        int overlapCount = playerOverlapCounts.GetValueOrDefault(player, 0) + 1;
-        playerOverlapCounts[player] = overlapCount;
-
-        if (overlapCount > 1) return;
-
-        trappedPlayers.Add(player);
-        if (trappedPlayers.Count >= 2 && state != PotState.Ejecting)
-            RequestForceEject();
-    }
-
-    // 우선순위 플레이어 배출
-    private bool TryEjectPlayer()
-    {
-        while (trappedPlayers.Count > 0)
+        if (player == null || PlayerSpawnManager.Instance == null) return;
+        if (!PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
+        if (trappedPlayers.Contains(player)) return;
+        if (!pendingPlayerEntries.Add(player.PlayerId)) return;
+        if (NetworkId == 0 || ServerManager.Instance == null)
         {
-            PlayerBrain player = trappedPlayers[0];
-            trappedPlayers.RemoveAt(0);
-
-            if (player == null) continue;
-
-            playerOverlapCounts.Remove(player);
-            if (player.Interact?.HeldObj != null)
-            {
-                CatchableObj heldObject = player.Interact.HeldObj;
-                player.Interact.ForceDropHeld();
-
-                if (player.Interact.TryReleaseHeld(heldObject))
-                    heldObject.OnDrop();
-            }
-
-            player.EffectController?.ApplyKnockback(GetEjectDirection() * playerEjectForce);
-            return true;
+            pendingPlayerEntries.Remove(player.PlayerId);
+            return;
         }
 
-        return false;
+        PotPlayerEnterPacket packet = new()
+        {
+            PotEntityId = NetworkId,
+            PlayerId = player.PlayerId
+        };
+
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    // 서버 큐에서 꺼낸 플레이어 배출
+    private void EjectPlayer(PlayerBrain player, Vector3 direction)
+    {
+        if (player == null) return;
+
+        trappedPlayers.Remove(player);
+        pendingPlayerEntries.Remove(player.PlayerId);
+        if (player.Interact?.HeldObj != null)
+        {
+            CatchableObj heldObject = player.Interact.HeldObj;
+            player.Interact.ForceDropHeld();
+
+            if (player.Interact.TryReleaseHeld(heldObject))
+                heldObject.OnDrop();
+        }
+
+        player.EffectController?.ApplyKnockback(direction * playerEjectForce);
     }
 
     // 플레이어 부모 컴포넌트 탐색
@@ -654,14 +622,6 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
     {
         player = other.GetComponentInParent<PlayerBrain>();
         return player != null;
-    }
-
-    // 빈손 주먹 강제 배출 요청
-    public void OnPunched(PlayerBrain player)
-    {
-        if (state == PotState.Ejecting) return;
-        if (storedObjects.Count == 0 && trappedPlayers.Count == 0) return;
-        RequestForceEject();
     }
 
     #endregion
@@ -677,72 +637,82 @@ public class PotInteraction : MapObjInteraction, IPunchReceiver
 
     #endregion
 
-    #region Test
+    #region Interface Implementations
 
-    [Header("Test")]
-    [SerializeField, Min(0f)] private float cookingDuration = 3f;
-    [SerializeField] private int dummyResultFoodId = 99999;
-
-    private Coroutine cookingCoroutine;
-    private long nextDummyEntryIndex = 1;
-    private long nextDummyEntityId = -1;
-
-    // 더미 솥 진입 결과 생성
-    private void SimulateObjectEntry(CatchableObj catchable)
+    // IEntityParentReceiver: 서버 부모 변경으로 오브젝트 진입 
+    public void HandleEntityAdded(CatchableObj entity)
     {
-        ReceiveObjectEntry(catchable, nextDummyEntryIndex++, state);
+        ReceiveObjEntry(entity, state);
+        TryStartCooking();
     }
 
-    // 더미 솥 조리 시작 결과 생성
-    private void SimulateCookingStart(CatchableObj bowl)
+    // IEntityParentReceiver: 서버 부모 변경으로 오브젝트 이탈 
+    public void HandleEntityRemoved(CatchableObj entity)
     {
-        ReceiveCookingStarted(bowl, GetLastRecipeEntryIndex(), cookingDuration);
+        pendingObjects.Remove(entity);
+        RemoveStoredObject(entity);
     }
 
-    // 더미 강제 배출 승인 생성
-    private void SimulateForceEjectApproval()
+    // ICookReceiver: 서버 조리 시작 시간 
+    public void HandleCookStart(CookStartPacket packet)
     {
-        ReceiveForceEjectApproved(lastProcessedEntryIndex);
+        pendingCookingDuration = Mathf.Max(0f, packet.CookingTimeMs / 1000f);
+        TryStartCooking();
     }
 
-    // 더미 조리 시간 진행
-    private IEnumerator CookingRoutine(float duration)
+    // ICookReceiver: 일반 조리 일시정지 수신(미사용)
+    public void HandleCookPause(CookPausePacket packet)
     {
-        yield return new WaitForSeconds(Mathf.Max(0f, duration));
-        cookingCoroutine = null;
-        SimulateCookingCompleted();
     }
 
-    // 더미 조리 완료 결과 생성
-    private void SimulateCookingCompleted()
+    // ICookReceiver: 일반 조리 완료 수신(미사용)
+    public void HandleCookComplete(CookCompletePacket packet)
     {
-        ReceiveCookingCompleted(
-            CreateDummyResult(dummyResultFoodId),
-            cookingBowl,
-            lastProcessedEntryIndex);
     }
 
-    // 더미 완성 음식 생성
-    private CatchableObj CreateDummyResult(int foodId)
+    // IPotNetworkReceiver: 서버 플레이어 진입 
+    public void HandlePotPlayerEnter(PotPlayerEnterPacket packet)
     {
-        if (DataManager.Instance == null || ObjectPoolManager.Instance == null) return null;
+        pendingPlayerEntries.Remove(packet.PlayerId);
+        if (PlayerSpawnManager.Instance == null) return;
+        if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player)) return;
+        if (!trappedPlayers.Contains(player)) trappedPlayers.Add(player);
+    }
 
-        Ingredient data = DataManager.Instance.GetIngredient().GetData(foodId);
-        if (data == null || string.IsNullOrEmpty(data.prefabName)) return null;
+    // IPotNetworkReceiver: 서버 배출 패킷 
+    public void HandlePotEject(PotEjectPacket packet)
+    {
+        if (packet == null) return;
 
-        GameObject resultObject = ObjectPoolManager.Instance.Pop(
-            data.prefabName,
-            transform.position,
-            transform.rotation);
+        if (ejectCoroutine != null)
+        {
+            pendingEjectPackets.Enqueue(packet);
+            return;
+        }
 
-        if (resultObject == null || !resultObject.TryGetComponent(out CatchableObj result)) return null;
+        BeginPacketEjection(packet);
+    }
 
-        result.NetworkId = nextDummyEntityId--;
-        result.Data = data;
-        return result;
+    // IPotNetworkReceiver: 서버 솥 조리 완료 
+    public void HandlePotCookComplete(PotCookCompletePacket packet)
+    {
+        if (packet == null) return;
+
+        pendingCookCompletePacket = packet;
+        gaugeUI?.Hide();
+        RemoveConsumedObj();
+    }
+
+    // IPunchReceiver: 솥 강제 배출 요청
+    public void OnPunched(PlayerBrain player)
+    {
+        if (state == PotState.Ejecting) return;
+        if (storedObjects.Count == 0 && trappedPlayers.Count == 0) return;
+        RequestForceEject();
     }
 
     #endregion
+
 }
 
 #if UNITY_EDITOR
