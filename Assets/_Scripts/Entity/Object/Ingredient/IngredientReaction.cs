@@ -69,7 +69,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions = IngredientAction.None;
 
         gaugeUI?.Hide();
-        cutParticle?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (cutParticle != null)
+            cutParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ApplyVisual(IngredientAction.None);
     }
 

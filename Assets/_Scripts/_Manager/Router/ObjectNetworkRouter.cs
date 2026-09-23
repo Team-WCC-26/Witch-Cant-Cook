@@ -11,6 +11,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     private const int TrashIngredientId = 99999;
 
     public Dictionary<long, CatchableObj> catchableDics = new();
+    private readonly Dictionary<long, long> pendingParentChanges = new();
 
     [SerializeField] private MapObjNetworkRouter mapObjRouter;
 
@@ -84,25 +85,30 @@ public class ObjectNetworkRouter : MonoBehaviour
         {
             if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
             {
-                Debug.LogError($"Parent change target not found. EntityId: {packet.EntityId}");
+                pendingParentChanges[packet.EntityId] = packet.ParentEntityId;
                 continue;
             }
 
-            long previousParentId = catchable.ParentEntityId;
-            if (previousParentId == packet.ParentEntityId)
-                continue;
-
-            NotifyParent(previousParentId, catchable, false);
-
-            if (catchable.Holder != null)
-            {
-                catchable.Holder.Interact.TryReleaseHeld(catchable);
-                catchable.OnDrop();
-            }
-
-            catchable.ParentEntityId = packet.ParentEntityId;
-            NotifyParent(packet.ParentEntityId, catchable, true);
+            ApplyParentChange(catchable, packet.ParentEntityId);
         }
+    }
+
+    // 부모 변경 적용
+    private void ApplyParentChange(CatchableObj catchable, long parentEntityId)
+    {
+        long previousParentId = catchable.ParentEntityId;
+        if (previousParentId == parentEntityId) return;
+
+        NotifyParent(previousParentId, catchable, false);
+
+        if (catchable.Holder != null)
+        {
+            catchable.Holder.Interact.TryReleaseHeld(catchable);
+            catchable.OnDrop();
+        }
+
+        catchable.ParentEntityId = parentEntityId;
+        NotifyParent(parentEntityId, catchable, true);
     }
 
     // 엔티티를 기존 부모에서 분리한다.
@@ -151,6 +157,8 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        pendingParentChanges.Remove(entityId);
+
         if (!catchableDics.TryGetValue(entityId, out CatchableObj catchable))
             return;
 
@@ -191,10 +199,12 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         catchableDics[networkId] = obj;
         obj.SetNetworkRouter(this);
+        ApplyPendingParentChange(networkId, obj);
     }
 
     public void Remove(long networkId)
     {
+        pendingParentChanges.Remove(networkId);
         catchableDics.Remove(networkId);
     }
     public bool TryGet(long networkId, out CatchableObj obj)
@@ -302,6 +312,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void Unregister(long entityId)
     {
+        pendingParentChanges.Remove(entityId);
         ReleaseNetworkBoundState(entityId);
         catchableDics.Remove(entityId);
         ObjectPoolManager.Instance.activeObjDict.Remove(entityId);
@@ -327,5 +338,14 @@ public class ObjectNetworkRouter : MonoBehaviour
         catchableDics[entityId] = catchable;
         catchable.SetNetworkRouter(this);
         ObjectPoolManager.Instance.activeObjDict[entityId] = catchable.gameObject;
+        ApplyPendingParentChange(entityId, catchable);
+    }
+
+    // 등록 전 수신한 부모 변경 적용
+    private void ApplyPendingParentChange(long entityId, CatchableObj catchable)
+    {
+        if (!pendingParentChanges.Remove(entityId, out long parentEntityId)) return;
+
+        ApplyParentChange(catchable, parentEntityId);
     }
 }
