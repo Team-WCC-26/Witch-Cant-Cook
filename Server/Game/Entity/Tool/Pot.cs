@@ -7,7 +7,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     private const long _ejectDelayMs = 1000;
     private const int _trashIngredientId = 99999;
 
-    private readonly List<Player> _players = new();
     private readonly HashSet<Entity> _autoEjectTargets = new();
 
     private bool _isCooking;
@@ -60,25 +59,22 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         return base.Remove(entity);
     }
 
-    public bool AddPlayer(Player player)
+    public override bool AddPlayer(Player player)
     {
-        if (player.InsidePot != null) return false;
-        if (_players.Contains(player)) return false;
+        if (!base.AddPlayer(player)) return false;
 
-        _players.Add(player);
-        player.InsidePot = this;
+        StartPlayerDamage(); // 들어가게 된 직후부터 초당 데미지
 
-        if (_players.Count >= 2) ForceEject();
+        if (InsidePlayers.Count >= 2) ForceEject();
 
         return true;
     }
 
-    public void RemovePlayer(Player player)
+    public override void RemovePlayer(Player player)
     {
-        if (_players.Remove(player))
-        {
-            player.InsidePot = null;
-        }
+        base.RemovePlayer(player);
+
+        if (InsidePlayers.Count == 0) StopPlayerDamage();
     }
 
     public void ForceEject()
@@ -115,7 +111,7 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         _cookingDish = dish;
         _cookingDishIndex = dishIndex;
 
-        long delayMs = (long)MathF.Ceiling(maxHp / Damage);
+        long delayMs = (long)MathF.Ceiling(maxHp / Damage * 1000);
 
         _cookTimer = _timerManager.Schedule(delayMs, this, static t => t.CompleteCook());
 
@@ -200,23 +196,22 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     {
         CancelAutoEject();
 
-        if (_storage.Count == 0 && _players.Count == 0) return;
+        if (_storage.Count == 0 && InsidePlayers.Count == 0) return;
 
         List<Entity> ejectEntities = new(_storage);
-        List<Player> ejectPlayers = new(_players);
-
-        _storage.Clear();
-        _players.Clear();
+        List<Player> ejectPlayers = new(InsidePlayers);
 
         foreach (var entity in ejectEntities)
         {
-            entity.Parent = null;
+            if (entity.Parent == this)
+            {
+                entity.Parent = null;
+            }
         }
 
-        foreach (var player in ejectPlayers)
-        {
-            player.InsidePot = null;
-        }
+        _storage.Clear();
+        ClearInsidePlayers();
+        StopPlayerDamage();
 
         BroadCastEject(ejectEntities, ejectPlayers);
     }
@@ -258,7 +253,10 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
 
         foreach (var entity in ejectTargets)
         {
-            entity.Parent = null;
+            if (entity.Parent == this)
+            {
+                entity.Parent = null;
+            }
         }
 
         BroadCastEject(ejectTargets, new List<Player>());

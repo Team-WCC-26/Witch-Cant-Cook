@@ -1,4 +1,5 @@
 ﻿using Protocol;
+using System.Numerics;
 
 namespace Server;
 
@@ -23,8 +24,14 @@ public class Ingredient() : Entity, ICookable, IInteractable
 
         IngredientBehaviour = id switch
         {
+            11900 => new IngredientCorn(),
+            12300 => new IngredientSquid(),
+            10900 => new IngredientTomato(),
+            11100 => new IngredientSalmon(),
             _ => null
         };
+
+        IngredientBehaviour?.Init(this, Room.TimerManager);
     }
 
     public override void Destroy()
@@ -130,7 +137,7 @@ public class Ingredient() : Entity, ICookable, IInteractable
         }
     }
 
-    private void BroadCastResult(byte[] packet)
+    private void BroadCastResult(byte[]? packet)
     {
         if (packet == null) return;
 

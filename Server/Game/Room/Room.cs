@@ -69,6 +69,20 @@ public class Room
     {
         _dishManager.Stop();
         _ingredientSpanwer.Stop();
+        _timerManager.Clear();
+
+        List<Entity> entities = new(_entities.Values);
+        foreach (var entity in entities)
+        {
+            entity.Parent = null;
+            if (entity is Ingredient ingredient)
+            {
+                ingredient.IngredientBehaviour?.Clear();
+            }
+        }
+
+        _entities.Clear();
+        _dirtyEntities.Clear();
     }
 
     public void Tick(long deltaTime)
@@ -133,9 +147,9 @@ public class Room
     {
         Ingredient ingredient = new();
         entityId = GenerateEntityId();
-        ingredient.InitIngredientId(id);
 
         RegisterEntity(entityId, ingredient);
+        ingredient.InitIngredientId(id);
 
         return ingredient;
     }
@@ -193,6 +207,11 @@ public class Room
         if (_entities.Remove(id, out var entity))
         {
             entity.Parent = null;
+
+            if (entity is Ingredient ingredient)
+            {
+                ingredient.IngredientBehaviour?.Clear();
+            }
         }
     }
 
@@ -235,7 +254,10 @@ public class Room
         _players.Remove(player);
         player.Room = null;
 
-        player.InsidePot?.RemovePlayer(player);
+        if (player.Parent is CookingTool cookingTool)
+        {
+            cookingTool.RemovePlayer(player);
+        }
 
         if (--_playerCnt <= 0)
         {
@@ -298,22 +320,30 @@ public class Room
         return containerTool.Insert(subject);
     }
 
-    public bool EnterPot(long potId, Player player)
+    public bool EnterToolPlayer(long toolId, Player player)
     {
-        if (!_entities.TryGetValue(potId, out var entity) || entity.IsDestroyed) return false;
-        if (entity is not Pot pot) return false;
+        if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        return pot.AddPlayer(player);
+        if (entity is CookingTool cookingTool) // 프라이팬 예외 필요 시 추가
+        {
+            return cookingTool.AddPlayer(player);
+        }
+
+        return false;
     }
 
-    public bool ForceEjectPot(long potId)
+    public bool ForceEjectTool(long toolId)
     {
-        if (!_entities.TryGetValue(potId, out var entity) || entity.IsDestroyed) return false;
-        if (entity is not Pot pot) return false;
+        if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        pot.ForceEject();
+        if (entity is Pot pot)
+        {
+            pot.ForceEject();
 
-        return true;
+            return true;
+        }
+
+        return false;
     }
 
     public bool LeaveStove(long panId)

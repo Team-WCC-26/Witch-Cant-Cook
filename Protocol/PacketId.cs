@@ -54,6 +54,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_PlayerMove = 302,
 
+    C_PlayerDamage = 304,
+
     C_StageSet = 310,
     S_StageSet = 311,
 
@@ -86,6 +88,17 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_IngredientCombine = 345,
 
+    C_IngredientCollision = 350,
+    S_IngredientCorn = 351,
+    S_IngredientSquid = 353,
+    S_IngredientTomato = 355,
+    S_IngredientSalmon = 357,
+    C_IngredientPosition = 358,
+    S_IngredientActivation = 359,
+
+    C_IngredientDistanceResponse = 360,
+    S_IngredientDistanceRequest = 361,
+
     //C_CookStart = 344,
     S_CookStart = 347,
 
@@ -110,8 +123,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_PotForceEject = 410,
     S_PotEject = 411,
 
-    C_PotPlayerEnter = 412,
-    S_PotPlayerEnter = 413,
+    C_ToolPlayerEnter = 412,
+    S_ToolPlayerEnter = 413,
 
     S_PotCookComplete = 415,
 

@@ -22,9 +22,22 @@ public abstract class Entity
                 player.HoldingEntity = null;
             }
 
+            Entity? previousParent = _parent;
             _parent = value;
 
             MakeDirty(DirtyMask.Parent);
+
+            if (this is Ingredient ingredient)
+            {
+                if (value is Player player)
+                {
+                    ingredient.OnPickup(player);
+                }
+                else if (previousParent is Player)
+                {
+                    ingredient.OnDrop();
+                }
+            }
         }
     }
 
@@ -72,7 +85,7 @@ public abstract class Entity
 
         if (mask.HasFlag(DirtyMask.Parent))
         {
-            if (Parent == null) return;
+            if (Parent == null || this is Player) return;
 
             if (Parent is Player player)
             {
@@ -121,4 +134,5 @@ public enum DirtyMask
     Ping = 1 << 3,
     State = 1 << 4,
     Process = 1 << 5,
+    Hp = 1 << 6,
 }
