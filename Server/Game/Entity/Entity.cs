@@ -22,9 +22,22 @@ public abstract class Entity
                 player.HoldingEntity = null;
             }
 
+            Entity? previousParent = _parent;
             _parent = value;
 
             MakeDirty(DirtyMask.Parent);
+
+            if (this is Ingredient ingredient)
+            {
+                if (value is Player player)
+                {
+                    ingredient.OnPickup(player);
+                }
+                else if (previousParent is Player)
+                {
+                    ingredient.OnDrop();
+                }
+            }
         }
     }
 

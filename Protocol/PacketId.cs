@@ -86,6 +86,17 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_IngredientCombine = 345,
 
+    C_IngredientCollision = 350,
+    S_IngredientCorn = 351,
+    S_IngredientSquid = 353,
+    S_IngredientTomato = 355,
+    S_IngredientSalmon = 357,
+    C_IngredientPosition = 358,
+    S_IngredientActivation = 359,
+
+    C_IngredientDistanceResponse = 360,
+    S_IngredientDistanceRequest = 361,
+
     //C_CookStart = 344,
     S_CookStart = 347,
 

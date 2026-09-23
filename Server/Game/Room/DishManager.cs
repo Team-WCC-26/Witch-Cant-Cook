@@ -110,7 +110,7 @@ internal class DishManager
             _timeLimitHandleDict[dish] = queue;
         }
 
-        queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit, dish, OnDishFaild));
+        queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit * 1000, dish, OnDishFaild));
 
         BroadCastDishState(recipeId, DishState.Order);
 

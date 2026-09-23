@@ -115,7 +115,7 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         _cookingDish = dish;
         _cookingDishIndex = dishIndex;
 
-        long delayMs = (long)MathF.Ceiling(maxHp / Damage);
+        long delayMs = (long)MathF.Ceiling(maxHp / Damage * 1000);
 
         _cookTimer = _timerManager.Schedule(delayMs, this, static t => t.CompleteCook());
 
@@ -205,13 +205,16 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         List<Entity> ejectEntities = new(_storage);
         List<Player> ejectPlayers = new(_players);
 
-        _storage.Clear();
-        _players.Clear();
-
         foreach (var entity in ejectEntities)
         {
-            entity.Parent = null;
+            if (entity.Parent == this)
+            {
+                entity.Parent = null;
+            }
         }
+
+        _storage.Clear();
+        _players.Clear();
 
         foreach (var player in ejectPlayers)
         {
@@ -258,7 +261,10 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
 
         foreach (var entity in ejectTargets)
         {
-            entity.Parent = null;
+            if (entity.Parent == this)
+            {
+                entity.Parent = null;
+            }
         }
 
         BroadCastEject(ejectTargets, new List<Player>());

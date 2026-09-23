@@ -134,7 +134,7 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
         if (player.HoldingEntity is not Dish dish) return false;
         if (!dish.Insert(Ingredient)) return false;
 
-        _storage.Clear();
+        Clear();
 
         return true;
     }

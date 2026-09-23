@@ -69,6 +69,20 @@ public class Room
     {
         _dishManager.Stop();
         _ingredientSpanwer.Stop();
+        _timerManager.Clear();
+
+        List<Entity> entities = new(_entities.Values);
+        foreach (var entity in entities)
+        {
+            entity.Parent = null;
+            if (entity is Ingredient ingredient)
+            {
+                ingredient.IngredientBehaviour?.Clear();
+            }
+        }
+
+        _entities.Clear();
+        _dirtyEntities.Clear();
     }
 
     public void Tick(long deltaTime)
@@ -133,9 +147,9 @@ public class Room
     {
         Ingredient ingredient = new();
         entityId = GenerateEntityId();
-        ingredient.InitIngredientId(id);
 
         RegisterEntity(entityId, ingredient);
+        ingredient.InitIngredientId(id);
 
         return ingredient;
     }
@@ -193,6 +207,11 @@ public class Room
         if (_entities.Remove(id, out var entity))
         {
             entity.Parent = null;
+
+            if (entity is Ingredient ingredient)
+            {
+                ingredient.IngredientBehaviour?.Clear();
+            }
         }
     }
 

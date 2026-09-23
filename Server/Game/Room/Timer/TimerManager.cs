@@ -92,6 +92,17 @@ public sealed class TimerManager
         return true;
     }
 
+    public void Clear()
+    {
+        foreach (var timer in _timers.Values)
+        {
+            timer.Cancelled = true;
+        }
+
+        _timers.Clear();
+        _queue.Clear();
+    }
+
     public long RemainingTime(TimerHandle handle)
     {
         if (!_timers.TryGetValue(handle.Id, out var timer)) return 0;

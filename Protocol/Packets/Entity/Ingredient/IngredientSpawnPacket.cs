@@ -21,4 +21,6 @@ public partial class IngredientConveySpawnPacket
     public long EntityId { get; set; }
     public int IngredienteId { get; set; }
     public int ConveyId { get; set; }
+    public Vector3 Position { get; set; }
+    public Quaternion Quaternion { get; set; }
 }

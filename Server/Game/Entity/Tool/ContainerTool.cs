@@ -30,6 +30,14 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
 
     public void Clear()
     {
+        foreach (var entity in _storage)
+        {
+            if (entity.Parent == this)
+            {
+                entity.Parent = null;
+            }
+        }
+
         _storage.Clear();
     }
 }

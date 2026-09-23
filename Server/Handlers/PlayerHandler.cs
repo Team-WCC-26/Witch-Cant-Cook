@@ -8,9 +8,13 @@ public class PlayerHandler : PacketHandlerBase
     public static void UpdateMove(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<PlayerMovementPacket>(package.Body);
+        var room = session.Player.Room;
 
-        session.Player.Position = packet.Position;
-        session.Player.Rotation = packet.Rotation;
-        session.Player.State = packet.CombinedState;
+        room.PushJob(() =>
+        {
+            session.Player.Position = packet.Position;
+            session.Player.Rotation = packet.Rotation;
+            session.Player.State = packet.CombinedState;
+        });
     }
 }
