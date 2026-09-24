@@ -589,9 +589,9 @@ public class PotInteraction : MapObjInteraction,
             return;
         }
 
-        PotPlayerEnterPacket packet = new()
+        ToolPlayerEnterPacket packet = new()
         {
-            PotEntityId = NetworkId,
+            ToolEntityId = NetworkId,
             PlayerId = player.PlayerId
         };
 
@@ -671,7 +671,7 @@ public class PotInteraction : MapObjInteraction,
     }
 
     // IPotNetworkReceiver: 서버 플레이어 진입 
-    public void HandlePotPlayerEnter(PotPlayerEnterPacket packet)
+    public void HandlePotPlayerEnter(ToolPlayerEnterPacket packet)
     {
         pendingPlayerEntries.Remove(packet.PlayerId);
         if (PlayerSpawnManager.Instance == null) return;
