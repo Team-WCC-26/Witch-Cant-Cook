@@ -13,8 +13,12 @@ using UnityEngine.UI;
 public class TEST_SetStage : MonoBehaviour
 {
     private static TEST_SetStage instance;
+    private const float StageDurationSeconds = 120f;
 
     private TMP_Text currentStageText;
+    private TMP_Text remainingTimeText;
+    private double stageEndTime;
+    private bool isTimerRunning;
     private GameObject stageInputPanel;
     private TMP_InputField stageInput;
     private TMP_Text validationText;
@@ -43,9 +47,12 @@ public class TEST_SetStage : MonoBehaviour
         CreateUi();
         RegisterStagePacketHandler();
         UpdateCurrentStage(1);
+        ShowRemainingTime(StageDurationSeconds);
+        StageManager.DoorOpened += OnDoorOpened;
     }
     private void Update()
     {
+        UpdateTimer();
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
             OpenInputPanel();
@@ -53,6 +60,7 @@ public class TEST_SetStage : MonoBehaviour
     }
     private void OnDestroy()
     {
+        StageManager.DoorOpened -= OnDoorOpened;
         if (instance == this) instance = null;
 
         if (ServerManager.Instance != null)
@@ -69,7 +77,51 @@ public class TEST_SetStage : MonoBehaviour
         {
             StageSetPacket packet = PacketSerializer.Deserialize<StageSetPacket>(data);
             UpdateCurrentStage(packet.StageNum);
+            RestartTimer();
         });
+    }
+
+    private void OnDoorOpened(DoorId doorId)
+    {
+        if (doorId == DoorId.Kitchen && !isTimerRunning) RestartTimer();
+    }
+
+    private void RestartTimer()
+    {
+        // 서버는 시작/변경만 알리고, 남은 시간은 각 클라이언트에서 계산합니다.
+        stageEndTime = Time.unscaledTimeAsDouble + StageDurationSeconds;
+        isTimerRunning = true;
+        ShowRemainingTime(StageDurationSeconds);
+    }
+
+    private void UpdateTimer()
+    {
+        if (!isTimerRunning) return;
+
+        double remaining = stageEndTime - Time.unscaledTimeAsDouble;
+        if (remaining > 0d)
+        {
+            ShowRemainingTime((float)remaining);
+            return;
+        }
+
+        // 종료 처리는 한 번만 실행하며, 테스트에서는 바로 로비로 복귀합니다.
+        isTimerRunning = false;
+        remainingTimeText.text = "스테이지 종료!";
+
+        PlayerSpawnManager spawnManager = PlayerSpawnManager.Instance;
+        if (spawnManager == null) return;
+
+        foreach (PlayerBrain player in spawnManager.Players)
+        {
+            if (player != null) spawnManager.RespawnPlayer(player.PlayerId);
+        }
+    }
+
+    private void ShowRemainingTime(float seconds)
+    {
+        int totalSeconds = Mathf.CeilToInt(Mathf.Max(0f, seconds));
+        remainingTimeText.text = $"{totalSeconds / 60}:{totalSeconds % 60:00}";
     }
 
     private void CreateUi()
@@ -87,6 +139,9 @@ public class TEST_SetStage : MonoBehaviour
 
         currentStageText = CreateText(canvasObject.transform, "Current Stage", 32, TextAnchor.UpperCenter);
         SetAnchors(currentStageText.rectTransform, new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0f, -28f), new Vector2(380f, 48f));
+
+        remainingTimeText = CreateText(canvasObject.transform, "Stage Remaining Time", 28, TextAnchor.UpperCenter);
+        SetAnchors(remainingTimeText.rectTransform, new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0f, -78f), new Vector2(380f, 44f));
 
         Button openButton = CreateButton(canvasObject.transform, "Change Stage Button", "스테이지 변경");
         SetAnchors(openButton.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-120f, -38f), new Vector2(200f, 52f));

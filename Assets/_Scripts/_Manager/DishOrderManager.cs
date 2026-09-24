@@ -153,7 +153,6 @@ public class DishOrderManager : MonoBehaviour
             recipeId = recipe.id,
             name = recipe.name,
             timeLimit = recipe.timeLimit,
-            finalConditionFlag = (IngredientState)recipe.finalConditionFlag,
             sprite = catalog != null ? catalog.GetRecipeSprite(recipeId) : null
         };
         recipeCards.Add(recipeId, card);
