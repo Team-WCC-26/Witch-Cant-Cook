@@ -116,8 +116,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.048728056, y: 0.059858277, z: 0.048728056}
-  m_Center: {x: 0, y: 0.029929131, z: 0}
+  m_Size: {x: 0.044579007, y: 0.059858277, z: 0.04406038}
+  m_Center: {x: 0.00017287582, y: 0.029929131, z: 0.00025931746}
 --- !u!54 &-9012784190197821221
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -161,9 +161,11 @@ MonoBehaviour:
   col: {fileID: 7416831067980358062}
   rb: {fileID: -9012784190197821221}
   category: 2
+  acceptedCategories: 0
   canBePicked: 1
-  holdLocalPosition: {x: 0, y: 0, z: 0}
-  holdLocalEulerAngles: {x: 0, y: 0, z: 0}
+  holdTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
   throwForce: 5
 --- !u!114 &-8273837953479191527
 MonoBehaviour:
@@ -191,6 +193,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b573810bd2d99fc4e907c9eeb3622fc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientEgg
+  eArea: 50003
 --- !u!114 &3732057744919762602
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -203,6 +206,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5cb2fffe38cc1f4487f4db4f1127177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitAreaCreator
+  spawnHeightOffset: 0.15
+  surfaceOffset: 0.1
 --- !u!114 &9190568062789187978
 MonoBehaviour:
   m_ObjectHideFlags: 0

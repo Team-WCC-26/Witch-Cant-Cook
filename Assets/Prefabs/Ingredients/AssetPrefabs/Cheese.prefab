@@ -114,8 +114,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.29332682, y: 0.12770963, z: 0.30842203}
-  m_Center: {x: 0, y: 0.06385481, z: 0}
+  m_Size: {x: 0.29332682, y: 0.12770963, z: 0.3094762}
+  m_Center: {x: 0, y: 0.06385481, z: 0.0005270764}
 --- !u!54 &-8081240703265740367
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -183,11 +183,11 @@ MonoBehaviour:
   col: {fileID: 107035638374384101}
   rb: {fileID: -8081240703265740367}
   category: 2
+  acceptedCategories: 0
   canBePicked: 1
   holdTransform:
     localPosition: {x: 0, y: 0, z: 0}
     localEulerAngles: {x: 0, y: 0, z: 0}
-    localScale: {x: 1, y: 1, z: 1}
   throwForce: 5
 --- !u!114 &3535829777973572196
 MonoBehaviour:
