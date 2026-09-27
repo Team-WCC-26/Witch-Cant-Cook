@@ -17,8 +17,8 @@ public class DishData
     [JsonProperty("ingredientID")]
     public int IngredientId { get; init; }
 
-    [JsonProperty("finalConditionFlag")]
-    public IngredientState ConditionFlag { get; init; }
+    //[JsonProperty("finalConditionFlag")]
+    //public IngredientState ConditionFlag { get; init; }
 
     [JsonProperty("timeLimit")]
     public int TimeLimit { get; init; }

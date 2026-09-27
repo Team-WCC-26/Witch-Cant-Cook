@@ -84,7 +84,7 @@ public class DataBase
             foreach (var dishData in JsonConvert.DeserializeObject<List<DishData>>(json))
             {
                 _dishes[dishData.Id] = dishData;
-                _recipes[new(dishData.IngredientId, dishData.ConditionFlag)] = dishData.Id;
+                _recipes[new(dishData.IngredientId, IngredientState.None)] = dishData.Id;
             }
 
             // 재료 그룹 파싱
@@ -192,9 +192,20 @@ public class DataBase
         foreach (var group in grouped)
         {
             int resuldId = group.Key;
-            IngredientStatePair[] ingredients = group.Select(x => new IngredientStatePair(x.IngredientId, x.ConditionFlag)).ToArray();
 
-            RecipeKey recipeKey = new RecipeKey(ingredients);
+            int cnt = group.Sum(x => x.Amount);
+
+            List<IngredientStatePair> ingredients = new();
+
+            foreach (var info in group)
+            {
+                for (int i = 0; i < info.Amount; i++)
+                {
+                    ingredients.Add(new(info.IngredientId, info.ConditionFlag));
+                }
+            }
+
+            RecipeKey recipeKey = new(ingredients);
 
             _ingredientCombinations[recipeKey] = resuldId;
 
