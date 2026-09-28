@@ -6,6 +6,6 @@ public class Ingredient : CatchableData
     public string throwing;
     public string tag;
     public byte conditionFlag;
-
+    public string IconName;
     public Ingredient() : base() { } 
 }

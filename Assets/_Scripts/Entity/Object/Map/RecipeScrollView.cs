@@ -32,8 +32,7 @@ public class RecipeScrollView : MonoBehaviour
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
     }
-    public void Show(IReadOnlyList<DishOrder> orders, RecipeVisualCatalog catalog, double now, bool namesOnly = true,
-        Func<int, RecipeCardData> resolveRecipe = null)
+    public void Show(IReadOnlyList<DishOrder> orders, double now, Func<int, RecipeCardData> resolveRecipe = null)
     {
         for (int i = 0; i < cards.Length; i++)
         {
@@ -46,10 +45,10 @@ public class RecipeScrollView : MonoBehaviour
             DishOrder order = orders[i];
             RecipeCardData data = resolveRecipe?.Invoke(order.RecipeId);
 
-            if (card.OrderId != order.Id || card.NamesOnly != namesOnly || !ReferenceEquals(card.BoundData, data))
-                card.Bind(order, data, catalog, namesOnly);
+            if (card.OrderId != order.Id || !ReferenceEquals(card.BoundData, data))
+                card.Bind(order, data);
 
-            if (!namesOnly) card.SetRemaining(order, now);
+            card.SetRemaining(order, now);
         }
     }
     public void Clear()
@@ -60,10 +59,15 @@ public class RecipeScrollView : MonoBehaviour
     public void ReportUIState()
     {
         Canvas canvas = GetComponentInParent<Canvas>();
-        Debug.Log($"RecipeScrollView {name}: active={gameObject.activeInHierarchy}, canvas={(canvas != null ? canvas.renderMode.ToString() : "missing")}, root={(cardRoot != null ? cardRoot.rect.size.ToString() : "missing")}, cards={cards.Length}", this);
+
         for (int i = 0; i < cards.Length; i++)
         {
-            if (cards[i] == null) { Debug.LogWarning($"Card {i + 1}: missing reference", this); continue; }
+            if (cards[i] == null) 
+            { 
+                Debug.LogWarning($"Card {i + 1}: missing reference", this);
+                continue; 
+            }
+
             RectTransform rect = cards[i].GetComponent<RectTransform>();
             Debug.Log($"Card {i + 1}: order={cards[i].OrderId}, activeSelf={cards[i].gameObject.activeSelf}, activeInHierarchy={cards[i].gameObject.activeInHierarchy}, size={(rect != null ? rect.rect.size.ToString() : "missing")}", cards[i]);
         }

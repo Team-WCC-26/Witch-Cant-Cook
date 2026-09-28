@@ -10,5 +10,6 @@ public class Recipe : IData
     public int timeLimit;
     public int nextRecipeSpawnDelay;
     public int spawnProbability;
+    public string IconName;
     public int GetKey() => id;
 }
