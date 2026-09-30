@@ -102,7 +102,7 @@ internal class DishManager
         var recipeId = GetRandomRecipe();
         var dishData = _dishses[recipeId];
 
-        IngredientStatePair dish = new(dishData.IngredientId, dishData.ConditionFlag);
+        IngredientStatePair dish = new(dishData.IngredientId, IngredientState.None);
 
         if (!_timeLimitHandleDict.TryGetValue(dish, out var queue))
         {
@@ -110,7 +110,7 @@ internal class DishManager
             _timeLimitHandleDict[dish] = queue;
         }
 
-        queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit, dish, OnDishFaild));
+        queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit * 1000, dish, OnDishFaild));
 
         BroadCastDishState(recipeId, DishState.Order);
 

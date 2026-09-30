@@ -55,6 +55,36 @@ public class EntityHandler : PacketHandlerBase
     //    });
     //}
 
+    [PacketHandler(PacketId.C_IngredientCollision)]
+    public static void CollideIngredient(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<IngredientCollisionPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
+            if (entity is not Ingredient ingredient || ingredient.IsDestroyed) return;
+
+            ingredient.OnCollision();
+        });
+    }
+
+    [PacketHandler(PacketId.C_IngredientDistanceResponse)]
+    public static void IngredientDistanceResponse(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<IngredientDistanceResponsePacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
+            if (entity is not Ingredient ingredient || ingredient.IsDestroyed) return;
+
+            ingredient.IngredientBehaviour?.OnDistanceResponse(session.Player, packet.Distance);
+        });
+    }
+
     [PacketHandler(PacketId.C_EntityThrow)]
     public static void ThrowEntity(Session session, PacketPackageInfo package)
     {
@@ -64,6 +94,8 @@ public class EntityHandler : PacketHandlerBase
         room.PushJob(() =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
+            if (entity.IsDestroyed) return;
+            if (entity.Parent is not Player holder || holder != session.Player) return;
 
             entity.Parent = null;
             room.BroadCast(PacketSerializer.Serialize(packet, true));

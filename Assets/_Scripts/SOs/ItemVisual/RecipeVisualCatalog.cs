@@ -3,27 +3,8 @@ using System.Collections.Generic;
 using Protocol;
 using UnityEngine;
 
-[Serializable]
-public class RecipeIngredientDisplayData
-{
-    public string name;
-    public Sprite sprite;
-    public IngredientState conditionFlag;
-}
+// Legacy asset type retained for old assets only. Runtime recipe UI does not use this SO.
 
-// UI input contract populated from the Recipe sheet, with optional local artwork.
-[Serializable]
-public class RecipeCardData
-{
-    public int recipeId;
-    public string name;
-    public Sprite sprite;
-    public IngredientState finalConditionFlag;
-    [Min(0.01f)] public float timeLimit = 60f; // Seconds.
-    public List<RecipeIngredientDisplayData> ingredients = new();
-}
-
-[CreateAssetMenu(menuName = "Scriptable Objects/Cooking Visual/Recipe UI Catalog")]
 public class RecipeVisualCatalog : ScriptableObject
 {
     [Serializable]
@@ -42,8 +23,10 @@ public class RecipeVisualCatalog : ScriptableObject
         public int recipeId;
         public Sprite sprite;
     }
+
     [SerializeField] private List<RecipeArtwork> recipeArtwork = new();
     [SerializeField] private List<MethodIcon> methodIcons = new();
+
     private readonly HashSet<int> warnedRecipes = new();
     private Dictionary<int, RecipeCardData> lookup;
 
@@ -54,15 +37,19 @@ public class RecipeVisualCatalog : ScriptableObject
     {
         foreach (RecipeArtwork art in recipeArtwork)
             if (art != null && art.recipeId == recipeId) return art.sprite;
+
         if (lookup == null)
         {
             lookup = new Dictionary<int, RecipeCardData>();
+
             foreach (RecipeCardData recipe in recipes)
             {
                 if (recipe == null) continue;
+
                 if (lookup.ContainsKey(recipe.recipeId))
                     Debug.LogWarning($"Duplicate RecipeId {recipe.recipeId}; first entry wins.", this);
-                else lookup.Add(recipe.recipeId, recipe);
+                else 
+                    lookup.Add(recipe.recipeId, recipe);
             }
         }
         if (lookup.TryGetValue(recipeId, out RecipeCardData data)) return data.sprite;
@@ -73,6 +60,8 @@ public class RecipeVisualCatalog : ScriptableObject
     {
         foreach (MethodIcon icon in methodIcons)
             if (icon != null && icon.method == method) return icon.sprite;
+
         return null;
     }
 }
+

@@ -14570,6 +14570,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1263235634}
   - {fileID: 362458826}
   - {fileID: 1971299937}
   - {fileID: 2063400643}
@@ -15359,6 +15360,54 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 51.75711, y: 386.14536, z: 53.76487}
   m_Center: {x: 0.0005645752, y: 193.07268, z: -0.0036268234}
+--- !u!1 &1263235632
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1263235634}
+  - component: {fileID: 1263235633}
+  m_Layer: 0
+  m_Name: ServerManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1263235633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263235632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9d6c6dd227c43f438b6ee75a5e7d945, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Server.ServerManager
+  isDestroyOnLoad: 0
+  _hostIP: villainouskirby.kro.kr
+  _useLocalHost: 0
+  IsEnterRoom: 0
+--- !u!4 &1263235634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263235632}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -35.99094, y: 0, z: 24.57656}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1182091347}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1279405322
 GameObject:
   m_ObjectHideFlags: 0

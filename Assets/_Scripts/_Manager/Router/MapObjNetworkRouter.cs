@@ -34,7 +34,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         // Delayed subscription
         yield return new WaitUntil(() => ServerManager.Instance != null);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotPlayerEnter, OnPotPlayerEntered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
         ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
         ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
         isSubscribed = true;
@@ -54,7 +54,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         if (!isSubscribed || ServerManager.Instance == null) return;
 
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolRegister);
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_PotPlayerEnter);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerEnter);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
         isSubscribed = false;
@@ -204,8 +204,8 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     // 솥 플레이어 진입 패킷 전달
     private void OnPotPlayerEntered(ReadOnlyMemory<byte> data)
     {
-        PotPlayerEnterPacket packet = MemoryPackSerializer.Deserialize<PotPlayerEnterPacket>(data.Span);
-        if (TryGetPotReceiver(packet.PotEntityId, out IPotNetworkReceiver receiver))
+        ToolPlayerEnterPacket packet = MemoryPackSerializer.Deserialize<ToolPlayerEnterPacket>(data.Span);
+        if (TryGetPotReceiver(packet.ToolEntityId, out IPotNetworkReceiver receiver))
             receiver.HandlePotPlayerEnter(packet);
     }
 

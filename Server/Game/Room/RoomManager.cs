@@ -61,7 +61,10 @@ public class RoomManager
     public void RemoveRoom(string roomId)
     {
         _rooms.Remove(roomId, out var room);
-        room?.GetShard().UnregisterRoom(roomId);
+        if (room == null) return;
+
+        room.Stop();
+        room.GetShard().UnregisterRoom(roomId);
     }
 
     private string CreateUniqueRoomId()

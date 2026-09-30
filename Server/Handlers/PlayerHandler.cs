@@ -8,9 +8,32 @@ public class PlayerHandler : PacketHandlerBase
     public static void UpdateMove(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<PlayerMovementPacket>(package.Body);
+        var room = session.Player.Room;
 
-        session.Player.Position = packet.Position;
-        session.Player.Rotation = packet.Rotation;
-        session.Player.State = packet.CombinedState;
+        room.PushJob(() =>
+        {
+            session.Player.Position = packet.Position;
+            session.Player.Rotation = packet.Rotation;
+            session.Player.State = packet.CombinedState;
+        });
+    }
+
+    [PacketHandler(PacketId.C_PlayerDamage)]
+    public static void DamagePlayer(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<PlayerDamagePacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            foreach (var player in room.Players)
+            {
+                if (player.PlayerId != packet.PlayerId) continue;
+
+                player.ApplyDamage(packet.Damage);
+
+                return;
+            }
+        });
     }
 }

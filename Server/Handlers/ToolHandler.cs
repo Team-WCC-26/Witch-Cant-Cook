@@ -46,15 +46,15 @@ public class ToolHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_PotPlayerEnter)]
+    [PacketHandler(PacketId.C_ToolPlayerEnter)]
     public static void EnterPot(Session session, PacketPackageInfo package)
     {
-        var packet = DeSerialize<PotPlayerEnterPacket>(package.Body);
+        var packet = DeSerialize<ToolPlayerEnterPacket>(package.Body);
         var room = session.Player.Room;
 
         room.PushJob(() =>
         {
-            if (room.EnterPot(packet.PotEntityId, session.Player))
+            if (room.EnterToolPlayer(packet.ToolEntityId, session.Player))
             {
                 room.BroadCast(PacketSerializer.Serialize(packet, true));
             }
@@ -69,7 +69,7 @@ public class ToolHandler : PacketHandlerBase
 
         room.PushJob(() =>
         {
-            room.ForceEjectPot(packet.PotEntityId);
+            room.ForceEjectTool(packet.PotEntityId);
         });
     }
 

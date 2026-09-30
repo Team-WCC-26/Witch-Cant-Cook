@@ -8,9 +8,7 @@ using UnityEngine.Serialization;
 
 public class DishOrderManager : MonoBehaviour
 {
-    [SerializeField] private RecipeVisualCatalog catalog;
-    [Tooltip("Order-flow test: show names only and wait for server results without local expiration.")]
-    [SerializeField] private bool namesOnly = true;
+
     [Tooltip("All scrolls show the same first three active orders, aligned to the top.")]
     [FormerlySerializedAs("scrollSlots")]
     [SerializeField] private RecipeScrollView[] scrollViews = Array.Empty<RecipeScrollView>();
@@ -27,6 +25,7 @@ public class DishOrderManager : MonoBehaviour
 
     private ServerManager registeredServer;
     private DataManager dataManager;
+    private RecipeIngredientIndex ingredientIndex;
     private readonly Dictionary<int, RecipeCardData> recipeCards = new();
     private readonly HashSet<int> missingRecipes = new();
 
@@ -84,7 +83,6 @@ public class DishOrderManager : MonoBehaviour
     {
         TryRegister();
 
-
         // Always update Unity objects on the main thread, regardless of the dispatcher's caller.
         while (receivedPackets.TryDequeue(out DishStatePacket packet))
             ApplyState(packet.RecipeId, packet.State);
@@ -99,7 +97,7 @@ public class DishOrderManager : MonoBehaviour
         {
             case DishState.Order:
                 RecipeCardData data = ResolveRecipe(recipeId);
-                orders.Add(recipeId, Time.unscaledTimeAsDouble, !namesOnly && data != null ? data.timeLimit : 0);
+                orders.Add(recipeId, Time.unscaledTimeAsDouble, data != null ? data.timeLimit : 0);
                 Debug.Log($"DishOrderManager: received {state}  RecipeId {recipeId}.", this);
 
                 return true;
@@ -110,11 +108,14 @@ public class DishOrderManager : MonoBehaviour
                 for (int i = 0; i < orders.Count; i++)
                 {
                     if (orders[i].RecipeId != recipeId) continue;
+
                     double elapsed = Time.unscaledTimeAsDouble - orders[i].ReceivedAt;
                     orders.Complete(recipeId);
+
                     Debug.Log($"DishOrderManager: received {state}, RecipeId {recipeId}; removed after {elapsed:F3}s.", this);
                     return true;
                 }
+
                 Debug.LogWarning($"DishOrderManager: received {state} for unknown RecipeId {recipeId}.", this);
                 return false;
 
@@ -126,36 +127,69 @@ public class DishOrderManager : MonoBehaviour
     private void RefreshViews()
     {
         double now = Time.unscaledTimeAsDouble;
-        if (!namesOnly)
-            for (int i = 0; i < orders.Count; i++)
-                if (orders[i].DurationSeconds <= 0)
-                    orders[i].SetDurationIfUnknown(ResolveRecipe(orders[i].RecipeId)?.timeLimit ?? 0);
+        for (int i = 0; i < orders.Count; i++)
+        {
+            if (orders[i].DurationSeconds <= 0)
+                orders[i].SetDurationIfUnknown(ResolveRecipe(orders[i].RecipeId)?.timeLimit ?? 0);
+        }
+
         orders.GetVisible(now, RecipeScrollView.Capacity, visibleOrders);
+
         pendingOrders = orders.Count;
         displayedOrders = visibleOrders.Count;
+
         foreach (RecipeScrollView view in views)
-            if (view != null) view.Show(visibleOrders, catalog, now, namesOnly, ResolveRecipe);
+            if (view != null) view.Show(visibleOrders, now, ResolveRecipe);
     }
 
     private RecipeCardData ResolveRecipe(int recipeId)
     {
         if (recipeCards.TryGetValue(recipeId, out RecipeCardData cached)) return cached;
+
         if (dataManager == null) dataManager = FindFirstObjectByType<DataManager>();
+
         if (dataManager == null || !dataManager.IsDataLoaded) return null;
+
         if (!dataManager.GetRecipe().TryGet(recipeId, out Recipe recipe))
         {
             if (missingRecipes.Add(recipeId))
                 Debug.LogWarning($"Recipe sheet has no row for RecipeId {recipeId}.", this);
+
             return null;
         }
+
         RecipeCardData card = new()
         {
             recipeId = recipe.id,
             name = recipe.name,
             timeLimit = recipe.timeLimit,
-            finalConditionFlag = (IngredientState)recipe.finalConditionFlag,
-            sprite = catalog != null ? catalog.GetRecipeSprite(recipeId) : null
+            iconName = recipe.IconName
         };
+
+        if (ingredientIndex == null)
+        {
+            var rows = dataManager.GetIngredientCombination().GetAll();
+            if (rows.Count == 0)
+                Debug.LogWarning("IngredientCombination has no loaded rows. Check GSpreadReader Sheets and the JSON cache.", this);
+            ingredientIndex = new RecipeIngredientIndex(rows);
+        }
+        foreach (IngredientCombination row in ingredientIndex.GetRows(recipeId))
+        {
+            if (row == null || row.recipeID != recipeId) continue;
+
+            if (!dataManager.GetIngredient().TryGet(row.ingID, out Ingredient ingredient))
+                Debug.LogWarning($"Recipe {recipeId} references missing Ingredient {row.ingID}.", this);
+
+            card.ingredients.Add(new RecipeIngredientDisplayData
+            {
+                name = ingredient != null ? ingredient.name : $"Ingredient #{row.ingID}",
+                iconName = ingredient != null ? ingredient.IconName : null,
+                conditionFlag = (IngredientState)row.conditionFlag,
+                amount = row.amount
+            });
+
+        }
+
         recipeCards.Add(recipeId, card);
         return card;
     }
@@ -171,10 +205,12 @@ public class DishOrderManager : MonoBehaviour
         while (receivedPackets.TryDequeue(out _)) { }
         orders.Clear();
         recipeCards.Clear();
+        ingredientIndex = null;
         missingRecipes.Clear();
 
         foreach (RecipeScrollView view in views)
             if (view != null) view.Clear();
+        RecipeSpriteLookup.ReleaseAll();
     }
 
     [ContextMenu("Preview/Add Order (Play Mode)")]

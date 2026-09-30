@@ -21,7 +21,6 @@ public class Player : Entity
     public Room? Room { get; set; }
     public PlayerCombinedState State { get; set; }
     public Entity? HoldingEntity { get; set; }
-    public Pot? InsidePot { get; set; }
     public Vector3 Position
     {
         get => _position;
@@ -33,8 +32,24 @@ public class Player : Entity
             MakeDirty(DirtyMask.Transform);
         }
     }
+    public int Hp
+    {
+        get => _hp;
+        set
+        {
+            value = Math.Max(0, value);
+
+            if (_hp == value) return;
+
+            _hp = value;
+            MakeDirty(DirtyMask.Hp);
+        }
+    }
     public Quaternion Rotation { get; set; }
 
+    public const int MaxHp = 100;
+
+    private int _hp = MaxHp;
     private float _ping;
     private Vector3 _position;
 
@@ -43,6 +58,13 @@ public class Player : Entity
     public ValueTask Send(ReadOnlyMemory<byte> packet)
     {
         return Session.SendAsync(packet);
+    }
+
+    public void ApplyDamage(int damage)
+    {
+        if (damage <= 0) return;
+
+        Hp -= damage;
     }
 
     public void LeaveRoom()
@@ -90,6 +112,15 @@ public class Player : Entity
             {
                 PlayerId = PlayerId,
                 Ping = Ping
+            });
+        }
+
+        if (mask.HasFlag(DirtyMask.Hp))
+        {
+            packet.PlayerHps.Add(new()
+            {
+                PlayerId = PlayerId,
+                Hp = Hp
             });
         }
     }

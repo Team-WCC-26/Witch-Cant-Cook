@@ -8,7 +8,10 @@ public class Oven() : CookingTool(new MultiSlotStorage()), IFixedTool
 
     public override bool Interact(Player player) // 원래 인터페이스를 분리시키는게 맞으나 귀찮으니 클라에서 오븐시작 버튼누른것만 반응하게 해야함
     {
-        StartCook();
+        if (StartCook())
+        {
+            StartPlayerDamage(); // 조리가 시작된 순간부터 초당 데미지
+        }
 
         return true;
     }
@@ -42,5 +45,7 @@ public class Oven() : CookingTool(new MultiSlotStorage()), IFixedTool
 
             ingredient.TryCook(_cookState);
         }
+
+        StopPlayerDamage(); // 조리가 끝나면 데미지 중단
     }
 }

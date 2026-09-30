@@ -7,12 +7,13 @@ using System.Threading;
 using TMPro;
 using MemoryPack;
 
+// 직접 씬에 배치하지 말 것.
 namespace Server
 {
     public class ServerManager : Singleton<ServerManager>
     {
-        [SerializeField] private string _hostIP = "villainouskirby.kro.kr";
-        [SerializeField] private bool _useLocalHost = true;
+        private string _hostIP = "villainouskirby.kro.kr";
+        private bool _useLocalHost = false;
 
         public WorldStateRouter Router { get; } = new();
         public bool IsEnterRoom = false;
