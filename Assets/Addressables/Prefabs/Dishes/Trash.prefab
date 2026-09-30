@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1339781416956493205}
   - component: {fileID: 607475093237782668}
   - component: {fileID: 611589939573153053}
-  - component: {fileID: -4338353643924303968}
+  - component: {fileID: -8505552817421577142}
   - component: {fileID: -5140449569005684756}
   - component: {fileID: 6408965424229390118}
   - component: {fileID: 7141355214861845665}
@@ -71,7 +71,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 7a63a71a0424f6b47bfa7203f359dece, type: 2}
+  - {fileID: 2100000, guid: 7858c32c8347c1742b56f1bbcb470837, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -95,7 +95,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &-4338353643924303968
+--- !u!114 &-8505552817421577142
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -112,10 +112,10 @@ MonoBehaviour:
   rb: {fileID: 7141355214861845665}
   category: 2
   acceptedCategories: 0
-  canBePicked: 1
+  canBePicked: 0
   holdTransform:
-    localPosition: {x: 0, y: 0, z: 0}
-    localEulerAngles: {x: 0, y: 0, z: 0}
+    localPosition: {x: 0, y: 0.03, z: 0}
+    localEulerAngles: {x: 0, y: 90, z: 0}
   throwForce: 0
 --- !u!114 &-5140449569005684756
 MonoBehaviour:
@@ -129,7 +129,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
-  catchable: {fileID: -4338353643924303968}
+  catchable: {fileID: -8505552817421577142}
   meshFilter: {fileID: 607475093237782668}
   targetRenderer: {fileID: 611589939573153053}
   cutParticle: {fileID: 0}
