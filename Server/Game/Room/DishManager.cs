@@ -102,7 +102,7 @@ internal class DishManager
         var recipeId = GetRandomRecipe();
         var dishData = _dishses[recipeId];
 
-        IngredientStatePair dish = new(dishData.IngredientId, dishData.ConditionFlag);
+        IngredientStatePair dish = new(dishData.IngredientId, IngredientState.None);
 
         if (!_timeLimitHandleDict.TryGetValue(dish, out var queue))
         {
