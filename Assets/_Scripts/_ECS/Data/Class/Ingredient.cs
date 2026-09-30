@@ -1,5 +1,6 @@
 using System;
 
+[Serializable]
 public class Ingredient : CatchableData
 {
     public int statID;

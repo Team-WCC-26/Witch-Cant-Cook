@@ -1,5 +1,6 @@
 using System;
 
+[Serializable]
 public class IngredientStat : IData
 {
     public int id;
