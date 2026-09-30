@@ -13,7 +13,7 @@ namespace Server
     public class ServerManager : Singleton<ServerManager>
     {
         private string _hostIP = "villainouskirby.kro.kr";
-        private bool _useLocalHost = false;
+        private bool _useLocalHost = true;
 
         public WorldStateRouter Router { get; } = new();
         public bool IsEnterRoom = false;
