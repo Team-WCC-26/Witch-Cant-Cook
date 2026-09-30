@@ -2,6 +2,7 @@
 using Protocol;
 using Server;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -32,6 +33,13 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
     private void OnEnable()
     {
+        StartCoroutine(WaitForServerManager());
+    }
+
+    private IEnumerator WaitForServerManager()
+    {
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
         ServerManager.Instance.RegisterHandler(_leaveMemberID, MemberLeft);
     }
