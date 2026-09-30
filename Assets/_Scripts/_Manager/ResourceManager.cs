@@ -8,10 +8,10 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 public class ResourceManager : Singleton<ResourceManager>
 {
-    // ¾Ë¸ÍÀÌ
+    // ì•Œë§¹ì´
     private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
 
-    // ·ÎµåµÈ ¿¡¼ÂÀ» °ü¸®ÇÏ´Â Ä³½Ã µñ¼Å³Ê¸®
+    // ë¡œë“œëœ ì—ì…‹ì„ ê´€ë¦¬í•˜ëŠ” ìºì‹œ ë”•ì…”ë„ˆë¦¬
     private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
 
 
@@ -32,7 +32,7 @@ public class ResourceManager : Singleton<ResourceManager>
     }
 
     /// <summary>
-    /// Addressables ½Ã½ºÅÛ ÃÊ±âÈ­
+    /// Addressables ì‹œìŠ¤í…œ ì´ˆê¸°í™”
     /// </summary>
     public async UniTask InitializeAsync()
     {
@@ -43,18 +43,18 @@ public class ResourceManager : Singleton<ResourceManager>
     }
 
     /// <summary>
-    /// ÃÊ±â preload ¸®¼Ò½º ·Îµå
+    /// ì´ˆê¸° preload ë¦¬ì†ŒìŠ¤ ë¡œë“œ
     /// </summary>
     /// <returns></returns>
     private async UniTask PreloadAssetsAsync()
     {
-        // ÀüÃ¼ preload
+        // ì „ì²´ preload
         await LoadAllAddressablesAsync();
 
     }
 
     /// <summary>
-    /// Ä³½ÃµÈ ¿¡¼Â °¡Á®¿À±â
+    /// ìºì‹œëœ ì—ì…‹ ê°€ì ¸ì˜¤ê¸°
     /// </summary>
     public T GetAsset<T>(string key) where T : UnityEngine.Object
     {
@@ -67,12 +67,22 @@ public class ResourceManager : Singleton<ResourceManager>
         return null;
     }
 
+    public bool TryGetAsset<T>(string key, out T asset) where T : UnityEngine.Object
+    {
+        asset = null;
+        if (string.IsNullOrWhiteSpace(key)) return false;
+        if (!_assetCache.TryGetValue(key, out UnityEngine.Object cachedAsset)) return false;
+
+        asset = cachedAsset as T;
+        return asset != null;
+    }
+
     /// <summary>
-    /// °³º° ¿¡¼Â ·Îµå
+    /// ê°œë³„ ì—ì…‹ ë¡œë“œ
     /// </summary>
     public async UniTask<T> LoadAsync<T>(string key) where T : UnityEngine.Object
     {
-        // ÀÌ¹Ì Ä³½Ã¿¡ ÀÖ´Â °æ¿ì
+        // ì´ë¯¸ ìºì‹œì— ìˆëŠ” ê²½ìš°
         if (_assetCache.TryGetValue(key, out var cachedAsset))
         {
             return cachedAsset as T;
@@ -88,7 +98,7 @@ public class ResourceManager : Singleton<ResourceManager>
                 return null;
             }
 
-            // µÎ dict »óÅÂ µ¿±âÈ­
+            // ë‘ dict ìƒíƒœ ë™ê¸°í™”
             _handleCache.Add(key, handle);
             _assetCache.Add(key, handle.Result);
 
@@ -103,7 +113,7 @@ public class ResourceManager : Singleton<ResourceManager>
     }
 
     /// <summary>
-    /// ¸ğµç Addressable ¿¡¼Â ·Îµå
+    /// ëª¨ë“  Addressable ì—ì…‹ ë¡œë“œ
     /// </summary>
     public async UniTask<bool> LoadAllAddressablesAsync()
     {
@@ -115,7 +125,7 @@ public class ResourceManager : Singleton<ResourceManager>
             {
                 string address = key.ToString();
 
-                // ÀÌ¹Ì Ä³½Ã¿¡ ÀÖÀ¸¸é ½ºÅµ
+                // ì´ë¯¸ ìºì‹œì— ìˆìœ¼ë©´ ìŠ¤í‚µ
                 if (_assetCache.ContainsKey(address))
                     continue;
 
@@ -130,14 +140,14 @@ public class ResourceManager : Singleton<ResourceManager>
 
 
     /// <summary>
-    /// °³º° ¿¡¼Â ÇØÁ¦
+    /// ê°œë³„ ì—ì…‹ í•´ì œ
     /// </summary>
     public void Release(string key)
     {
-        // ÇÚµé È®ÀÎ
+        // í•¸ë“¤ í™•ì¸
         if (_handleCache.TryGetValue(key, out AsyncOperationHandle handle))
         {
-            Addressables.Release(handle); // ¾îµå·¹¼­ºí ¸Ş¸ğ¸® ÇØÁ¦
+            Addressables.Release(handle); // ì–´ë“œë ˆì„œë¸” ë©”ëª¨ë¦¬ í•´ì œ
 
             _handleCache.Remove(key);     
             _assetCache.Remove(key);      
@@ -147,7 +157,7 @@ public class ResourceManager : Singleton<ResourceManager>
 
 
     /// <summary>
-    /// ÀüÃ¼ ¿¡¼Â ÇØÁ¦
+    /// ì „ì²´ ì—ì…‹ í•´ì œ
     /// </summary>
     public void ReleaseAll()
     {
