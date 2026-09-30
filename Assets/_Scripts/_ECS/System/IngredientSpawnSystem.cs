@@ -6,6 +6,8 @@ using UnityEngine;
 //[UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class IngredientSpawnSystem : SystemBase
 {
+    private const string DefaultDishAddress = "Default_Dish";
+
     private ObjectNetworkRouter objectRouter;
     protected override void OnUpdate()
     {
@@ -24,30 +26,45 @@ public partial class IngredientSpawnSystem : SystemBase
             Vector3 reqPos = request.ValueRO.Position;
             Quaternion reqRot = request.ValueRO.Rotation;
 
-            var ingredientRaw = DataManager.Instance.GetIngredient().Get(reqID);
-            if (ingredientRaw == null)
+            bool isIngredient = DataManager.Instance.GetIngredient().TryGet(reqID, out Ingredient ingredientRaw);
+            Recipe recipeRaw = null;
+
+            if (!isIngredient && !DataManager.Instance.GetRecipe().TryGet(reqID, out recipeRaw))
             {
-                Debug.LogWarning($"[SpawnSystem] Ingredient data not found. ID: {reqID}");
+                Debug.LogError($"[SpawnSystem] Neither Ingredient nor Recipe data was found. ID: {reqID}");
                 ecb.DestroyEntity(requestEntity);
                 continue;
             }
 
-            string targetKey = ingredientRaw.prefabName;
+            string targetKey = isIngredient
+                ? ingredientRaw.prefabName
+                : ResolveDishAddress(recipeRaw);
 
-            // ÇÁ¸®ÆÕ »ı¼º ¿äÃ»
+            if (string.IsNullOrEmpty(targetKey))
+            {
+                ecb.DestroyEntity(requestEntity);
+                continue;
+            }
+
+            // í”„ë¦¬íŒ¹ ìƒì„± ìš”ì²­
             GameObject spawnedObj = ObjectPoolManager.Instance.Pop(targetKey, reqPos, reqRot);
 
             if (spawnedObj != null)
             {
-                // 3. ECS ÄÄÆ÷³ÍÆ® ÁÖÀÔ ¹× µñ¼Å³Ê¸® ¼¼ÆÃ ·ÎÁ÷ È£Ãâ
-                InjectECSComponents(
-                    ecb,
-                    spawnedObj,
-                    reqID,
-                    netID,
-                    reqPos,
-                    reqRot
-                );
+                // 3. ë„¤íŠ¸ì›Œí¬ ì˜¤ë¸Œì íŠ¸ ë“±ë¡ ë° ì¼ë°˜ ì¬ë£Œ ECS ì»´í¬ë„ŒíŠ¸ ì£¼ì…
+                RegisterNetworkObject(spawnedObj, netID);
+
+                if (isIngredient)
+                {
+                    InjectIngredientECSComponents(
+                        ecb,
+                        ingredientRaw,
+                        netID,
+                        reqPos,
+                        reqRot
+                    );
+                }
+
                 ObjectPoolManager.Instance.activeObjDict.Add(netID, spawnedObj);
 
                 if (spawnedObj.TryGetComponent(out CatchableObj catchObj))
@@ -73,9 +90,34 @@ public partial class IngredientSpawnSystem : SystemBase
         ecb.Dispose();
     }
 
-    private void InjectECSComponents(EntityCommandBuffer ecb,GameObject spawnedObj, int ingredientID, long networkID, Vector3 position, UnityEngine.Quaternion rotation)
+    private static string ResolveDishAddress(Recipe recipe)
     {
-        //TEST
+        ResourceManager resourceManager = ResourceManager.Instance;
+        if (resourceManager == null)
+        {
+            Debug.LogError("[SpawnSystem] ResourceManager was not found while resolving a dish prefab.");
+            return null;
+        }
+
+        if (resourceManager.TryGetAsset<GameObject>(recipe.prefabName, out _))
+            return recipe.prefabName;
+
+        if (resourceManager.TryGetAsset<GameObject>(DefaultDishAddress, out _))
+        {
+            Debug.LogWarning(
+                $"[SpawnSystem] Dish prefab was not found. RecipeId: {recipe.id}, " +
+                $"Address: {recipe.prefabName}. Using {DefaultDishAddress}.");
+            return DefaultDishAddress;
+        }
+
+        Debug.LogError(
+            $"[SpawnSystem] Dish prefab and default prefab were not found. " +
+            $"RecipeId: {recipe.id}, Address: {recipe.prefabName}, Default: {DefaultDishAddress}");
+        return null;
+    }
+
+    private void RegisterNetworkObject(GameObject spawnedObj, long networkID)
+    {
         CatchableObj catchable = spawnedObj.GetComponent<CatchableObj>();
         if (catchable != null)
         {
@@ -86,8 +128,15 @@ public partial class IngredientSpawnSystem : SystemBase
         {
             Debug.LogWarning($"[SpawnSystem] CatchableObj missing. NetworkID: {networkID}, Object: {spawnedObj.name}");
         }
+    }
 
-        var ingredientRaw = DataManager.Instance.GetIngredient().Get(ingredientID);
+    private static void InjectIngredientECSComponents(
+        EntityCommandBuffer ecb,
+        Ingredient ingredientRaw,
+        long networkID,
+        Vector3 position,
+        UnityEngine.Quaternion rotation)
+    {
         var statId = ingredientRaw.statID;
         var statRaw = DataManager.Instance.GetIngredientStat().Get(statId);
 
@@ -95,18 +144,18 @@ public partial class IngredientSpawnSystem : SystemBase
         {
             Entity newEntity = ecb.CreateEntity();
 
-            // ±âÈ¹ µ¥ÀÌÅÍ ¹× Æ®·£½ºÆû ¼³Á¤ (À§Ä¡¿Í È¸ÀüÀ» µ¿½Ã¿¡ ¼³Á¤)
+            // ê¸°íš ë°ì´í„° ë° íŠ¸ëœìŠ¤í¼ ì„¤ì • (ìœ„ì¹˜ì™€ íšŒì „ì„ ë™ì‹œì— ì„¤ì •)
             ecb.AddComponent(newEntity, new IngredientInfo { ID = ingredientRaw.id, Name = ingredientRaw.name });
             ecb.AddComponent(newEntity, new Health { Current = statRaw.hp, Max = statRaw.hp });
             ecb.AddComponent(newEntity, new IngredientPhysics { Weight = statRaw.weight, Throwing = DataManager.ParseEnum<ThrowingType>(ingredientRaw.throwing, ThrowingType.parabola) });
             ecb.AddComponent(newEntity, new IngredientCombat { Damage = statRaw.damage, Tag = ingredientRaw.tag });
 
-            // À§Ä¡¿Í È¸Àü°ª µ¿½Ã ÁÖÀÔ
+            // ìœ„ì¹˜ì™€ íšŒì „ê°’ ë™ì‹œ ì£¼ì…
             ecb.AddComponent(newEntity, LocalTransform.FromPositionRotation(position, rotation));
-            // ¸ÖÆ¼ÇÃ·¹ÀÌ ½Äº° ID ÁÖÀÔ
+            // ë©€í‹°í”Œë ˆì´ ì‹ë³„ ID ì£¼ì…
             ecb.AddComponent(newEntity, new NetworkID { Value = networkID });
 
-            // ¿ø°İ µ¿±âÈ­ ÃÊ±â°ª ¼¼ÆÃ
+            // ì›ê²© ë™ê¸°í™” ì´ˆê¸°ê°’ ì„¸íŒ…
             ecb.AddComponent(newEntity, new NetworkRemoteSync
             {
                 TargetPosition = position,
