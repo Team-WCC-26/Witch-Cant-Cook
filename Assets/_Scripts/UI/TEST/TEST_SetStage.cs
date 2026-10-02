@@ -13,7 +13,7 @@ using UnityEngine.UI;
 public class TEST_SetStage : MonoBehaviour
 {
     private static TEST_SetStage instance;
-    private const float StageDurationSeconds = 120f;
+    private const float StageDurationSeconds = 240f;
 
     private TMP_Text currentStageText;
     private TMP_Text remainingTimeText;
