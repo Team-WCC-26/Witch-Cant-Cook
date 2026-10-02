@@ -59,6 +59,12 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_StageSet = 310,
     S_StageSet = 311,
 
+    C_StageStart = 312,
+    S_StageStart = 313,
+
+    C_StageStop = 314,
+    S_StageStop = 315,
+
     //C_EntityRegister = 330,
     //S_EntityRegister = 331,
 

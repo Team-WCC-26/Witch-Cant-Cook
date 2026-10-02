@@ -8,12 +8,40 @@ public class GameLoopHandler : PacketHandlerBase
     public static void SetStage(Session session, PacketPackageInfo package)
     {
         var room = session.Player.Room;
-
         var packet = DeSerialize<StageSetPacket>(package.Body);
 
         room.PushJob(() =>
         {
             room.SetStage(packet.StageNum);
+
+            room.BroadCast(PacketSerializer.Serialize(packet, true));
+        });
+    }
+
+    [PacketHandler(PacketId.C_StageStart)]
+    public static void StartStage(Session session, PacketPackageInfo package)
+    {
+        var room = session.Player.Room;
+        var packet = DeSerialize<StageStartPacket>(package.Body);
+
+        room.PushJob(() =>
+        {
+            room.SetStage(packet.StageNum);
+            room.Start();
+
+            room.BroadCast(PacketSerializer.Serialize(packet, true));
+        });
+    }
+
+    [PacketHandler(PacketId.C_StageStop)]
+    public static void StopStage(Session session, PacketPackageInfo package)
+    {
+        var room = session.Player.Room;
+        var packet = DeSerialize<StageStopPacket>(package.Body);
+
+        room.PushJob(() =>
+        {
+            room.Stop();
 
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });

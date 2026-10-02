@@ -1,4 +1,6 @@
-﻿namespace Server;
+﻿using Protocol;
+
+namespace Server;
 
 public abstract class Tool() : Entity, IInteractable
 {
@@ -13,5 +15,25 @@ public abstract class Tool() : Entity, IInteractable
         Damage = stat.Damage;
     }
 
+    public override void Destroy()
+    {
+        base.Destroy();
+
+        Room.TimerManager.Schedule(3000, this, static t => t.Respawn());
+    }
+
     public abstract bool Interact(Player player);
+
+    private void Respawn()
+    {
+        Room.GenerateTool(ToolId, out long entityId);
+
+        ToolSpawnPacket packet = new()
+        {
+            EntityId = entityId,
+            ToolId = ToolId,
+        };
+
+        Room.BroadCast(PacketSerializer.Serialize(packet));
+    }
 }
