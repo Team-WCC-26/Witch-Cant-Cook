@@ -40,15 +40,15 @@ public sealed class ConveyorSpawnTimingDebug : MonoBehaviour
             float now = Time.realtimeSinceStartup;
             int beltId = belt.BeltId;
 
-            if (lastSpawnTimeByBelt.TryGetValue(beltId, out float previousSpawnTime))
-            {
-                Debug.Log($"[Conveyor Timing] Belt {beltId}: visual spawn interval = {now - previousSpawnTime:F3}s (entity {networkId})");
-            }
+            //if (lastSpawnTimeByBelt.TryGetValue(beltId, out float previousSpawnTime))
+            //{
+            //    Debug.Log($"[Conveyor Timing] Belt {beltId}: visual spawn interval = {now - previousSpawnTime:F3}s (entity {networkId})");
+            //}
 
-            if (lastPickupTimeByBelt.Remove(beltId, out float pickupTime))
-            {
-                Debug.Log($"[Conveyor Timing] Belt {beltId}: picked -> next visual spawn = {now - pickupTime:F3}s (entity {networkId})");
-            }
+            //if (lastPickupTimeByBelt.Remove(beltId, out float pickupTime))
+            //{
+            //    Debug.Log($"[Conveyor Timing] Belt {beltId}: picked -> next visual spawn = {now - pickupTime:F3}s (entity {networkId})");
+            //}
 
             lastSpawnTimeByBelt[beltId] = now;
         }

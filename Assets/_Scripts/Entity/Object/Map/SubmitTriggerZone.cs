@@ -44,29 +44,75 @@ public class SubmitTriggerZone : MonoBehaviour
             plates.Add(pair.Value);
         }
         foreach (long id in new List<long>(nextRequestAt.Keys))
-            if (Time.unscaledTime >= nextRequestAt[id]) nextRequestAt.Remove(id);
+        {
+            if (Time.unscaledTime >= nextRequestAt[id]) 
+                nextRequestAt.Remove(id);
+        }
+
         Debug.Log($"<color=#87CEFA>[Submit] Bell: platesInZone={plates.Count}</color>", this);
-        foreach (PlateInteraction plate in plates) SubmitPlateAsync(plate).Forget();
+
+        foreach (PlateInteraction plate in plates)
+        {
+            SubmitPlateAsync(plate).Forget();
+        }
     }
 
     private async UniTask SubmitPlateAsync(PlateInteraction plate)
     {
-        if (plate == null) return;
-        if (plate.IsEmpty) { LogSkipped(plate, "empty plate"); return; }
-        if (!plate.TryGetComponent(out CatchableObj catchable)) { LogSkipped(plate, "CatchableObj missing"); return; }
-        // The last holder is the authority even after dropping the plate on the counter.
-        if (!catchable.IsLocalOwner) { LogSkipped(plate, $"not local owner, EntityId={catchable.NetworkId}, LastHolder={catchable.LastHolderPlayerId}"); return; }
-        if (catchable.NetworkId <= 0) { LogSkipped(plate, $"invalid EntityId={catchable.NetworkId}"); return; }
-        ServerManager server = ServerManager.Instance;
-        if (server == null) { LogSkipped(plate, "ServerManager missing"); return; }
+        #region 방어 및 로그 코드
+        // plate가 null이거나 비어있는 경우
+        if (plate == null) 
+            return;
+        if (plate.IsEmpty) 
+        { 
+            LogSkipped(plate, "empty plate"); 
+            return; 
+        }
+        // CatchableObj가 없는 경우
+        if (!plate.TryGetComponent(out CatchableObj catchable)) 
+        { 
+            LogSkipped(plate, "CatchableObj missing"); 
+            return; 
+        }
 
+        // 로컬 소유자가 아닌 경우
+        if (!catchable.IsLocalOwner) 
+        { 
+            LogSkipped(plate, $"not local owner, EntityId={catchable.NetworkId}, LastHolder={catchable.LastHolderPlayerId}"); 
+            return; 
+        }
+
+        // 유효하지 않은 EntityId인 경우
+        if (catchable.NetworkId <= 0) 
+        { 
+            LogSkipped(plate, $"invalid EntityId={catchable.NetworkId}"); 
+            return; 
+        }
+
+        // ServerManager가 없는 경우
+        ServerManager server = ServerManager.Instance;
+        if (server == null) 
+        {
+            LogSkipped(plate, "ServerManager missing"); 
+            return; 
+        }
+
+        // 이미 요청 중이거나 쿨다운 중인 경우
         long plateId = catchable.NetworkId;
-        if (nextRequestAt.ContainsKey(plateId) || !sending.Add(plateId)) { LogSkipped(plate, $"request in progress/cooldown, EntityId={plateId}"); return; }
+        if (nextRequestAt.ContainsKey(plateId) || !sending.Add(plateId)) 
+        { 
+            LogSkipped(plate, $"request in progress/cooldown, EntityId={plateId}"); 
+            return; 
+        }
+        #endregion
+
         nextRequestAt[plateId] = Time.unscaledTime + RequestCooldown;
+
         try
         {
+            DishOrderManager.ReportSubmission(plate, plateId);
             ServeDishPacket packet = new() { EntityId = plateId };
-            Debug.Log($"<color=#87CEFA>[Submit TX REQUEST] C_ServeDish / ServeDishPacket {{ EntityId={packet.EntityId} }} plate={plate.name}</color>", this);
+            Debug.Log($"<color=#87CEFA>[Submit TX REQUEST] C_ServeDish / ServeDishPacket {{ EntityId={packet.EntityId} }} </color>", this);
             await server.SendData(PacketSerializer.Serialize(packet));
             // Leave plate/food alive until ObjectNetworkRouter receives the server destroy event.
             // DishOrderManager removes the order only upon the server's DishState result.
@@ -74,11 +120,15 @@ public class SubmitTriggerZone : MonoBehaviour
         catch (Exception error)
         {
             nextRequestAt.Remove(plateId);
+            DishOrderManager.ReportSubmissionIssue("전송 오류: " + error.Message);
             Debug.LogException(error, this);
         }
         finally { sending.Remove(plateId); }
     }
 
-    private void LogSkipped(PlateInteraction plate, string reason) =>
+    private void LogSkipped(PlateInteraction plate, string reason)
+    {
+        DishOrderManager.ReportSubmissionIssue($"요청 생략: {plate.name} / {reason}");
         Debug.Log($"<color=#87CEFA>[Submit SKIP] plate={plate.name}: {reason}</color>", this);
+    }
 }
