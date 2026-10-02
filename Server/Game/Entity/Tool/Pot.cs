@@ -10,7 +10,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     private readonly HashSet<Entity> _autoEjectTargets = new();
 
     private bool _isCooking;
-    private int _cookingDishIndex = -1;
     private Dish? _cookingDish;
     private TimerHandle _cookTimer;
     private TimerHandle _autoEjectTimer;
@@ -88,7 +87,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     {
         float maxHp = 0;
         bool hasIngredient = false;
-        int dishIndex = 0;
 
         foreach (var entity in _storage)
         {
@@ -99,8 +97,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
                 hasIngredient = true;
                 maxHp = MathF.Max(maxHp, ingredient.Stat.Hp);
             }
-
-            dishIndex++;
         }
 
         if (!hasIngredient) return false;
@@ -109,7 +105,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
 
         _isCooking = true;
         _cookingDish = dish;
-        _cookingDishIndex = dishIndex;
 
         long delayMs = (long)MathF.Ceiling(maxHp / Damage * 1000);
 
@@ -171,7 +166,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
 
         _isCooking = false;
         _cookingDish = null;
-        _cookingDishIndex = -1;
 
         dish.Insert(result);
 
@@ -293,7 +287,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
 
         _isCooking = false;
         _cookingDish = null;
-        _cookingDishIndex = -1;
     }
 
     private void CancelAutoEject()
