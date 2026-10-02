@@ -369,8 +369,7 @@ public class Room
         if (!Entities.TryGetValue(dishId, out var entity)) return false;
         if (entity is not Dish dish || dish.Ingredient == null) return false;
 
-        var ingredient = dish.Ingredient;
-        _dishManager.SubmitDish(new(ingredient.IngredientId, ingredient.ProcessState));
+        _dishManager.SubmitDish(dish.Ingredient.IngredientId);
         dish.Destroy();
 
         return true;

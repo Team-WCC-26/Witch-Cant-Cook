@@ -10,7 +10,7 @@ public class DataBase
     public IReadOnlyDictionary<RecipeKey, int> IngredientCombinations => _ingredientCombinations;
     public IReadOnlyDictionary<int, ToolData> Tools => _tools;
     public IReadOnlyDictionary<int, DishData> Dishes => _dishes;
-    public IReadOnlyDictionary<IngredientStatePair, int> Recipes => _recipes;
+    //public IReadOnlyDictionary<IngredientStatePair, int> Recipes => _recipes;
     public IReadOnlyDictionary<int, List<IngredientGroup>> IngredientGroups => _ingredientGroups;
     public IReadOnlyDictionary<int, List<RecipeGroup>> RecipeGroups => _recipeGroups;
 
@@ -19,7 +19,7 @@ public class DataBase
     private readonly Dictionary<RecipeKey, int> _ingredientCombinations = new();
     private readonly Dictionary<int, ToolData> _tools = new();
     private readonly Dictionary<int, DishData> _dishes = new();
-    private readonly Dictionary<IngredientStatePair, int> _recipes = new();
+    //private readonly Dictionary<IngredientStatePair, int> _recipes = new();
     private readonly Dictionary<int, List<IngredientGroup>> _ingredientGroups = new();
     private readonly Dictionary<int, List<RecipeGroup>> _recipeGroups = new();
 
@@ -79,12 +79,12 @@ public class DataBase
             json = await client.GetStringAsync(url + export + dish);
 
             _dishes.Clear();
-            _recipes.Clear();
+            //_recipes.Clear();
 
             foreach (var dishData in JsonConvert.DeserializeObject<List<DishData>>(json))
             {
                 _dishes[dishData.Id] = dishData;
-                _recipes[new(dishData.IngredientId, IngredientState.None)] = dishData.Id;
+                //_recipes[new(dishData.IngredientId, IngredientState.None)] = dishData.Id;
             }
 
             // 재료 그룹 파싱
