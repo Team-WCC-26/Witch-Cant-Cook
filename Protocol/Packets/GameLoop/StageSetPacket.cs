@@ -23,5 +23,4 @@ public partial class StageStartPacket
 [PacketId(PacketId.S_StageStop)]
 public partial class StageStopPacket
 {
-    public int StageNum { get; set; }
 }

@@ -26,6 +26,7 @@ public class GameLoopHandler : PacketHandlerBase
 
         room.PushJob(() =>
         {
+            room.SetStage(packet.StageNum);
             room.Start();
 
             room.BroadCast(PacketSerializer.Serialize(packet, true));
