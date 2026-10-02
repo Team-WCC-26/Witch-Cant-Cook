@@ -26,6 +26,9 @@ public sealed class PlayerCameraController : MonoBehaviour
     private Vector3 itemPointLocalPosition;
     private Quaternion itemPointLocalRotation = Quaternion.identity;
 
+    private Vector3 throwPointLocalPosition;
+    private Quaternion throwPointLocalRotation = Quaternion.identity;
+
     private bool canControlCursor = false;
 
     private void Awake()
@@ -47,6 +50,16 @@ public sealed class PlayerCameraController : MonoBehaviour
             );
             itemPointLocalRotation = Quaternion.Inverse(brain.transform.rotation)
                 * brain.ItemPoint.rotation;
+        }
+
+        if (brain.ThrowPoint != null)
+        {
+            Transform throwPoint = brain.ThrowPoint.transform;
+            throwPointLocalPosition = brain.transform.InverseTransformPoint(
+                throwPoint.position
+            );
+            throwPointLocalRotation = Quaternion.Inverse(brain.transform.rotation)
+                * throwPoint.rotation;
         }
 
         if (yawRoot == null)
@@ -140,6 +153,14 @@ public sealed class PlayerCameraController : MonoBehaviour
             brain.ItemPoint.SetPositionAndRotation(
                 brain.transform.position + yawRotation * itemPointLocalPosition,
                 yawRotation * itemPointLocalRotation
+            );
+        }
+
+        if (brain.ThrowPoint != null)
+        {
+            brain.ThrowPoint.transform.SetPositionAndRotation(
+                brain.transform.position + yawRotation * throwPointLocalPosition,
+                yawRotation * throwPointLocalRotation
             );
         }
     }
