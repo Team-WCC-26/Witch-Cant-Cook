@@ -26,6 +26,17 @@ public class PotInteraction : MapObjInteraction,
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
 
+    [Header("조리 완료 파티클")]
+    [SerializeField, InspectorName("파티클 프리팹")]
+    private DishCompleteVfx cookCompleteEffectPrefab;
+    [SerializeField, InspectorName("재생 위치 (비워두면 솥 윗면)")]
+    private Transform cookCompleteEffectOrigin;
+    [SerializeField, InspectorName("위치 보정")]
+    private Vector3 cookCompleteEffectOffset = new Vector3(0f, 0.15f, 0f);
+    [SerializeField, Min(0.1f)]
+    [Tooltip("입자 크기는 유지하고 퍼지는 범위와 확산 고리 크기만 조절합니다. 1은 기본, 2는 두 배입니다.")]
+    private float cookCompleteEffectSpread = 2f;
+
     #endregion
 
     private PotState state = PotState.Idle;
@@ -47,6 +58,7 @@ public class PotInteraction : MapObjInteraction,
     private ObjectNetworkRouter objectRouter;
     private PotCookCompletePacket pendingCookCompletePacket;
     private float? pendingCookingDuration;
+    private long lastCookCompleteEffectDishId;
 
     #region Lifecycle
 
@@ -75,6 +87,7 @@ public class PotInteraction : MapObjInteraction,
     private void ResetPotData()
     {
         state = PotState.Idle;
+        lastCookCompleteEffectDishId = 0;
 
         // Object storage
         pendingObjects.Clear();
@@ -701,6 +714,60 @@ public class PotInteraction : MapObjInteraction,
         pendingCookCompletePacket = packet;
         gaugeUI?.Hide();
         RemoveConsumedObj();
+        PlayCookCompleteEffect(packet.DishEntityId);
+    }
+
+    private void PlayCookCompleteEffect(long completedDishId)
+    {
+        if (completedDishId <= 0 || completedDishId == lastCookCompleteEffectDishId) return;
+
+        if (cookCompleteEffectPrefab == null)
+            cookCompleteEffectPrefab = Resources.Load<DishCompleteVfx>("VFX/PotCookComplete");
+        if (cookCompleteEffectPrefab == null)
+        {
+            Debug.LogWarning("솥 조리 완료 파티클 프리팹을 찾을 수 없습니다.", this);
+            return;
+        }
+
+        Vector3 position;
+        if (cookCompleteEffectOrigin != null)
+            position = cookCompleteEffectOrigin.position;
+        else
+        {
+            Renderer potRenderer = GetComponent<Renderer>();
+            Bounds bounds = potRenderer != null ? potRenderer.bounds : new Bounds(transform.position, Vector3.zero);
+            position = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+        }
+
+        DishCompleteVfx effect = Instantiate(cookCompleteEffectPrefab,
+            position + cookCompleteEffectOffset, Quaternion.identity);
+        effect.name = "솥_요리완성_파티클";
+        float spread = Mathf.Max(0.1f, cookCompleteEffectSpread);
+        effect.transform.localScale *= spread;
+        foreach (ParticleSystem system in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            // 생성 범위만 Transform 배율을 적용하고, 개별 입자 크기는 유지합니다.
+            var main = system.main;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            main.startSpeed = ScaleEffectCurve(main.startSpeed, spread);
+            main.gravityModifier = ScaleEffectCurve(main.gravityModifier, spread);
+            var velocity = system.velocityOverLifetime;
+            velocity.x = ScaleEffectCurve(velocity.x, spread);
+            velocity.y = ScaleEffectCurve(velocity.y, spread);
+            velocity.z = ScaleEffectCurve(velocity.z, spread);
+            if (system.name == "확산고리")
+                main.startSize = ScaleEffectCurve(main.startSize, spread);
+        }
+        effect.PlayOnce();
+        lastCookCompleteEffectDishId = completedDishId;
+    }
+
+    private static ParticleSystem.MinMaxCurve ScaleEffectCurve(ParticleSystem.MinMaxCurve curve, float scale)
+    {
+        curve.constantMin *= scale;
+        curve.constantMax *= scale;
+        curve.curveMultiplier *= scale;
+        return curve;
     }
 
     // IPunchReceiver: 솥 강제 배출 요청
@@ -722,7 +789,13 @@ public class PotInteractionEditor : UnityEditor.Editor
     // 기본 Inspector와 디버그 배출 버튼 표시
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
+        serializedObject.Update();
+        using (new UnityEditor.EditorGUI.DisabledScope(true))
+            UnityEditor.EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Script"));
+        DrawPropertiesExcluding(serializedObject, "m_Script", "cookCompleteEffectSpread");
+        UnityEditor.EditorGUILayout.PropertyField(serializedObject.FindProperty("cookCompleteEffectSpread"),
+            new GUIContent("이펙트 확산 배율"));
+        serializedObject.ApplyModifiedProperties();
         GUILayout.Space(8f);
 
         bool previousEnabled = GUI.enabled;

@@ -94,7 +94,10 @@ public class DishOrderManager : MonoBehaviour
 
         // Always update Unity objects on the main thread, regardless of the dispatcher's caller.
         while (receivedPackets.TryDequeue(out DishStatePacket packet))
+        {
+            DishSubmissionVfx.PlayForServerResult(packet.State);
             ApplyState(packet.RecipeId, packet.State);
+        }
 
         RefreshViews();
         if (successCanvas != null && Time.unscaledTime >= successHideAt)

@@ -170,7 +170,7 @@ public class IngredientNetworkBridge : MonoBehaviour
 
         entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
         {
-            IngredientID = packet.IngredienteId,
+            IngredientID = packet.IngredientId,
             NetworkID = packet.EntityId,
             Position = (float3)spawnPoint.Position,
             Rotation = (quaternion)spawnPoint.Rotation,
