@@ -162,7 +162,7 @@ public class PlayerInteract
         CatchableObj target = HeldObj;
 
         Transform throwOrigin = GetThrowOrigin();
-        Vector3 throwPosition = GetThrowPosition(throwOrigin);
+        Vector3 throwPosition = GetThrowPosition(target);
         Vector3 velocity = GetThrowDirection(throwOrigin) * GetThrowForce();
 
         EntityThrowPacket packet = new()
@@ -257,9 +257,11 @@ public class PlayerInteract
             : brain.transform;
     }
 
-    private Vector3 GetThrowPosition(Transform origin)
+    private Vector3 GetThrowPosition(CatchableObj target)
     {
-        return origin.TransformPoint(brain.ThrowCameraOffset);
+        return brain.ThrowPoint != null
+            ? brain.ThrowPoint.transform.position
+            : target.transform.position;
     }
 
     private Vector3 GetThrowDirection(Transform origin)

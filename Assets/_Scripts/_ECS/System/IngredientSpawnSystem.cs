@@ -51,6 +51,8 @@ public partial class IngredientSpawnSystem : SystemBase
 
             if (spawnedObj != null)
             {
+                // Assign identity before router registration can attach this food to a plate.
+                FoodRecipeIdentity.Initialize(spawnedObj.GetComponent<CatchableObj>(), ingredientRaw, recipeRaw);
                 // 3. 네트워크 오브젝트 등록 및 일반 재료 ECS 컴포넌트 주입
                 RegisterNetworkObject(spawnedObj, netID);
 
@@ -66,11 +68,6 @@ public partial class IngredientSpawnSystem : SystemBase
                 }
 
                 ObjectPoolManager.Instance.activeObjDict.Add(netID, spawnedObj);
-
-                if (spawnedObj.TryGetComponent(out CatchableObj catchObj))
-                {
-                    catchObj.Data = ingredientRaw;
-                }
 
                 var belt = ConveyorBeltRegistry.TryGetBeltById(request.ValueRO.ConveyId, out ConveyorBeltController beltController);
                 if (beltController != null)

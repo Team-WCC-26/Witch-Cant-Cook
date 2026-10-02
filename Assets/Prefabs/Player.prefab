@@ -2974,16 +2974,16 @@ MonoBehaviour:
   <RecoveryDelay>k__BackingField: 0.1
   <GroundLayerMask>k__BackingField:
     serializedVersion: 2
-    m_Bits: 257
+    m_Bits: 1281
   <JumpPower>k__BackingField: 5.5
   <FallMultiplier>k__BackingField: 2.5
   <CoyoteTime>k__BackingField: 0.1
   <GroundCheckDistance>k__BackingField: 0.02
   <FallCheckDistance>k__BackingField: 0.3
   <DebugGroundCheck>k__BackingField: 1
-  <ThrowForce>k__BackingField: 8
+  <ThrowForce>k__BackingField: 10
   <ThrowAngle>k__BackingField: 0
-  <ThrowCameraOffset>k__BackingField: {x: 0, y: 0, z: 3}
+  <ThrowPoint>k__BackingField: {fileID: 4561894624052767480}
 --- !u!114 &1858417482901392103
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3903,6 +3903,37 @@ Transform:
   - {fileID: 5625890061644825407}
   m_Father: {fileID: 4853918368129747453}
   m_LocalEulerAnglesHint: {x: -60.79, y: -17.694, z: 90.5}
+--- !u!1 &4561894624052767480
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6867655892014024267}
+  m_Layer: 6
+  m_Name: ThrowPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: -5397416234189338067, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6867655892014024267
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4561894624052767480}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.1, z: 0.969}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5775003194831538317}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4588497707977467129
 GameObject:
   m_ObjectHideFlags: 0
@@ -6354,5 +6385,6 @@ Transform:
   m_Children:
   - {fileID: 1890275039990231339}
   - {fileID: 5439273483909490691}
+  - {fileID: 6867655892014024267}
   m_Father: {fileID: 2734250763933767740}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

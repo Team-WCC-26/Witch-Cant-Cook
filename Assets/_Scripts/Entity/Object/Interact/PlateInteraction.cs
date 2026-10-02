@@ -5,6 +5,7 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
     private CatchableObj currentFood;
 
     public bool IsEmpty => currentFood == null;
+    public CatchableObj CurrentFood => currentFood;
 
     // 팬에 든 음식을 빈 그릇으로 전달받는다.
     public bool TryReceivePanPrimary(PanInteraction pan, PlayerInteract player)

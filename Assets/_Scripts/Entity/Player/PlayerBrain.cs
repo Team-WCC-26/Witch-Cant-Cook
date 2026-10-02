@@ -66,7 +66,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
     [field: SerializeField] public float ThrowAngle { get; private set; } = 0.0f;
-    [field: SerializeField] public Vector3 ThrowCameraOffset { get; private set; } = Vector3.zero;
+    [field: SerializeField] public GameObject ThrowPoint { get; private set; } = null;
     private PlayerInteract interact;
 
     private PlayerStateResolver stateResolver = null;

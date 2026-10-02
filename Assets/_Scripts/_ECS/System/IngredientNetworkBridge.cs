@@ -114,7 +114,7 @@ public class IngredientNetworkBridge : MonoBehaviour
         if (ServerManager.Instance != null)
         {
             ServerManager.Instance.SendData(sendBuffer).Forget();
-            Debug.Log($"[Network Send] Ingredient spawn requested. ID: {ingredientID}, Position: {targetPosition}");
+            //Debug.Log($"[Network Send] Ingredient spawn requested. ID: {ingredientID}, Position: {targetPosition}");
         }
         else
         {
@@ -157,7 +157,7 @@ public class IngredientNetworkBridge : MonoBehaviour
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
 
         IngredientConveySpawnPacket packet = MemoryPackSerializer.Deserialize<IngredientConveySpawnPacket>(data.Span);
-        Debug.Log($"[Network] ConveySpawnPacket received. ConveyId: {packet.ConveyId}, IngredienteId: {packet.IngredienteId}, EntityId: {packet.EntityId}");
+        //Debug.Log($"[Network] ConveySpawnPacket received. ConveyId: {packet.ConveyId}, IngredienteId: {packet.IngredienteId}, EntityId: {packet.EntityId}");
 
         if (!ConveyorSpawnPointRegistry.TryGetSpawnPoint(packet.ConveyId, out var spawnPoint))
         {
@@ -170,7 +170,7 @@ public class IngredientNetworkBridge : MonoBehaviour
 
         entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
         {
-            IngredientID = packet.IngredienteId,
+            IngredientID = packet.IngredientId,
             NetworkID = packet.EntityId,
             Position = (float3)spawnPoint.Position,
             Rotation = (quaternion)spawnPoint.Rotation,
