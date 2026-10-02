@@ -8,14 +8,14 @@ internal class DishManager
     private readonly TimerManager _timerManager;
 
     private IReadOnlyDictionary<int, DishData> _dishses => ServerContext.Instance.DataBase.Dishes;
-    private IReadOnlyDictionary<IngredientStatePair, int> _recipes => ServerContext.Instance.DataBase.Recipes;
+    //private IReadOnlyDictionary<IngredientStatePair, int> _recipes => ServerContext.Instance.DataBase.Recipes;
     private IReadOnlyDictionary<int, List<RecipeGroup>> _recipeGroups => ServerContext.Instance.DataBase.RecipeGroups;
     private readonly Random _random = new();
 
     private List<DishData> _currentDishes = new();
     private int _totalWeight;
 
-    private Dictionary<IngredientStatePair, Queue<TimerHandle>> _timeLimitHandleDict = new();
+    private Dictionary<int, Queue<TimerHandle>> _timeLimitHandleDict = new();
     private TimerHandle _spawnDelayHandle;
     private bool _running = false;
 
@@ -85,13 +85,17 @@ internal class DishManager
         throw new InvalidOperationException("재료 선택에 실패했습니다.");
     }
 
-    public void SubmitDish(IngredientStatePair dish)
+    public void SubmitDish(int recipeId)
     {
-        if (_timeLimitHandleDict.TryGetValue(dish, out var handles) && handles.TryDequeue(out var handle))
+        if (_timeLimitHandleDict.TryGetValue(recipeId, out var handles) && handles.TryDequeue(out var handle))
         {
             _timerManager.Cancel(handle);
 
-            BroadCastDishState(_recipes[dish], DishState.Success);
+            BroadCastDishState(recipeId, DishState.Success);
+        }
+        else
+        {
+            BroadCastDishState(-1, DishState.Fail);
         }
     }
 
@@ -102,28 +106,26 @@ internal class DishManager
         var recipeId = GetRandomRecipe();
         var dishData = _dishses[recipeId];
 
-        IngredientStatePair dish = new(dishData.IngredientId, IngredientState.None);
-
-        if (!_timeLimitHandleDict.TryGetValue(dish, out var queue))
+        if (!_timeLimitHandleDict.TryGetValue(recipeId, out var queue))
         {
             queue = new();
-            _timeLimitHandleDict[dish] = queue;
+            _timeLimitHandleDict[recipeId] = queue;
         }
 
-        queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit * 1000, dish, OnDishFaild));
+        queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit * 1000, recipeId, OnDishFaild));
 
         BroadCastDishState(recipeId, DishState.Order);
 
         ScheduleSelect(dishData.SpawnDelay * 1000);
     }
 
-    private void OnDishFaild(IngredientStatePair dish)
+    private void OnDishFaild(int recipeId)
     {
-        if (!_timeLimitHandleDict.TryGetValue(dish, out var queue) || !queue.TryDequeue(out _)) return;
+        if (!_timeLimitHandleDict.TryGetValue(recipeId, out var queue) || !queue.TryDequeue(out _)) return;
 
-        if (_recipes.TryGetValue(dish, out var recipe))
+        if (_dishses.TryGetValue(recipeId, out var recipe))
         {
-            BroadCastDishState(recipe, DishState.Fail);
+            BroadCastDishState(recipeId, DishState.Fail);
         }
     }
 
