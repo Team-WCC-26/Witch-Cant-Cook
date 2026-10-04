@@ -162,7 +162,17 @@ public class PlayerActionController
 
     private bool IsFalling()
     {
-        if (brain.Rb.linearVelocity.y >= 0f || brain.Col == null) return false;
+        if (brain.Col == null) return false;
+
+        if (brain.StateResolver is RemotePlayerStateResolver remote)
+        {
+            // Ignore tiny interpolation corrections while the remote player is stationary.
+            if (remote.VerticalSpeed >= -0.01f) return false;
+        }
+        else if (brain.Rb.linearVelocity.y >= 0f)
+        {
+            return false;
+        }
 
         Bounds bounds = brain.Col.bounds;
         float radius = Mathf.Min(bounds.extents.x, bounds.extents.z) * 0.9f;

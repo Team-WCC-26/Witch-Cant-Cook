@@ -11,6 +11,8 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     private float positionLerpSpeed = 15f;
     private float rotationLerpSpeed = 15f;
 
+    public float VerticalSpeed { get; private set; }
+
     public RemotePlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         targetPosition = brain.transform.position;
@@ -29,14 +31,21 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     {
         if (!hasRemoteTransform)
         {
+            VerticalSpeed = 0f;
             return;
         }
 
+        float previousHeight = brain.transform.position.y;
         brain.transform.position = Vector3.Lerp(
             brain.transform.position,
             targetPosition,
             Time.deltaTime * positionLerpSpeed
         );
+
+        // Transform interpolation, rather than Rigidbody physics, moves remote players.
+        VerticalSpeed = Time.deltaTime > 0f
+            ? (brain.transform.position.y - previousHeight) / Time.deltaTime
+            : 0f;
 
         brain.transform.rotation = Quaternion.Slerp(
             brain.transform.rotation,
