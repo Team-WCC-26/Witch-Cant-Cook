@@ -16,6 +16,8 @@ public class PlayerActionController
 
     private bool canAction = true;
     private float actionTime;
+    private bool pendingPrimaryAction;
+    private EntityCategory pendingPrimaryCategory;
 
 
     public PlayerActionController(PlayerBrain brain)
@@ -85,6 +87,7 @@ public class PlayerActionController
 
         animController.PlayPrimaryAction();
         canAction = false;
+        RecordPrimaryAction(EntityCategory.Player);
     }
 
     public bool TryEquipAction()
@@ -93,7 +96,32 @@ public class PlayerActionController
 
         animController.PlayPrimaryAction();
         canAction = false;
+        RecordPrimaryAction(brain.Interact.HeldObj.Category);
         return true;
+    }
+
+    private void RecordPrimaryAction(EntityCategory category)
+    {
+        if (brain.StateResolver is not LocalPlayerStateResolver) return;
+
+        pendingPrimaryAction = true;
+        pendingPrimaryCategory = category;
+    }
+
+    public bool ConsumePrimaryAction(out EntityCategory category)
+    {
+        category = pendingPrimaryCategory;
+        bool pending = pendingPrimaryAction;
+        pendingPrimaryAction = false;
+        return pending;
+    }
+
+    public void PlayRemotePrimaryAction(PlayerCombinedState state)
+    {
+        if (state.PhysicalMode != PlayerPhysicalMode.Default) return;
+
+        animController.UpdateTick(state, movement.IsGroundedNow, IsFalling());
+        animController.PlayPrimaryAction();
     }
 
     private void UpdateActionState()

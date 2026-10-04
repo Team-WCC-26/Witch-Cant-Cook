@@ -6,6 +6,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     private Vector3 targetPosition;
     private Quaternion targetRotation;
     private bool hasRemoteTransform = false;
+    private PlayerInteraction previousRemoteInteraction = PlayerInteraction.None;
 
     private float positionLerpSpeed = 15f;
     private float rotationLerpSpeed = 15f;
@@ -62,6 +63,16 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     public void ApplyRemoteState(PlayerCombinedState remoteState)
     {
         SetCurrentState(remoteState);
+
+        // Repeated snapshots must not restart the same action every frame.
+        bool isPrimary = remoteState.Interaction == PlayerInteraction.DefaultPrimary
+            || remoteState.Interaction == PlayerInteraction.HeldPrimary;
+        if (isPrimary && remoteState.Interaction != previousRemoteInteraction)
+        {
+            brain.ActionController.PlayRemotePrimaryAction(remoteState);
+        }
+
+        previousRemoteInteraction = remoteState.Interaction;
     }
 
     public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Vector3 rotation)

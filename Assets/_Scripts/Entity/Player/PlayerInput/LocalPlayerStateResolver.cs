@@ -104,6 +104,23 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
 
     private void SendMovementPacket()
     {
+        PlayerCombinedState outgoingState = CurrentState;
+        if (brain.ActionController.ConsumePrimaryAction(out EntityCategory category)
+            && CurrentState.PhysicalMode == PlayerPhysicalMode.Default)
+        {
+            // Send the action that actually played, once, without changing local input state.
+            outgoingState = new PlayerCombinedState(
+                CurrentState.PhysicalMode,
+                CurrentState.MoveDir,
+                CurrentState.IsRun,
+                category == EntityCategory.Player
+                    ? PlayerInteraction.DefaultPrimary
+                    : PlayerInteraction.HeldPrimary,
+                category,
+                CurrentState.JumpRequested
+            );
+        }
+
         Quaternion facingRotation = brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
@@ -113,7 +130,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             PlayerId = brain.PlayerId,
             Position = DataConverter.UnityToNumerics(brain.transform.position),
             Rotation = DataConverter.UnityToNumerics(facingRotation),
-            CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(CurrentState)
+            CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(outgoingState)
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
