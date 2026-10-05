@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 1476012699105353947}
   - component: {fileID: 6226398047412646919}
   - component: {fileID: 2676890332202823826}
-  - component: {fileID: -724347999095194362}
   m_Layer: 0
   m_Name: OnionLiquid
   m_TagString: Untagged
@@ -133,7 +132,7 @@ MonoBehaviour:
     m_Bits: 64
   groundLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   landingCollider: {fileID: 7722786719336871818}
   minGroundNormalY: 0.5
   movementEffect:
@@ -169,32 +168,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 0
---- !u!114 &-724347999095194362
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6734343480547526999}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 741545d5993dd094b99bc764e0dce595, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitArea
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 256
-  landingCollider: {fileID: 0}
-  minGroundNormalY: 0.5
-  movementEffect:
-    ChangeSpeed: 0
-    SpeedMultiplier: 0
-    ChangeFriction: 0
-    FrictionMultiplier: 0
-    Duration: 0
 --- !u!1 &7822133530134709062
 GameObject:
   m_ObjectHideFlags: 0
