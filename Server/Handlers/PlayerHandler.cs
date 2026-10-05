@@ -19,21 +19,16 @@ public class PlayerHandler : PacketHandlerBase
     }
 
     [PacketHandler(PacketId.C_PlayerDamage)]
-    public static void DamagePlayer(Session session, PacketPackageInfo package)
+    public static void DamagePlayer(Session session, PacketPackageInfo package) // TODO => 본인이 맞았다고 판정된것만 적용할건지 정해야함
     {
         var packet = DeSerialize<PlayerDamagePacket>(package.Body);
         var room = session.Player.Room;
 
+        if (packet.PlayerId != session.Player.PlayerId) return;
+
         room.PushJob(() =>
         {
-            foreach (var player in room.Players)
-            {
-                if (player.PlayerId != packet.PlayerId) continue;
-
-                player.ApplyDamage(packet.Damage);
-
-                return;
-            }
+            session.Player.ApplyDamage(Math.Min(packet.Damage, Player.MaxHp));
         });
     }
 }

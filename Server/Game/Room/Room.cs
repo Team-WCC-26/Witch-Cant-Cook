@@ -1,6 +1,4 @@
 using Protocol;
-using System.Net.Sockets;
-using System.Numerics;
 
 namespace Server;
 
@@ -32,7 +30,7 @@ public class Room
     public TimerManager TimerManager => _timerManager;
     private TimerManager _timerManager = new();
 
-    private IngredientSpawner _ingredientSpanwer;
+    private IngredientSpawner _ingredientSpawner;
     private DishManager _dishManager;
 
     public Room(string id, string name, string password)
@@ -41,7 +39,7 @@ public class Room
         Name = name;
         Password = password;
 
-        _ingredientSpanwer = new(this, _timerManager, 2000);
+        _ingredientSpawner = new(this, _timerManager, 2000);
         _dishManager = new(this, _timerManager);
     }
 
@@ -62,13 +60,13 @@ public class Room
     public void Start()
     {
         _dishManager.Start();
-        _ingredientSpanwer.Start();
+        _ingredientSpawner.Start();
     }
 
     public void Stop()
     {
         _dishManager.Stop();
-        _ingredientSpanwer.Stop();
+        _ingredientSpawner.Stop();
         _timerManager.Clear();
 
         List<Entity> entities = new(_entities.Values);
@@ -139,7 +137,7 @@ public class Room
 
     public void SetStage(int stage)
     {
-        _ingredientSpanwer.SetStage(stage);
+        _ingredientSpawner.SetStage(stage);
         _dishManager.SetStage(stage);
     }
 
@@ -154,10 +152,10 @@ public class Room
         return ingredient;
     }
 
-    public Tool GenerateTool(int id, out long entityId)
+    public Tool? GenerateTool(int id, out long entityId)
     {
-        Tool tool;
-        
+        Tool? tool;
+
         switch (id)
         {
             case 10:
@@ -193,7 +191,13 @@ public class Room
                 tool = null;
                 break;
         }
-        
+
+        if (tool == null)
+        {
+            entityId = 0;
+            return null;
+        }
+
         entityId = GenerateEntityId();
         tool.InitToolId(id);
 

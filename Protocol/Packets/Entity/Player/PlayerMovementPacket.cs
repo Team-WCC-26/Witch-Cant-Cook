@@ -42,7 +42,7 @@ public enum CatchableObjType
 }
 
 [MemoryPackable]
-public readonly partial struct PlayerCombinedState
+public readonly partial struct PlayerCombinedState : IEquatable<PlayerCombinedState>
 {
     public readonly PlayerPhysicalMode PhysicalMode;
     public readonly Vector2 MoveDir;
@@ -63,5 +63,14 @@ public readonly partial struct PlayerCombinedState
         IsRun = isRun;
         Interaction = interaction;
         HeldObjType = heldObjType;
+    }
+
+    public bool Equals(PlayerCombinedState other)
+    {
+        return PhysicalMode == other.PhysicalMode &&
+               MoveDir == other.MoveDir &&
+               IsRun == other.IsRun &&
+               Interaction == other.Interaction &&
+               HeldObjType == other.HeldObjType;
     }
 }

@@ -50,7 +50,14 @@ public class Shard
         {
             while (_jobs.TryDequeue(out var job))
             {
-                job();
+                try
+                {
+                    job();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
             }
 
             long now = TimeUtil.NowMs();
@@ -62,7 +69,14 @@ public class Shard
 
                 foreach (var room in _roomDict.Values)
                 {
-                    room.Tick(deltaTime);
+                    try
+                    {
+                        room.Tick(deltaTime);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 }
 
                 nextTickTime += TickMs;

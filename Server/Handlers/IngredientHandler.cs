@@ -11,12 +11,19 @@ public class IngredientHandler : PacketHandlerBase
     {
         var packet = DeSerialize<IngredientSpawnPacket>(package.Body);
         var room = session.Player.Room;
-        var ingredient = room.GenerateIngredient(packet.IngredientID, out var entityId);
-
-        packet.EntityId = entityId;
 
         room.PushJob(() =>
         {
+            if (!DB.Ingredients.ContainsKey(packet.IngredientID))
+            {
+                Console.WriteLine($"Room ID: {room.Id}\n Invalid IngredientId: {packet.IngredientID}");
+                return;
+            }
+
+            var ingredient = room.GenerateIngredient(packet.IngredientID, out var entityId);
+
+            packet.EntityId = entityId;
+
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }

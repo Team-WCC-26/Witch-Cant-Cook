@@ -36,15 +36,17 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
 
     public void Clear()
     {
-        foreach (var entity in _storage)
+        List<Entity> entities = new(_storage);
+
+        _storage.Clear();
+
+        foreach (var entity in entities)
         {
             if (entity.Parent == this)
             {
                 entity.Parent = null;
             }
         }
-
-        _storage.Clear();
     }
 
     public virtual bool AddPlayer(Player player)

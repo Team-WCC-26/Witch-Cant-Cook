@@ -11,10 +11,13 @@ public class EntityHandler : PacketHandlerBase
         var packet = DeSerialize<EntityDestroyPacket>(package.Body);
         var room = session.Player.Room;
 
-        room.DestroyIngredient(packet.EntityId);
-
         room.PushJob(() =>
         {
+            if (!room.Entities.TryGetValue(packet.EntityId, out var entity) || entity.IsDestroyed) return;
+            if (entity.Parent is Player holder && holder != session.Player) return;
+
+            room.DestroyIngredient(packet.EntityId);
+
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
@@ -39,6 +42,9 @@ public class EntityHandler : PacketHandlerBase
 
         room.PushJob(() =>
         {
+            if (!room.Entities.TryGetValue(packet.SubjectEntityId, out var subject) || subject.IsDestroyed) return;
+            if (subject.Parent is Player holder && holder != session.Player) return;
+
             room.InsertEntity(packet.TargetEntityId, packet.SubjectEntityId);
         });
     }

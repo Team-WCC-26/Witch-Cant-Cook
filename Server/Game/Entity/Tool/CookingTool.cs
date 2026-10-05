@@ -1,5 +1,4 @@
 ﻿using Protocol;
-using System.Runtime.Serialization.DataContracts;
 
 namespace Server;
 
@@ -80,6 +79,8 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
                 {
                     ingredient = item as Ingredient;
                 }
+
+                if (ingredient == null) continue;
 
                 maxHp = MathF.Max(maxHp, ingredient.Hp);
             }

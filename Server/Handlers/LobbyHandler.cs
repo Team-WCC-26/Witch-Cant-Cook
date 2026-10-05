@@ -12,7 +12,7 @@ public class LobbyHandler : PacketHandlerBase
 
         room.PushJob(() =>
         {
-            room.InteractDoor(packet.DoorId, packet.PlayerId);
+            room.InteractDoor(packet.DoorId, session.Player.PlayerId);
         });
     }
 
@@ -24,7 +24,7 @@ public class LobbyHandler : PacketHandlerBase
 
         room.PushJob(() =>
         {
-            room.StopInteractDoor(packet.DoorId, packet.PlayerId);
+            room.StopInteractDoor(packet.DoorId, session.Player.PlayerId);
         });
     }
 }

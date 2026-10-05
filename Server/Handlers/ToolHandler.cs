@@ -9,12 +9,17 @@ public class ToolHandler : PacketHandlerBase
     {
         var packet = DeSerialize<ToolSpawnPacket>(package.Body);
         var room = session.Player.Room;
-        var tool = room.GenerateTool(packet.ToolId, out var entityId);
-
-        packet.EntityId = entityId;
 
         room.PushJob(() =>
         {
+            if (room.GenerateTool(packet.ToolId, out var entityId) == null)
+            {
+                Console.WriteLine($"Room ID: {room.Id}\n Invalid ToolId: {packet.ToolId}");
+                return;
+            }
+
+            packet.EntityId = entityId;
+
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
@@ -24,12 +29,17 @@ public class ToolHandler : PacketHandlerBase
     {
         var packet = DeSerialize<ToolRegisterPacket>(package.Body);
         var room = session.Player.Room;
-        var tool = room.GenerateTool(packet.ToolId, out var entityId);
-
-        packet.EntityId = entityId;
 
         room.PushJob(() =>
         {
+            if (room.GenerateTool(packet.ToolId, out var entityId) == null)
+            {
+                Console.WriteLine($"Room ID: {room.Id}\n Invalid ToolId: {packet.ToolId}");
+                return;
+            }
+
+            packet.EntityId = entityId;
+
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
