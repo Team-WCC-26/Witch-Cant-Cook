@@ -26,6 +26,8 @@ public class IngredientActionVisual
 
 public class IngredientReaction : MonoBehaviour, IPoolable
 {
+    public event Action<IngredientAction> OnActionCompleted;
+
     [SerializeField] private CatchableObj catchable;
     public CatchableObj Catchable => catchable;
 
@@ -116,8 +118,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
                     break;
             }
 
-            completedActions |= action;
-            ApplyVisual(completedActions);
+            CompleteAction(action);
             return true;
         }
 
@@ -127,9 +128,17 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public void ApplyServerAction(IngredientAction action)
     {
         // Server visual
-        completedActions |= action;
         lastAction = action;
+        CompleteAction(action);
+    }
+
+    private void CompleteAction(IngredientAction action)
+    {
+        IngredientAction newlyCompleted = action & ~completedActions;
+        completedActions |= action;
         ApplyVisual(completedActions);
+        if (newlyCompleted != IngredientAction.None)
+            OnActionCompleted?.Invoke(newlyCompleted);
     }
     
     private bool IsActionBlocked(IngredientAction action)
