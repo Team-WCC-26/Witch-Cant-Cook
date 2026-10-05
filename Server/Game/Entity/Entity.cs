@@ -85,7 +85,7 @@ public abstract class Entity
 
         if (mask.HasFlag(DirtyMask.Parent))
         {
-            if (Parent == null || this is Player) return;
+            if (mask.HasFlag(DirtyMask.Destroy) || this is Player) return;
 
             if (Parent is Player player)
             {
@@ -100,7 +100,7 @@ public abstract class Entity
                 packet.ParentChangedEntities.Add(new()
                 {
                     EntityId = EntityId,
-                    ParentEntityId = Parent.EntityId
+                    ParentEntityId = (Parent == null) ? -1 : Parent.EntityId
                 });
             }
         }

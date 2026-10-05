@@ -11,8 +11,10 @@ public abstract class Tool() : Entity, IInteractable
     {
         ToolId = id;
 
-        ServerContext.Instance.DataBase.Tools.TryGetValue(id, out var stat);
-        Damage = stat.Damage;
+        if (ServerContext.Instance.DataBase.Tools.TryGetValue(id, out var stat))
+        {
+            Damage = stat.Damage;
+        }
     }
 
     public override void Destroy()
