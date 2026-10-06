@@ -12,6 +12,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     private bool pendingJumpRequested = false;
     private bool isJumpLocked = false;
     private bool hasJumpLockStarted = false;
+    private float nextJumpAllowedTime;
     public LocalPlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         inputFSM = new PlayerInputFSM(brain);
@@ -160,7 +161,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             return;
         }
 
-        pendingJumpRequested |= inputFSM.CurrentJumpRequested;
+        pendingJumpRequested |= inputFSM.CurrentJumpRequested ||
+            (brain.Input.RawIsJumpHeld && brain.ActionController.IsGroundedNow);
     }
 
     // Consumes jump once when physics is ready to apply it.
@@ -170,6 +172,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             physicalMode == PlayerPhysicalMode.Default
             && pendingJumpRequested
             && !isJumpLocked
+            && Time.time >= nextJumpAllowedTime
+            && !brain.ActionController.Movement.IsForcedMovementActive
             && brain.ActionController.CanRequestJump;
 
         if (jumpRequested)
@@ -204,6 +208,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         {
             isJumpLocked = false;
             hasJumpLockStarted = false;
+            // Repeat delay starts at landing, not at the previous takeoff.
+            nextJumpAllowedTime = Time.time + brain.JumpRepeatDelay;
         }
     }
     #endregion

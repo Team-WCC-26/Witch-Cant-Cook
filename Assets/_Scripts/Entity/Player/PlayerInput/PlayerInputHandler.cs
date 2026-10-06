@@ -19,6 +19,12 @@ public class PlayerInputHandler : MonoBehaviour
     public Vector2 RawMoveDir { get; private set; }
     public Vector2 RawLookDelta { get; private set; }
     public bool RawIsRunning { get; private set; } = false;
+    public bool RawIsJumpHeld { get; private set; }
+
+    private void OnDisable()
+    {
+        RawIsJumpHeld = false;
+    }
 
     #region Unity Callbacks
     private void LateUpdate()
@@ -75,6 +81,7 @@ public class PlayerInputHandler : MonoBehaviour
     // Sends one-shot jump input from the Input System.
     public void OnJump(InputAction.CallbackContext context)
     {
+        RawIsJumpHeld = context.ReadValueAsButton();
         if (!context.started) return;
         InputPerformed?.Invoke(KeyInput.Jump);
     }
