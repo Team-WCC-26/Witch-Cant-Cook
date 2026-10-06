@@ -13,8 +13,8 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
     public float VerticalSpeed { get; private set; }
 
-    private const float JumpStartMinSpeed = 1.5f;
-    private const float JumpStartMinRise = 0.15f;
+    private const float JumpStartMinSpeed = 1.0f;
+    private const float JumpStartMinRise = 0.2f;
     private const float JumpRearmMinFallSpeed = 1.5f;
     private const float JumpRearmMinDrop = 0.15f;
     private const float LandingConfirmTime = 0.08f;
