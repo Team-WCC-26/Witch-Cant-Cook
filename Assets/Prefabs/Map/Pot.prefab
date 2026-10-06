@@ -726,7 +726,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: -6.118, y: 0.602, z: -0.292}
-  m_LocalScale: {x: 5, y: 4, z: 5}
+  m_LocalScale: {x: 12.17, y: 10.92, z: 12.17}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 371744101699514061}
@@ -855,6 +855,10 @@ MonoBehaviour:
   parentRecipe: {fileID: 6200284094665000253}
   parentETC: {fileID: 7029398455341877822}
   gaugeUI: {fileID: 4913153951767390539}
+  cookCompleteEffectPrefab: {fileID: 0}
+  cookCompleteEffectOrigin: {fileID: 0}
+  cookCompleteEffectOffset: {x: 0, y: 0.15, z: 0}
+  cookCompleteEffectSpread: 2
   ejectPoint: {fileID: 6707980391395126494}
   ejectInterval: 0.8
   ejectBaseDirection: {x: -230, y: 210, z: -10}
@@ -1488,6 +1492,10 @@ PrefabInstance:
     - target: {fileID: 1573771098962916629, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
       propertyPath: m_Name
       value: SFT_Filler_Water
+      objectReference: {fileID: 0}
+    - target: {fileID: 1573771098962916629, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
+      propertyPath: m_Layer
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 1573771098962916629, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
       propertyPath: m_IsActive
