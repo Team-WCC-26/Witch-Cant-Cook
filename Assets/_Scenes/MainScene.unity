@@ -526,6 +526,7 @@ GameObject:
   - component: {fileID: 27837861}
   - component: {fileID: 27837863}
   - component: {fileID: 27837862}
+  - component: {fileID: 27837864}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (19)
   m_TagString: Untagged
@@ -542,11 +543,11 @@ Transform:
   m_GameObject: {fileID: 27837860}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.199998, y: 0, z: 32.42}
+  m_LocalPosition: {x: 4.199997, y: 0, z: 32.42}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &27837862
 MeshRenderer:
@@ -606,6 +607,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 27837860}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &27837864
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27837860}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &30508144
 GameObject:
   m_ObjectHideFlags: 0
@@ -1308,6 +1330,7 @@ GameObject:
   - component: {fileID: 89620076}
   - component: {fileID: 89620078}
   - component: {fileID: 89620077}
+  - component: {fileID: 89620079}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (31)
   m_TagString: Untagged
@@ -1324,11 +1347,11 @@ Transform:
   m_GameObject: {fileID: 89620075}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 14.959998, y: 0, z: 27.2}
+  m_LocalPosition: {x: 14.959999, y: 0, z: 27.2}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &89620077
 MeshRenderer:
@@ -1388,6 +1411,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 89620075}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &89620079
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 89620075}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00015258789}
 --- !u!1 &97353462
 GameObject:
   m_ObjectHideFlags: 0
@@ -2805,6 +2849,7 @@ GameObject:
   - component: {fileID: 186133058}
   - component: {fileID: 186133060}
   - component: {fileID: 186133059}
+  - component: {fileID: 186133061}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (12)
   m_TagString: Untagged
@@ -2821,11 +2866,11 @@ Transform:
   m_GameObject: {fileID: 186133057}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -6.6, y: 0, z: 16.72}
+  m_LocalPosition: {x: -6.5999985, y: 0, z: 16.72}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &186133059
 MeshRenderer:
@@ -2885,6 +2930,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 186133057}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &186133061
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 186133057}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509842, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &208820363
 GameObject:
   m_ObjectHideFlags: 0
@@ -3891,6 +3957,7 @@ GameObject:
   - component: {fileID: 256844689}
   - component: {fileID: 256844691}
   - component: {fileID: 256844690}
+  - component: {fileID: 256844692}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (34)
   m_TagString: Untagged
@@ -3911,7 +3978,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &256844690
 MeshRenderer:
@@ -3971,6 +4038,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 256844688}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &256844692
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 256844688}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00015258789}
 --- !u!1 &257012740
 GameObject:
   m_ObjectHideFlags: 0
@@ -5665,6 +5753,7 @@ GameObject:
   - component: {fileID: 353544595}
   - component: {fileID: 353544597}
   - component: {fileID: 353544596}
+  - component: {fileID: 353544598}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (14)
   m_TagString: Untagged
@@ -5681,11 +5770,11 @@ Transform:
   m_GameObject: {fileID: 353544594}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.2, y: 0, z: 16.72}
+  m_LocalPosition: {x: 4.200001, y: 0, z: 16.72}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &353544596
 MeshRenderer:
@@ -5745,6 +5834,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 353544594}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &353544598
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353544594}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509598, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &370735946
 GameObject:
   m_ObjectHideFlags: 0
@@ -5756,6 +5866,7 @@ GameObject:
   - component: {fileID: 370735947}
   - component: {fileID: 370735949}
   - component: {fileID: 370735948}
+  - component: {fileID: 370735950}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (33)
   m_TagString: Untagged
@@ -5776,7 +5887,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &370735948
 MeshRenderer:
@@ -5836,6 +5947,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 370735946}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &370735950
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 370735946}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00012207031}
 --- !u!1001 &389212290
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7127,6 +7259,7 @@ GameObject:
   - component: {fileID: 485600940}
   - component: {fileID: 485600942}
   - component: {fileID: 485600941}
+  - component: {fileID: 485600943}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (28)
   m_TagString: Untagged
@@ -7147,7 +7280,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &485600941
 MeshRenderer:
@@ -7207,6 +7340,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 485600939}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &485600943
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 485600939}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509598, y: 5.6828957, z: 0.00018310547}
 --- !u!1001 &496840661
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7329,6 +7483,7 @@ GameObject:
   - component: {fileID: 501251637}
   - component: {fileID: 501251639}
   - component: {fileID: 501251638}
+  - component: {fileID: 501251640}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (27)
   m_TagString: Untagged
@@ -7349,7 +7504,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &501251638
 MeshRenderer:
@@ -7409,6 +7564,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 501251636}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &501251640
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 501251636}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00018310547}
 --- !u!1 &513582778
 GameObject:
   m_ObjectHideFlags: 0
@@ -8157,6 +8333,7 @@ GameObject:
   - component: {fileID: 576833109}
   - component: {fileID: 576833111}
   - component: {fileID: 576833110}
+  - component: {fileID: 576833112}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (38)
   m_TagString: Untagged
@@ -8173,11 +8350,11 @@ Transform:
   m_GameObject: {fileID: 576833108}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.199998, y: 0, z: 37.66}
+  m_LocalPosition: {x: 4.199997, y: 0, z: 37.66}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &576833110
 MeshRenderer:
@@ -8237,6 +8414,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 576833108}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &576833112
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 576833108}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.000061035156}
 --- !u!1 &595472316
 GameObject:
   m_ObjectHideFlags: 0
@@ -11198,6 +11396,7 @@ GameObject:
   - component: {fileID: 825176301}
   - component: {fileID: 825176303}
   - component: {fileID: 825176302}
+  - component: {fileID: 825176304}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (25)
   m_TagString: Untagged
@@ -11214,11 +11413,11 @@ Transform:
   m_GameObject: {fileID: 825176300}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.2000022, y: 0, z: 21.96}
+  m_LocalPosition: {x: -1.2000008, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &825176302
 MeshRenderer:
@@ -11278,6 +11477,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 825176300}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &825176304
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 825176300}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509842, y: 5.6828957, z: -4.0379402e-14}
 --- !u!43 &826604601
 Mesh:
   m_ObjectHideFlags: 0
@@ -11467,6 +11687,7 @@ GameObject:
   - component: {fileID: 838462315}
   - component: {fileID: 838462317}
   - component: {fileID: 838462316}
+  - component: {fileID: 838462318}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (23)
   m_TagString: Untagged
@@ -11483,11 +11704,11 @@ Transform:
   m_GameObject: {fileID: 838462314}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 14.959998, y: 0, z: 32.42}
+  m_LocalPosition: {x: 14.959999, y: 0, z: 32.42}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &838462316
 MeshRenderer:
@@ -11547,6 +11768,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 838462314}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &838462318
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 838462314}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00012207031}
 --- !u!114 &838875652 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8977062203864416437, guid: 2867add58ac82f64596cc598915effdc, type: 3}
@@ -11911,6 +12153,7 @@ GameObject:
   - component: {fileID: 871670392}
   - component: {fileID: 871670394}
   - component: {fileID: 871670393}
+  - component: {fileID: 871670395}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (39)
   m_TagString: Untagged
@@ -11927,11 +12170,11 @@ Transform:
   m_GameObject: {fileID: 871670391}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9.5999975, y: 0, z: 37.66}
+  m_LocalPosition: {x: 9.599998, y: 0, z: 37.66}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &871670393
 MeshRenderer:
@@ -11991,6 +12234,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 871670391}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &871670395
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 871670391}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.000061035156}
 --- !u!1001 &883556861
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12128,6 +12392,7 @@ GameObject:
   - component: {fileID: 897327785}
   - component: {fileID: 897327787}
   - component: {fileID: 897327786}
+  - component: {fileID: 897327788}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (26)
   m_TagString: Untagged
@@ -12144,11 +12409,11 @@ Transform:
   m_GameObject: {fileID: 897327784}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 14.959998, y: 0, z: 37.69}
+  m_LocalPosition: {x: 14.959999, y: 0, z: 37.69}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &897327786
 MeshRenderer:
@@ -12208,6 +12473,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 897327784}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &897327788
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 897327784}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00018310547}
 --- !u!4 &904813783 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4089847840494037143, guid: bc4f2ec28bc655342a82271089a13d3f, type: 3}
@@ -12525,33 +12811,6 @@ Transform:
   m_Children:
   - {fileID: 1180723859}
   - {fileID: 1010354491}
-  - {fileID: 186133058}
-  - {fileID: 1061927137}
-  - {fileID: 825176301}
-  - {fileID: 2022299569}
-  - {fileID: 1422082763}
-  - {fileID: 1379175730}
-  - {fileID: 970399398}
-  - {fileID: 1749314125}
-  - {fileID: 27837861}
-  - {fileID: 576833109}
-  - {fileID: 1579649009}
-  - {fileID: 1567498524}
-  - {fileID: 871670392}
-  - {fileID: 1614617019}
-  - {fileID: 838462315}
-  - {fileID: 897327785}
-  - {fileID: 370735947}
-  - {fileID: 501251637}
-  - {fileID: 1301244748}
-  - {fileID: 485600940}
-  - {fileID: 89620076}
-  - {fileID: 256844689}
-  - {fileID: 1151593974}
-  - {fileID: 1122168911}
-  - {fileID: 353544595}
-  - {fileID: 1595975685}
-  - {fileID: 1613172857}
   - {fileID: 1779155260}
   - {fileID: 1450669754}
   m_Father: {fileID: 1993472484}
@@ -13150,6 +13409,7 @@ GameObject:
   - component: {fileID: 970399398}
   - component: {fileID: 970399400}
   - component: {fileID: 970399399}
+  - component: {fileID: 970399401}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (32)
   m_TagString: Untagged
@@ -13166,11 +13426,11 @@ Transform:
   m_GameObject: {fileID: 970399397}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 20.309, y: 0, z: 21.96}
+  m_LocalPosition: {x: 20.308998, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &970399399
 MeshRenderer:
@@ -13230,6 +13490,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 970399397}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &970399401
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 970399397}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: -4.0379402e-14}
 --- !u!1 &975634608
 GameObject:
   m_ObjectHideFlags: 0
@@ -14884,6 +15165,7 @@ GameObject:
   - component: {fileID: 1061927137}
   - component: {fileID: 1061927139}
   - component: {fileID: 1061927138}
+  - component: {fileID: 1061927140}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (15)
   m_TagString: Untagged
@@ -14900,11 +15182,11 @@ Transform:
   m_GameObject: {fileID: 1061927136}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -6.594003, y: 0, z: 21.96}
+  m_LocalPosition: {x: -6.594002, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1061927138
 MeshRenderer:
@@ -14964,6 +15246,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1061927136}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1061927140
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1061927136}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: -4.0379402e-14}
 --- !u!1001 &1063570370
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15845,6 +16148,7 @@ GameObject:
   - component: {fileID: 1122168911}
   - component: {fileID: 1122168913}
   - component: {fileID: 1122168912}
+  - component: {fileID: 1122168914}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (13)
   m_TagString: Untagged
@@ -15861,11 +16165,11 @@ Transform:
   m_GameObject: {fileID: 1122168910}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.2, y: 0, z: 16.72}
+  m_LocalPosition: {x: -1.2000008, y: 0, z: 16.72}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1122168912
 MeshRenderer:
@@ -15925,6 +16229,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1122168910}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1122168914
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1122168910}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509842, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &1134698111
 GameObject:
   m_ObjectHideFlags: 0
@@ -16599,6 +16924,7 @@ GameObject:
   - component: {fileID: 1151593974}
   - component: {fileID: 1151593976}
   - component: {fileID: 1151593975}
+  - component: {fileID: 1151593977}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (37)
   m_TagString: Untagged
@@ -16619,7 +16945,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1151593975
 MeshRenderer:
@@ -16679,6 +17005,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1151593973}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1151593977
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1151593973}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509598, y: 5.6828957, z: 0.00015258789}
 --- !u!1 &1166277882
 GameObject:
   m_ObjectHideFlags: 0
@@ -17163,6 +17510,33 @@ Transform:
   - {fileID: 943221177}
   - {fileID: 223038428}
   - {fileID: 1661791100}
+  - {fileID: 186133058}
+  - {fileID: 1061927137}
+  - {fileID: 825176301}
+  - {fileID: 2022299569}
+  - {fileID: 1422082763}
+  - {fileID: 1379175730}
+  - {fileID: 970399398}
+  - {fileID: 1749314125}
+  - {fileID: 27837861}
+  - {fileID: 576833109}
+  - {fileID: 1579649009}
+  - {fileID: 1567498524}
+  - {fileID: 871670392}
+  - {fileID: 1614617019}
+  - {fileID: 838462315}
+  - {fileID: 897327785}
+  - {fileID: 370735947}
+  - {fileID: 501251637}
+  - {fileID: 1301244748}
+  - {fileID: 485600940}
+  - {fileID: 89620076}
+  - {fileID: 256844689}
+  - {fileID: 1151593974}
+  - {fileID: 1122168911}
+  - {fileID: 353544595}
+  - {fileID: 1595975685}
+  - {fileID: 1613172857}
   m_Father: {fileID: 923341522}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1180901109
@@ -18838,6 +19212,7 @@ GameObject:
   - component: {fileID: 1301244748}
   - component: {fileID: 1301244750}
   - component: {fileID: 1301244749}
+  - component: {fileID: 1301244751}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (36)
   m_TagString: Untagged
@@ -18858,7 +19233,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1301244749
 MeshRenderer:
@@ -18918,6 +19293,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1301244747}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1301244751
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1301244747}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509598, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &1307474930
 GameObject:
   m_ObjectHideFlags: 0
@@ -20491,6 +20887,7 @@ GameObject:
   - component: {fileID: 1379175730}
   - component: {fileID: 1379175732}
   - component: {fileID: 1379175731}
+  - component: {fileID: 1379175733}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (22)
   m_TagString: Untagged
@@ -20507,11 +20904,11 @@ Transform:
   m_GameObject: {fileID: 1379175729}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 14.96, y: 0, z: 21.96}
+  m_LocalPosition: {x: 14.959999, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1379175731
 MeshRenderer:
@@ -20571,6 +20968,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1379175729}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1379175733
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1379175729}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: -4.0379402e-14}
 --- !u!1 &1379710186
 GameObject:
   m_ObjectHideFlags: 0
@@ -21370,6 +21788,7 @@ GameObject:
   - component: {fileID: 1422082763}
   - component: {fileID: 1422082765}
   - component: {fileID: 1422082764}
+  - component: {fileID: 1422082766}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (18)
   m_TagString: Untagged
@@ -21386,11 +21805,11 @@ Transform:
   m_GameObject: {fileID: 1422082762}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9.5999975, y: 0, z: 21.96}
+  m_LocalPosition: {x: 9.599998, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1422082764
 MeshRenderer:
@@ -21450,6 +21869,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1422082762}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1422082766
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1422082762}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: -4.0379402e-14}
 --- !u!1 &1450669753
 GameObject:
   m_ObjectHideFlags: 0
@@ -22467,6 +22907,7 @@ GameObject:
   - component: {fileID: 1567498524}
   - component: {fileID: 1567498526}
   - component: {fileID: 1567498525}
+  - component: {fileID: 1567498527}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (20)
   m_TagString: Untagged
@@ -22483,11 +22924,11 @@ Transform:
   m_GameObject: {fileID: 1567498523}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9.5999975, y: 0, z: 32.42}
+  m_LocalPosition: {x: 9.599998, y: 0, z: 32.42}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1567498525
 MeshRenderer:
@@ -22547,6 +22988,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1567498523}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1567498527
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1567498523}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &1568695239
 GameObject:
   m_ObjectHideFlags: 0
@@ -22782,6 +23244,7 @@ GameObject:
   - component: {fileID: 1579649009}
   - component: {fileID: 1579649011}
   - component: {fileID: 1579649010}
+  - component: {fileID: 1579649012}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (29)
   m_TagString: Untagged
@@ -22798,11 +23261,11 @@ Transform:
   m_GameObject: {fileID: 1579649008}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.199998, y: 0, z: 27.2}
+  m_LocalPosition: {x: 4.199997, y: 0, z: 27.2}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1579649010
 MeshRenderer:
@@ -22862,6 +23325,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1579649008}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1579649012
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1579649008}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00015258789}
 --- !u!1 &1584980529
 GameObject:
   m_ObjectHideFlags: 0
@@ -22904,6 +23388,7 @@ GameObject:
   - component: {fileID: 1595975685}
   - component: {fileID: 1595975687}
   - component: {fileID: 1595975686}
+  - component: {fileID: 1595975688}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (21)
   m_TagString: Untagged
@@ -22924,7 +23409,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1595975686
 MeshRenderer:
@@ -22984,6 +23469,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1595975684}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1595975688
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1595975684}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &1596440319
 GameObject:
   m_ObjectHideFlags: 0
@@ -23061,6 +23567,7 @@ GameObject:
   - component: {fileID: 1613172857}
   - component: {fileID: 1613172859}
   - component: {fileID: 1613172858}
+  - component: {fileID: 1613172860}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (24)
   m_TagString: Untagged
@@ -23081,7 +23588,7 @@ Transform:
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1613172858
 MeshRenderer:
@@ -23141,6 +23648,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1613172856}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1613172860
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1613172856}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00012207031}
 --- !u!1 &1614617018
 GameObject:
   m_ObjectHideFlags: 0
@@ -23152,6 +23680,7 @@ GameObject:
   - component: {fileID: 1614617019}
   - component: {fileID: 1614617021}
   - component: {fileID: 1614617020}
+  - component: {fileID: 1614617022}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (30)
   m_TagString: Untagged
@@ -23168,11 +23697,11 @@ Transform:
   m_GameObject: {fileID: 1614617018}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9.5999975, y: 0, z: 27.2}
+  m_LocalPosition: {x: 9.599998, y: 0, z: 27.2}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1614617020
 MeshRenderer:
@@ -23232,6 +23761,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1614617018}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1614617022
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1614617018}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: 0.00015258789}
 --- !u!1 &1626915675
 GameObject:
   m_ObjectHideFlags: 0
@@ -24985,6 +25535,7 @@ GameObject:
   - component: {fileID: 1749314125}
   - component: {fileID: 1749314127}
   - component: {fileID: 1749314126}
+  - component: {fileID: 1749314128}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (35)
   m_TagString: Untagged
@@ -25001,11 +25552,11 @@ Transform:
   m_GameObject: {fileID: 1749314124}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 25.681002, y: 0, z: 21.96}
+  m_LocalPosition: {x: 25.681, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1749314126
 MeshRenderer:
@@ -25065,6 +25616,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749314124}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &1749314128
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749314124}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.509598, y: 5.6828957, z: -4.0379402e-14}
 --- !u!1 &1753348825 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f5726f96f08f5f41a7408a8f314de55, type: 3}
@@ -28621,6 +29193,7 @@ GameObject:
   - component: {fileID: 2022299569}
   - component: {fileID: 2022299571}
   - component: {fileID: 2022299570}
+  - component: {fileID: 2022299572}
   m_Layer: 8
   m_Name: BD_AlchemistWS.001 (17)
   m_TagString: Untagged
@@ -28637,11 +29210,11 @@ Transform:
   m_GameObject: {fileID: 2022299568}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000037748947, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.199998, y: 0, z: 21.96}
+  m_LocalPosition: {x: 4.199997, y: 0, z: 21.96}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 923341522}
+  m_Father: {fileID: 1180723859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &2022299570
 MeshRenderer:
@@ -28701,6 +29274,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2022299568}
   m_Mesh: {fileID: 1047965117597826415, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
+--- !u!65 &2022299572
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022299568}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 557.0127, y: 11.398451, z: 544.24866}
+  m_Center: {x: 7.510086, y: 5.6828957, z: -4.0379402e-14}
 --- !u!1 &2028849227
 GameObject:
   m_ObjectHideFlags: 0
