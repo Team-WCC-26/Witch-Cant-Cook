@@ -15,9 +15,12 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
     private const float JumpStartMinSpeed = 1.5f;
     private const float JumpStartMinRise = 0.15f;
+    private const float JumpRearmMinFallSpeed = 1.5f;
+    private const float JumpRearmMinDrop = 0.15f;
     private const float LandingConfirmTime = 0.08f;
     private bool hasJumpBaseline;
     private float riseStartHeight;
+    private float jumpPeakHeight;
     private bool jumpStartTriggered;
     private bool hasLeftGround;
     private float groundedTime;
@@ -74,6 +77,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         {
             hasJumpBaseline = true;
             riseStartHeight = height;
+            jumpPeakHeight = height;
             jumpStartTriggered = false;
             hasLeftGround = false;
             groundedTime = 0f;
@@ -81,6 +85,18 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         }
 
         if (!isGrounded) hasLeftGround = true;
+
+        if (jumpStartTriggered)
+        {
+            jumpPeakHeight = Mathf.Max(jumpPeakHeight, height);
+            // A clear descent rearms remote jumps even when interpolation skips landing.
+            if (VerticalSpeed <= -JumpRearmMinFallSpeed &&
+                jumpPeakHeight - height >= JumpRearmMinDrop)
+            {
+                jumpStartTriggered = false;
+                riseStartHeight = height;
+            }
+        }
 
         if (hasLeftGround && isGrounded && VerticalSpeed <= 0f)
         {
@@ -103,6 +119,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
             height - riseStartHeight >= JumpStartMinRise)
         {
             jumpStartTriggered = true;
+            jumpPeakHeight = height;
             brain.ActionController.PlayRemoteJumpStart();
         }
     }
