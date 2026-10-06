@@ -68,6 +68,13 @@ public class PlayerActionController
     {
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
+            if (movement.IsForcedMovementActive)
+            {
+                movement.UpdateForcedMovementSpeed();
+                movement.ApplyFallGravity();
+                return;
+            }
+
             // 입력이 없어도 Move(0, ...)를 호출해 마찰(FrictionMultiplier) 기반 감속을 타게 한다.
             // Stop()으로 바로 가면 즉시 0으로 스냅되어 빙판 등의 미끄러짐 효과가 무시된다.
             movement.Move(state.MoveDir, state.IsRun);
