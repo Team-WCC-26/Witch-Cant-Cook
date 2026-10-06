@@ -115,8 +115,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         else
             riseStartHeight = Mathf.Min(riseStartHeight, previousHeight);
 
-        if (!jumpStartTriggered && VerticalSpeed >= JumpStartMinSpeed &&
-            height - riseStartHeight >= JumpStartMinRise)
+        if (!jumpStartTriggered && VerticalSpeed >= 0.5f)
         {
             jumpStartTriggered = true;
             jumpPeakHeight = height;
