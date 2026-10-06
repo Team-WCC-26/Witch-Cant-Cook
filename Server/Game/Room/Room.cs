@@ -340,9 +340,9 @@ public class Room
     {
         if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        if (entity is CookingTool cookingTool) // 프라이팬 예외 필요 시 추가
+        if (entity is Oven || entity is Pot)
         {
-            return cookingTool.AddPlayer(player);
+            return (entity as ContainerTool).AddPlayer(player);
         }
 
         return false;
