@@ -38,7 +38,7 @@ public class PlayerActionController
         // Update default locomotion and airborne animation parameters.
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
-            animController.UpdateTick(state, movement.IsGroundedNow, IsFalling());
+            animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         }
 
         // Apply physical mode changes once per transition.
@@ -127,7 +127,7 @@ public class PlayerActionController
     {
         if (state.PhysicalMode != PlayerPhysicalMode.Default) return;
 
-        animController.UpdateTick(state, movement.IsGroundedNow, IsFalling());
+        animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         animController.PlayPrimaryAction();
     }
 
@@ -173,12 +173,20 @@ public class PlayerActionController
         animController.PlayJumpAnim();
     }
 
+    private bool IsGroundedForAnimation()
+    {
+        return brain.StateResolver is RemotePlayerStateResolver remote
+            ? remote.IsGroundedForAnimation
+            : movement.IsGroundedNow;
+    }
+
     private bool IsFalling()
     {
         if (brain.Col == null) return false;
 
         if (brain.StateResolver is RemotePlayerStateResolver remote)
         {
+            if (remote.IsGroundedForAnimation) return false;
             // Ignore tiny interpolation corrections while the remote player is stationary.
             if (remote.VerticalSpeed >= -0.01f) return false;
         }

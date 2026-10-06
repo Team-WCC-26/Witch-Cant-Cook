@@ -11,7 +11,6 @@ public class PlayerAnimController
     private readonly int heldCategoryHash = Animator.StringToHash("HeldCategory");
     private readonly int primaryActionHash = Animator.StringToHash("Primary Action");
     private readonly int jumpHash = Animator.StringToHash("Jump");
-    private readonly int remoteJumpStartHash = Animator.StringToHash("RemoteJumpStart");
     
     private readonly int groundedHash = Animator.StringToHash("IsGrounded");
     private readonly int fallingHash = Animator.StringToHash("IsFalling");
@@ -74,7 +73,8 @@ public class PlayerAnimController
 
     public void PlayRemoteJumpStart()
     {
-        animator.SetTrigger(remoteJumpStartHash);
+        // Landing can win over a jump trigger in the same Animator update.
+        animator.CrossFadeInFixedTime(jumpStartHash, 0.05f, 0, 0f);
     }
 
     public void CancelAction()
