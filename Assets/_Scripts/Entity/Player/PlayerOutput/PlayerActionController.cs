@@ -131,6 +131,12 @@ public class PlayerActionController
         animController.PlayPrimaryAction();
     }
 
+    public void PlayRemoteJumpStart()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        animController.PlayRemoteJumpStart();
+    }
+
     private void UpdateActionState()
     {
         bool isPlaying = animController.IsPrimaryActionPlaying();

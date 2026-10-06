@@ -11,6 +11,7 @@ public class PlayerAnimController
     private readonly int heldCategoryHash = Animator.StringToHash("HeldCategory");
     private readonly int primaryActionHash = Animator.StringToHash("Primary Action");
     private readonly int jumpHash = Animator.StringToHash("Jump");
+    private readonly int remoteJumpStartHash = Animator.StringToHash("RemoteJumpStart");
     
     private readonly int groundedHash = Animator.StringToHash("IsGrounded");
     private readonly int fallingHash = Animator.StringToHash("IsFalling");
@@ -69,6 +70,11 @@ public class PlayerAnimController
     public void PlayJumpAnim()
     {
         animator.SetTrigger(jumpHash);
+    }
+
+    public void PlayRemoteJumpStart()
+    {
+        animator.SetTrigger(remoteJumpStartHash);
     }
 
     public void CancelAction()

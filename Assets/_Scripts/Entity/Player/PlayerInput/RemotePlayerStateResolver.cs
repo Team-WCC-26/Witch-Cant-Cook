@@ -13,6 +13,15 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
     public float VerticalSpeed { get; private set; }
 
+    private const float JumpStartMinSpeed = 1.5f;
+    private const float JumpStartMinRise = 0.15f;
+    private const float LandingConfirmTime = 0.08f;
+    private bool hasJumpBaseline;
+    private float riseStartHeight;
+    private bool jumpStartTriggered;
+    private bool hasLeftGround;
+    private float groundedTime;
+
     public RemotePlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         targetPosition = brain.transform.position;
@@ -52,6 +61,50 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
             targetRotation,
             Time.deltaTime * rotationLerpSpeed
         );
+
+        UpdateRemoteJump(previousHeight);
+    }
+
+    private void UpdateRemoteJump(float previousHeight)
+    {
+        float height = brain.transform.position.y;
+        bool isGrounded = brain.ActionController.IsGroundedNow;
+
+        if (!hasJumpBaseline || CurrentState.PhysicalMode != PlayerPhysicalMode.Default)
+        {
+            hasJumpBaseline = true;
+            riseStartHeight = height;
+            jumpStartTriggered = false;
+            hasLeftGround = false;
+            groundedTime = 0f;
+            return;
+        }
+
+        if (!isGrounded) hasLeftGround = true;
+
+        if (hasLeftGround && isGrounded && VerticalSpeed <= 0f)
+        {
+            groundedTime += Time.deltaTime;
+            if (groundedTime >= LandingConfirmTime)
+            {
+                jumpStartTriggered = false;
+                hasLeftGround = false;
+                riseStartHeight = height;
+            }
+        }
+        else groundedTime = 0f;
+
+        if (VerticalSpeed <= 0f)
+            riseStartHeight = height;
+        else
+            riseStartHeight = Mathf.Min(riseStartHeight, previousHeight);
+
+        if (!jumpStartTriggered && VerticalSpeed >= JumpStartMinSpeed &&
+            height - riseStartHeight >= JumpStartMinRise)
+        {
+            jumpStartTriggered = true;
+            brain.ActionController.PlayRemoteJumpStart();
+        }
     }
 
     public override void FixedTick()
