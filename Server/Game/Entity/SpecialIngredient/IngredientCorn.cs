@@ -1,4 +1,5 @@
 ﻿using Protocol;
+using System.Numerics;
 
 namespace Server;
 
@@ -72,10 +73,18 @@ public sealed class IngredientCorn : IngredientBehaviour, IPickupHandler, IDropH
 
         _triggered = true;
 
+        Vector3? explosionOrigin = null;
+
+        if (Ingredient.Parent is Player holder)
+        {
+            explosionOrigin = holder.Position;
+        }
+
         Broadcast(new IngredientCornPacket
         {
             EntityId = Ingredient.EntityId,
-            ExplosionSeed = EffectSeed()
+            ExplosionSeed = EffectSeed(),
+            ExplosionOrigin = explosionOrigin
         });
 
         Ingredient.Destroy();

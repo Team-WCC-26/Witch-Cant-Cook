@@ -30,6 +30,10 @@ public class Room
     public TimerManager TimerManager => _timerManager;
     private TimerManager _timerManager = new();
 
+    private const long StagePlayTimeMs = 4 * 60 * 1000;
+
+    private TimerHandle? _stageTimer;
+
     private IngredientSpawner _ingredientSpawner;
     private DishManager _dishManager;
 
@@ -59,6 +63,13 @@ public class Room
 
     public void Start()
     {
+        if (_stageTimer != null)
+        {
+            _timerManager.Cancel(_stageTimer.Value);
+        }
+
+        _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.OnStageTimeout());
+
         _dishManager.Start();
         _ingredientSpawner.Start();
     }
@@ -68,6 +79,7 @@ public class Room
         _dishManager.Stop();
         _ingredientSpawner.Stop();
         _timerManager.Clear();
+        _stageTimer = null;
 
         List<Entity> entities = new(_entities.Values);
         foreach (var entity in entities)
@@ -328,9 +340,9 @@ public class Room
     {
         if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        if (entity is CookingTool cookingTool) // 프라이팬 예외 필요 시 추가
+        if (entity is Oven || entity is Pot)
         {
-            return cookingTool.AddPlayer(player);
+            return (entity as ContainerTool).AddPlayer(player);
         }
 
         return false;
@@ -441,6 +453,15 @@ public class Room
         {
             Start();
         }
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
+    }
+
+    private void OnStageTimeout()
+    {
+        Stop();
+
+        StageStopPacket packet = new();
 
         BroadCast(PacketSerializer.Serialize(packet, true));
     }
