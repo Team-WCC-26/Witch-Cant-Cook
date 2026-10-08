@@ -13,10 +13,19 @@ public class RecipeScrollView : MonoBehaviour
     public void Configure(RectTransform root, RecipeOrderCardUI[] views) { cardRoot = root; cards = views; }
     private void Awake()
     {
+        ResolveCards();
         ConfigureLayout();
         // Another object's OnEnable may already have bound an order before our Awake.
         foreach (RecipeOrderCardUI card in cards)
             if (card != null && card.OrderId < 0) card.Clear();
+    }
+    private void ResolveCards()
+    {
+        // Prefab replacement can leave the scene's card references empty.
+        // Preserve explicit bindings; recover existing cards even when hidden.
+        if (cardRoot == null || Array.Exists(cards, card => card != null)) return;
+
+        cards = cardRoot.GetComponentsInChildren<RecipeOrderCardUI>(true);
     }
     private void ConfigureLayout()
     {
@@ -34,6 +43,7 @@ public class RecipeScrollView : MonoBehaviour
     }
     public void Show(IReadOnlyList<DishOrder> orders, double now, Func<int, RecipeCardData> resolveRecipe = null)
     {
+        ResolveCards();
         for (int i = 0; i < cards.Length; i++)
         {
             RecipeOrderCardUI card = cards[i];
@@ -53,6 +63,8 @@ public class RecipeScrollView : MonoBehaviour
     }
     public void Clear()
     {
+        // DishOrderManager.OnEnable can run before this view's Awake.
+        ResolveCards();
         foreach (RecipeOrderCardUI card in cards) if (card != null) card.Clear();
     }
 

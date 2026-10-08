@@ -57,6 +57,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
     [field: SerializeField, Min(1f)] public float FallMultiplier { get; private set; } = 2.5f;
     [field: SerializeField, Min(0f)] public float CoyoteTime { get; private set; } = 0.1f;
+    [field: SerializeField, Min(0f)] public float JumpRepeatDelay { get; private set; } = 0.2f;
 
     [field: Header("Jump Validation")]
     [field: SerializeField] public float GroundCheckDistance { get; private set; } = 0.08f;

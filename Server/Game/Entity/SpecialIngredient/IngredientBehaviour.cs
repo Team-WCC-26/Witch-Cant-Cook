@@ -4,6 +4,8 @@ namespace Server;
 
 public abstract class IngredientBehaviour
 {
+    private const long _distanceTimeoutMs = 500;
+
     public bool Enabled
     {
         get => _enabled;
@@ -32,6 +34,7 @@ public abstract class IngredientBehaviour
     private bool _enabled = true;
     private readonly Dictionary<string, float> _distanceResults = new();
     private Action<IReadOnlyDictionary<string, float>>? _distanceCallback;
+    private TimerHandle _distanceTimer;
 
     public void Init(Ingredient ingredient, TimerManager timerManager)
     {
@@ -90,10 +93,13 @@ public abstract class IngredientBehaviour
     }
 
     // 서버는 재료의 정확한 위치를 모르므로 각 플레이어가 측정한 재료와의 거리를 요청-응답으로 수집한다
+    // 응답하지 않는 플레이어가 있어도 진행할 수 있도록 타임아웃을 둔다
     protected void RequestDistances(Action<IReadOnlyDictionary<string, float>> onCollected)
     {
         CancelDistanceQuery();
         _distanceCallback = onCollected;
+
+        _distanceTimer = Schedule(_distanceTimeoutMs, this, static behaviour => behaviour.OnDistanceTimeout());
 
         byte[] body = Serialize(new IngredientDistanceRequestPacket
         {
@@ -108,6 +114,7 @@ public abstract class IngredientBehaviour
 
     protected void CancelDistanceQuery()
     {
+        Cancel(ref _distanceTimer);
         _distanceCallback = null;
         _distanceResults.Clear();
     }
@@ -123,12 +130,25 @@ public abstract class IngredientBehaviour
             if (!_distanceResults.ContainsKey(roomPlayer.PlayerId)) return;
         }
 
+        CompleteDistanceQuery();
+    }
+
+    // 수집된 거리로 콜백을 실행한다. 응답이 없는 플레이어는 결과에서 제외된다
+    private void CompleteDistanceQuery()
+    {
+        if (_distanceCallback == null) return;
+
         Action<IReadOnlyDictionary<string, float>> callback = _distanceCallback;
         Dictionary<string, float> results = new(_distanceResults);
 
         CancelDistanceQuery();
 
         callback(results);
+    }
+
+    private void OnDistanceTimeout()
+    {
+        CompleteDistanceQuery();
     }
 
     public virtual void OnEnable() { }

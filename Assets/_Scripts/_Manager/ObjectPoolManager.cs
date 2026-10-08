@@ -13,6 +13,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 {
     public Dictionary<long, Object> activeObjDict = new();
     private readonly Dictionary<string, Queue<GameObject>> _poolDic = new();
+    private readonly Dictionary<string, Vector3> _prefabLocalScales = new();
 
     // 풀 관리용 루트 트랜스폼
     private Transform _poolRoot;
@@ -43,6 +44,8 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         if (go != null)
         {
+            RestorePrefabScale(go, key);
+
             if (spawnPoint != null)
             {
                 go.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -83,6 +86,8 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
             go.SetActive(false);
             go.transform.SetParent(_poolRoot);
+            // Restore after reparenting, which otherwise preserves the pot's world scale.
+            RestorePrefabScale(go, key);
             queue.Enqueue(go);
         }
         else
@@ -114,11 +119,19 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         InitRoot(); // 생성할 때 루트가 있는지 확인
 
+        _prefabLocalScales[key] = prefab.transform.localScale;
+
         // 최초 생성 시점에도 루트 오브젝트 밑에 배치되도록 설정
         GameObject go = UnityEngine.Object.Instantiate(prefab, _poolRoot);
         go.name = key; // 이름을 키값으로 강제 고정
         ResetPoolable(go);
         return go;
+    }
+
+    private void RestorePrefabScale(GameObject go, string key)
+    {
+        if (_prefabLocalScales.TryGetValue(key, out Vector3 scale))
+            go.transform.localScale = scale;
     }
 
     /// <summary>

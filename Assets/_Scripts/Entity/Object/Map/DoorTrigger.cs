@@ -17,13 +17,15 @@ public class DoorTrigger : MonoBehaviour
         if (player == null || player.PlayerId != PlayerSpawnManager.Instance.MyID)
             return;
 
-        InteractDoorPacket packet = new()
-        {
-            DoorId = DoorId.Kitchen,
-            PlayerId = PlayerSpawnManager.Instance.MyID
-        };
-        var data = PacketSerializer.Serialize(packet);
-        _ = ServerManager.Instance.SendData(data);
+        SendDoorPacket(PlayerSpawnManager.Instance.MyID);
+
+        //InteractDoorPacket packet = new()
+        //{
+        //    DoorId = DoorId.Kitchen,
+        //    PlayerId = PlayerSpawnManager.Instance.MyID
+        //};
+        //var data = PacketSerializer.Serialize(packet);
+        //_ = ServerManager.Instance.SendData(data);
         
         Debug.Log($"DoorTrigger: Player entered trigger for door {PlayerSpawnManager.Instance.MyID} ismine? {PlayerSpawnManager.Instance.IsMine(PlayerSpawnManager.Instance.MyID)}");
     }
@@ -40,5 +42,17 @@ public class DoorTrigger : MonoBehaviour
 
         var data = PacketSerializer.Serialize(packet);
         _ = ServerManager.Instance.SendData(data);
+    }
+
+    public void SendDoorPacket(string id)
+    {
+        InteractDoorPacket packet = new()
+        {
+            DoorId = DoorId.Kitchen,
+            PlayerId = id
+        };
+        var data = PacketSerializer.Serialize(packet);
+        _ = ServerManager.Instance.SendData(data);
+
     }
 }

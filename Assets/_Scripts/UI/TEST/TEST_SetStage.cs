@@ -19,6 +19,8 @@ public class TEST_SetStage : MonoBehaviour
     private TMP_Text remainingTimeText;
     private double stageEndTime;
     private bool isTimerRunning;
+    private int currentStageNumber = 1;
+    private bool testStageStartRequested;
     private GameObject stageInputPanel;
     private TMP_InputField stageInput;
     private TMP_Text validationText;
@@ -57,6 +59,11 @@ public class TEST_SetStage : MonoBehaviour
         {
             OpenInputPanel();
         }
+        if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame &&
+            !stageInputPanel.activeSelf)
+        {
+            RequestTestStageStart();
+        }
     }
     private void OnDestroy()
     {
@@ -66,6 +73,7 @@ public class TEST_SetStage : MonoBehaviour
         if (ServerManager.Instance != null)
         {
             ServerManager.Instance.UnRegisterHandler(PacketId.S_StageSet);
+            ServerManager.Instance.UnRegisterHandler(PacketId.S_StageStart);
         }
     }
 
@@ -79,6 +87,57 @@ public class TEST_SetStage : MonoBehaviour
             UpdateCurrentStage(packet.StageNum);
             RestartTimer();
         });
+        ServerManager.Instance.RegisterHandler(PacketId.S_StageStart, data =>
+        {
+            StageStartPacket packet = PacketSerializer.Deserialize<StageStartPacket>(data);
+            UpdateCurrentStage(packet.StageNum);
+            testStageStartRequested = true;
+
+            // 테스트용 로컬 알림: 기존 문 처리와 주방 도구 등록 이벤트를 함께 실행합니다.
+            // 서버의 문 상태를 변경하는 패킷은 아닙니다.
+            ServerManager.Instance.DispatchPacket(PacketId.S_OpenDoor,
+                MemoryPack.MemoryPackSerializer.Serialize(new OpenDoorPacket { DoorId = DoorId.Kitchen }));
+            RestartTimer();
+            GameObject.Find("KitchenDoor")?.SetActive(false);
+        });
+    }
+
+    private async void RequestTestStageStart()
+    {
+        if (testStageStartRequested) return;
+
+        var server = ServerManager.Instance;
+        var players = PlayerSpawnManager.Instance;
+        if (server == null || players == null || string.IsNullOrEmpty(players.MyID))
+        {
+            Debug.LogWarning("방에 입장한 뒤 Tab을 눌러주세요.");
+            return;
+        }
+
+        GameObject kitchenDoor = GameObject.Find("KitchenDoor");
+        if (kitchenDoor == null)
+        {
+            Debug.LogWarning("테스트용 KitchenDoor를 찾을 수 없습니다.");
+            return;
+        }
+
+        testStageStartRequested = true;
+        try
+        {
+            var sendTask = server.SendData(PacketSerializer.Serialize(new StageStartPacket
+            {
+                StageNum = currentStageNumber
+            }));
+            // 요청과 동시에 문과 자식 콜라이더를 비활성화해 통행할 수 있게 합니다.
+            kitchenDoor.SetActive(false);
+            await sendTask;
+        }
+        catch (System.Exception exception)
+        {
+            testStageStartRequested = false;
+            if (kitchenDoor != null) kitchenDoor.SetActive(true);
+            Debug.LogException(exception);
+        }
     }
 
     private void OnDoorOpened(DoorId doorId)
@@ -210,6 +269,7 @@ public class TEST_SetStage : MonoBehaviour
 
     private void UpdateCurrentStage(int stageNumber)
     {
+        currentStageNumber = stageNumber;
         if (currentStageText != null) currentStageText.text = $"현재 스테이지: {stageNumber}";
     }
 

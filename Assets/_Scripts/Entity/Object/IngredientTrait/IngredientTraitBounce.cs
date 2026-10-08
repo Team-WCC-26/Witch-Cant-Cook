@@ -20,6 +20,8 @@ public class IngredientTraitBounce : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+        if (!isActiveAndEnabled) return;
+
         Rigidbody otherRb = collision.rigidbody;
 
         if (otherRb == null || otherRb == rb || otherRb.isKinematic)
@@ -38,12 +40,4 @@ public class IngredientTraitBounce : MonoBehaviour
         otherRb.AddForce(dir * force, ForceMode.Impulse);
     }
 
-    private void FixedUpdate()
-    {
-        if (rb.linearVelocity.magnitude < minSpeed)
-        {
-            rb.linearVelocity =
-                rb.linearVelocity.normalized * minSpeed;
-        }
-    }
 }

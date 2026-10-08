@@ -96,6 +96,9 @@ public class ObjectNetworkRouter : MonoBehaviour
     // 부모 변경 적용
     private void ApplyParentChange(CatchableObj catchable, long parentEntityId)
     {
+        if (parentEntityId == -1) parentEntityId = 0;
+        if (catchable.ParentEntityId == -1) catchable.ParentEntityId = 0;
+
         long previousParentId = catchable.ParentEntityId;
         if (previousParentId == parentEntityId) return;
 
@@ -283,7 +286,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     private void NotifyParent(long parentEntityId, CatchableObj entity, bool added)
     {
         // Container notification
-        if (parentEntityId == 0) return;
+        if (parentEntityId == 0 || parentEntityId == -1) return;
 
         if (!TryResolveParent(parentEntityId, out IEntityParentReceiver receiver))
         {

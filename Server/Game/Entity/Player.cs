@@ -19,7 +19,17 @@ public class Player : Entity
         }
     }
     public Room? Room { get; set; }
-    public PlayerCombinedState State { get; set; }
+    public PlayerCombinedState State
+    {
+        get => _state;
+        set
+        {
+            if (_state.Equals(value)) return;
+
+            _state = value;
+            MakeDirty(DirtyMask.Transform);
+        }
+    }
     public Entity? HoldingEntity { get; set; }
     public Vector3 Position
     {
@@ -45,13 +55,25 @@ public class Player : Entity
             MakeDirty(DirtyMask.Hp);
         }
     }
-    public Quaternion Rotation { get; set; }
+    public Quaternion Rotation
+    {
+        get => _rotation;
+        set
+        {
+            if (_rotation == value) return;
+
+            _rotation = value;
+            MakeDirty(DirtyMask.Transform);
+        }
+    }
 
     public const int MaxHp = 100;
 
+    private PlayerCombinedState _state;
     private int _hp = MaxHp;
     private float _ping;
     private Vector3 _position;
+    private Quaternion _rotation;
 
     private PacketBatch _batch = new();
 

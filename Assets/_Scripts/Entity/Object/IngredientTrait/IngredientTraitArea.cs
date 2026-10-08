@@ -47,6 +47,9 @@ public class IngredientTraitArea : MonoBehaviour
 
         col.isTrigger = true;
         landingCollider.isTrigger = false;
+        // Only landing surfaces may block the area; players and ingredients pass through.
+        // Configure the child collider so the root effect trigger keeps its player contacts.
+        landingCollider.excludeLayers = ~groundLayer.value;
         landingCollider.enabled = true;
         rb.isKinematic = false;
         rb.useGravity = true;

@@ -38,7 +38,7 @@ public class PlayerActionController
         // Update default locomotion and airborne animation parameters.
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
-            animController.UpdateTick(state, movement.IsGroundedNow, IsFalling());
+            animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         }
 
         // Apply physical mode changes once per transition.
@@ -68,6 +68,13 @@ public class PlayerActionController
     {
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
+            if (movement.IsForcedMovementActive)
+            {
+                movement.UpdateForcedMovementSpeed();
+                movement.ApplyFallGravity();
+                return;
+            }
+
             // 입력이 없어도 Move(0, ...)를 호출해 마찰(FrictionMultiplier) 기반 감속을 타게 한다.
             // Stop()으로 바로 가면 즉시 0으로 스냅되어 빙판 등의 미끄러짐 효과가 무시된다.
             movement.Move(state.MoveDir, state.IsRun);
@@ -120,8 +127,14 @@ public class PlayerActionController
     {
         if (state.PhysicalMode != PlayerPhysicalMode.Default) return;
 
-        animController.UpdateTick(state, movement.IsGroundedNow, IsFalling());
+        animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         animController.PlayPrimaryAction();
+    }
+
+    public void PlayRemoteJumpStart()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        animController.PlayRemoteJumpStart();
     }
 
     private void UpdateActionState()
@@ -160,12 +173,20 @@ public class PlayerActionController
         animController.PlayJumpAnim();
     }
 
+    private bool IsGroundedForAnimation()
+    {
+        return brain.StateResolver is RemotePlayerStateResolver remote
+            ? remote.IsGroundedForAnimation
+            : movement.IsGroundedNow;
+    }
+
     private bool IsFalling()
     {
         if (brain.Col == null) return false;
 
         if (brain.StateResolver is RemotePlayerStateResolver remote)
         {
+            if (remote.IsGroundedForAnimation) return false;
             // Ignore tiny interpolation corrections while the remote player is stationary.
             if (remote.VerticalSpeed >= -0.01f) return false;
         }

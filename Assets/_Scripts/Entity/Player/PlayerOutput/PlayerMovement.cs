@@ -18,6 +18,19 @@ public class PlayerMovement
 
     private Rigidbody rb => brain.Rb;
 
+    private float forcedMovementUntil;
+    public bool IsForcedMovementActive => Time.time < forcedMovementUntil;
+
+    public void BeginForcedMovement(float duration)
+    {
+        forcedMovementUntil = Time.time + Mathf.Max(0f, duration);
+    }
+
+    public void UpdateForcedMovementSpeed()
+    {
+        CurrentSpeed = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z).magnitude;
+    }
+
     public float CurrentSpeed { get; private set; }
     public bool IsGroundedNow => IsGrounded();
     public float VerticalSpeed => rb.linearVelocity.y;

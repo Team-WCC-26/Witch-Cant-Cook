@@ -627,7 +627,14 @@ public class PotInteraction : MapObjInteraction,
                 heldObject.OnDrop();
         }
 
-        player.EffectController?.ApplyKnockback(direction * playerEjectForce);
+        // Only the owning client applies physics; peers receive its movement snapshots.
+        if (PlayerSpawnManager.Instance == null ||
+            !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
+        if (player.Rb == null || player.Rb.isKinematic) return;
+
+        player.ActionController.Movement.BeginForcedMovement(0.5f);
+        player.Rb.linearVelocity = Vector3.zero;
+        player.Rb.AddForce(direction * playerEjectForce, ForceMode.Impulse);
     }
 
     // 플레이어 부모 컴포넌트 탐색
