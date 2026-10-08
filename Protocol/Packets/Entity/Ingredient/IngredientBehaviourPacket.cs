@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using System.Numerics;
 
 namespace Protocol;
 
@@ -15,6 +16,7 @@ public partial class IngredientCornPacket
 {
     public long EntityId { get; set; }
     public int ExplosionSeed { get; set; }
+    public Vector3? ExplosionOrigin { get; set; }
 }
 
 [MemoryPackable]
