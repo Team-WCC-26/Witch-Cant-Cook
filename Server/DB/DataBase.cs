@@ -25,6 +25,15 @@ public class DataBase
 
     //private readonly Dictionary<IngredientStatePair, HashSet<RecipeKey>> _recipeCandidate = new();
 
+    private readonly int[] RetryDelays =
+    {
+        1000,
+        2000,
+        3000,
+        5000,
+        10000
+    };
+
     public async Task Init()
     {
         Console.WriteLine("DataBase Initilizing...");
@@ -42,7 +51,7 @@ public class DataBase
             string recipeGroup = "RecipeGroup";
 
             // 재료 데이터 파싱
-            string json = await client.GetStringAsync(url + export + ingredient);
+            string json = await GetStringAsync(client, url + export + ingredient);
 
             _ingredients.Clear();
 
@@ -52,7 +61,7 @@ public class DataBase
             }
 
             // 재료 스탯 데이터 파싱
-            json = await client.GetStringAsync(url + export + ingredient + stat);
+            json = await GetStringAsync(client, url + export + ingredient + stat);
 
             _ingredientStats.Clear();
 
@@ -62,11 +71,11 @@ public class DataBase
             }
 
             // 재료 조합 데이터 파싱
-            json = await client.GetStringAsync(url + export + ingredient + combination);
+            json = await GetStringAsync(client, url + export + ingredient + combination);
             BuildRecipeData(JsonConvert.DeserializeObject<List<IngredientCombinationData>>(json));
 
             // 도구 데이터 파싱
-            json = await client.GetStringAsync(url + export + tool);
+            json = await GetStringAsync(client, url + export + tool);
 
             _tools.Clear();
 
@@ -76,7 +85,7 @@ public class DataBase
             }
 
             // 최종 요리 데이터 파싱
-            json = await client.GetStringAsync(url + export + dish);
+            json = await GetStringAsync(client, url + export + dish);
 
             _dishes.Clear();
             //_recipes.Clear();
@@ -88,7 +97,7 @@ public class DataBase
             }
 
             // 재료 그룹 파싱
-            json = await client.GetStringAsync(url + export + ingredientGroup);
+            json = await GetStringAsync(client, url + export + ingredientGroup);
 
             _ingredientGroups.Clear();
 
@@ -104,7 +113,7 @@ public class DataBase
             }
 
             // 레시피 그룹 파싱
-            json = await client.GetStringAsync(url + export + recipeGroup);
+            json = await GetStringAsync(client, url + export + recipeGroup);
 
             _recipeGroups.Clear();
 
@@ -222,5 +231,30 @@ public class DataBase
             }
             */
         }
+    }
+
+    private async Task<string> GetStringAsync(HttpClient client, string requestUrl)
+    {
+        for (int i = 0; i < RetryDelays.Length; i++)
+        {
+            try
+            {
+                using HttpResponseMessage response = await client.GetAsync(requestUrl);
+
+                if (response.IsSuccessStatusCode) return await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine($"Database request failed: {(int)response.StatusCode} {response.StatusCode}");
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Database request failed: {ex.Message}");
+            }
+
+            Console.WriteLine($"Retrying in {RetryDelays[i] / 1000.0:F1}s...");
+
+            await Task.Delay(RetryDelays[i]);
+        }
+
+        throw new Exception($"Failed to retrieve database: {requestUrl}");
     }
 }
