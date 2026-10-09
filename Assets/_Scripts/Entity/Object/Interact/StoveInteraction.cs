@@ -6,8 +6,19 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
 {
     private PanInteraction currentPan;
     private long pendingPanId;
+    private readonly ObjPlacement placement = new();
 
     #region Unity Lifecycle
+
+    private void OnEnable() => placement.Released += HandlePlacementReleased;
+
+    private void OnDisable()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        if (currentPan != null) ReleasePan(currentPan);
+        pendingPanId = 0;
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -37,9 +48,9 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     {
         if (!TryGetPan(other, out PanInteraction pan)) return;
         if (pan.Catchable == null) return;
-        if (pan.Catchable.NetworkId != pendingPanId) return;
-
-        pendingPanId = 0;
+        if (pan.Catchable.Col != other) return;
+        if (pan.Catchable.NetworkId == pendingPanId) pendingPanId = 0;
+        if (currentPan == pan && placement.IsPlaced) placement.Release();
     }
 
     #endregion
@@ -79,8 +90,29 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     // 팬 위치를 화구 슬롯에 고정
     private void PlacePan(PanInteraction pan)
     {
+        if (!placement.TryPlace(pan.Catchable, panSlot))
+        {
+            Debug.LogError("[Stove] Failed to place the inserted pan.", this);
+            return;
+        }
         currentPan = pan;
-        pan.PlaceOnStove(this, panSlot);
+        pan.PlaceOnStove(this);
+    }
+
+    private void HandlePlacementReleased(CatchableObj item)
+    {
+        if (currentPan == null || currentPan.Catchable != item) return;
+        if (item.IsHold || !item.IsLocalOwner || item.ParentEntityId != NetworkId) return;
+        if (item.NetworkId == 0 || ServerManager.Instance == null) return;
+
+        EntityThrowPacket packet = new()
+        {
+            EntityId = item.NetworkId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(item.transform.position),
+            Velocity = ProtocolTypeConverter.ToNumericsVector3(
+                item.Rb != null ? item.Rb.linearVelocity : Vector3.zero)
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     // 화구에서 팬을 분리한다.
@@ -88,6 +120,7 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     {
         if (currentPan != pan) return;
 
+        placement.Dispose();
         currentPan = null;
         pan.ReleaseFromStove(this);
     }

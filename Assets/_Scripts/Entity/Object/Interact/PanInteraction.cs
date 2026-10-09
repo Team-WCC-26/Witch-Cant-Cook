@@ -241,13 +241,11 @@ public class PanInteraction : MonoBehaviour,
 
     #region Pan Placement
 
-    // 팬을 화구 슬롯에 배치하고 조리를 시작한다.
-    public void PlaceOnStove(StoveInteraction stove, Transform slot)
+    // 위치 보정은 화구의 ObjPlacement가 담당하고 화구 연결만 갱신한다.
+    public void PlaceOnStove(StoveInteraction stove)
     {
         currentStove?.ReleasePan(this);
         currentStove = stove;
-
-        AttachPan(slot);
     }
 
     // 현재 화구에서 팬을 분리하고 조리를 중단한다.

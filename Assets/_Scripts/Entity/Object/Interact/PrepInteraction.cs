@@ -9,10 +9,12 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     [SerializeField] private ColliderRelay itemTrigger;
 
     private CatchableObj currentItem;
+    private readonly ObjPlacement placement = new();
     private readonly HashSet<long> pendingEntities = new();
 
     private void OnEnable()
     {
+        placement.Released += HandlePlacementReleased;
         if (itemTrigger == null) return;
         itemTrigger.TriggerEntered += HandleTriggerEnter;
         itemTrigger.TriggerExited += HandleTriggerExit;
@@ -20,6 +22,8 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
 
     private void OnDisable()
     {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
         if (itemTrigger != null)
         {
             itemTrigger.TriggerEntered -= HandleTriggerEnter;
@@ -65,9 +69,16 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
         if (catchable == null || catchable.Col != other) return;
         pendingEntities.Remove(catchable.NetworkId);
 
-        if (currentItem != catchable || catchable.IsHold || !catchable.IsLocalOwner) return;
-        if (catchable.NetworkId == 0 || ServerManager.Instance == null) return;
-        RequestDetach(catchable);
+        if (currentItem != catchable) return;
+        if (placement.IsPlaced) placement.Release();
+    }
+
+    private void HandlePlacementReleased(CatchableObj item)
+    {
+        if (currentItem != item || item.IsHold || !item.IsLocalOwner) return;
+        if (item.ParentEntityId != NetworkId || item.NetworkId == 0) return;
+        if (ServerManager.Instance == null) return;
+        RequestDetach(item);
     }
 
     // 범위를 벗어난 아이템의 서버 보관 관계를 해제한다.
@@ -96,29 +107,18 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     public void ApplyPut(CatchableObj catchable)
     {
         if (catchable == null || itemSlot == null || currentItem != null) return;
-        currentItem = catchable;
-
-        if (catchable.Category == EntityCategory.Pan &&
-            catchable.TryGetComponent(out PanInteraction pan))
+        if (!placement.TryPlace(catchable, itemSlot))
         {
-            pan.PlaceOnPrep(itemSlot);
+            Debug.LogError("[Prep] Failed to place the inserted item.", this);
             return;
         }
-
-        catchable.transform.SetPositionAndRotation(itemSlot.position, itemSlot.rotation);
-        if (catchable.IsHold)
-            catchable.OnDrop();
-        else
-            catchable.SetPhysicsState(true);
-        catchable.ChangePickState(true);
-
-        if (catchable.Rb == null) return;
-        catchable.Rb.linearVelocity = Vector3.zero;
-        catchable.Rb.angularVelocity = Vector3.zero;
+        currentItem = catchable;
     }
 
     public void Release(CatchableObj catchable)
     {
-        if (currentItem == catchable) currentItem = null;
+        if (currentItem != catchable) return;
+        placement.Dispose();
+        currentItem = null;
     }
 }
