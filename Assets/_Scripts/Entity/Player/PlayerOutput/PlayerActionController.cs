@@ -66,12 +66,14 @@ public class PlayerActionController
 
     public void FixedTick(PlayerCombinedState state)
     {
+        movement.UpdateEjectionMovement(state.PhysicalMode == PlayerPhysicalMode.Default);
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
             if (movement.IsForcedMovementActive)
             {
                 movement.UpdateForcedMovementSpeed();
-                movement.ApplyFallGravity();
+                if (!movement.IsEjectionActive)
+                    movement.ApplyFallGravity();
                 return;
             }
 

@@ -632,7 +632,8 @@ public class PotInteraction : MapObjInteraction,
             !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
         if (player.Rb == null || player.Rb.isKinematic) return;
 
-        player.ActionController.Movement.BeginForcedMovement(0.5f);
+        player.ActionController.Movement.BeginEjectionMovement();
+        player.Rb.position = GetEjectPosition();
         player.Rb.linearVelocity = Vector3.zero;
         player.Rb.AddForce(direction * playerEjectForce, ForceMode.Impulse);
     }
