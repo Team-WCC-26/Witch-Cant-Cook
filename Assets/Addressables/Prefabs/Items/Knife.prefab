@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 8558192342800442512}
   - component: {fileID: 7990262299635600095}
   - component: {fileID: 7378896830364393045}
+  - component: {fileID: -8432211279182819103}
   m_Layer: 7
   m_Name: Knife
   m_TagString: Untagged
@@ -176,3 +177,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0cfc37e68d50fa4b82cf69c953b942b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KnifeInteraction
+--- !u!114 &-8432211279182819103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5441762677514521552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

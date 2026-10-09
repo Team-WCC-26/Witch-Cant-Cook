@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 6799696461143793664}
   - component: {fileID: -2649709027471576472}
   - component: {fileID: 4784320800737997909}
+  - component: {fileID: 4194221043076016700}
   m_Layer: 7
   m_Name: Cabbage
   m_TagString: Untagged
@@ -207,3 +208,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
   catchable: {fileID: -2649709027471576472}
   playerTag: Player
+--- !u!114 &4194221043076016700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201833804755295052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

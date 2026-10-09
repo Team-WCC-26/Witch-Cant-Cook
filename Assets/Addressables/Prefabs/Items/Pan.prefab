@@ -12,10 +12,10 @@ GameObject:
   - component: {fileID: 7175614014138858052}
   - component: {fileID: 1027142227670218976}
   - component: {fileID: 4247187198980872897}
-  - component: {fileID: 540803491445441954}
   - component: {fileID: 4268600552986204514}
   - component: {fileID: 5058207579791732192}
   - component: {fileID: 3793110361683235705}
+  - component: {fileID: -188371715531875933}
   m_Layer: 7
   m_Name: Pan
   m_TagString: Untagged
@@ -36,6 +36,7 @@ Transform:
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children:
+  - {fileID: 3880631266163779706}
   - {fileID: 2976135767223971141}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 91.448, z: 0}
@@ -117,27 +118,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.28009653, y: 0.07275139, z: 0.6107814}
   m_Center: {x: 0, y: 0.0363757, z: 0}
---- !u!65 &540803491445441954
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3414835098846860901}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.25, y: 0.03, z: 0.25}
-  m_Center: {x: -1.058062e-11, y: 0.079, z: 0.17916743}
 --- !u!54 &4268600552986204514
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -200,10 +180,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PanInteraction
   catchable: {fileID: 5058207579791732192}
+  itemTrigger: {fileID: 194776402680465293}
   ingredientSlot: {fileID: 2976135767223971141}
+  maxInsertAngle: 30
   tossForce: 3
   tossUpForce: 2
   triggerDisableDuration: 0.5
+  damageImmuneDuration: 1
+--- !u!114 &-188371715531875933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3414835098846860901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!1 &4512971488614220204
 GameObject:
   m_ObjectHideFlags: 0
@@ -235,3 +234,73 @@ Transform:
   m_Children: []
   m_Father: {fileID: 3965393241791296107}
   m_LocalEulerAnglesHint: {x: 0, y: 50, z: 0}
+--- !u!1 &6531948469147220018
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3880631266163779706}
+  - component: {fileID: 6211429364665369603}
+  - component: {fileID: 194776402680465293}
+  m_Layer: 0
+  m_Name: PanTrigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3880631266163779706
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6531948469147220018}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.045, z: 0.16}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3965393241791296107}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &6211429364665369603
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6531948469147220018}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.15, y: 0.045, z: 0.15}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &194776402680465293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6531948469147220018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 1
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

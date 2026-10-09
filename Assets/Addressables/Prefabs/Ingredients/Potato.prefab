@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: -2636729341739224782}
   - component: {fileID: -5372810678010353467}
   - component: {fileID: 4421413023149403772}
+  - component: {fileID: -8766142143363994122}
   m_Layer: 7
   m_Name: Potato
   m_TagString: Untagged
@@ -207,3 +208,19 @@ MonoBehaviour:
     mesh: {fileID: 5156236442672316251, guid: efa93528e179c8348a72afff626d3af6, type: 3}
     materials:
     - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+--- !u!114 &-8766142143363994122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7684211704048314985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

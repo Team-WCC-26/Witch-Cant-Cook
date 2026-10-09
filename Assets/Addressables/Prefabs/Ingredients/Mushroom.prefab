@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 3713424704699584209}
   - component: {fileID: 1778634146311837896}
   - component: {fileID: 8241985720436198501}
+  - component: {fileID: -182896332007547510}
   m_Layer: 7
   m_Name: Mushroom
   m_TagString: Untagged
@@ -238,3 +239,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e87bac7a5e53453aa228eaebd71c1e0a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-182896332007547510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4455335733293047946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

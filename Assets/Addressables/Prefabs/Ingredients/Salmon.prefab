@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 4196658960300039916}
   - component: {fileID: 5416636572794946063}
   - component: {fileID: 8684670662182131638}
+  - component: {fileID: 1782413983734237567}
   m_Layer: 0
   m_Name: Salmon
   m_TagString: Untagged
@@ -160,11 +161,11 @@ MonoBehaviour:
   col: {fileID: 2801301649602648683}
   rb: {fileID: 2717724081867907516}
   category: 2
+  acceptedCategories: 0
   canBePicked: 1
   holdTransform:
     localPosition: {x: 0, y: 0, z: 0}
     localEulerAngles: {x: 0, y: 0, z: 0}
-    localScale: {x: 1, y: 1, z: 1}
   throwForce: 0
 --- !u!114 &5416636572794946063
 MonoBehaviour:
@@ -207,3 +208,19 @@ MonoBehaviour:
   delayBeforeFly: 2
   stunDuration: 10
   minStunImpactSpeed: 3
+--- !u!114 &1782413983734237567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6981972798909853531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

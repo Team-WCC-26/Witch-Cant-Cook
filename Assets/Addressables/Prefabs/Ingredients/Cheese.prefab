@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: -2632227905180563674}
   - component: {fileID: -4187350784476599205}
   - component: {fileID: 3535829777973572196}
+  - component: {fileID: -5628787465338898435}
   m_Layer: 7
   m_Name: Cheese
   m_TagString: Untagged
@@ -207,3 +208,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
   catchable: {fileID: -4187350784476599205}
   playerTag: Player
+--- !u!114 &-5628787465338898435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 23362274327783971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128
