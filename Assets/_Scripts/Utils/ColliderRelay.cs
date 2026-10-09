@@ -34,6 +34,18 @@ public class ColliderRelay : MonoBehaviour
         }
     }
 
+    // 관리 중인 Collider의 감지를 일시 중지하거나 다시 활성화한다.
+    public void SetCollidersEnabled(bool enabled)
+    {
+        if (colliders == null)
+            colliders = GetComponents<Collider>();
+
+        foreach (Collider collider in colliders)
+        {
+            if (collider != null) collider.enabled = enabled;
+        }
+    }
+
     private bool MatchesLayer(Collider other)
     {
         return other != null &&
