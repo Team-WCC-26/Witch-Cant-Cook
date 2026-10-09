@@ -11,8 +11,7 @@ public class PanInteraction : MonoBehaviour,
     ICookReceiver
 {
     [SerializeField] private CatchableObj catchable;
-
-    private Collider itemTrigger;
+    [SerializeField] private ColliderRelay itemTrigger;
     private IngredientReaction currentIngredient;
     private Vector3 currentIngredientOriginalScale;
     private StoveInteraction currentStove;
@@ -29,21 +28,22 @@ public class PanInteraction : MonoBehaviour,
     {
         if (catchable == null)
             catchable = GetComponent<CatchableObj>();
+    }
 
-        if (itemTrigger == null)
-        {
-            foreach (Collider candidate in GetComponents<Collider>())
-            {
-                if (!candidate.isTrigger) continue;
-
-                itemTrigger = candidate;
-                break;
-            }
-        }
+    private void OnEnable()
+    {
+        if (itemTrigger == null) return;
+        itemTrigger.TriggerEntered += HandleTriggerEnter;
+        itemTrigger.TriggerExited += HandleTriggerExit;
     }
 
     private void OnDisable()
     {
+        if (itemTrigger != null)
+        {
+            itemTrigger.TriggerEntered -= HandleTriggerEnter;
+            itemTrigger.TriggerExited -= HandleTriggerExit;
+        }
         RestorePanTriggerNow();
         HideCookGauge();
         pendingIngredientId = 0;
@@ -53,7 +53,7 @@ public class PanInteraction : MonoBehaviour,
         currentStove = null;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void HandleTriggerEnter(Collider other)
     {
         // 팬의 유효성 확인
         if (catchable == null || catchable.NetworkId == 0) return;
@@ -80,7 +80,7 @@ public class PanInteraction : MonoBehaviour,
         RequestInsert(ingredientCatchable);
     }
 
-    private void OnTriggerExit(Collider other)
+    private void HandleTriggerExit(Collider other)
     {
         if (!TryGetItem(other, out _, out CatchableObj ingredientCatchable)) return;
         if (ingredientCatchable.NetworkId != pendingIngredientId) return;
@@ -214,14 +214,15 @@ public class PanInteraction : MonoBehaviour,
         if (triggerRestoreCoroutine != null)
             StopCoroutine(triggerRestoreCoroutine);
 
-        itemTrigger.enabled = false;
+        itemTrigger.SetCollidersEnabled(false);
         triggerRestoreCoroutine = StartCoroutine(RestorePanTriggerRoutine());
     }
 
     private IEnumerator RestorePanTriggerRoutine()
     {
         yield return new WaitForSeconds(triggerDisableDuration);
-        itemTrigger.enabled = true;
+        if (itemTrigger != null)
+            itemTrigger.SetCollidersEnabled(true);
         triggerRestoreCoroutine = null;
     }
     private void RestorePanTriggerNow()
@@ -233,7 +234,7 @@ public class PanInteraction : MonoBehaviour,
         }
 
         if (itemTrigger != null)
-            itemTrigger.enabled = true;
+            itemTrigger.SetCollidersEnabled(true);
     }
 
     #endregion
