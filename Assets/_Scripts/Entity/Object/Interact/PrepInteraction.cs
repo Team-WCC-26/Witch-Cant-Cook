@@ -107,7 +107,7 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     public void ApplyPut(CatchableObj catchable)
     {
         if (catchable == null || itemSlot == null || currentItem != null) return;
-        if (!placement.TryPlace(catchable, itemSlot))
+        if (!placement.TryPlace(catchable, itemSlot, alignColliderBottom: true))
         {
             Debug.LogError("[Prep] Failed to place the inserted item.", this);
             return;
