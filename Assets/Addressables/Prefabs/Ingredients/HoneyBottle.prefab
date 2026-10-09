@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 4835016729146804557}
   - component: {fileID: 7487898934483325409}
   - component: {fileID: -7750319739028657001}
+  - component: {fileID: 5729132004843726150}
   m_Layer: 7
   m_Name: HoneyBottle
   m_TagString: Untagged
@@ -163,6 +164,7 @@ MonoBehaviour:
   col: {fileID: 759561449717819131}
   rb: {fileID: 229093935088154368}
   category: 2
+  acceptedCategories: 0
   canBePicked: 1
   holdTransform:
     localPosition: {x: 0, y: 0, z: 0}
@@ -224,3 +226,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
   catchable: {fileID: 287341765393210474}
   playerTag: Player
+--- !u!114 &5729132004843726150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3243848449515356353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

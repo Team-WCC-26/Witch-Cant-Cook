@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 2856905927471024075}
   - component: {fileID: 7490860222993719298}
   - component: {fileID: -8525846093917614007}
+  - component: {fileID: -5665415809960135339}
   m_Layer: 7
   m_Name: Plate
   m_TagString: Untagged
@@ -176,3 +177,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02c5689601a650c429584ac28b1d8423, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlateInteraction
+--- !u!114 &-5665415809960135339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3164666988225984397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

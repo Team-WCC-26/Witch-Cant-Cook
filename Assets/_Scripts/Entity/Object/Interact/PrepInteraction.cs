@@ -6,159 +6,119 @@ using UnityEngine;
 public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver
 {
     [SerializeField] private Transform itemSlot;
-    [SerializeField] private Transform knifeSlot;
+    [SerializeField] private ColliderRelay itemTrigger;
 
     private CatchableObj currentItem;
-    private CatchableObj currentKnife;
+    private readonly ObjPlacement placement = new();
     private readonly HashSet<long> pendingEntities = new();
 
-    // 들고 있는 팬을 조리대의 아이템 슬롯에 배치한다.
+    private void OnEnable()
+    {
+        placement.Released += HandlePlacementReleased;
+        if (itemTrigger == null) return;
+        itemTrigger.TriggerEntered += HandleTriggerEnter;
+        itemTrigger.TriggerExited += HandleTriggerExit;
+    }
+
+    private void OnDisable()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        if (itemTrigger != null)
+        {
+            itemTrigger.TriggerEntered -= HandleTriggerEnter;
+            itemTrigger.TriggerExited -= HandleTriggerExit;
+        }
+
+        pendingEntities.Clear();
+        currentItem = null;
+    }
+
     public bool TryReceivePanPrimary(PanInteraction pan, PlayerInteract player)
     {
-        if (pan == null) return false;
-        if (player == null) return false;
-        if (!IsRegistered) return false;
-        if (currentItem != null) return false;
-        if (pan.Catchable == null) return false;
-        if (pan.Catchable.NetworkId == 0) return false;
-        if (!pendingEntities.Add(pan.Catchable.NetworkId)) return false;
+        if (pan == null || player == null || itemSlot == null) return false;
+        if (!IsRegistered || currentItem != null || pendingEntities.Count > 0) return false;
+        if (pan.Catchable == null || pan.Catchable.NetworkId == 0) return false;
 
+        pendingEntities.Add(pan.Catchable.NetworkId);
         player.RequestEntityInteract(NetworkId);
         return true;
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void HandleTriggerEnter(Collider other)
     {
-        if (!collision.gameObject.TryGetComponent(out CatchableObj catchable))
-        {
-            return;
-        }
-        if (catchable.IsHold) return;
-        if (currentItem == catchable || currentKnife == catchable) return;
-        if (!IsRegistered) return;
-        if (ServerManager.Instance == null) return;
-        if (catchable.NetworkId == 0) return;
+        if (!IsRegistered || itemSlot == null || ServerManager.Instance == null) return;
+        if (currentItem != null || pendingEntities.Count > 0) return;
+
+        CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
+        if (catchable == null || catchable.Col != other) return;
+        if (catchable.IsHold || !catchable.IsLocalOwner || catchable.NetworkId == 0) return;
         if (!pendingEntities.Add(catchable.NetworkId)) return;
 
-        // Insert request
         EntityInsertPacket packet = new()
         {
             SubjectEntityId = catchable.NetworkId,
             TargetEntityId = NetworkId
         };
-
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
-    private void OnCollisionExit(Collision collision)
+    private void HandleTriggerExit(Collider other)
     {
-        if (!collision.gameObject.TryGetComponent(out CatchableObj catchable)) return;
+        CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
+        if (catchable == null || catchable.Col != other) return;
         pendingEntities.Remove(catchable.NetworkId);
 
         if (currentItem != catchable) return;
-        if (catchable.Category != EntityCategory.Pan) return;
-        if (!catchable.IsLocalOwner) return;
-        if (catchable.NetworkId == 0) return;
-        if (ServerManager.Instance == null) return;
-
-        RequestDetach(catchable);
+        if (placement.IsPlaced) placement.Release();
     }
 
-    // 조리대에서 벗어난 팬의 부모 해제를 서버에 요청한다.
-    private static void RequestDetach(CatchableObj pan)
+    private void HandlePlacementReleased(CatchableObj item)
     {
-        Vector3 velocity = pan.Rb != null
-            ? pan.Rb.linearVelocity
-            : Vector3.zero;
+        if (currentItem != item || item.IsHold || !item.IsLocalOwner) return;
+        if (item.ParentEntityId != NetworkId || item.NetworkId == 0) return;
+        if (ServerManager.Instance == null) return;
+        RequestDetach(item);
+    }
 
+    // 범위를 벗어난 아이템의 서버 보관 관계를 해제한다.
+    private static void RequestDetach(CatchableObj item)
+    {
+        Vector3 velocity = item.Rb != null ? item.Rb.linearVelocity : Vector3.zero;
         EntityThrowPacket packet = new()
         {
-            EntityId = pan.NetworkId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(pan.transform.position),
+            EntityId = item.NetworkId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(item.transform.position),
             Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
         };
-
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     public void HandleEntityAdded(CatchableObj entity)
     {
         if (entity == null) return;
-
-        // Parent result
         pendingEntities.Remove(entity.NetworkId);
         ApplyPut(entity);
     }
 
-    public void HandleEntityRemoved(CatchableObj entity)
-    {
-        Release(entity);
-    }
+    public void HandleEntityRemoved(CatchableObj entity) => Release(entity);
 
+    // 서버가 삽입을 승인하면 한 번만 보정하고 이후 물리 움직임을 유지한다.
     public void ApplyPut(CatchableObj catchable)
     {
-        if (catchable == null) return;
-
-        if (catchable.Category == EntityCategory.Knife)
+        if (catchable == null || itemSlot == null || currentItem != null) return;
+        if (!placement.TryPlace(catchable, itemSlot, alignColliderBottom: true))
         {
-            TryAttachKnife(catchable);
+            Debug.LogError("[Prep] Failed to place the inserted item.", this);
             return;
         }
-
-        if (catchable.Category == EntityCategory.Pan &&
-            catchable.TryGetComponent(out PanInteraction pan))
-        {
-            TryAttachPan(pan);
-            return;
-        }
-
-        TryAttachItem(catchable);
-    }
-
-    // 팬을 아이템 슬롯에 동적 물리 상태로 배치한다.
-    private void TryAttachPan(PanInteraction pan)
-    {
-        if (currentItem != null) return;
-
-        currentItem = pan.Catchable;
-        pan.PlaceOnPrep(itemSlot);
-    }
-
-    private void TryAttachItem(CatchableObj catchable)
-    {
-        if (currentItem != null) return;
-
         currentItem = catchable;
-        AttachToSlot(catchable, itemSlot);
-    }
-
-    private void TryAttachKnife(CatchableObj knife)
-    {
-        if (currentKnife != null) return;
-
-        currentKnife = knife;
-        AttachToSlot(knife, knifeSlot);
-    }
-
-    private void AttachToSlot(CatchableObj catchable, Transform slot)
-    {
-        catchable.transform.position = slot.position;
-        catchable.transform.rotation = slot.rotation;
-
-        catchable.OnPlacedOnPrep(Release);
     }
 
     public void Release(CatchableObj catchable)
     {
-        if (currentItem == catchable)
-        {
-            currentItem = null;
-            return;
-        }
-
-        if (currentKnife == catchable)
-        {
-            currentKnife = null;
-        }
+        if (currentItem != catchable) return;
+        placement.Dispose();
+        currentItem = null;
     }
 }

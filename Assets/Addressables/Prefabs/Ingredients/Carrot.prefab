@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: -274396100364849250}
   - component: {fileID: -5558276893335986928}
   - component: {fileID: 6750885171012275325}
+  - component: {fileID: 4827861041483684568}
   m_Layer: 7
   m_Name: Carrot
   m_TagString: Obstacle
@@ -207,3 +208,19 @@ MonoBehaviour:
     mesh: {fileID: 1482366402939863665, guid: f645709017594ed47be7ef5b1be79c9e, type: 3}
     materials:
     - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+--- !u!114 &4827861041483684568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7294934431915186970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128
