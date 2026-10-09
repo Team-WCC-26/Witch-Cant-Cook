@@ -19,7 +19,33 @@ public class PlayerMovement
     private Rigidbody rb => brain.Rb;
 
     private float forcedMovementUntil;
-    public bool IsForcedMovementActive => Time.time < forcedMovementUntil;
+    private float ejectionStartedAt;
+    private float dampingBeforeEjection;
+    public bool IsEjectionActive { get; private set; }
+    public bool IsForcedMovementActive => IsEjectionActive || Time.time < forcedMovementUntil;
+
+    public void BeginEjectionMovement()
+    {
+        if (!IsEjectionActive)
+            dampingBeforeEjection = rb.linearDamping;
+
+        IsEjectionActive = true;
+        ejectionStartedAt = Time.time;
+        rb.linearDamping = dampingBeforeEjection * 0.5f;
+    }
+
+    public void UpdateEjectionMovement(bool canContinue)
+    {
+        if (!IsEjectionActive) return;
+
+        float elapsed = Time.time - ejectionStartedAt;
+        // Allow the launch impulse to take effect before checking for landing.
+        bool landed = elapsed >= 0.1f && rb.linearVelocity.y <= 0f && IsGrounded();
+        if (canContinue && !landed && elapsed < 5f) return;
+
+        rb.linearDamping = dampingBeforeEjection;
+        IsEjectionActive = false;
+    }
 
     public void BeginForcedMovement(float duration)
     {
