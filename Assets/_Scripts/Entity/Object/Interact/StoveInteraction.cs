@@ -90,7 +90,7 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     // 팬 위치를 화구 슬롯에 고정
     private void PlacePan(PanInteraction pan)
     {
-        if (!placement.TryPlace(pan.Catchable, panSlot))
+        if (!placement.TryPlace(pan.Catchable, panSlot, 1f))
         {
             Debug.LogError("[Stove] Failed to place the inserted pan.", this);
             return;
@@ -105,12 +105,9 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
         if (item.IsHold || !item.IsLocalOwner || item.ParentEntityId != NetworkId) return;
         if (item.NetworkId == 0 || ServerManager.Instance == null) return;
 
-        EntityThrowPacket packet = new()
+        PanStoveExitPacket packet = new()
         {
-            EntityId = item.NetworkId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(item.transform.position),
-            Velocity = ProtocolTypeConverter.ToNumericsVector3(
-                item.Rb != null ? item.Rb.linearVelocity : Vector3.zero)
+            PanEntityId = item.NetworkId
         };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
