@@ -33,7 +33,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         Vector2 moveDir = brain.Input.RawMoveDir;
         bool isRun = brain.Input.RawIsRunning;
 
-        if (physicalMode != PlayerPhysicalMode.Default)
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
         {
             moveDir = Vector2.zero;
             isRun = false;
@@ -66,7 +66,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         EntityCategory heldEntityCategory = ResolveHeldEntityCategory();
         bool jumpRequested = ConsumeJumpRequest(physicalMode);
 
-        if (physicalMode != PlayerPhysicalMode.Default)
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
         {
             moveDir = Vector2.zero;
             isRun = false;
@@ -148,7 +148,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     // Keeps jump input alive until the next physics tick.
     private void CacheJumpRequest(PlayerPhysicalMode physicalMode)
     {
-        if (physicalMode != PlayerPhysicalMode.Default)
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
         {
             pendingJumpRequested = false;
             isJumpLocked = false;
@@ -170,6 +170,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     {
         bool jumpRequested =
             physicalMode == PlayerPhysicalMode.Default
+            && !brain.Input.IsInputBlocked
             && pendingJumpRequested
             && !isJumpLocked
             && Time.time >= nextJumpAllowedTime

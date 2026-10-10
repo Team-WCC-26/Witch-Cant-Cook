@@ -82,12 +82,15 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     private CatchableObj combinedVisual;
     private ObjectNetworkRouter objectRouter;
+    private bool initialCanBePicked;
 
     public event Action OnPicked;
     public event Action OnDropped;
 
     private void Awake()
     {
+        initialCanBePicked = canBePicked;
+
         if (col == null || col.isTrigger)
         {
             foreach (Collider candidate in GetComponentsInChildren<Collider>())
@@ -156,7 +159,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         LastHolderPlayerId = null;
         IsHold = false;
         IsRespawning = false;
-        canBePicked = true;
+        canBePicked = initialCanBePicked;
         releaseFromPrep = null;
 
         networkId = 0;

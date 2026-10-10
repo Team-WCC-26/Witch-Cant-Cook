@@ -1,3 +1,5 @@
+using Protocol;
+using Server;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,6 +13,7 @@ public class IngredientTraitArea : MonoBehaviour
 
     [SerializeField] private LayerMask playerLayer;
     [SerializeField] private LayerMask groundLayer;
+
     [Header("Landing")]
     [Tooltip("Non-trigger collider on a child object without its own Rigidbody.")]
     [SerializeField] private Collider landingCollider;
@@ -21,20 +24,28 @@ public class IngredientTraitArea : MonoBehaviour
 
     private Collider col;
     private Rigidbody rb;
+    private CatchableObj catchable;
     private bool landed;
     private readonly Dictionary<PlayerBrain, int> overlapCounts = new();
     private readonly Dictionary<Collider, PlayerBrain> overlappingColliders = new();
+
+    private readonly IngredientTraitTimer timer = new();
+    [SerializeField] private bool useTimer = true;
+    [SerializeField] private float duration = 10f;
 
     private void Awake()
     {
         col = GetComponent<Collider>();
         rb = GetComponent<Rigidbody>();
+        catchable = GetComponent<CatchableObj>();
         col.isTrigger = true;
     }
 
     private void OnEnable()
     {
+        timer.Stop();
         landed = false;
+
         if (landingCollider == null || landingCollider == col ||
             !landingCollider.transform.IsChildOf(transform) || landingCollider.attachedRigidbody != rb)
         {
@@ -57,6 +68,26 @@ public class IngredientTraitArea : MonoBehaviour
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         rb.WakeUp();
+
+        if (useTimer && duration > 0f && catchable != null)
+            timer.StartTimer(duration, RequestDestroy);
+    }
+
+    private void Update()
+    {
+        timer.Tick(Time.deltaTime);
+    }
+
+    private void RequestDestroy()
+    {
+        if (!isActiveAndEnabled || catchable == null ||
+            catchable.NetworkId <= 0 || ServerManager.Instance == null) return;
+
+        EntityDestroyPacket packet = new()
+        {
+            EntityId = catchable.NetworkId
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     private void Reset()
@@ -167,6 +198,8 @@ public class IngredientTraitArea : MonoBehaviour
 
     private void OnDisable()
     {
+        timer.Stop();
+
         foreach (PlayerBrain player in overlapCounts.Keys)
             EndMovementEffect(player);
         overlapCounts.Clear();

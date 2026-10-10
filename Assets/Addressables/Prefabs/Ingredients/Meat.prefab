@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 7084931450169209163}
   - component: {fileID: 3754346785235192577}
   - component: {fileID: -7685586999236619332}
+  - component: {fileID: -5624094703688409029}
   m_Layer: 7
   m_Name: Meat
   m_TagString: Untagged
@@ -217,6 +218,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IngredientDamageController
   catchable: {fileID: 7084931450169209163}
   playerTag: Player
+--- !u!114 &-5624094703688409029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5393613222406266558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!1 &7029853958502374009
 GameObject:
   m_ObjectHideFlags: 0

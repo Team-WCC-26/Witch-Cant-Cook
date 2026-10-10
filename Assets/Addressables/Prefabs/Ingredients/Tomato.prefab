@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 3525218091698516734}
   - component: {fileID: -3012402540637535007}
   - component: {fileID: -2546647160030054977}
+  - component: {fileID: 4782894890492682936}
   m_Layer: 7
   m_Name: Tomato
   m_TagString: Untagged
@@ -207,3 +208,19 @@ MonoBehaviour:
     mesh: {fileID: 5971135060449108565, guid: 4225aa6df154f32458b75d4383795927, type: 3}
     materials:
     - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+--- !u!114 &4782894890492682936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2274349369809703162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128

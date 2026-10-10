@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Protocol;
 using Server;
+using Unity.Cinemachine;
 using UnityEngine;
 
 public enum PotState
@@ -25,6 +26,14 @@ public class PotInteraction : MapObjInteraction,
 
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
+
+    [Header("솥 시점")]
+    [SerializeField] private CinemachineCamera potCamera;
+    [SerializeField] private int potCameraPriority = 20;
+    private PrioritySettings previousCameraPriority;
+    private bool isPotCameraActive;
+    private PlayerInputHandler trappedLocalInput;
+    private bool previousInputBlocked;
 
     [Header("조리 완료 파티클")]
     [SerializeField, InspectorName("파티클 프리팹")]
@@ -86,6 +95,8 @@ public class PotInteraction : MapObjInteraction,
     // 솥 데이터 초기화
     private void ResetPotData()
     {
+        RestorePlayerInput();
+        RestorePlayerCamera();
         state = PotState.Idle;
         lastCookCompleteEffectDishId = 0;
 
@@ -630,9 +641,12 @@ public class PotInteraction : MapObjInteraction,
         // Only the owning client applies physics; peers receive its movement snapshots.
         if (PlayerSpawnManager.Instance == null ||
             !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
+        RestorePlayerInput();
+        RestorePlayerCamera();
         if (player.Rb == null || player.Rb.isKinematic) return;
 
-        player.ActionController.Movement.BeginForcedMovement(0.5f);
+        player.ActionController.Movement.BeginEjectionMovement();
+        player.Rb.position = GetEjectPosition();
         player.Rb.linearVelocity = Vector3.zero;
         player.Rb.AddForce(direction * playerEjectForce, ForceMode.Impulse);
     }
@@ -697,6 +711,43 @@ public class PotInteraction : MapObjInteraction,
         if (PlayerSpawnManager.Instance == null) return;
         if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player)) return;
         if (!trappedPlayers.Contains(player)) trappedPlayers.Add(player);
+        if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
+        {
+            if (trappedLocalInput == null && player.Input != null)
+            {
+                trappedLocalInput = player.Input;
+                previousInputBlocked = trappedLocalInput.IsInputBlocked;
+                trappedLocalInput.IsInputBlocked = true;
+            }
+            ActivatePotCamera();
+        }
+    }
+
+    private void RestorePlayerInput()
+    {
+        if (trappedLocalInput != null)
+            trappedLocalInput.IsInputBlocked = previousInputBlocked;
+        trappedLocalInput = null;
+    }
+
+    private void ActivatePotCamera()
+    {
+        if (isPotCameraActive) return;
+        if (potCamera == null)
+            potCamera = GetComponentInChildren<CinemachineCamera>(true);
+        if (potCamera == null) return;
+
+        previousCameraPriority = potCamera.Priority;
+        potCamera.Priority = potCameraPriority;
+        isPotCameraActive = true;
+    }
+
+    private void RestorePlayerCamera()
+    {
+        if (!isPotCameraActive) return;
+        if (potCamera != null)
+            potCamera.Priority = previousCameraPriority;
+        isPotCameraActive = false;
     }
 
     // IPotNetworkReceiver: 서버 배출 패킷 

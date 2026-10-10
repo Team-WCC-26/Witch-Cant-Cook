@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 5256957274881897092}
   - component: {fileID: -384053855214374386}
   - component: {fileID: 2893194697849916806}
+  - component: {fileID: 5881044552826518358}
   m_Layer: 0
   m_Name: Squid
   m_TagString: Untagged
@@ -225,3 +226,19 @@ MonoBehaviour:
     mesh: {fileID: 4789206286548881375, guid: 68ee6dac8367afd478b84df55c48597b, type: 3}
     materials:
     - {fileID: 2100000, guid: 78bd210f9d9c0184a85628001932032c, type: 2}
+--- !u!114 &5881044552826518358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055630435769749224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 128
