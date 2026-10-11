@@ -69,14 +69,7 @@ public class PotInteraction : MapObjInteraction,
     private float? pendingCookingDuration;
     private long lastCookCompleteEffectDishId;
 
-    #region Lifecycle
-
-    // 솥 패킷에서 오브젝트를 찾을 라우터 연결
-    public override void InitializeRouter(MapObjNetworkRouter router)
-    {
-        base.InitializeRouter(router);
-        objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
-    }
+    #region Unity Callbacks
 
     // 솥 활성화 초기화
     private void OnEnable()
@@ -92,9 +85,86 @@ public class PotInteraction : MapObjInteraction,
         ResetPotData();
     }
 
+    // 진입 대상 서버 요청
+    private void OnTriggerEnter(Collider other)
+    {
+        if (TryGetPlayer(other, out PlayerBrain player))
+        {
+            RequestPlayerEntry(player);
+            return;
+        }
+
+        CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
+        if (catchable == null) return;
+        if (storedObjects.Contains(catchable) || !pendingObjects.Add(catchable)) return;
+
+        RequestObjEntry(catchable);
+    }
+
+    // 선택 시 배출 기준 방향과 랜덤 범위 표시
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 origin = GetEjectPosition();
+        float length = Mathf.Max(0.1f, ejectGizmoLength);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(origin, 0.08f);
+        Gizmos.DrawLine(origin, origin + GetWorldEjectDirection(ejectBaseDirection) * length);
+
+        float minY = Mathf.Min(ejectRandomRangeYMin, ejectRandomRangeYMax);
+        float maxY = Mathf.Max(ejectRandomRangeYMin, ejectRandomRangeYMax);
+        Vector3[] endpoints = new Vector3[8];
+        int index = 0;
+
+        for (int y = 0; y < 2; y++)
+        {
+            for (int x = 0; x < 2; x++)
+            {
+                for (int z = 0; z < 2; z++)
+                {
+                    Vector3 offset = new(
+                        x == 0 ? -ejectRandomRangeX : ejectRandomRangeX,
+                        y == 0 ? minY : maxY,
+                        z == 0 ? -ejectRandomRangeZ : ejectRandomRangeZ);
+                    endpoints[index++] = origin + GetWorldEjectDirection(ejectBaseDirection + offset) * length;
+                }
+            }
+        }
+
+        Gizmos.color = Color.cyan;
+        foreach (Vector3 endpoint in endpoints)
+            Gizmos.DrawLine(origin, endpoint);
+
+        DrawEjectRangeEdge(endpoints, 0, 1);
+        DrawEjectRangeEdge(endpoints, 0, 2);
+        DrawEjectRangeEdge(endpoints, 1, 3);
+        DrawEjectRangeEdge(endpoints, 2, 3);
+        DrawEjectRangeEdge(endpoints, 4, 5);
+        DrawEjectRangeEdge(endpoints, 4, 6);
+        DrawEjectRangeEdge(endpoints, 5, 7);
+        DrawEjectRangeEdge(endpoints, 6, 7);
+        DrawEjectRangeEdge(endpoints, 0, 4);
+        DrawEjectRangeEdge(endpoints, 1, 5);
+        DrawEjectRangeEdge(endpoints, 2, 6);
+        DrawEjectRangeEdge(endpoints, 3, 7);
+    }
+
+    #endregion
+
+    #region Lifecycle
+
+    // 솥 패킷에서 오브젝트를 찾을 라우터 연결
+    public override void InitializeRouter(MapObjNetworkRouter router)
+    {
+        base.InitializeRouter(router);
+        objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
+    }
+
     // 솥 데이터 초기화
     private void ResetPotData()
     {
+        foreach (PlayerBrain player in trappedPlayers)
+            PlayerGlow.SetActive(player, false);
         RestorePlayerInput();
         RestorePlayerCamera();
         state = PotState.Idle;
@@ -144,22 +214,6 @@ public class PotInteraction : MapObjInteraction,
             if (catchable == null) continue;
             ObjectPoolManager.Instance.Push(catchable.gameObject);
         }
-    }
-
-    // 진입 대상 서버 요청
-    private void OnTriggerEnter(Collider other)
-    {
-        if (TryGetPlayer(other, out PlayerBrain player))
-        {
-            RequestPlayerEntry(player);
-            return;
-        }
-
-        CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
-        if (catchable == null) return;
-        if (storedObjects.Contains(catchable) || !pendingObjects.Add(catchable)) return;
-
-        RequestObjEntry(catchable);
     }
 
     #endregion
@@ -497,54 +551,6 @@ public class PotInteraction : MapObjInteraction,
             BeginPacketEjection(pendingEjectPackets.Dequeue());
     }
 
-    // 선택 시 배출 기준 방향과 랜덤 범위 표시
-    private void OnDrawGizmosSelected()
-    {
-        Vector3 origin = GetEjectPosition();
-        float length = Mathf.Max(0.1f, ejectGizmoLength);
-
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(origin, 0.08f);
-        Gizmos.DrawLine(origin, origin + GetWorldEjectDirection(ejectBaseDirection) * length);
-
-        float minY = Mathf.Min(ejectRandomRangeYMin, ejectRandomRangeYMax);
-        float maxY = Mathf.Max(ejectRandomRangeYMin, ejectRandomRangeYMax);
-        Vector3[] endpoints = new Vector3[8];
-        int index = 0;
-
-        for (int y = 0; y < 2; y++)
-        {
-            for (int x = 0; x < 2; x++)
-            {
-                for (int z = 0; z < 2; z++)
-                {
-                    Vector3 offset = new(
-                        x == 0 ? -ejectRandomRangeX : ejectRandomRangeX,
-                        y == 0 ? minY : maxY,
-                        z == 0 ? -ejectRandomRangeZ : ejectRandomRangeZ);
-                    endpoints[index++] = origin + GetWorldEjectDirection(ejectBaseDirection + offset) * length;
-                }
-            }
-        }
-
-        Gizmos.color = Color.cyan;
-        foreach (Vector3 endpoint in endpoints)
-            Gizmos.DrawLine(origin, endpoint);
-
-        DrawEjectRangeEdge(endpoints, 0, 1);
-        DrawEjectRangeEdge(endpoints, 0, 2);
-        DrawEjectRangeEdge(endpoints, 1, 3);
-        DrawEjectRangeEdge(endpoints, 2, 3);
-        DrawEjectRangeEdge(endpoints, 4, 5);
-        DrawEjectRangeEdge(endpoints, 4, 6);
-        DrawEjectRangeEdge(endpoints, 5, 7);
-        DrawEjectRangeEdge(endpoints, 6, 7);
-        DrawEjectRangeEdge(endpoints, 0, 4);
-        DrawEjectRangeEdge(endpoints, 1, 5);
-        DrawEjectRangeEdge(endpoints, 2, 6);
-        DrawEjectRangeEdge(endpoints, 3, 7);
-    }
-
     // 로컬 배출 방향을 안전한 월드 방향으로 변환
     private Vector3 GetWorldEjectDirection(Vector3 localDirection)
     {
@@ -627,6 +633,7 @@ public class PotInteraction : MapObjInteraction,
     {
         if (player == null) return;
 
+        PlayerGlow.SetActive(player, false);
         trappedPlayers.Remove(player);
         pendingPlayerEntries.Remove(player.PlayerId);
         if (player.Interact?.HeldObj != null)
@@ -711,6 +718,7 @@ public class PotInteraction : MapObjInteraction,
         if (PlayerSpawnManager.Instance == null) return;
         if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player)) return;
         if (!trappedPlayers.Contains(player)) trappedPlayers.Add(player);
+        PlayerGlow.SetActive(player, true);
         if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
         {
             if (trappedLocalInput == null && player.Input != null)
@@ -840,6 +848,7 @@ public class PotInteraction : MapObjInteraction,
 
 }
 
+#region Editor
 #if UNITY_EDITOR
 [UnityEditor.CustomEditor(typeof(PotInteraction))]
 public class PotInteractionEditor : UnityEditor.Editor
@@ -866,3 +875,4 @@ public class PotInteractionEditor : UnityEditor.Editor
     }
 }
 #endif
+#endregion
