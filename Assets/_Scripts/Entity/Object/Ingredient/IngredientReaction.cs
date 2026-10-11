@@ -34,7 +34,6 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     [Header("Components")]
     [SerializeField] private MeshFilter meshFilter;
     [SerializeField] private Renderer targetRenderer;
-    [SerializeField] private ParticleSystem cutParticle;
 
     [Header("Interact Gauge")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
@@ -71,8 +70,6 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions = IngredientAction.None;
 
         gaugeUI?.Hide();
-        if (cutParticle != null)
-            cutParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ApplyVisual(IngredientAction.None);
     }
 
@@ -95,11 +92,6 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         // Apply damage and check for completion
         curHP = (int)MathF.Max(0, curHP - dmg);
-        if (action == IngredientAction.Cut)
-        {
-            PlayCutParticle();
-        }
-
         // TODO: Apply mesh and shader changes based on HP progress.
         // TODO: Show completed state flag.
         if (curHP <= 0)
@@ -137,7 +129,10 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         IngredientAction newlyCompleted = action & ~completedActions;
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
+        {
             gaugeUI?.Hide();
+            PlayCutParticle();
+        }
         ApplyVisual(completedActions);
         if (newlyCompleted != IngredientAction.None)
             OnActionCompleted?.Invoke(newlyCompleted);
@@ -218,9 +213,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void PlayCutParticle()
     {
-        if (cutParticle == null) return;
-        cutParticle.Clear(true);
-        cutParticle.Play(true);
+        Vector3 position = targetRenderer != null ? targetRenderer.bounds.center : transform.position;
+        IngredientCutVfx.PlayAt(position, catchable != null ? catchable.Data as Ingredient : null);
     }
     #endregion
 }
