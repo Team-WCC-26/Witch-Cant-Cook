@@ -136,6 +136,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     {
         IngredientAction newlyCompleted = action & ~completedActions;
         completedActions |= action;
+        if ((newlyCompleted & IngredientAction.Cut) != 0)
+            gaugeUI?.Hide();
         ApplyVisual(completedActions);
         if (newlyCompleted != IngredientAction.None)
             OnActionCompleted?.Invoke(newlyCompleted);

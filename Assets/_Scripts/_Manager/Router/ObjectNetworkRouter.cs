@@ -130,8 +130,9 @@ public class ObjectNetworkRouter : MonoBehaviour
             if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
                 continue;
 
-            if (catchable.TryGetComponent(out IngredientReaction reaction))
-                reaction.GaugeUI?.ShowProgress(packet.Process);
+            if (catchable.TryGetComponent(out IngredientReaction reaction) &&
+                !reaction.IsActionCompleted(IngredientAction.Cut))
+                reaction.GaugeUI?.ShowProgress(1f - packet.Process);
         }
     }
 
