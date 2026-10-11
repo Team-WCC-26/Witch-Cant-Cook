@@ -21,16 +21,18 @@ public class PlayerMovement
     private float forcedMovementUntil;
     private float ejectionStartedAt;
     private float dampingBeforeEjection;
+    private float ejectionMaxDuration = 5f;
     public bool IsEjectionActive { get; private set; }
     public bool IsForcedMovementActive => IsEjectionActive || Time.time < forcedMovementUntil;
 
-    public void BeginEjectionMovement()
+    public void BeginEjectionMovement(float maxDuration = 5f)
     {
         if (!IsEjectionActive)
             dampingBeforeEjection = rb.linearDamping;
 
         IsEjectionActive = true;
         ejectionStartedAt = Time.time;
+        ejectionMaxDuration = Mathf.Max(0.1f, maxDuration);
         rb.linearDamping = dampingBeforeEjection * 0.5f;
     }
 
@@ -41,7 +43,7 @@ public class PlayerMovement
         float elapsed = Time.time - ejectionStartedAt;
         // Allow the launch impulse to take effect before checking for landing.
         bool landed = elapsed >= 0.1f && rb.linearVelocity.y <= 0f && IsGrounded();
-        if (canContinue && !landed && elapsed < 5f) return;
+        if (canContinue && !landed && elapsed < ejectionMaxDuration) return;
 
         rb.linearDamping = dampingBeforeEjection;
         IsEjectionActive = false;
