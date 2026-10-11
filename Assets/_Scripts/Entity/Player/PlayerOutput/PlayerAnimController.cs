@@ -71,7 +71,7 @@ public class PlayerAnimController
         animator.SetTrigger(jumpHash);
     }
 
-    public void PlayRemoteJumpStart()
+    public void PlayJumpStart()
     {
         // Landing can win over a jump trigger in the same Animator update.
         animator.CrossFadeInFixedTime(jumpStartHash, 0.05f, 0, 0f);

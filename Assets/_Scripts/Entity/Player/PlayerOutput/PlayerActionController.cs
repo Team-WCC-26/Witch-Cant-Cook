@@ -17,6 +17,7 @@ public class PlayerActionController
     private bool canAction = true;
     private float actionTime;
     private bool pendingPrimaryAction;
+    private bool isLaunchJumpActive;
     private EntityCategory pendingPrimaryCategory;
 
 
@@ -32,6 +33,7 @@ public class PlayerActionController
 
     public void UpdateTick(PlayerCombinedState state)
     {
+        if (!movement.IsEjectionActive) isLaunchJumpActive = false;
         UpdateActionState();
         movement.UpdateGroundState();
 
@@ -136,7 +138,7 @@ public class PlayerActionController
     public void PlayRemoteJumpStart()
     {
         if (brain.StateResolver is not RemotePlayerStateResolver) return;
-        animController.PlayRemoteJumpStart();
+        animController.PlayJumpStart();
     }
 
     private void UpdateActionState()
@@ -175,8 +177,16 @@ public class PlayerActionController
         animController.PlayJumpAnim();
     }
 
+    public void PlayLaunchJumpStart()
+    {
+        isLaunchJumpActive = true;
+        animController.UpdateTick(brain.StateResolver.CurrentState, false, false);
+        animController.PlayJumpStart();
+    }
+
     private bool IsGroundedForAnimation()
     {
+        if (isLaunchJumpActive && movement.IsEjectionActive) return false;
         return brain.StateResolver is RemotePlayerStateResolver remote
             ? remote.IsGroundedForAnimation
             : movement.IsGroundedNow;

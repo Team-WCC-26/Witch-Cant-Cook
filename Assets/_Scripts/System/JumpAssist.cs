@@ -196,6 +196,7 @@ public class JumpAssist : MonoBehaviour
             rb.angularVelocity = Vector3.zero;
             flight.player.ActionController.Movement.BeginEjectionMovement(float.PositiveInfinity);
             rb.AddForce(direction * Mathf.Max(0.01f, launchForce), ForceMode.Impulse);
+            flight.player.ActionController.PlayLaunchJumpStart();
             flight.launched = true;
         }
     }
