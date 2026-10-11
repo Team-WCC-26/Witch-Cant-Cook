@@ -17,14 +17,15 @@ public class PlayerInputHandler : MonoBehaviour
     public event Action<KeyInput> InputPerformed;
 
     public bool IsInputBlocked { get; set; }
+    public bool IsMovementBlocked { get; set; }
     private Vector2 rawMoveDir;
     private Vector2 rawLookDelta;
     private bool rawIsRunning;
     private bool rawIsJumpHeld;
-    public Vector2 RawMoveDir { get => IsInputBlocked ? Vector2.zero : rawMoveDir; private set => rawMoveDir = value; }
+    public Vector2 RawMoveDir { get => (IsInputBlocked || IsMovementBlocked) ? Vector2.zero : rawMoveDir; private set => rawMoveDir = value; }
     public Vector2 RawLookDelta { get => IsInputBlocked ? Vector2.zero : rawLookDelta; private set => rawLookDelta = value; }
-    public bool RawIsRunning { get => !IsInputBlocked && rawIsRunning; private set => rawIsRunning = value; }
-    public bool RawIsJumpHeld { get => !IsInputBlocked && rawIsJumpHeld; private set => rawIsJumpHeld = value; }
+    public bool RawIsRunning { get => !IsInputBlocked && !IsMovementBlocked && rawIsRunning; private set => rawIsRunning = value; }
+    public bool RawIsJumpHeld { get => !IsInputBlocked && !IsMovementBlocked && rawIsJumpHeld; private set => rawIsJumpHeld = value; }
 
     private void OnDisable()
     {
@@ -90,7 +91,7 @@ public class PlayerInputHandler : MonoBehaviour
     public void OnJump(InputAction.CallbackContext context)
     {
         RawIsJumpHeld = context.ReadValueAsButton();
-        if (IsInputBlocked) return;
+        if (IsInputBlocked || IsMovementBlocked) return;
         if (!context.started) return;
         InputPerformed?.Invoke(KeyInput.Jump);
     }

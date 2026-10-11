@@ -140,7 +140,7 @@ public class PlayerInputFSM
     // Consumes jump as a one-frame movement request.
     private bool ResolveJumpRequested()
     {
-        bool jumpRequested = pendingJumpRequested;
+        bool jumpRequested = !inputHandler.IsMovementBlocked && pendingJumpRequested;
         pendingJumpRequested = false;
         return jumpRequested;
     }

@@ -148,7 +148,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     // Keeps jump input alive until the next physics tick.
     private void CacheJumpRequest(PlayerPhysicalMode physicalMode)
     {
-        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked || brain.Input.IsMovementBlocked)
         {
             pendingJumpRequested = false;
             isJumpLocked = false;
@@ -170,7 +170,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     {
         bool jumpRequested =
             physicalMode == PlayerPhysicalMode.Default
-            && !brain.Input.IsInputBlocked
+            && !brain.Input.IsInputBlocked && !brain.Input.IsMovementBlocked
             && pendingJumpRequested
             && !isJumpLocked
             && Time.time >= nextJumpAllowedTime

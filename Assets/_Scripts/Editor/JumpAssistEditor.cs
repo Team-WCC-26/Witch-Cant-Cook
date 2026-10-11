@@ -7,15 +7,21 @@ using UnityEngine.SceneManagement;
 [CustomEditor(typeof(JumpAssist))]
 public class JumpAssistEditor : Editor
 {
-    private Sequence _preview;
-    private Transform _pivot;
-    private Quaternion _restRotation;
-    private double _startTime;
-    private bool _ownsAnimationMode;
+    private Sequence preview;
+    private Transform pivot;
+    private Quaternion restRotation;
+    private double startTime;
+    private bool ownsAnimationMode;
+
+    #region Unity Callbacks
+
+    private void OnDisable() => StopPreview();
+    private void OnPlayModeChanged(PlayModeStateChange state) => StopPreview();
+    private void OnSceneSaving(Scene scene, string path) => StopPreview();
 
     public override void OnInspectorGUI()
     {
-        using (new EditorGUI.DisabledScope(_preview != null))
+        using (new EditorGUI.DisabledScope(preview != null))
             DrawDefaultInspector();
 
         if (Application.isPlaying)
@@ -24,22 +30,27 @@ public class JumpAssistEditor : Editor
             return;
         }
 
-        using (new EditorGUI.DisabledScope(_preview == null && AnimationMode.InAnimationMode()))
+        using (new EditorGUI.DisabledScope(EditorUtility.IsPersistent(target)
+            || (preview == null && AnimationMode.InAnimationMode())))
         {
-            if (GUILayout.Button(_preview == null ? "모션 미리 보기" : "미리 보기 중지"))
+            if (GUILayout.Button(preview == null ? "모션 미리 보기" : "미리 보기 중지"))
             {
-                if (_preview == null) StartPreview();
+                if (preview == null) StartPreview();
                 else StopPreview();
             }
         }
     }
 
+    #endregion
+
+    #region Editor
+
     private void StartPreview()
     {
-        _pivot = ((JumpAssist)target).transform;
-        _restRotation = _pivot.localRotation;
+        pivot = ((JumpAssist)target).transform;
+        restRotation = pivot.localRotation;
         AnimationMode.StartAnimationMode();
-        _ownsAnimationMode = true;
+        ownsAnimationMode = true;
 
         // Register the temporary rotation so Unity treats it as preview data.
         string[] axes = { "x", "y", "z", "w" };
@@ -50,14 +61,14 @@ public class JumpAssistEditor : Editor
                 EditorCurveBinding.FloatCurve("", typeof(Transform), property),
                 new PropertyModification
                 {
-                    target = _pivot,
+                    target = pivot,
                     propertyPath = property,
-                    value = _restRotation[i].ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    value = restRotation[i].ToString(System.Globalization.CultureInfo.InvariantCulture)
                 }, false);
         }
 
-        _preview = ((JumpAssist)target).CreatePreviewMotion();
-        _startTime = EditorApplication.timeSinceStartup;
+        preview = ((JumpAssist)target).CreatePreviewMotion();
+        startTime = EditorApplication.timeSinceStartup;
         EditorApplication.update += UpdatePreview;
         EditorApplication.playModeStateChanged += OnPlayModeChanged;
         AssemblyReloadEvents.beforeAssemblyReload += StopPreview;
@@ -66,22 +77,19 @@ public class JumpAssistEditor : Editor
 
     private void UpdatePreview()
     {
-        if (_pivot == null || _preview == null || !_preview.IsActive()
+        if (pivot == null || preview == null || !preview.IsActive()
             || !AnimationMode.InAnimationMode())
         {
             StopPreview();
             return;
         }
 
-        float elapsed = (float)(EditorApplication.timeSinceStartup - _startTime);
-        _preview.Goto(elapsed, false);
+        float elapsed = (float)(EditorApplication.timeSinceStartup - startTime);
+        preview.Goto(elapsed, false);
         SceneView.RepaintAll();
-        if (elapsed >= _preview.Duration()) StopPreview();
+        if (elapsed >= preview.Duration()) StopPreview();
     }
 
-    private void OnPlayModeChanged(PlayModeStateChange state) => StopPreview();
-    private void OnSceneSaving(Scene scene, string path) => StopPreview();
-    private void OnDisable() => StopPreview();
 
     private void StopPreview()
     {
@@ -89,16 +97,18 @@ public class JumpAssistEditor : Editor
         EditorApplication.playModeStateChanged -= OnPlayModeChanged;
         AssemblyReloadEvents.beforeAssemblyReload -= StopPreview;
         EditorSceneManager.sceneSaving -= OnSceneSaving;
-        _preview?.Kill();
-        _preview = null;
-        if (_ownsAnimationMode)
+        preview?.Kill();
+        preview = null;
+        if (ownsAnimationMode)
         {
             AnimationMode.StopAnimationMode();
-            _ownsAnimationMode = false;
-            if (_pivot != null) _pivot.localRotation = _restRotation;
+            ownsAnimationMode = false;
+            if (pivot != null) pivot.localRotation = restRotation;
         }
-        _pivot = null;
+        pivot = null;
         SceneView.RepaintAll();
         Repaint();
     }
+
+    #endregion
 }
