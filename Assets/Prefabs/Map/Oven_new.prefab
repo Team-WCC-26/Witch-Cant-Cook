@@ -102,7 +102,7 @@ GameObject:
   - component: {fileID: 140746972998133180}
   - component: {fileID: 4700016114234785651}
   m_Layer: 0
-  m_Name: Botton_3
+  m_Name: BtnMid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -192,7 +192,7 @@ GameObject:
   - component: {fileID: 5340299181481579893}
   - component: {fileID: 107724594992576137}
   m_Layer: 0
-  m_Name: Botton_4
+  m_Name: BtnBtm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -281,8 +281,10 @@ GameObject:
   - component: {fileID: 5154154796772312855}
   - component: {fileID: 3709962005772708073}
   - component: {fileID: 4782180655026967892}
+  - component: {fileID: 7799315814117749132}
+  - component: {fileID: 6005097936886233293}
   m_Layer: 0
-  m_Name: Botton_2
+  m_Name: MainBtn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -360,6 +362,43 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &7799315814117749132
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3745380062377360427}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.17946476, y: 0.046573523, z: 0.1794648}
+  m_Center: {x: -0.000000011175871, y: 0.000000003725291, z: 0.000000003725291}
+--- !u!114 &6005097936886233293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3745380062377360427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 0
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &4459241475590107190
 GameObject:
   m_ObjectHideFlags: 0
@@ -371,7 +410,6 @@ GameObject:
   - component: {fileID: 5507406186747588545}
   - component: {fileID: 8966627805598019264}
   - component: {fileID: 6699435959361097531}
-  - component: {fileID: 9097796178088014953}
   m_Layer: 0
   m_Name: Oven_door
   m_TagString: Untagged
@@ -387,13 +425,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4459241475590107190}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.028635088, y: -0, z: 0.000000017695125, w: 0.99959}
+  m_LocalRotation: {x: 0.026176924, y: 0, z: 0, w: 0.99965733}
   m_LocalPosition: {x: -0.05945177, y: 0.065711744, z: 0.47749808}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8247178996809694912}
-  m_LocalEulerAnglesHint: {x: 3.282, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 3, y: 0, z: 0}
 --- !u!33 &8966627805598019264
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -452,27 +490,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &9097796178088014953
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4459241475590107190}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.8659026, y: 0.15130289, z: 0.73534185}
-  m_Center: {x: 0.11207041, y: -0.061846722, z: 0.3816917}
 --- !u!1 &4553271637208455662
 GameObject:
   m_ObjectHideFlags: 0
@@ -585,6 +602,59 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.07458001, y: 0.2476213, z: 0.5512305}
   m_Center: {x: -1.8180463, y: 0.033123042, z: 2.8823211}
+--- !u!1 &4913454895790989399
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3886846039186322452}
+  - component: {fileID: 7565698103318066730}
+  m_Layer: 0
+  m_Name: DoorCollider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3886846039186322452
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4913454895790989399}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.026176924, y: 0, z: 0, w: 0.99965733}
+  m_LocalPosition: {x: -0.05945177, y: 0.065711744, z: 0.47749808}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8247178996809694912}
+  m_LocalEulerAnglesHint: {x: 3, y: 0, z: 0}
+--- !u!65 &7565698103318066730
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4913454895790989399}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.8659024, y: 0.15130287, z: 0.73534167}
+  m_Center: {x: 0.1120704, y: -0.061846733, z: 0.3816915}
 --- !u!1 &5701265659899676092
 GameObject:
   m_ObjectHideFlags: 0
@@ -709,7 +779,7 @@ GameObject:
   - component: {fileID: 8360331683691559765}
   - component: {fileID: 4002230214578902017}
   m_Layer: 0
-  m_Name: Botton_1
+  m_Name: BtnTop
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -797,7 +867,7 @@ GameObject:
   m_Component:
   - component: {fileID: 480056316256382918}
   m_Layer: 0
-  m_Name: ColliderParent (1)
+  m_Name: ColliderParent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -812,7 +882,7 @@ Transform:
   m_GameObject: {fileID: 6548213903423836001}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 3.7680008, y: -3.238, z: -3.2340007}
+  m_LocalPosition: {x: 3.7680008, y: -3.2380006, z: -3.2340019}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -820,6 +890,7 @@ Transform:
   - {fileID: 3974263018067426382}
   - {fileID: 1212461407102971985}
   - {fileID: 6300347442479159392}
+  - {fileID: 5939500107467528601}
   m_Father: {fileID: 8247178996809694912}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6934460686601576164
@@ -1024,6 +1095,135 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &7565565358908950624
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5939500107467528601}
+  - component: {fileID: 1897988736368004689}
+  - component: {fileID: 1910308760925583018}
+  - component: {fileID: 4659504649392596552}
+  - component: {fileID: 5679672997121481982}
+  m_Layer: 0
+  m_Name: InnerTrigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5939500107467528601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7565565358908950624}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.13, y: 1.001, z: -0.0993}
+  m_LocalScale: {x: 1.25, y: 0.6, z: 2.2}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 480056316256382918}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &1897988736368004689
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7565565358908950624}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &1910308760925583018
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7565565358908950624}
+  m_Enabled: 0
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &4659504649392596552
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7565565358908950624}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.33371428, y: 0.5583655, z: 0.20085248}
+  m_Center: {x: -1.5958787, y: 1.3973073, z: 0.78037816}
+--- !u!114 &5679672997121481982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7565565358908950624}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
+  useTrigger: 1
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &8306620225549646079
 GameObject:
   m_ObjectHideFlags: 0
@@ -1146,6 +1346,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8247178996809694912}
   - component: {fileID: 6405567670451129497}
+  - component: {fileID: 7364870912854301120}
   m_Layer: 0
   m_Name: Oven_new
   m_TagString: Untagged
@@ -1167,13 +1368,14 @@ Transform:
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 480056316256382918}
-  - {fileID: 3405092764259175938}
-  - {fileID: 5154154796772312855}
-  - {fileID: 50167618875032665}
-  - {fileID: 7992382333243500331}
   - {fileID: 885175829246236420}
   - {fileID: 5507406186747588545}
+  - {fileID: 3886846039186322452}
   - {fileID: 333171984610321944}
+  - {fileID: 3405092764259175938}
+  - {fileID: 50167618875032665}
+  - {fileID: 7992382333243500331}
+  - {fileID: 5154154796772312855}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!114 &6405567670451129497
@@ -1190,3 +1392,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OvenInteraction
   eToolId: 80
   acceptedCategories: 2
+--- !u!114 &7364870912854301120
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8831816943483008047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f0d1bac64934b8aac1727384cdbd3f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OvenDoorController
+  door: {fileID: 5507406186747588545}
+  doorCollider: {fileID: 0}
+  closeDuration: 0.5
+  openDuration: 0.5
