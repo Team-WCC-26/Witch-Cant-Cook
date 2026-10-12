@@ -4,8 +4,6 @@ using UnityEngine;
 using Protocol;
 using Cysharp.Threading.Tasks;
 using System.Threading;
-using TMPro;
-using MemoryPack;
 
 // 직접 씬에 배치하지 말 것.
 namespace Server

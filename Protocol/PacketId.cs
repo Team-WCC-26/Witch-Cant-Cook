@@ -20,6 +20,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_PingResult = 10,
 
+    C_SetLatency = 12, // 테스트용 지연 시뮬레이터
+
     // 인증 관련 패킷 (100~199)
     C_LoginRequest = 100,
     S_LoginResponse = 101,

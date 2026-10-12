@@ -39,7 +39,8 @@ class Program
             .UsePackageDecoder<PacketPackageDecoder>()
             .UsePackageHandler(async (session, package) =>
             {
-                PacketDispatcher.Dispatch(session, (PacketId)package.Id, package);
+                // 지연 설정 세션은 큐잉, 미설정 세션은 내부에서 기존 Dispatch 직행
+                await LatencySimulator.ReceiveAsync(session, package);
             })
 
             .ConfigureSuperSocket(options =>
