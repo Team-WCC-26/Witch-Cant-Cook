@@ -71,6 +71,21 @@ public class ToolHandler : PacketHandlerBase
         });
     }
 
+    [PacketHandler(PacketId.C_ToolPlayerExit)]
+    public static void ExitPot(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<ToolPlayerExitPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            if (room.ExitToolPlayer(packet.ToolEntityId, session.Player))
+            {
+                room.BroadCast(PacketSerializer.Serialize(packet, true));
+            }
+        });
+    }
+
     [PacketHandler(PacketId.C_PotForceEject)]
     public static void ForceEjectPot(Session session, PacketPackageInfo package)
     {
@@ -83,17 +98,17 @@ public class ToolHandler : PacketHandlerBase
         });
     }
 
-    [PacketHandler(PacketId.C_PanStoveExit)]
-    public static void PanStoveExit(Session session, PacketPackageInfo package)
-    {
-        var packet = DeSerialize<PanStoveExitPacket>(package.Body);
-        var room = session.Player.Room;
+    //[PacketHandler(PacketId.C_PanStoveExit)]
+    //public static void PanStoveExit(Session session, PacketPackageInfo package)
+    //{
+    //    var packet = DeSerialize<PanStoveExitPacket>(package.Body);
+    //    var room = session.Player.Room;
 
-        room.PushJob(() =>
-        {
-            room.LeaveStove(packet.PanEntityId);
-        });
-    }
+    //    room.PushJob(() =>
+    //    {
+    //        room.LeaveStove(packet.PanEntityId);
+    //    });
+    //}
 
     //[PacketHandler(PacketId.C_ClearDish)]
     //public static void ClearDish(Session session, PacketPackageInfo package)

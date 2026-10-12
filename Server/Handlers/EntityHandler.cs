@@ -49,6 +49,20 @@ public class EntityHandler : PacketHandlerBase
         });
     }
 
+    [PacketHandler(PacketId.C_EntityExit)]
+    public static void ExitEntity(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<EntityExitPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
+
+            entity.Parent = null;
+        });
+    }
+
     //[PacketHandler(PacketId.C_EntityPickup)]
     //public static void PickupEntity(Session session, PacketPackageInfo package)
     //{

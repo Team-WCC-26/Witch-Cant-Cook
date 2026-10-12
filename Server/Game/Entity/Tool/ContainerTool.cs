@@ -60,11 +60,13 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
         return true;
     }
 
-    public virtual void RemovePlayer(Player player)
+    public virtual bool RemovePlayer(Player player)
     {
-        if (!_insidePlayers.Remove(player)) return;
+        if (!_insidePlayers.Remove(player)) return false;
 
         player.Parent = null;
+
+        return true;
     }
 
     public void ClearInsidePlayers()
