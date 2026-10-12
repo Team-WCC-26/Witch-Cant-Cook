@@ -5,7 +5,12 @@ using UnityEngine;
 
 public class PlayerInteract
 {
+    private enum PendingAttackImpact { None, Punch, Knife }
+
     private readonly PlayerBrain brain;
+    private PendingAttackImpact pendingAttackImpact;
+    private CatchableObj pendingKnife;
+    private float pendingImpactDeadline;
 
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
@@ -46,8 +51,11 @@ public class PlayerInteract
         IInteractTarget target = FindInteractTarget();
         if (target is not CatchableObj obj)
         {
-            brain.ActionController.PunchAction();
-            target.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+            if (brain.ActionController.PunchAction())
+            {
+                pendingAttackImpact = PendingAttackImpact.Punch;
+                pendingImpactDeadline = Time.time + 2f;
+            }
             return;
         }
         if (obj.IsHold) return;
@@ -183,6 +191,52 @@ public class PlayerInteract
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    public void QueueKnifeImpact()
+    {
+        pendingAttackImpact = PendingAttackImpact.Knife;
+        pendingKnife = HeldObj;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
+    public void CancelPendingAttackImpact()
+    {
+        pendingAttackImpact = PendingAttackImpact.None;
+        pendingKnife = null;
+        pendingImpactDeadline = 0f;
+    }
+
+    public void OnPunchImpact()
+    {
+        if (!TryConsumeAttackImpact(PendingAttackImpact.Punch, out _)) return;
+
+        IInteractTarget target = FindInteractTarget();
+        if (target is CatchableObj) return;
+        target?.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+    }
+
+    public void OnKnifeImpact()
+    {
+        if (!TryConsumeAttackImpact(PendingAttackImpact.Knife, out CatchableObj knife)) return;
+        if (HeldObj != knife || knife == null) return;
+
+        if (FindInteractTarget() is not CatchableObj target) return;
+        if (!target.TryGetComponent(out IngredientReaction _)) return;
+        RequestEntityInteract(target.NetworkId);
+    }
+
+    private bool TryConsumeAttackImpact(PendingAttackImpact expected, out CatchableObj knife)
+    {
+        knife = pendingKnife;
+        if (pendingAttackImpact != expected) return false;
+
+        bool valid = Time.time <= pendingImpactDeadline &&
+            PlayerSpawnManager.Instance != null &&
+            PlayerSpawnManager.Instance.IsMine(brain.PlayerId) &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default;
+        CancelPendingAttackImpact();
+        return valid;
     }
 
     public bool TryUseEquipment()

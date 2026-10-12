@@ -132,7 +132,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
             if (catchable.TryGetComponent(out IngredientReaction reaction) &&
                 !reaction.IsActionCompleted(IngredientAction.Cut))
-                reaction.GaugeUI?.ShowProgress(1f - packet.Process);
+                reaction.ApplyCutProgress(packet.Process);
         }
     }
 

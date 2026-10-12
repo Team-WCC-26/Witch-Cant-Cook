@@ -7,11 +7,7 @@ public class KnifeInteraction : MonoBehaviour, IHeldPrimaryAction, IEquipment
         if (interact == null) return false;
 
         if (!interact.TryUseEquipment()) return true;
-
-        if (interact.FindInteractTarget() is not CatchableObj target) return true;
-        if (!target.TryGetComponent(out IngredientReaction _)) return true;
-
-        interact.RequestEntityInteract(target.NetworkId);
+        interact.QueueKnifeImpact();
         return true;
     }
 }

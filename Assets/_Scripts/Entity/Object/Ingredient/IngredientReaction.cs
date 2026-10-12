@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 [Flags]
@@ -41,6 +42,17 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private IngredientAction completedActions = IngredientAction.None;
     private int curHP;
     private int maxHP;
+    private float lastCutProcess;
+    private Coroutine wobbleRoutine;
+    private Transform wobblePivot;
+    private MeshFilter wobbleMeshFilter;
+    private MeshRenderer wobbleMeshRenderer;
+    private MaterialPropertyBlock wobblePropertyBlock;
+    private float wobbleDirection = 1f;
+
+    [Header("Cut Hit Wobble")]
+    [SerializeField, Min(0f)] private float wobbleAngle = 12f;
+    [SerializeField, Min(0.01f)] private float wobbleDuration = 0.35f;
     public float CurGuage => 1 - (float)curHP / maxHP;
     public InteractionGaugeUI GaugeUI => gaugeUI;
 
@@ -65,12 +77,32 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     public void ResetForPool()
     {
+        StopHitWobble();
         InitializeGauge();
         lastAction = IngredientAction.None;
         completedActions = IngredientAction.None;
+        lastCutProcess = 0f;
+        wobbleDirection = 1f;
 
         gaugeUI?.Hide();
         ApplyVisual(IngredientAction.None);
+    }
+
+    private void OnDisable()
+    {
+        StopHitWobble();
+    }
+
+    public void ApplyCutProgress(float process)
+    {
+        if (IsActionCompleted(IngredientAction.Cut)) return;
+
+        process = Mathf.Clamp01(process);
+        gaugeUI?.ShowProgress(1f - process);
+
+        if (process <= lastCutProcess + 0.0001f || process >= 1f) return;
+        lastCutProcess = process;
+        PlayHitWobble();
     }
 
     public bool Interact(IngredientAction action, int dmg = 0)
@@ -130,6 +162,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
+            StopHitWobble();
             gaugeUI?.Hide();
             PlayCutParticle();
         }
@@ -215,6 +248,89 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     {
         Vector3 position = targetRenderer != null ? targetRenderer.bounds.center : transform.position;
         IngredientCutVfx.PlayAt(position, catchable != null ? catchable.Data as Ingredient : null);
+    }
+
+    private void PlayHitWobble()
+    {
+        if (!isActiveAndEnabled || wobbleAngle <= 0f || meshFilter == null ||
+            targetRenderer is not MeshRenderer sourceRenderer ||
+            meshFilter.transform != sourceRenderer.transform ||
+            meshFilter.sharedMesh == null)
+            return;
+
+        if (wobblePivot == null)
+        {
+            GameObject pivotObject = new GameObject("CutHitWobblePivot");
+            wobblePivot = pivotObject.transform;
+            wobblePivot.SetParent(meshFilter.transform, false);
+
+            GameObject visualObject = new GameObject("CutHitWobbleVisual");
+            visualObject.transform.SetParent(wobblePivot, false);
+            visualObject.layer = sourceRenderer.gameObject.layer;
+            wobbleMeshFilter = visualObject.AddComponent<MeshFilter>();
+            wobbleMeshRenderer = visualObject.AddComponent<MeshRenderer>();
+            wobbleMeshRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
+            wobbleMeshRenderer.receiveShadows = sourceRenderer.receiveShadows;
+            wobbleMeshRenderer.lightProbeUsage = sourceRenderer.lightProbeUsage;
+            wobbleMeshRenderer.reflectionProbeUsage = sourceRenderer.reflectionProbeUsage;
+            wobbleMeshRenderer.renderingLayerMask = sourceRenderer.renderingLayerMask;
+            wobbleMeshRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
+            wobbleMeshRenderer.sortingOrder = sourceRenderer.sortingOrder;
+            wobblePropertyBlock = new MaterialPropertyBlock();
+        }
+
+        if (wobbleRoutine != null)
+            StopCoroutine(wobbleRoutine);
+
+        wobbleMeshFilter.sharedMesh = meshFilter.sharedMesh;
+        wobbleMeshRenderer.sharedMaterials = sourceRenderer.sharedMaterials;
+        for (int i = 0; i < wobbleMeshRenderer.sharedMaterials.Length; i++)
+        {
+            sourceRenderer.GetPropertyBlock(wobblePropertyBlock, i);
+            wobbleMeshRenderer.SetPropertyBlock(wobblePropertyBlock, i);
+        }
+
+        Bounds bounds = meshFilter.sharedMesh.bounds;
+        Vector3 pivot = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+        wobblePivot.localPosition = pivot;
+        wobblePivot.GetChild(0).localPosition = -pivot;
+        wobblePivot.localRotation = Quaternion.identity;
+        wobblePivot.gameObject.SetActive(true);
+        sourceRenderer.enabled = false;
+
+        wobbleDirection = -wobbleDirection;
+        wobbleRoutine = StartCoroutine(HitWobbleRoutine());
+    }
+
+    private IEnumerator HitWobbleRoutine()
+    {
+        float elapsed = 0f;
+        while (elapsed < wobbleDuration)
+        {
+            float progress = Mathf.Clamp01(elapsed / wobbleDuration);
+            float angle = Mathf.Sin(progress * Mathf.PI * 3f) * (1f - progress) * wobbleAngle * wobbleDirection;
+            wobblePivot.localRotation = Quaternion.Euler(angle * 0.25f, 0f, angle);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        wobbleRoutine = null;
+        StopHitWobble();
+    }
+
+    private void StopHitWobble()
+    {
+        if (wobbleRoutine != null)
+        {
+            StopCoroutine(wobbleRoutine);
+            wobbleRoutine = null;
+        }
+
+        if (wobblePivot == null || !wobblePivot.gameObject.activeSelf) return;
+        wobblePivot.localRotation = Quaternion.identity;
+        wobblePivot.gameObject.SetActive(false);
+        if (targetRenderer != null)
+            targetRenderer.enabled = true;
     }
     #endregion
 }
