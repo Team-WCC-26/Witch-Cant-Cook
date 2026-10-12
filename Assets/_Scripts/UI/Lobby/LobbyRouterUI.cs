@@ -86,6 +86,9 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
     {
         var packet = MemoryPackSerializer.Deserialize<JoinRoomPacket>(data.Span);
 
+        if (packet.RoomId != "N" && packet.RoomId != "F")
+            StageSelectionSession.Instance.OnRoomJoined();
+
         //_chat.gameObject.SetActive(true);
 
         PlayerSpawnManager.Instance.MyID = packet.PlayerId;

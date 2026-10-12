@@ -53,6 +53,9 @@ public partial class IngredientSpawnSystem : SystemBase
             {
                 // Assign identity before router registration can attach this food to a plate.
                 FoodRecipeIdentity.Initialize(spawnedObj.GetComponent<CatchableObj>(), ingredientRaw, recipeRaw);
+                // The pool resets before spawn data is assigned; initialize processing HP from the new ingredient.
+                if (isIngredient)
+                    spawnedObj.GetComponent<IngredientReaction>()?.ResetForPool();
                 // 3. 네트워크 오브젝트 등록 및 일반 재료 ECS 컴포넌트 주입
                 RegisterNetworkObject(spawnedObj, netID);
 

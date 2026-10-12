@@ -77,6 +77,8 @@ public class GSpreadReader : Singleton<GSpreadReader>
         return true;
     }
 
+    public bool HasSheet(string className) => sheets.Exists(sheet => sheet.className == className);
+
     public List<T> ImportData<T>() where T : class, new()
     {
         var sheet = sheets.Find(s => s.className == typeof(T).Name);
