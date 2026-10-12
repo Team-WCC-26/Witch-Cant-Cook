@@ -20,6 +20,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_PingResult = 10,
 
+    C_SetLatency = 12, // 테스트용 지연 시뮬레이터
+
     // 인증 관련 패킷 (100~199)
     C_LoginRequest = 100,
     S_LoginResponse = 101,
@@ -78,8 +80,10 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_EntityInteract = 334,
 
-    C_EntityThrow = 336,
-    S_EntityThrow = 337,
+    C_EntityExit = 336,
+
+    C_EntityThrow = 338,
+    S_EntityThrow = 339,
 
     //C_EntityCombine = 338,
     //S_EntityCombine = 339,
@@ -132,11 +136,14 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_ToolPlayerEnter = 412,
     S_ToolPlayerEnter = 413,
 
-    S_PotCookComplete = 415,
+    C_ToolPlayerExit = 414,
+    S_ToolPlayerExit = 415,
+
+    S_PotCookComplete = 417,
 
     // Pan
-    C_PanStoveExit = 416,
-    S_PanStoveExit = 417,
+    C_PanStoveExit = 418,
+    S_PanStoveExit = 419,
 
     // 기타 패킷 (00~)
     // ...

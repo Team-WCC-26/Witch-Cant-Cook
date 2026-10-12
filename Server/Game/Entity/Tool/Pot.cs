@@ -69,11 +69,13 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         return true;
     }
 
-    public override void RemovePlayer(Player player)
+    public override bool RemovePlayer(Player player)
     {
-        base.RemovePlayer(player);
+        var res = base.RemovePlayer(player);
 
         if (InsidePlayers.Count == 0) StopPlayerDamage();
+
+        return res;
     }
 
     public void ForceEject()

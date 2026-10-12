@@ -4,6 +4,26 @@ namespace Server;
 
 public class Pan() : CookingTool(new SingleSlotStorage())
 {
+    public override Entity? Parent 
+    {
+        get => base.Parent;
+        set
+        {
+            base.Parent = value;
+
+            if (_parent is Stove)
+            {
+                SetCookEnable(true);
+                StartCook();
+            }
+            else
+            {
+                SetCookEnable(false);
+                PauseCook();
+            }
+        }
+    }
+
     protected override IngredientState _cookState => IngredientState.Grilled;
 
     public override bool Interact(Player player)
@@ -12,8 +32,6 @@ public class Pan() : CookingTool(new SingleSlotStorage())
         {
             player.HoldingEntity = this;
             Parent = player;
-
-            PauseCook();
 
             return true;
         }
@@ -35,21 +53,19 @@ public class Pan() : CookingTool(new SingleSlotStorage())
         return true;
     }
 
-    public bool LeaveStove()
-    {
-        if (Parent is not Stove) return false;
+    //public bool LeaveStove()
+    //{
+    //    if (Parent is not Stove) return false;
 
-        Parent = null;
+    //    Parent = null;
 
-        PauseCook();
+    //    PauseCook();
 
-        return true;
-    }
+    //    return true;
+    //}
 
     private void PauseCook()
     {
-        SetCookEnable(false);
-
         if (_timerManager.Pause(_cookTimer))
         {
             CookPausePacket pausePacket = new()

@@ -348,6 +348,18 @@ public class Room
         return false;
     }
 
+    public bool ExitToolPlayer(long toolId, Player player)
+    {
+        if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
+
+        if (entity is Oven || entity is Pot)
+        {
+            return (entity as ContainerTool).RemovePlayer(player);
+        }
+
+        return false;
+    }
+
     public bool ForceEjectTool(long toolId)
     {
         if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
@@ -362,13 +374,13 @@ public class Room
         return false;
     }
 
-    public bool LeaveStove(long panId)
-    {
-        if (!_entities.TryGetValue(panId, out var entity) || entity.IsDestroyed) return false;
-        if (entity is not Pan pan) return false;
+    //public bool LeaveStove(long panId)
+    //{
+    //    if (!_entities.TryGetValue(panId, out var entity) || entity.IsDestroyed) return false;
+    //    if (entity is not Pan pan) return false;
 
-        return pan.LeaveStove();
-    }
+    //    return pan.LeaveStove();
+    //}
 
     public void InteractDoor(DoorId doorId, string playerId)
     {

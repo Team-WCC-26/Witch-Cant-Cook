@@ -58,6 +58,14 @@ public sealed class TimerManager
         }
     }
 
+    public bool CheckHandleValid(TimerHandle handle)
+    {
+        if (!_timers.TryGetValue(handle.Id, out var timer)) return false;
+        if (timer.Cancelled) return false;
+
+        return true;
+    }
+
     public bool Pause(TimerHandle handle)
     {
         if (!_timers.TryGetValue(handle.Id, out var timer)) return false;
