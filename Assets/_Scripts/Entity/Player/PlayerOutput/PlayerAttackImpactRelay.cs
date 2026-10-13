@@ -11,9 +11,13 @@ public sealed class PlayerAttackImpactRelay : MonoBehaviour
         brain = GetComponentInParent<PlayerBrain>();
     }
 
-    public void OnPunchImpact()
+public void OnPunchImpact()
     {
-        brain?.Interact?.OnPunchImpact();
+        if (brain?.Interact == null) return;
+        if (brain.StateResolver is RemotePlayerStateResolver)
+            brain.Interact.OnRemotePunchImpact();
+        else
+            brain.Interact.OnPunchImpact();
     }
 
     public void OnKnifeImpact()

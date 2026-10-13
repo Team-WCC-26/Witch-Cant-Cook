@@ -1228,7 +1228,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d2762720fa788f7429c9c89656358b49, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackImpactRelay
 --- !u!1 &1194803427804363679
 GameObject:
@@ -2921,6 +2921,7 @@ GameObject:
   - component: {fileID: 6000329936595199975}
   - component: {fileID: 7464928229050404789}
   - component: {fileID: 3735518019011116279}
+  - component: {fileID: 8363391749389190376}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -3288,6 +3289,21 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &8363391749389190376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3553836231192102681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e51e645a331bf2445bc7720564c600aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHitWobble
+  visualRoot: {fileID: 5775003194831538317}
+  angle: 12
+  duration: 0.35
 --- !u!1 &3665109766101093656
 GameObject:
   m_ObjectHideFlags: 0

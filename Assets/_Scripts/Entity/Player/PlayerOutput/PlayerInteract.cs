@@ -6,6 +6,8 @@ using UnityEngine;
 public class PlayerInteract
 {
     private enum PendingAttackImpact { None, Punch, Knife }
+    private const float RemotePunchRadiusBonus = 0.15f;
+    private const float RemotePunchDistanceBonus = 0.25f;
 
     private readonly PlayerBrain brain;
     private PendingAttackImpact pendingAttackImpact;
@@ -219,9 +221,55 @@ public class PlayerInteract
     {
         if (!TryConsumeAttackImpact(PendingAttackImpact.Punch, out _)) return;
 
+        if (TryFindPunchedPlayer(BuildInteractRay(), GetInteractRadius(), brain.InteractDistance) is PlayerHitWobble playerHit)
+        {
+            playerHit.PlayHit(brain.transform.position);
+            return;
+        }
+
         IInteractTarget target = FindInteractTarget();
         if (target is CatchableObj) return;
         target?.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+    }
+
+    public void OnRemotePunchImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+
+        Transform facing = brain.FacingRoot != null ? brain.FacingRoot : brain.transform;
+        Vector3 origin = brain.Col != null ? brain.Col.bounds.center : facing.position + Vector3.up;
+        PlayerHitWobble playerHit = TryFindPunchedPlayer(
+            new Ray(origin, facing.forward),
+            GetInteractRadius() + RemotePunchRadiusBonus,
+            brain.InteractDistance + RemotePunchDistanceBonus);
+        playerHit?.PlayHit(brain.transform.position);
+    }
+
+    private PlayerHitWobble TryFindPunchedPlayer(Ray ray, float radius, float distance)
+    {
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            radius,
+            ray.direction,
+            distance,
+            Physics.AllLayers,
+            QueryTriggerInteraction.Ignore);
+
+        float nearestDistance = float.PositiveInfinity;
+        Collider nearestCollider = null;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.transform.IsChildOf(brain.transform)) continue;
+            if (hit.distance >= nearestDistance) continue;
+            nearestDistance = hit.distance;
+            nearestCollider = hit.collider;
+        }
+
+        if (nearestCollider == null) return null;
+        PlayerBrain target = nearestCollider.GetComponentInParent<PlayerBrain>();
+        return target != null && target != brain
+            ? target.GetComponent<PlayerHitWobble>()
+            : null;
     }
 
     public void OnKnifeImpact()
