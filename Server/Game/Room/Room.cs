@@ -194,6 +194,10 @@ public class Room
                 tool = new CounterTop();
                 break;
 
+            case 70:
+                tool = new JumpPad();
+                break;
+
             case 80:
                 tool = new Oven();
                 //_cookManager.RegisterCookingTool(id, tool as CookingTool);
@@ -372,6 +376,22 @@ public class Room
         }
 
         return false;
+    }
+
+    public bool EnterJumpPad(long padId)
+    {
+        if (!_entities.TryGetValue(padId, out var entity) || entity.IsDestroyed) return false;
+        if (entity is not JumpPad jumpPad) return false;
+
+        return jumpPad.HandlePlayerEnter();
+    }
+
+    public bool ExitJumpPad(long padId)
+    {
+        if (!_entities.TryGetValue(padId, out var entity) || entity.IsDestroyed) return false;
+        if (entity is not JumpPad jumpPad) return false;
+
+        return jumpPad.HandlePlayerExit();
     }
 
     //public bool LeaveStove(long panId)
