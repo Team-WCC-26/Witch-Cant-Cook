@@ -26,6 +26,7 @@ public class PotInteraction : MapObjInteraction,
 
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
+    [SerializeField] private Animator cookingVisualAnimator;
 
     [Header("솥 시점")]
     [SerializeField] private CinemachineCamera potCamera;
@@ -47,6 +48,11 @@ public class PotInteraction : MapObjInteraction,
     private float cookCompleteEffectSpread = 2f;
 
     #endregion
+
+    private static readonly int IsCookingHash = Animator.StringToHash("IsCooking");
+    private static readonly int CookingRattleHash = Animator.StringToHash("CookingRattle");
+    private static readonly int CookingIdleHash = Animator.StringToHash("Idle");
+    private bool cookingVisualActive;
 
     private PotState state = PotState.Idle;
     public PotState State => state;
@@ -75,6 +81,19 @@ public class PotInteraction : MapObjInteraction,
     private void OnEnable()
     {
         ResetPotData();
+    }
+
+    // 게이지가 실제 표시되는 동안에만 시각용 솥 애니메이션을 재생한다.
+    private void LateUpdate()
+    {
+        bool shouldPlay = state == PotState.Cooking &&
+            gaugeUI != null && gaugeUI.gameObject.activeInHierarchy;
+        if (cookingVisualAnimator == null || shouldPlay == cookingVisualActive) return;
+
+        cookingVisualActive = shouldPlay;
+        cookingVisualAnimator.SetBool(IsCookingHash, shouldPlay);
+        if (shouldPlay)
+            cookingVisualAnimator.Play(CookingRattleHash, 0, Random.value);
     }
 
     // 솥 보관물 반환 및 초기화
@@ -194,6 +213,12 @@ public class PotInteraction : MapObjInteraction,
         ejectRandom = null;
 
         gaugeUI?.Hide();
+        cookingVisualActive = false;
+        if (cookingVisualAnimator != null)
+        {
+            cookingVisualAnimator.SetBool(IsCookingHash, false);
+            cookingVisualAnimator.Play(CookingIdleHash, 0, 0f);
+        }
     }
 
     // 실행 중 솥 코루틴 중단
