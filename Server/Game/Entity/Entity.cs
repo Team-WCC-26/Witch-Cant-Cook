@@ -6,7 +6,7 @@ public abstract class Entity
 {
     public long EntityId { get; private set; }
     public Room Room { get; private set; }
-    public Entity? Parent
+    public virtual Entity? Parent
     {
         get => _parent;
         set
@@ -43,7 +43,7 @@ public abstract class Entity
 
     public bool IsDestroyed => _dirtyMask.HasFlag(DirtyMask.Destroy);
 
-    private Entity? _parent;
+    protected Entity? _parent;
     private DirtyMask _dirtyMask = DirtyMask.None;
 
     internal void InitEntityId(long id)

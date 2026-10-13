@@ -33,3 +33,12 @@ public partial class ToolPlayerEnterPacket
     public long ToolEntityId { get; set; }
     public string PlayerId { get; set; }
 }
+
+[MemoryPackable]
+[PacketId(PacketId.C_ToolPlayerExit)]
+[PacketId(PacketId.S_ToolPlayerExit)]
+public partial class ToolPlayerExitPacket
+{
+    public long ToolEntityId { get; set; }
+    public string PlayerId { get; set; }
+}

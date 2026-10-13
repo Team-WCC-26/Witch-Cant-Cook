@@ -53,6 +53,7 @@ public class PlayerActionController
                     break;
 
                 case PlayerPhysicalMode.Ragdoll:
+                    brain.Interact.CancelPendingAttackImpact();
                     brain.Interact.ForceDropHeld();
                     ragdollController.Enter();
                     break;
@@ -92,13 +93,14 @@ public class PlayerActionController
     }
 
     #region Action
-    public void PunchAction()
+    public bool PunchAction()
     {
-        if (!canAction) return;
+        if (!canAction) return false;
 
         animController.PlayPrimaryAction();
         canAction = false;
         RecordPrimaryAction(EntityCategory.Player);
+        return true;
     }
 
     public bool TryEquipAction()
@@ -162,6 +164,7 @@ public class PlayerActionController
 
     public void CancelAction()
     {
+        brain.Interact.CancelPendingAttackImpact();
         animController.CancelAction();
         canAction = true;
         actionTime = 0;

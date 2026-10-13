@@ -1,195 +1,128 @@
+using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 [RequireComponent(typeof(CatchableObj))]
 public class IngredientTraitExplode : IngredientTrait
 {
-    [Header("Fragments")]
-    [SerializeField] private GameObject explosionVFXPrefab;
-    [SerializeField] private GameObject explosionFragment;
-    [SerializeField] private int fragmentCount = 10;
-    [SerializeField] private float fragmentForce = 8f;
-
     [Header("Explosion")]
-    [SerializeField] private float blastRadius = 4f;
-    [SerializeField] private float blastForce = 12f;
-    [SerializeField] private float upwardModifier = 2f;
-    [SerializeField] private LayerMask blastMask;
+    [SerializeField] private GameObject explosionVFXPrefab;
+    [SerializeField, Min(0f)] private float blastRadius = 10f;
+    [SerializeField, Min(0f)] private float blastForce = 12f;
+    [SerializeField, Min(0f)] private float upwardModifier = 2f;
+    [SerializeField] private LayerMask blastMask = ~0;
 
-    [Header("VFX / SFX")]
-    [SerializeField] private ParticleSystem explosionVFX;
-    [SerializeField] private AudioSource explosionSFX;
+    [Header("Player Knockback")]
+    [SerializeField, Min(0f)] private float playerForceMultiplier = 2.2f;
+    [SerializeField, Min(0f)] private float playerSpinImpulse = 0.8f;
+    [SerializeField, Min(0f)] private float playerKnockbackDuration = 0.8f;
 
-    private bool exploded = false;
+    [Header("Replacement Ingredient")]
+    [SerializeField] private Define.eIngredient replacementIngredient = Define.eIngredient.Popcorn;
+    [SerializeField, Min(0f)] private float replacementHeightOffset = 0.15f;
 
+    private CatchableObj source;
+    private bool exploded;
+    private readonly HashSet<Rigidbody> affectedBodies = new();
+
+    private void Awake()
+    {
+        source = GetComponent<CatchableObj>();
+    }
 
     protected override void StartTrait()
     {
         exploded = false;
+        affectedBodies.Clear();
     }
 
     public void Explode()
     {
-        if (exploded)
-            return;
-
+        if (exploded) return;
         exploded = true;
 
         Vector3 origin = transform.position;
-
-        SpawnExplosionParticle(origin);
-
-        // 필요하면 사용
-        // PlayVFX(origin);
-        // PlaySFX();
+        if (explosionVFXPrefab != null)
+            Instantiate(explosionVFXPrefab, origin, Quaternion.identity);
 
         ApplyBlast(origin);
-        SpawnFragments(origin);
-
+        SpawnReplacement(origin);
     }
 
     private void ApplyBlast(Vector3 origin)
     {
+        affectedBodies.Clear();
         Collider[] hits = Physics.OverlapSphere(
-            origin,
-            blastRadius,
-            blastMask,
-            QueryTriggerInteraction.Ignore);
+            origin, blastRadius, blastMask, QueryTriggerInteraction.Ignore);
 
         foreach (Collider hit in hits)
         {
-            if (hit.gameObject == gameObject)
-                continue;
+            if (hit.transform.IsChildOf(transform)) continue;
 
-            if (hit.TryGetComponent(out PlayerBrain player))
+            PlayerBrain player = hit.GetComponentInParent<PlayerBrain>();
+            if (player != null)
             {
-                if (player.Interact.HeldObj != null &&
-                    player.Interact.HeldObj.gameObject != gameObject)
-                {
+                Rigidbody playerBody = player.Rb;
+                if (playerBody == null || playerBody.isKinematic || !affectedBodies.Add(playerBody))
+                    continue;
+
+                if (player.Interact.HeldObj != null && player.Interact.HeldObj != source)
                     player.Interact.ForceDropHeld();
-                }
 
-                ApplyPlayerKnockback(player.Rb);
+                // 이동 코드가 다음 FixedUpdate에서 폭발 속도/회전을 덮어쓰지 않도록 한다.
+                player.ActionController.Movement.BeginForcedMovement(playerKnockbackDuration);
+                ApplyKnockback(playerBody, origin, playerForceMultiplier);
+                float spinDirection = Random.value < 0.5f ? -1f : 1f;
+                playerBody.AddTorque(Vector3.up * (playerSpinImpulse * spinDirection), ForceMode.Impulse);
                 continue;
             }
 
-            if (hit.TryGetComponent(out CatchableObj catchable))
-            {
-                if (catchable.IsHold)
-                    continue;
+            CatchableObj catchable = hit.GetComponentInParent<CatchableObj>();
+            if (catchable != null && (catchable == source || catchable.IsHold)) continue;
 
-                Rigidbody rb = catchable.Rb ?? hit.attachedRigidbody;
+            Rigidbody rb = hit.attachedRigidbody;
+            if (rb == null || rb.isKinematic || !affectedBodies.Add(rb)) continue;
 
-                if (rb == null)
-                    continue;
-
-                ApplyObjectKnockback(rb, origin);
-            }
+            ApplyKnockback(rb, origin, 1f);
         }
     }
 
-    private void ApplyObjectKnockback(Rigidbody rb, Vector3 origin)
+    private void ApplyKnockback(Rigidbody rb, Vector3 origin, float multiplier)
     {
-        Vector3 dir = rb.position - origin;
-        dir.y = 0f;
-
-        if (dir.sqrMagnitude < 0.001f)
-            dir = Random.insideUnitSphere;
-
-        dir.Normalize();
-
-        Vector3 force =
-            dir * blastForce +
-            Vector3.up * (blastForce * 0.3f);
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        rb.AddForce(force, ForceMode.Impulse);
-    }
-
-    private void ApplyPlayerKnockback(Rigidbody rb)
-    {
-        Vector3 backDir = -transform.forward;
-        backDir.y = 0f;
-        backDir.Normalize();
-
-        Vector3 force =
-            backDir * blastForce * 2.2f +
-            Vector3.up * blastForce * 0.25f;
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        rb.AddForce(force, ForceMode.Impulse);
-
-        Vector3 vel = rb.linearVelocity;
-
-        if (vel.y > 2f)
-            vel.y = 2f;
-
-        rb.linearVelocity = vel;
-    }
-
-    private void SpawnExplosionParticle(Vector3 position)
-    {
-        if (explosionVFXPrefab == null)
-            return;
-
-        Instantiate(explosionVFXPrefab, position, Quaternion.identity);
-    }
-
-    private void SpawnFragments(Vector3 origin)
-    {
-        for (int i = 0; i < fragmentCount; i++)
+        Vector3 direction = rb.worldCenterOfMass - origin;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.001f)
         {
-            GameObject obj = ObjectPoolManager.Instance.Pop("Popcorn");
-
-            obj.transform.position = origin;
-            obj.transform.rotation = Random.rotation;
-
-            Rigidbody rb = obj.GetComponent<Rigidbody>();
-
-            if (rb == null)
-                continue;
-
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-
-            Vector3 dir = Random.onUnitSphere;
-            dir.y = Mathf.Abs(dir.y) + 0.3f;
-
-            rb.AddForce(dir.normalized * fragmentForce, ForceMode.Impulse);
+            Vector2 randomDirection = Random.insideUnitCircle;
+            direction = new Vector3(randomDirection.x, 0f, randomDirection.y);
+            if (direction.sqrMagnitude < 0.001f) direction = Vector3.forward;
         }
+
+        Vector3 impulse = direction.normalized * (blastForce * multiplier) +
+                          Vector3.up * upwardModifier;
+        rb.AddForce(impulse, ForceMode.Impulse);
     }
 
-    #region SFX & VFX
-
-    private void PlayVFX(Vector3 position)
+    private void SpawnReplacement(Vector3 origin)
     {
-        if (explosionVFX == null)
+        IngredientNetworkBridge bridge = IngredientNetworkBridge.Instance;
+        if (bridge == null)
+        {
+            Debug.LogError("[Explosion] IngredientNetworkBridge is required to spawn the replacement ingredient.");
             return;
+        }
 
-        explosionVFX.transform.SetParent(null);
-        explosionVFX.transform.position = position;
-        explosionVFX.Play();
+        // 일반 재료 생성 경로를 사용해 데이터, NetworkID, 잡기/조리/ECS 등록을 유지한다.
+        Vector3 position = origin + Vector3.up * replacementHeightOffset;
+        bridge.SendSpawnPacketToServer((int)replacementIngredient, (float3)position);
     }
-
-    private void PlaySFX()
-    {
-        if (explosionSFX == null)
-            return;
-
-        explosionSFX.transform.SetParent(null);
-        explosionSFX.Play();
-    }
-
-    #endregion
 
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(1f, 0f, 0f, 0.25f);
-        Gizmos.DrawSphere(transform.position, blastRadius);
+        Gizmos.DrawWireSphere(transform.position, blastRadius);
     }
 #endif
 }

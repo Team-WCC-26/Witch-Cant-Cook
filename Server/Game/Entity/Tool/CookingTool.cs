@@ -63,13 +63,13 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
         if (!_cookable) return false;
         if (_storage.Count <= 0) return false;
 
-        if (!_timerManager.Resume(_cookTimer))
+        if (!(_timerManager.CheckHandleValid(_cookTimer) && _timerManager.Resume(_cookTimer)))
         {
             float maxHp = 0;
 
             foreach (var item in _storage)
             {
-                Ingredient ingredient;
+                Ingredient? ingredient;
 
                 if (item is ContainerTool ct)
                 {
@@ -83,6 +83,11 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
                 if (ingredient == null) continue;
 
                 maxHp = MathF.Max(maxHp, ingredient.Hp);
+            }
+
+            foreach (var player in InsidePlayers)
+            {
+                maxHp = MathF.Max(maxHp, player.Hp);
             }
 
             long delayMs = (long)MathF.Ceiling(maxHp / Damage);
