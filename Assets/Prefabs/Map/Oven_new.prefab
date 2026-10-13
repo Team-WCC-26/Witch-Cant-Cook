@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 333171984610321944}
   - component: {fileID: 8263467898440183907}
   - component: {fileID: 7127438703876831838}
+  - component: {fileID: 4030880165711703747}
   m_Layer: 0
   m_Name: Oven_inner
   m_TagString: Untagged
@@ -90,6 +91,27 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &4030880165711703747
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 845786548868681915}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.7546079, y: 0.80137724, z: 0.07180372}
+  m_Center: {x: 0.08921485, y: 0.0070626317, z: 0.09220271}
 --- !u!1 &3096971239994938169
 GameObject:
   m_ObjectHideFlags: 0
@@ -283,7 +305,8 @@ GameObject:
   - component: {fileID: 4782180655026967892}
   - component: {fileID: 7799315814117749132}
   - component: {fileID: 6005097936886233293}
-  m_Layer: 0
+  - component: {fileID: 4126089351362075981}
+  m_Layer: 10
   m_Name: MainBtn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -299,7 +322,7 @@ Transform:
   m_GameObject: {fileID: 3745380062377360427}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -0.5075533, y: 0.10696808, z: 0.58125985}
+  m_LocalPosition: {x: -0.5075533, y: 0.10696808, z: 0.584}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -399,6 +422,19 @@ MonoBehaviour:
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &4126089351362075981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3745380062377360427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bed9ac04c584bc2aa30c7821bbf2239, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OvenButton
+  oven: {fileID: 6405567670451129497}
 --- !u!1 &4459241475590107190
 GameObject:
   m_ObjectHideFlags: 0
@@ -1392,6 +1428,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OvenInteraction
   eToolId: 80
   acceptedCategories: 2
+  mainButton: {fileID: 5154154796772312855}
+  buttonRelay: {fileID: 6005097936886233293}
+  innerTrigger: {fileID: 4659504649392596552}
+  doorController: {fileID: 7364870912854301120}
+  minimumCollisionSpeed: 1
+  pressedButtonZ: 0.576
+  buttonPressDuration: 0.1
+  buttonReturnDuration: 0.1
+  startResponseTimeout: 2
+  emptyOvenWaitDuration: 3
+  completeAudio: {fileID: 0}
 --- !u!114 &7364870912854301120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1405,6 +1452,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OvenDoorController
   door: {fileID: 5507406186747588545}
-  doorCollider: {fileID: 0}
+  doorCollider: {fileID: 7565698103318066730}
   closeDuration: 0.5
   openDuration: 0.5

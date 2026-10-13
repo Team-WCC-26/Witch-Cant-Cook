@@ -196,8 +196,9 @@ MonoBehaviour:
   catchable: {fileID: 3525218091698516734}
   meshFilter: {fileID: 2554692772080338405}
   targetRenderer: {fileID: 329009903539302703}
-  cutParticle: {fileID: 1766117342703822864, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
   gaugeUI: {fileID: 7759626513116068551}
+  wobbleAngle: 12
+  wobbleDuration: 0.35
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
   actionVisuals:
@@ -209,6 +210,14 @@ MonoBehaviour:
     mesh: {fileID: 5971135060449108565, guid: 4225aa6df154f32458b75d4383795927, type: 3}
     materials:
     - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+  - action: 8
+    mesh: {fileID: -1550271240043946642, guid: f2a76b8bb82842b41acf9ddc7eff32f9, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
+  - action: 9
+    mesh: {fileID: 5971135060449108565, guid: 4225aa6df154f32458b75d4383795927, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
 --- !u!114 &4782894890492682936
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,5 +357,5 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2b827591ddfb48348a9ad080db2ee689, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGaugeUI
