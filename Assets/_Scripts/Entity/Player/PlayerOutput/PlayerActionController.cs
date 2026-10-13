@@ -1,7 +1,9 @@
+using System;
 using UnityEngine;
 
 public class PlayerActionController
 {
+    public static event Action<PlayerBrain> RemotePunchPlayed;
     private readonly PlayerBrain brain;
 
     private readonly PlayerAnimController animController;
@@ -135,6 +137,8 @@ public class PlayerActionController
 
         animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         animController.PlayPrimaryAction();
+        if (state.HeldEntityCategory == EntityCategory.Player)
+            RemotePunchPlayed?.Invoke(brain);
     }
 
     public void PlayRemoteJumpStart()

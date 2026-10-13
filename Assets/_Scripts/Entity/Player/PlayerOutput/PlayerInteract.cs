@@ -68,6 +68,14 @@ public class PlayerInteract
     {
         if (!IsHolding) return;
 
+        OvenButton ovenButton = FindInteractTarget().GetTargetComponent<OvenButton>();
+        if (ovenButton != null)
+        {
+            brain.ActionController.PunchAction();
+            ovenButton.OnPunched(brain);
+            return;
+        }
+
         if (TryUseHeldPrimaryAction()) return;
         if (TryUseHeldObjectReceiver()) return;
 

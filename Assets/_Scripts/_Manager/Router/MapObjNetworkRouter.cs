@@ -17,9 +17,12 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private readonly Dictionary<long, MapObjInteraction> mapObjects = new();
 
     private MapObjInteraction currentRegisterTarget;
+    
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
-    private bool isRegisterOwner;
+
+    private bool isRegisterar;
+    public bool IsRegistrar => isRegisterar;
 
     #region unity cycle
 
@@ -63,6 +66,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     #endregion
 
     #region Map Object Getters
+
     public bool TryGetMapObject(long entityId, out MapObjInteraction mapObj)
     {
         return mapObjects.TryGetValue(entityId, out mapObj);
@@ -93,7 +97,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         registerTargets.Clear();
         mapObjects.Clear();
         currentRegisterTarget = null;
-        isRegisterOwner = IsRegisterOwner();
+        isRegisterar = IsRegisterOwner();
 
         HashSet<MapObjInteraction> targets = new();
 
@@ -113,11 +117,11 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
             registerTargets.Add(mapObj);
 
-            if (isRegisterOwner)
+            if (isRegisterar)
                 registerQueue.Enqueue(mapObj);
         }
 
-        if (isRegisterOwner)
+        if (isRegisterar)
             RegisterNext();
     }
 
@@ -175,7 +179,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         target.SetNetworkId(packet.EntityId);
         mapObjects[packet.EntityId] = target;
 
-        if (!isRegisterOwner || currentRegisterTarget != target) return;
+        if (!isRegisterar || currentRegisterTarget != target) return;
 
         currentRegisterTarget = null;
         RegisterNext();
