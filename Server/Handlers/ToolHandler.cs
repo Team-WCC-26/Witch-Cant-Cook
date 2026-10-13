@@ -98,6 +98,30 @@ public class ToolHandler : PacketHandlerBase
         });
     }
 
+    [PacketHandler(PacketId.C_JumpPadPlayerEnter)]
+    public static void EnterJumpPad(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<JumpPadPlayerEnterPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            room.EnterJumpPad(packet.PadEntityId);
+        });
+    }
+
+    [PacketHandler(PacketId.C_JumpPadPlayerExit)]
+    public static void ExitJumpPad(Session session, PacketPackageInfo package)
+    {
+        var packet = DeSerialize<JumpPadPlayerExitPacket>(package.Body);
+        var room = session.Player.Room;
+
+        room.PushJob(() =>
+        {
+            room.ExitJumpPad(packet.PadEntityId);
+        });
+    }
+
     //[PacketHandler(PacketId.C_PanStoveExit)]
     //public static void PanStoveExit(Session session, PacketPackageInfo package)
     //{
