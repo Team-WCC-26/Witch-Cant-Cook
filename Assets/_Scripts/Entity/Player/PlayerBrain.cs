@@ -88,6 +88,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private Camera playerCamera = null;
     private CinemachineCamera virtualCamera = null;
     private bool isInitialized = false;
+    private PlayerRocketController rocket;
 
     #endregion
 
@@ -97,6 +98,20 @@ public sealed class PlayerBrain : MonoBehaviour
     public PlayerStateResolver StateResolver => stateResolver;
     public Camera PlayerCam => playerCamera;
     public PlayerHealthData Health { get; private set; }
+    public PlayerRocketController Rocket
+    {
+        get
+        {
+            if (rocket == null)
+            {
+                rocket = GetComponent<PlayerRocketController>();
+                if (rocket == null && Application.isPlaying)
+                    rocket = gameObject.AddComponent<PlayerRocketController>();
+            }
+            if (rocket != null) rocket.Initialize(this);
+            return rocket;
+        }
+    }
     #endregion
 
     #region Unity Callbacks
@@ -108,6 +123,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
         actionController = new PlayerActionController(this);
         interact = new PlayerInteract(this);
+        _ = Rocket;
     }
 
     private void Update()
@@ -143,6 +159,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     public void Initialize(string id)
     {
+        Rocket?.StopFlight();
         PlayerId = id;
 
         if (Health != null)
@@ -203,6 +220,8 @@ public sealed class PlayerBrain : MonoBehaviour
         {
             return;
         }
+
+        Rocket?.StopFlight();
 
         if (stateResolver is LocalPlayerStateResolver localStateResolver)
         {

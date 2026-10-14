@@ -145,6 +145,8 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
         Transform point = spawnPoint != null ? spawnPoint : spawnRoot;
 
+        player.Rocket?.StopFlight();
+
         player.transform.SetPositionAndRotation(
             point.position,
             point.rotation);

@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: -5558276893335986928}
   - component: {fileID: 6750885171012275325}
   - component: {fileID: 4827861041483684568}
+  - component: {fileID: 881106000}
   m_Layer: 7
   m_Name: Carrot
   m_TagString: Obstacle
@@ -350,3 +351,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b827591ddfb48348a9ad080db2ee689, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGaugeUI
+--- !u!114 &881106000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7294934431915186970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66a040b6f02541e6ac3ac203c38fc1db, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientCarrot
+  catchable: {fileID: -274396100364849250}
+  reaction: {fileID: 6750885171012275325}
+  rocketSettings:
+    rocketDuration: 3
+    rocketSpeed: 12
+    rocketTurnSpeed: 120
+    rocketTurnMaxAngle: 75
+    rocketImpactForce: 8
+    collisionMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+  propulsionParticles: {fileID: 0}
+  propulsionAudio: {fileID: 0}

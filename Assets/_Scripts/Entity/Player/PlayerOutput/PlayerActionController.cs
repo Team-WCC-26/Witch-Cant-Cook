@@ -35,12 +35,13 @@ public class PlayerActionController
 
     public void UpdateTick(PlayerCombinedState state)
     {
+        brain.Rocket?.UpdateFlightState(state);
         if (!movement.IsEjectionActive) isLaunchJumpActive = false;
         UpdateActionState();
         movement.UpdateGroundState();
 
         // Update default locomotion and airborne animation parameters.
-        if (state.PhysicalMode == PlayerPhysicalMode.Default)
+        if (state.PhysicalMode == PlayerPhysicalMode.Default && !(brain.Rocket != null && brain.Rocket.IsFlying))
         {
             animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         }
@@ -71,6 +72,7 @@ public class PlayerActionController
 
     public void FixedTick(PlayerCombinedState state)
     {
+        if (brain.Rocket != null && brain.Rocket.FixedTick(state)) return;
         movement.UpdateEjectionMovement(state.PhysicalMode == PlayerPhysicalMode.Default);
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {

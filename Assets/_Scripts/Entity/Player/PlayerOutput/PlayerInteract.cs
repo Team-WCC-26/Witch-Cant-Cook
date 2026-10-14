@@ -27,6 +27,7 @@ public class PlayerInteract
         DrawDebugInteractRay();
 
         if (!PlayerSpawnManager.Instance.IsMine(brain.PlayerId)) return;
+        if (brain.Rocket != null && brain.Rocket.IsFlying) return;
 
         switch (interaction)
         {
@@ -103,6 +104,7 @@ public class PlayerInteract
     
     private void RequestSecondaryAction()
     {
+        if (TryGetHeldComponent(out IHeldSecondaryAction action) && action.TryUseSecondary(this)) return;
         EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
         switch (category)
@@ -155,6 +157,8 @@ public class PlayerInteract
     public void RequestDropHeld()
     {
         if (!IsHolding) return;
+
+        brain.Rocket?.StopFlight();
 
         CatchableObj target = HeldObj;
         EntityThrowPacket packet = new()
@@ -308,6 +312,8 @@ public class PlayerInteract
         if (target == null) return false;
         if (HeldObj != target) return false;
 
+        brain.Rocket?.StopFlight();
+
         brain.ActionController.CancelAction();
         HeldObj = null;
         target.transform.SetParent(null, true);
@@ -337,6 +343,8 @@ public class PlayerInteract
     {
         if (target == null) return;
 
+        brain.Rocket?.StopFlight();
+
         brain.ActionController.CancelAction();
         target.OnPick(brain);
         Transform holdParent = target.IsEquipment
@@ -353,6 +361,8 @@ public class PlayerInteract
     public void ApplyThrown(CatchableObj target)
     {
         if (target == null || HeldObj != target) return;
+
+        brain.Rocket?.StopFlight();
 
         brain.ActionController.CancelAction();
         HeldObj = null;
