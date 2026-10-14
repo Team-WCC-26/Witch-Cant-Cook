@@ -77,6 +77,7 @@ public class PotInteraction : MapObjInteraction,
     // Player entry
     private readonly List<PlayerBrain> trappedPlayers = new();
     private readonly HashSet<string> pendingPlayerEntries = new(); // Awaiting server response
+    private bool playerEnteredDuringEjection;
 
     // Network 
     private ObjectNetworkRouter objectRouter;
@@ -211,6 +212,7 @@ public class PotInteraction : MapObjInteraction,
         // Player entry
         trappedPlayers.Clear();
         pendingPlayerEntries.Clear();
+        playerEnteredDuringEjection = false;
 
         // Network
         pendingCookCompletePacket = null;
@@ -475,7 +477,6 @@ public class PotInteraction : MapObjInteraction,
 
     private IEnumerator EjectSequenceRoutine(bool waitForPunchRattle)
     {
-        float visualEndTime = 0f;
         if (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
         {
             // 펀치가 로컬에서 재생되지 않은 클라이언트도 같은 순서로 흔들림을 재생한다.
@@ -485,22 +486,31 @@ public class PotInteraction : MapObjInteraction,
 
             while (Time.time < visualOverrideUntilTime)
                 yield return null;
-
-            if (cookingVisualAnimator != null)
-            {
-                PlayVisualOverride(EjectBounceHash, EjectBounceDuration, 0.05f);
-                visualEndTime = Time.time + EjectBounceDuration;
-            }
         }
 
-        // 애니메이션 재생을 요청한 바로 그 프레임에 첫 플레이어/물건을 배출한다.
-        if (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
+        bool ejectedAny = false;
+        while (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
+        {
+            // 각 대상의 배출 애니메이션과 실제 배출을 같은 프레임에 시작한다.
+            if (cookingVisualAnimator != null)
+                PlayVisualOverride(EjectBounceHash, EjectBounceDuration, 0.05f);
+
             EjectNextTarget();
+            ejectedAny = true;
 
-        yield return EjectRemainingRoutine();
+            bool hasMore = activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0;
+            float visualDuration = cookingVisualAnimator != null ? EjectBounceDuration : 0f;
+            float delay = hasMore
+                ? Mathf.Max(ejectInterval, visualDuration)
+                : visualDuration;
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+            else
+                yield return null;
+        }
 
-        // 다음 패킷의 연출이 현재 배출 애니메이션을 끊지 않도록 한다.
-        while (Time.time < visualEndTime)
+        // 대상이 없어도 코루틴 등록이 끝난 뒤 다음 패킷을 처리한다.
+        if (!ejectedAny)
             yield return null;
 
         ejectCoroutine = null;
@@ -521,7 +531,7 @@ public class PotInteraction : MapObjInteraction,
             cookingVisualAnimator.Play(stateHash, 0, 0f);
     }
 
-    // 첫 대상과 나머지 대상이 같은 배출 로직을 사용한다.
+    // 서버 목록 순서대로 플레이어 또는 오브젝트 한 개를 배출한다.
     private void EjectNextTarget()
     {
         Vector3 direction = GetEjectDirection();
@@ -538,18 +548,6 @@ public class PotInteraction : MapObjInteraction,
                 next.NetworkId == pendingCookCompletePacket.DishEntityId;
             float force = isCompletedBowl ? bowlEjectForce : ejectForce;
             EjectObject(next, force, direction);
-        }
-    }
-
-    // 서버 배출 순서를 유지하며 두 번째 대상부터 간격을 적용한다.
-    private IEnumerator EjectRemainingRoutine()
-    {
-        while (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
-        {
-            if (ejectInterval > 0f)
-                yield return new WaitForSeconds(ejectInterval);
-
-            EjectNextTarget();
         }
     }
 
@@ -627,7 +625,8 @@ public class PotInteraction : MapObjInteraction,
         CatchableObj[] enteredDuringEjection = postEjectObjects.ToArray();
         postEjectObjects.Clear();
         ChangeState(PotState.Idle);
-        bool swallowedAfterEjection = false;
+        bool swallowedAfterEjection = playerEnteredDuringEjection;
+        playerEnteredDuringEjection = false;
 
         foreach (CatchableObj catchable in enteredDuringEjection)
         {
@@ -817,7 +816,14 @@ public class PotInteraction : MapObjInteraction,
         pendingPlayerEntries.Remove(packet.PlayerId);
         if (PlayerSpawnManager.Instance == null) return;
         if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player)) return;
-        if (!trappedPlayers.Contains(player)) trappedPlayers.Add(player);
+        if (!trappedPlayers.Contains(player))
+        {
+            trappedPlayers.Add(player);
+            if (state == PotState.Ejecting)
+                playerEnteredDuringEjection = true;
+            else
+                PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
+        }
         PlayerGlow.SetActive(player, true);
         if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
         {
