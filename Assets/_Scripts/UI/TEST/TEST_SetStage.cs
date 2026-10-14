@@ -74,7 +74,7 @@ public class TEST_SetStage : MonoBehaviour
     private void OnSelectionChanged()
     {
         if (currentStageText != null)
-            currentStageText.text = $"현재 스테이지: {stageSession.SelectedStageId}";
+            currentStageText.text = stageSession.HasStageSelection ? $"현재 스테이지: {stageSession.SelectedStageId}" : "";
         if (stageWasRunning && !stageSession.IsStageRunning)
             testStageStartRequested = false;
         stageWasRunning = stageSession.IsStageRunning;
@@ -92,7 +92,7 @@ public class TEST_SetStage : MonoBehaviour
 
     private async void RequestTestStageStart()
     {
-        if (stageSession == null || testStageStartRequested || stageSession.IsStageRunning) return;
+        if (stageSession == null || !stageSession.HasStageSelection || testStageStartRequested || stageSession.IsStageRunning) return;
         var server = ServerManager.Instance;
         if (server == null || !stageSession.IsRoomReady)
         {

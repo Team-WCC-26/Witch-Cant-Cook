@@ -127,6 +127,8 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         if (!ContainsPlayer(playerId))
             SpawnPlayer(playerId);
 
+        StageSelectionSession.Instance.OnPlayerEntered(playerId);
+
         UIManager.Hide<LobbyRouterUI>();
     }
 

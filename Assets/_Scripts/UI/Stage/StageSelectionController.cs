@@ -83,7 +83,7 @@ public class StageSelectionController : MonoBehaviour
         if (direction == 0 || player == null || pages == null || stageRunning || pendingStageId != 0 ||
             Time.unscaledTime < nextRequestAt) return;
         var players = PlayerSpawnManager.Instance;
-        if (session == null || !session.IsRoomReady || players == null ||
+        if (session == null || !session.IsRoomReady || !session.HasStageSelection || players == null ||
             string.IsNullOrEmpty(player.PlayerId) || !players.IsMine(player.PlayerId)) return;
         if (!pages.TryGetAdjacentStage(selectedStageId, direction, out int requestedStageId)) return;
         pendingStageId = requestedStageId;
@@ -114,6 +114,11 @@ public class StageSelectionController : MonoBehaviour
     private void RefreshPage()
     {
         if (view == null || !initialized) return;
+        if (session != null && !session.HasStageSelection)
+        {
+            view.Clear("");
+            return;
+        }
         if (pages.StageIds.Count == 0)
         {
             view.Clear("Stage 테이블을 연결해 주세요.");
@@ -132,6 +137,11 @@ public class StageSelectionController : MonoBehaviour
     {
         if (view == null || !initialized || pages.StageIds.Count == 0) return;
         int index = pages.IndexOf(selectedStageId);
+        if (session == null || !session.HasStageSelection)
+        {
+            view.SetNavigation(false, false, "");
+            return;
+        }
         bool connected = session != null && session.IsRoomReady;
         bool canTurn = connected && !stageRunning && pendingStageId == 0 && index >= 0;
         status ??= index < 0 ? $"스테이지 {selectedStageId}: Stage 데이터가 없습니다." :
