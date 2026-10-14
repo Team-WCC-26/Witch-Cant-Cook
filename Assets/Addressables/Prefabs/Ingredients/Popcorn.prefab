@@ -45,7 +45,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 271539983981087086}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 2369706504805217276, guid: 8be764a899bdd6643ba9981054b9dc49, type: 3}
 --- !u!23 &7452489732268660795
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -71,7 +71,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 8290782892783832528, guid: 8be764a899bdd6643ba9981054b9dc49, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f85a987679ca4c44db875b2c15a54b23, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatchableObj
   networkId: 0
   col: {fileID: 6639652469728864722}
@@ -175,13 +175,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
   catchable: {fileID: 881124000}
   meshFilter: {fileID: 6437526259180243771}
   targetRenderer: {fileID: 7452489732268660795}
-  cutParticle: {fileID: 0}
   gaugeUI: {fileID: 0}
+  wobbleAngle: 12
+  wobbleDuration: 0.35
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
   actionVisuals: []
@@ -195,7 +196,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 638318be638e4ff1bd22ae34f8208ea5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ColliderRelay
   useTrigger: 0
   targetLayers:

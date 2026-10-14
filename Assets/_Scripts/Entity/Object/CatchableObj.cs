@@ -83,6 +83,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     private CatchableObj combinedVisual;
     private ObjectNetworkRouter objectRouter;
     private bool initialCanBePicked;
+    private RigidbodyInterpolation initialInterpolation;
 
     public event Action OnPicked;
     public event Action OnDropped;
@@ -90,6 +91,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     private void Awake()
     {
         initialCanBePicked = canBePicked;
+        if (rb != null)
+            initialInterpolation = rb.interpolation;
 
         if (col == null || col.isTrigger)
         {
@@ -203,6 +206,9 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     {
         if (rb == null) return;
         col.enabled = enablePhysics;
+
+        // Held objects follow the hand transform directly; interpolation would lag that pose.
+        rb.interpolation = enablePhysics ? initialInterpolation : RigidbodyInterpolation.None;
 
         if (!enablePhysics)
         {
