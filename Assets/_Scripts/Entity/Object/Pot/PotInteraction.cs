@@ -51,8 +51,17 @@ public class PotInteraction : MapObjInteraction,
 
     private static readonly int IsCookingHash = Animator.StringToHash("IsCooking");
     private static readonly int CookingRattleHash = Animator.StringToHash("CookingRattle");
+    private static readonly int PunchRattleHash = Animator.StringToHash("PunchRattle");
+    private static readonly int EjectBounceHash = Animator.StringToHash("EjectBounce");
+    private static readonly int IngredientIntakeHash = Animator.StringToHash("IngredientIntake");
     private static readonly int CookingIdleHash = Animator.StringToHash("Idle");
+    private const float PunchRattleDuration = 0.55f;
+    private const float IngredientIntakeDuration = 0.62f;
+    // 0.78초 클립과 짧은 전환이 끝날 때까지 다음 배출 연출을 대기시킨다.
+    private const float EjectBounceDuration = 0.85f;
     private bool cookingVisualActive;
+    private float visualOverrideUntilTime;
+    private int visualOverrideStateHash;
 
     private PotState state = PotState.Idle;
     public PotState State => state;
@@ -86,6 +95,8 @@ public class PotInteraction : MapObjInteraction,
     // 게이지가 실제 표시되는 동안에만 시각용 솥 애니메이션을 재생한다.
     private void LateUpdate()
     {
+        if (Time.time < visualOverrideUntilTime) return;
+
         bool shouldPlay = state == PotState.Cooking &&
             gaugeUI != null && gaugeUI.gameObject.activeInHierarchy;
         if (cookingVisualAnimator == null || shouldPlay == cookingVisualActive) return;
@@ -214,6 +225,8 @@ public class PotInteraction : MapObjInteraction,
 
         gaugeUI?.Hide();
         cookingVisualActive = false;
+        visualOverrideUntilTime = 0f;
+        visualOverrideStateHash = 0;
         if (cookingVisualAnimator != null)
         {
             cookingVisualAnimator.SetBool(IsCookingHash, false);
@@ -277,9 +290,13 @@ public class PotInteraction : MapObjInteraction,
         else
         {
             StoreETC(catchable);
-            if (entryState == PotState.Ejecting)
+            if (entryState == PotState.Ejecting && storedObjects.Contains(catchable))
                 postEjectObjects.Add(catchable);
         }
+
+        // 재료, 그릇 등 서버가 수락해 보관한 모든 오브젝트에 같은 연출을 적용한다.
+        if (entryState != PotState.Ejecting && storedObjects.Contains(catchable))
+            PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
     }
 
     // 솥 조리 시작 결과 수신
@@ -451,36 +468,89 @@ public class PotInteraction : MapObjInteraction,
         pendingCookingDuration = null;
         gaugeUI?.Hide();
         ChangeState(PotState.Ejecting);
-        ejectCoroutine = StartCoroutine(EjectRoutine());
+        // 플레이어가 든 솥을 강제 배출할 때는 모든 클라이언트에서 펀치 흔들림을 마친 뒤 배출한다.
+        bool waitForPunchRattle = packet.PlayerIds.Count > 0 && pendingCookCompletePacket == null;
+        ejectCoroutine = StartCoroutine(EjectSequenceRoutine(waitForPunchRattle));
     }
 
-    // 서버 배출 순서대로 순차 처리
-    private IEnumerator EjectRoutine()
+    private IEnumerator EjectSequenceRoutine(bool waitForPunchRattle)
     {
-        while (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
+        float visualEndTime = 0f;
+        if (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
         {
-            Vector3 direction = GetEjectDirection();
+            // 펀치가 로컬에서 재생되지 않은 클라이언트도 같은 순서로 흔들림을 재생한다.
+            if (waitForPunchRattle &&
+                (visualOverrideStateHash != PunchRattleHash || Time.time >= visualOverrideUntilTime))
+                PlayVisualOverride(PunchRattleHash, PunchRattleDuration);
 
-            if (activeEjectPlayers.Count > 0)
-            {
-                EjectPlayer(activeEjectPlayers.Dequeue(), direction);
-            }
-            else
-            {
-                CatchableObj next = activeEjectObjects.Dequeue();
-                bool isCompletedBowl = pendingCookCompletePacket != null &&
-                    next != null &&
-                    next.NetworkId == pendingCookCompletePacket.DishEntityId;
-                float force = isCompletedBowl ? bowlEjectForce : ejectForce;
-                EjectObject(next, force, direction);
-            }
+            while (Time.time < visualOverrideUntilTime)
+                yield return null;
 
-            if ((activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0) && ejectInterval > 0f)
-                yield return new WaitForSeconds(ejectInterval);
+            if (cookingVisualAnimator != null)
+            {
+                PlayVisualOverride(EjectBounceHash, EjectBounceDuration, 0.05f);
+                visualEndTime = Time.time + EjectBounceDuration;
+            }
         }
+
+        // 애니메이션 재생을 요청한 바로 그 프레임에 첫 플레이어/물건을 배출한다.
+        if (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
+            EjectNextTarget();
+
+        yield return EjectRemainingRoutine();
+
+        // 다음 패킷의 연출이 현재 배출 애니메이션을 끊지 않도록 한다.
+        while (Time.time < visualEndTime)
+            yield return null;
 
         ejectCoroutine = null;
         FinishPacketEjection();
+    }
+
+    private void PlayVisualOverride(int stateHash, float duration, float blendDuration = 0f)
+    {
+        if (cookingVisualAnimator == null) return;
+
+        visualOverrideUntilTime = Time.time + duration;
+        visualOverrideStateHash = stateHash;
+        cookingVisualActive = false;
+        cookingVisualAnimator.SetBool(IsCookingHash, false);
+        if (blendDuration > 0f)
+            cookingVisualAnimator.CrossFadeInFixedTime(stateHash, blendDuration, 0, 0f);
+        else
+            cookingVisualAnimator.Play(stateHash, 0, 0f);
+    }
+
+    // 첫 대상과 나머지 대상이 같은 배출 로직을 사용한다.
+    private void EjectNextTarget()
+    {
+        Vector3 direction = GetEjectDirection();
+
+        if (activeEjectPlayers.Count > 0)
+        {
+            EjectPlayer(activeEjectPlayers.Dequeue(), direction);
+        }
+        else
+        {
+            CatchableObj next = activeEjectObjects.Dequeue();
+            bool isCompletedBowl = pendingCookCompletePacket != null &&
+                next != null &&
+                next.NetworkId == pendingCookCompletePacket.DishEntityId;
+            float force = isCompletedBowl ? bowlEjectForce : ejectForce;
+            EjectObject(next, force, direction);
+        }
+    }
+
+    // 서버 배출 순서를 유지하며 두 번째 대상부터 간격을 적용한다.
+    private IEnumerator EjectRemainingRoutine()
+    {
+        while (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
+        {
+            if (ejectInterval > 0f)
+                yield return new WaitForSeconds(ejectInterval);
+
+            EjectNextTarget();
+        }
     }
 
     // 보관 오브젝트 물리 배출
@@ -557,6 +627,7 @@ public class PotInteraction : MapObjInteraction,
         CatchableObj[] enteredDuringEjection = postEjectObjects.ToArray();
         postEjectObjects.Clear();
         ChangeState(PotState.Idle);
+        bool swallowedAfterEjection = false;
 
         foreach (CatchableObj catchable in enteredDuringEjection)
         {
@@ -567,7 +638,11 @@ public class PotInteraction : MapObjInteraction,
             etcObjects.Remove(catchable);
 
             HandleIdleEntry(catchable);
+            swallowedAfterEjection |= storedObjects.Contains(catchable);
         }
+
+        if (swallowedAfterEjection)
+            PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
 
         TryStartCooking();
         pendingCookCompletePacket = null;
@@ -865,6 +940,7 @@ public class PotInteraction : MapObjInteraction,
     public void OnPunched(PlayerBrain player)
     {
         if (state == PotState.Ejecting) return;
+        PlayVisualOverride(PunchRattleHash, PunchRattleDuration);
         if (storedObjects.Count == 0 && trappedPlayers.Count == 0) return;
         RequestForceEject();
     }
