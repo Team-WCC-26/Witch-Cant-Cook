@@ -97,6 +97,13 @@ public class RoomHandler : PacketHandlerBase
             };
 
             session.Player.Send(PacketSerializer.Serialize(joinRoomPacket, true));
+
+            RoomMoneyPacket roomMoneyPacket = new()
+            {
+                Money = room.Money
+            };
+
+            session.Player.Send(PacketSerializer.Serialize(roomMoneyPacket, true));
         });
     }
 

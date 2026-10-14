@@ -92,6 +92,8 @@ internal class DishManager
             _timerManager.Cancel(handle);
 
             BroadCastDishState(recipeId, DishState.Success);
+
+            _room.AddMoney(_dishses[recipeId].Money);
         }
         else
         {

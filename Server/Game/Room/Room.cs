@@ -21,6 +21,10 @@ public class Room
     private int _playerCnt = 0;
     private int _tick = 0;
 
+    // 룸 공용 재화 (요리 제출 성공 시 지급, 주방 업그레이드에 사용)
+    public int Money => _money;
+    private int _money = 0;
+
     private long _nextEntityId = 0;
 
     private Shard _shard;
@@ -52,6 +56,7 @@ public class Room
         _players.Clear();
         _playerCnt = 0;
         _tick = 0;
+        _money = 0;
         _nextEntityId = 0;
         _doors.Clear();
 
@@ -410,6 +415,37 @@ public class Room
     public void StopInteractDoor(DoorId doorId, string playerId)
     {
         _doors[doorId].EndInteract(playerId);
+    }
+
+    public void AddMoney(int amount)
+    {
+        if (amount <= 0) return;
+
+        _money += amount;
+
+        BroadCastMoney();
+    }
+
+    public bool TrySpendMoney(int cost)
+    {
+        if (cost < 0) return false;
+        if (_money < cost) return false;
+
+        _money -= cost;
+
+        BroadCastMoney();
+
+        return true;
+    }
+
+    private void BroadCastMoney()
+    {
+        RoomMoneyPacket packet = new()
+        {
+            Money = _money
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
     public bool ServeDish(long dishId)
