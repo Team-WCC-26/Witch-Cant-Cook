@@ -129,6 +129,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     //C_ClearDish = 404,
     //S_ClearDish = 405,
 
+    S_RoomMoney = 406,
+
     // Pot
     C_PotForceEject = 410,
     S_PotEject = 411,

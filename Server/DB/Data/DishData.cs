@@ -28,4 +28,7 @@ public class DishData
 
     [JsonProperty("spawnProbability")]
     public int SpawnWeight { get; init; }
+
+    [JsonProperty("Money")]
+    public int Money { get; init; }
 }
