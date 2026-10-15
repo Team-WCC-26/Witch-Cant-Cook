@@ -30,6 +30,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     private void OnEnable()
     {
         Instance = this;
+        IngredientEgg.ResetPanTransfers();
 
         if (ServerManager.Instance != null)
         {

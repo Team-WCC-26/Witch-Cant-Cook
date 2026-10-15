@@ -13,16 +13,17 @@ public class PanInteraction : MonoBehaviour,
     [SerializeField] private CatchableObj catchable;
     [SerializeField] private ColliderRelay itemTrigger;
     private IngredientReaction currentIngredient;
-    private Vector3 currentIngredientOriginalScale;
     private StoveInteraction currentStove;
     private long pendingIngredientId;
     private long pendingTossId;
     private float pendingCookDuration = -1f;
+    private IngredientEgg pendingEgg;
+    private long pendingEggId;
 
     public CatchableObj Catchable => catchable;
     public bool HasIngredient => currentIngredient != null;
 
-    #region Unity Lifecycle
+    #region Unity Callbacks
 
     private void Awake()
     {
@@ -39,6 +40,9 @@ public class PanInteraction : MonoBehaviour,
 
     private void OnDisable()
     {
+        pendingEgg?.CancelPanInsert();
+        pendingEgg = null;
+        pendingEggId = 0;
         if (itemTrigger != null)
         {
             itemTrigger.TriggerEntered -= HandleTriggerEnter;
@@ -53,18 +57,26 @@ public class PanInteraction : MonoBehaviour,
         currentStove = null;
     }
 
+    #endregion
+
     private void HandleTriggerEnter(Collider other)
     {
         // 팬의 유효성 확인
         if (catchable == null || catchable.NetworkId == 0) return;
 
-        if (currentIngredient != null) return; //중복 아이템 방지
-        if (pendingIngredientId != 0) return; //이미 서버에 요청 중인 재료가 있음
+        if (currentIngredient != null || pendingIngredientId != 0) return;
 
         // 팬의 X축과 Z축이 허용 범위 안에 있어야 함.
         float xAngle = Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.x));
         float zAngle = Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.z));
         if (xAngle > maxInsertAngle || zAngle > maxInsertAngle) return;
+
+        IngredientEgg egg = other.GetComponentInParent<IngredientEgg>();
+        if (egg != null)
+        {
+            egg.TryInsertIntoPan(this);
+            return;
+        }
 
         // 아이템 유효성 확인
         if (!TryGetItem(other, out IngredientReaction _, out CatchableObj ingredientCatchable)) return;
@@ -88,8 +100,6 @@ public class PanInteraction : MonoBehaviour,
         pendingIngredientId = 0;
     }
 
-    #endregion
-
     #region Ingredient State
 
     [SerializeField] private Transform ingredientSlot;
@@ -99,12 +109,12 @@ public class PanInteraction : MonoBehaviour,
     private void AttachItem(IngredientReaction ingredient, CatchableObj ingredientCatchable)
     {
         currentIngredient = ingredient;
-        currentIngredientOriginalScale = ingredient.transform.localScale;
+
+        if (ingredient.TryGetComponent(out IngredientTraitArea area))
+            area.ConvertToIngredient();
 
         Transform slot = ingredientSlot != null ? ingredientSlot : transform;
-        ingredient.transform.SetParent(slot, false);
-        ingredient.transform.localPosition = Vector3.zero;
-        ingredient.transform.localRotation = Quaternion.identity;
+        ingredient.ApplyPanPlacement(slot);
 
         ingredientCatchable.ChangePickState(false);
         ingredientCatchable.SetPhysicsState(false);
@@ -119,7 +129,7 @@ public class PanInteraction : MonoBehaviour,
     private void DetachItem(IngredientReaction ingredient)
     {
         ingredient.transform.SetParent(null, true);
-        ingredient.transform.localScale = currentIngredientOriginalScale;
+        ingredient.RestoreOriginalScale();
     }
 
     // Collider에서 팬에 넣을 수 있는 재료를 찾는다.
@@ -133,6 +143,8 @@ public class PanInteraction : MonoBehaviour,
         ingredientCatchable = ingredient.Catchable;
         if (ingredientCatchable == null) return false;
         if (ingredientCatchable.Category != EntityCategory.Ingredient) return false;
+        if (ingredientCatchable.Data is Ingredient data && data.id == (int)Define.eIngredient.EggInside)
+            return false;
 
         return true;
     }
@@ -292,6 +304,26 @@ public class PanInteraction : MonoBehaviour,
 
     #region Interface Implementations
 
+    public void ReserveEgg(long eggId, IngredientEgg egg)
+    {
+        pendingEggId = eggId;
+        pendingEgg = egg;
+        pendingIngredientId = eggId;
+    }
+
+    public void ReserveInside(long eggId, long insideId)
+    {
+        if (pendingEggId == eggId) pendingIngredientId = insideId;
+    }
+
+    public void ReleaseEgg(long eggId)
+    {
+        if (pendingEggId != eggId) return;
+        pendingEgg = null;
+        pendingEggId = 0;
+        pendingIngredientId = 0;
+    }
+
     // IHeldPrimaryAction: 선택된 대상에 팬 좌클릭 처리 위임
     public bool TryUsePrimary(PlayerInteract interact)
     {
@@ -321,6 +353,8 @@ public class PanInteraction : MonoBehaviour,
 
         if (currentIngredient != null) return false; //팬에 이미 재료가 있음
         if (pendingIngredientId != 0) return false; //이미 서버에 요청 중인 재료가 있음
+        if (heldObj.Data is Ingredient data && data.id == (int)Define.eIngredient.EggInside)
+            return false;
         if (!heldObj.TryGetComponent(out IngredientReaction _)) return false; //재료가 아님
         if (heldObj.NetworkId == 0) return false;
         if (catchable == null || catchable.NetworkId == 0) return false;
@@ -344,8 +378,13 @@ public class PanInteraction : MonoBehaviour,
 
         if (!entity.TryGetComponent(out IngredientReaction ingredient)) return;
 
+        if (pendingEgg != null && entity.NetworkId != pendingIngredientId)
+            pendingEgg.CancelPanInsert();
+
         pendingIngredientId = 0;
         AttachItem(ingredient, entity);
+        IngredientEgg.CompletePanInsert(this, entity.NetworkId);
+        ReleaseEgg(pendingEggId);
     }
 
     // IEntityParentReceiver: 서버가 팬에서 제거한 재료를 분리한다.

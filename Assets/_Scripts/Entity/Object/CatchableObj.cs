@@ -87,6 +87,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public event Action OnPicked;
     public event Action OnDropped;
+    public event Action<Vector3> Thrown;
 
     private void Awake()
     {
@@ -248,6 +249,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         transform.position = ProtocolTypeConverter.ToUnityVector3(packet.Position);
 
         OnThrow();
+        Thrown?.Invoke(ProtocolTypeConverter.ToUnityVector3(packet.Velocity));
 
         if (rb == null) return;
 

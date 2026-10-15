@@ -71,6 +71,8 @@ public partial class IngredientSpawnSystem : SystemBase
                 }
 
                 ObjectPoolManager.Instance.activeObjDict.Add(netID, spawnedObj);
+                if (isIngredient && spawnedObj.TryGetComponent(out CatchableObj spawnedCatchable))
+                    IngredientEgg.PrepareSpawnedInside(reqID, reqPos, spawnedCatchable);
 
                 var belt = ConveyorBeltRegistry.TryGetBeltById(request.ValueRO.ConveyId, out ConveyorBeltController beltController);
                 if (beltController != null)

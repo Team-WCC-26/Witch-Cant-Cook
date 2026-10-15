@@ -161,6 +161,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        IngredientEgg.HandleDestroyedEntity(entityId);
         pendingParentChanges.Remove(entityId);
 
         if (!catchableDics.TryGetValue(entityId, out CatchableObj catchable))

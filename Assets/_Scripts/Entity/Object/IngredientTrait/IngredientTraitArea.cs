@@ -26,12 +26,15 @@ public class IngredientTraitArea : MonoBehaviour
     private Rigidbody rb;
     private CatchableObj catchable;
     private bool landed;
+    private bool convertedToIngredient;
     private readonly Dictionary<PlayerBrain, int> overlapCounts = new();
     private readonly Dictionary<Collider, PlayerBrain> overlappingColliders = new();
 
     private readonly IngredientTraitTimer timer = new();
     [SerializeField] private bool useTimer = true;
     [SerializeField] private float duration = 10f;
+
+    #region Unity Callbacks
 
     private void Awake()
     {
@@ -43,6 +46,7 @@ public class IngredientTraitArea : MonoBehaviour
 
     private void OnEnable()
     {
+        convertedToIngredient = false;
         timer.Stop();
         landed = false;
 
@@ -56,6 +60,7 @@ public class IngredientTraitArea : MonoBehaviour
             return;
         }
 
+        col.enabled = true;
         col.isTrigger = true;
         landingCollider.isTrigger = false;
         // Only landing surfaces may block the area; players and ingredients pass through.
@@ -78,18 +83,6 @@ public class IngredientTraitArea : MonoBehaviour
         timer.Tick(Time.deltaTime);
     }
 
-    private void RequestDestroy()
-    {
-        if (!isActiveAndEnabled || catchable == null ||
-            catchable.NetworkId <= 0 || ServerManager.Instance == null) return;
-
-        EntityDestroyPacket packet = new()
-        {
-            EntityId = catchable.NetworkId
-        };
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-    }
-
     private void Reset()
     {
         if (TryGetComponent(out Collider c)) c.isTrigger = true;
@@ -102,11 +95,79 @@ public class IngredientTraitArea : MonoBehaviour
     }
 
     private void OnCollisionEnter(Collision collision) => TryLand(collision);
+
     private void OnCollisionStay(Collision collision) => TryLand(collision);
+
+    private void OnTriggerEnter(Collider other) => RegisterPlayer(other);
+
+    private void OnTriggerStay(Collider other)
+    {
+        // Also handles players already overlapping while the area was falling.
+        RegisterPlayer(other);
+        if (overlappingColliders.TryGetValue(other, out PlayerBrain player))
+            PlayerStayed?.Invoke(player);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!overlappingColliders.TryGetValue(other, out PlayerBrain player)) return;
+        overlappingColliders.Remove(other);
+        int count = overlapCounts[player] - 1;
+        if (count > 0)
+        {
+            overlapCounts[player] = count;
+            return;
+        }
+        overlapCounts.Remove(player);
+        if (player == null) return;
+        PlayerExited?.Invoke(player);
+        EndMovementEffect(player);
+    }
+
+    private void OnDisable()
+    {
+        timer.Stop();
+
+        foreach (PlayerBrain player in overlapCounts.Keys)
+            EndMovementEffect(player);
+        overlapCounts.Clear();
+        overlappingColliders.Clear();
+        landed = false;
+    }
+
+    #endregion
+
+    public void ConvertToIngredient()
+    {
+        if (convertedToIngredient) return;
+        convertedToIngredient = true;
+        timer.Stop();
+        foreach (PlayerBrain player in overlapCounts.Keys)
+            EndMovementEffect(player);
+        overlapCounts.Clear();
+        overlappingColliders.Clear();
+        landed = false;
+        col.enabled = false;
+        landingCollider.enabled = true;
+        landingCollider.excludeLayers = 0;
+    }
+
+    private void RequestDestroy()
+    {
+        if (convertedToIngredient) return;
+        if (!isActiveAndEnabled || catchable == null ||
+            catchable.NetworkId <= 0 || ServerManager.Instance == null) return;
+
+        EntityDestroyPacket packet = new()
+        {
+            EntityId = catchable.NetworkId
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
 
     private void TryLand(Collision collision)
     {
-        if (landed) return;
+        if (convertedToIngredient || landed) return;
         if (((1 << collision.collider.gameObject.layer) & groundLayer) == 0) return;
 
         for (int i = 0; i < collision.contactCount; i++)
@@ -149,7 +210,7 @@ public class IngredientTraitArea : MonoBehaviour
 
     private void RegisterPlayer(Collider other)
     {
-        if (!landed || overlappingColliders.ContainsKey(other)) return;
+        if (convertedToIngredient || !landed || overlappingColliders.ContainsKey(other)) return;
         if (!IsPlayer(other, out PlayerBrain player)) return;
         overlappingColliders.Add(other, player);
         int count = overlapCounts.GetValueOrDefault(player, 0) + 1;
@@ -162,32 +223,6 @@ public class IngredientTraitArea : MonoBehaviour
             effectController.ApplyMovementEffect(movementEffect);
     }
 
-    private void OnTriggerEnter(Collider other) => RegisterPlayer(other);
-
-    private void OnTriggerStay(Collider other)
-    {
-        // Also handles players already overlapping while the area was falling.
-        RegisterPlayer(other);
-        if (overlappingColliders.TryGetValue(other, out PlayerBrain player))
-            PlayerStayed?.Invoke(player);
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (!overlappingColliders.TryGetValue(other, out PlayerBrain player)) return;
-        overlappingColliders.Remove(other);
-        int count = overlapCounts[player] - 1;
-        if (count > 0)
-        {
-            overlapCounts[player] = count;
-            return;
-        }
-        overlapCounts.Remove(player);
-        if (player == null) return;
-        PlayerExited?.Invoke(player);
-        EndMovementEffect(player);
-    }
-
     private void EndMovementEffect(PlayerBrain player)
     {
         if (player == null || PlayerSpawnManager.Instance == null) return;
@@ -196,14 +231,4 @@ public class IngredientTraitArea : MonoBehaviour
             effectController.EndMovementEffect();
     }
 
-    private void OnDisable()
-    {
-        timer.Stop();
-
-        foreach (PlayerBrain player in overlapCounts.Keys)
-            EndMovementEffect(player);
-        overlapCounts.Clear();
-        overlappingColliders.Clear();
-        landed = false;
-    }
 }
