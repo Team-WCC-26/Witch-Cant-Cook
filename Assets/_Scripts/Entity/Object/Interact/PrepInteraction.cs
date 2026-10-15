@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver
 {
+    private const float PanFrontYaw = 90f;
+
     [SerializeField] private Transform itemSlot;
     [SerializeField] private ColliderRelay itemTrigger;
 
@@ -107,7 +109,11 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     public void ApplyPut(CatchableObj catchable)
     {
         if (catchable == null || itemSlot == null || currentItem != null) return;
-        if (!placement.TryPlace(catchable, itemSlot, alignColliderBottom: true))
+        Quaternion? rotationOverride = null;
+        if (catchable.TryGetComponent<PanInteraction>(out _))
+            rotationOverride = itemSlot.rotation * Quaternion.Euler(0f, PanFrontYaw, 0f);
+        if (!placement.TryPlace(catchable, itemSlot, alignColliderBottom: true,
+                rotationOverride: rotationOverride))
         {
             Debug.LogError("[Prep] Failed to place the inserted item.", this);
             return;

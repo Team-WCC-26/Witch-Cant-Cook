@@ -28,7 +28,7 @@ public sealed class ObjPlacement : IDisposable
     /// 위치·회전과 속도를 보정하고 충격에 따른 배치 해제를 감지한다.
     /// </summary>
     public bool TryPlace(CatchableObj item, Transform slot, float? minReleaseImpulse = null,
-        bool alignColliderBottom = false)
+        bool alignColliderBottom = false, Quaternion? rotationOverride = null)
     {
         if (IsPlaced || item == null || slot == null || item.IsHold) return false;
         if (item.Rb == null || item.Col == null || item.Col.isTrigger) return false;
@@ -47,7 +47,7 @@ public sealed class ObjPlacement : IDisposable
         item.SetPhysicsState(true);
         item.ChangePickState(true);
         placedPosition = slot.position;
-        placedRotation = slot.rotation;
+        placedRotation = rotationOverride ?? slot.rotation;
         RestorePlacement();
 
         if (alignColliderBottom)
