@@ -98,6 +98,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public void ApplyPlatePlacement(Transform slot)
     {
         ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+        transform.localScale = Vector3.one;
     }
 
     public void RestoreOriginalScale()

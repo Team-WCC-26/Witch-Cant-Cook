@@ -32,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 64.73627, y: -0, z: 1.0254}
-  m_LocalScale: {x: 0.57, y: 0.57, z: 0.57}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 2129848697889921226}
@@ -45,7 +45,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4025078505919267616}
-  m_Mesh: {fileID: -5029557887968017231, guid: f4f48ad005bac8a438d12a664a0a2935, type: 3}
+  m_Mesh: {fileID: -6138934213963632976, guid: 354f61b2ad1780d46babcc7da665c47a, type: 3}
 --- !u!23 &1228255895677693326
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -156,11 +156,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
-  catchable: {fileID: -8505552817421577142, guid: c3136ac832d8d484398dbe4ced33795a, type: 3}
-  meshFilter: {fileID: 607475093237782668, guid: c3136ac832d8d484398dbe4ced33795a, type: 3}
-  targetRenderer: {fileID: 611589939573153053, guid: c3136ac832d8d484398dbe4ced33795a, type: 3}
-  cutParticle: {fileID: 0}
-  gaugeUI: {fileID: 4079155461303983743, guid: c3136ac832d8d484398dbe4ced33795a, type: 3}
+  catchable: {fileID: -4338353643924303968, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
+  meshFilter: {fileID: 607475093237782668, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
+  targetRenderer: {fileID: 611589939573153053, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
+  gaugeUI: {fileID: 4079155461303983743, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
+  wobbleAngle: 12
+  wobbleDuration: 0.35
+  panPlacement: {fileID: 0}
   platePlacement: {fileID: 11400000, guid: 5caaf7eea2e84a879a8aa111430232d3, type: 2}
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}

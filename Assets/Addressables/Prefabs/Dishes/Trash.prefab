@@ -32,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0.033, z: 0}
-  m_LocalScale: {x: 0.57, y: 0.45599985, z: 0.57}
+  m_LocalScale: {x: 1, y: 0.7999997, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 625939746364597252}
@@ -132,8 +132,10 @@ MonoBehaviour:
   catchable: {fileID: -8505552817421577142}
   meshFilter: {fileID: 607475093237782668}
   targetRenderer: {fileID: 611589939573153053}
-  cutParticle: {fileID: 0}
   gaugeUI: {fileID: 4079155461303983743}
+  wobbleAngle: 12
+  wobbleDuration: 0.35
+  panPlacement: {fileID: 0}
   platePlacement: {fileID: 11400000, guid: 5caaf7eea2e84a879a8aa111430232d3, type: 2}
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
