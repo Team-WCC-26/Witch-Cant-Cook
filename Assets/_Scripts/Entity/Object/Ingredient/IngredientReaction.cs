@@ -56,27 +56,59 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public float CurGuage => 1 - (float)curHP / maxHP;
     public InteractionGaugeUI GaugeUI => gaugeUI;
 
+    [Header("Placement")]
+    [SerializeField] private TransformData panPlacement;
+    [SerializeField] private TransformData platePlacement;
+    [SerializeField, HideInInspector] private Vector3 plateOffsetPos = Vector3.zero;
+    [SerializeField, HideInInspector] private Vector3 plateOffsetEuler = Vector3.zero;
+    public Vector3 PlateOffsetPos => plateOffsetPos;
+    public Vector3 PlateOffsetEuler => plateOffsetEuler;
+
+    private Vector3 originalScale;
+    private bool hasOriginalScale;
+
+    [Header("Action Visuals")]
+    [SerializeField] private IngredientActionVisual[] actionVisuals;
+
+    #region Unity Callbacks
+
+    private void Awake()
+    {
+        CacheOriginalScale();
+        InitializeGauge();
+    }
+
+    private void OnDisable()
+    {
+        StopHitWobble();
+    }
+
+    #endregion
+
     public bool IsActionCompleted(IngredientAction action)
     {
         return (completedActions & action) != 0;
     }
 
-    [Header("Plate Offset")]
-    [SerializeField] private Vector3 plateOffsetPos = Vector3.zero;
-    [SerializeField] private Vector3 plateOffsetEuler = Vector3.zero;
-    public Vector3 PlateOffsetPos => plateOffsetPos;
-    public Vector3 PlateOffsetEuler => plateOffsetEuler;
-
-    [Header("Action Visuals")]
-    [SerializeField] private IngredientActionVisual[] actionVisuals;
-
-    private void Awake()
+    public void ApplyPanPlacement(Transform slot)
     {
-        InitializeGauge();
+        ApplyPlacement(slot, panPlacement, Vector3.zero, Vector3.zero);
+    }
+
+    public void ApplyPlatePlacement(Transform slot)
+    {
+        ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+    }
+
+    public void RestoreOriginalScale()
+    {
+        CacheOriginalScale();
+        transform.localScale = originalScale;
     }
 
     public void ResetForPool()
     {
+        RestoreOriginalScale();
         StopHitWobble();
         InitializeGauge();
         lastAction = IngredientAction.None;
@@ -86,11 +118,6 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         gaugeUI?.Hide();
         ApplyVisual(IngredientAction.None);
-    }
-
-    private void OnDisable()
-    {
-        StopHitWobble();
     }
 
     public void ApplyCutProgress(float process)
@@ -154,6 +181,24 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         // Server visual
         lastAction = action;
         CompleteAction(action);
+    }
+
+    private void CacheOriginalScale()
+    {
+        if (hasOriginalScale) return;
+        originalScale = transform.localScale;
+        hasOriginalScale = true;
+    }
+
+    private void ApplyPlacement(Transform slot, TransformData placement,
+        Vector3 defaultPosition, Vector3 defaultRotation)
+    {
+        CacheOriginalScale();
+        transform.SetParent(slot, false);
+        transform.localPosition = placement != null ? placement.PositionOffset : defaultPosition;
+        transform.localRotation = Quaternion.Euler(placement != null ? placement.RotationOffset : defaultRotation);
+        transform.localScale = placement != null && !placement.Scale.Equals(Vector3.zero)
+            ? placement.Scale : originalScale;
     }
 
     private void CompleteAction(IngredientAction action)
