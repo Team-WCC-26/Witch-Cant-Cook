@@ -24,24 +24,12 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private bool isRegisterar;
     public bool IsRegistrar => isRegisterar;
 
-    #region unity cycle
+    #region Unity Callbacks
 
     private void OnEnable()
     {
         StageManager.DoorOpened += OnDoorOpened;
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
-    }
-
-    private IEnumerator SubscribeWhenReady()
-    {
-        // Delayed subscription
-        yield return new WaitUntil(() => ServerManager.Instance != null);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
-        isSubscribed = true;
-        subscribeRoutine = null;
     }
 
     private void OnDisable()
@@ -60,10 +48,30 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerEnter);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_JumpPadEvent);
         isSubscribed = false;
     }
 
     #endregion
+
+    private IEnumerator SubscribeWhenReady()
+    {
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
+        ServerManager.Instance.RegisterHandler(PacketId.S_JumpPadEvent, OnJumpPadEvent);
+        isSubscribed = true;
+        subscribeRoutine = null;
+    }
+
+    private void OnJumpPadEvent(ReadOnlyMemory<byte> data)
+    {
+        JumpPadEventPacket packet = PacketSerializer.Deserialize<JumpPadEventPacket>(data.Span);
+        if (TryGetMapObject(packet.PadEntityId, out JumpAssist pad))
+            pad.HandleJumpPadEvent(packet);
+    }
 
     #region Map Object Getters
 

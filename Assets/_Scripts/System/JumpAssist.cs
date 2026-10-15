@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using Protocol;
+using Server;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class JumpAssist : MonoBehaviour
+public class JumpAssist : MapObjInteraction
 {
     [Header("발사 대기")]
     [SerializeField, Min(0.01f)] private float activationDelay = 1f;
@@ -35,6 +37,9 @@ public class JumpAssist : MonoBehaviour
     private Quaternion restRotation;
     private Sequence motion;
     private PadState state;
+    private bool localPlayerEntered;
+    private bool serverReady = true;
+    private int lastFireRound;
     private readonly Dictionary<Collider, PlayerBrain> occupants = new();
     private readonly List<Collider> staleContacts = new();
     private readonly List<Flight> flights = new();
@@ -72,6 +77,13 @@ public class JumpAssist : MonoBehaviour
         }
         foreach (Collider contact in staleContacts) occupants.Remove(contact);
 
+        bool hasLocalPlayer = false;
+        foreach (PlayerBrain player in occupants.Values)
+        {
+            if (player.StateResolver is LocalPlayerStateResolver) hasLocalPlayer = true;
+        }
+        SendPlayerPresence(hasLocalPlayer);
+
         for (int i = flights.Count - 1; i >= 0; i--)
         {
             Flight flight = flights[i];
@@ -84,21 +96,68 @@ public class JumpAssist : MonoBehaviour
         }
 
         if (state == PadState.Waiting && occupants.Count == 0) CancelWaiting();
-        else if (state == PadState.Idle && occupants.Count > 0) BeginWaiting();
+        else if (state == PadState.Idle && IsRegistered && serverReady && occupants.Count > 0) BeginWaiting();
     }
 
     private void OnDisable()
     {
+        SendPlayerPresence(false);
         motion?.Kill();
         motion = null;
         foreach (Flight flight in flights) RestorePlayer(flight);
         flights.Clear();
         occupants.Clear();
         state = PadState.Idle;
+        serverReady = true;
         if (Application.isPlaying) transform.localRotation = restRotation;
     }
 
     #endregion
+
+    public void HandleJumpPadEvent(JumpPadEventPacket packet)
+    {
+        switch (packet.EventType)
+        {
+            case JumpPadEventType.Fire:
+                if (packet.FireRound <= lastFireRound) return;
+                lastFireRound = packet.FireRound;
+                serverReady = false;
+                motion?.Kill();
+                state = PadState.Launching;
+                PreparePlayers();
+                motion = CreateMotion(restRotation);
+                motion.Goto(Mathf.Max(0.01f, activationDelay), true);
+                motion.OnComplete(FinishMotion);
+                break;
+            case JumpPadEventType.Cancel:
+                serverReady = false;
+                CancelWaiting();
+                break;
+            case JumpPadEventType.Return:
+                serverReady = true;
+                break;
+        }
+    }
+
+    public void PlayMotion()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || state != PadState.Idle) return;
+        state = PadState.Launching;
+        motion = CreateMotion(restRotation);
+        motion.OnComplete(FinishMotion);
+    }
+
+    private void SendPlayerPresence(bool entered)
+    {
+        if (localPlayerEntered == entered || !IsRegistered || ServerManager.Instance == null) return;
+        localPlayerEntered = entered;
+        if (entered)
+            _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(
+                new JumpPadPlayerEnterPacket { PadEntityId = NetworkId }));
+        else
+            _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(
+                new JumpPadPlayerExitPacket { PadEntityId = NetworkId }));
+    }
 
     private static bool IsAvailable(PlayerBrain player)
     {
@@ -113,8 +172,7 @@ public class JumpAssist : MonoBehaviour
             && !player.ActionController.Movement.IsForcedMovementActive;
     }
 
-    private Sequence CreateMotion(Quaternion initialRotation, TweenCallback onPressed = null,
-        TweenCallback onReturning = null)
+    private Sequence CreateMotion(Quaternion initialRotation)
     {
         Vector3 pressedAngles = initialRotation.eulerAngles;
         pressedAngles.z = 0f;
@@ -124,11 +182,9 @@ public class JumpAssist : MonoBehaviour
         Sequence sequence = DOTween.Sequence();
         sequence.Append(transform.DOLocalRotateQuaternion(pressedRotation, Mathf.Max(0.01f, activationDelay))
             .SetEase(pressEase));
-        if (onPressed != null) sequence.AppendCallback(onPressed);
         sequence.Append(transform.DOLocalRotateQuaternion(liftedRotation, Mathf.Max(0.01f, liftDuration))
             .SetEase(liftEase));
         sequence.AppendInterval(Mathf.Max(0f, holdDuration));
-        if (onReturning != null) sequence.AppendCallback(onReturning);
         sequence.Append(transform.DOLocalRotateQuaternion(initialRotation, Mathf.Max(0.01f, returnDuration))
             .SetEase(returnEase));
         return sequence;
@@ -137,9 +193,11 @@ public class JumpAssist : MonoBehaviour
     private void BeginWaiting()
     {
         state = PadState.Waiting;
-        motion = CreateMotion(restRotation, PreparePlayers,
-            () => state = PadState.Returning);
-        motion.OnComplete(FinishMotion);
+        Vector3 pressedAngles = restRotation.eulerAngles;
+        pressedAngles.z = 0f;
+        motion = DOTween.Sequence();
+        motion.Append(transform.DOLocalRotateQuaternion(Quaternion.Euler(pressedAngles),
+            Mathf.Max(0.01f, activationDelay)).SetEase(pressEase));
     }
 
     private void CancelWaiting()
@@ -154,22 +212,9 @@ public class JumpAssist : MonoBehaviour
 
     private void PreparePlayers()
     {
-        // Re-check at the exact end of the waiting tween, before fixing the targets.
-        bool hasPlayer = false;
         foreach (PlayerBrain player in occupants.Values)
         {
-            if (IsStanding(player)) hasPlayer = true;
-        }
-        if (!hasPlayer)
-        {
-            CancelWaiting();
-            return;
-        }
-
-        state = PadState.Launching;
-        foreach (PlayerBrain player in occupants.Values)
-        {
-            // Remote players will be launched by their owning client via a future packet.
+            // Each client launches only its own player.
             if (!IsAvailable(player) || player.Rb.isKinematic
                 || player.StateResolver is not LocalPlayerStateResolver
                 || player.Input.IsInputBlocked || player.Input.IsMovementBlocked
@@ -214,14 +259,6 @@ public class JumpAssist : MonoBehaviour
         transform.localRotation = restRotation;
         motion = null;
         state = PadState.Idle;
-    }
-
-    public void PlayMotion()
-    {
-        if (!Application.isPlaying || !isActiveAndEnabled || state != PadState.Idle) return;
-        state = PadState.Launching;
-        motion = CreateMotion(restRotation);
-        motion.OnComplete(FinishMotion);
     }
 
     #region Editor
