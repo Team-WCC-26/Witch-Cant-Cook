@@ -17,28 +17,19 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private readonly Dictionary<long, MapObjInteraction> mapObjects = new();
 
     private MapObjInteraction currentRegisterTarget;
+    
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
-    private bool isRegisterOwner;
 
-    #region unity cycle
+    private bool isRegisterar;
+    public bool IsRegistrar => isRegisterar;
+
+    #region Unity Callbacks
 
     private void OnEnable()
     {
         StageManager.DoorOpened += OnDoorOpened;
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
-    }
-
-    private IEnumerator SubscribeWhenReady()
-    {
-        // Delayed subscription
-        yield return new WaitUntil(() => ServerManager.Instance != null);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
-        isSubscribed = true;
-        subscribeRoutine = null;
     }
 
     private void OnDisable()
@@ -57,12 +48,33 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerEnter);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_JumpPadEvent);
         isSubscribed = false;
     }
 
     #endregion
 
+    private IEnumerator SubscribeWhenReady()
+    {
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
+        ServerManager.Instance.RegisterHandler(PacketId.S_JumpPadEvent, OnJumpPadEvent);
+        isSubscribed = true;
+        subscribeRoutine = null;
+    }
+
+    private void OnJumpPadEvent(ReadOnlyMemory<byte> data)
+    {
+        JumpPadEventPacket packet = PacketSerializer.Deserialize<JumpPadEventPacket>(data.Span);
+        if (TryGetMapObject(packet.PadEntityId, out JumpAssist pad))
+            pad.HandleJumpPadEvent(packet);
+    }
+
     #region Map Object Getters
+
     public bool TryGetMapObject(long entityId, out MapObjInteraction mapObj)
     {
         return mapObjects.TryGetValue(entityId, out mapObj);
@@ -93,7 +105,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         registerTargets.Clear();
         mapObjects.Clear();
         currentRegisterTarget = null;
-        isRegisterOwner = IsRegisterOwner();
+        isRegisterar = IsRegisterOwner();
 
         HashSet<MapObjInteraction> targets = new();
 
@@ -113,11 +125,11 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
             registerTargets.Add(mapObj);
 
-            if (isRegisterOwner)
+            if (isRegisterar)
                 registerQueue.Enqueue(mapObj);
         }
 
-        if (isRegisterOwner)
+        if (isRegisterar)
             RegisterNext();
     }
 
@@ -175,7 +187,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         target.SetNetworkId(packet.EntityId);
         mapObjects[packet.EntityId] = target;
 
-        if (!isRegisterOwner || currentRegisterTarget != target) return;
+        if (!isRegisterar || currentRegisterTarget != target) return;
 
         currentRegisterTarget = null;
         RegisterNext();

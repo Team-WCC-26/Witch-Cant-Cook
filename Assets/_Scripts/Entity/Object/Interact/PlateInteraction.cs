@@ -24,6 +24,8 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
         CatchableObj food = currentFood;
         currentFood = null;
         food.transform.SetParent(null, true);
+        if (food.TryGetComponent(out IngredientReaction reaction))
+            reaction.RestoreOriginalScale();
 
         if (ObjectPoolManager.Instance != null)
             ObjectPoolManager.Instance.Push(food.gameObject);
@@ -38,9 +40,7 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
         currentFood = entity;
         entity.ChangePickState(false);
         entity.SetPhysicsState(false);
-        entity.transform.SetParent(transform, false);
-        entity.transform.localPosition = reaction.PlateOffsetPos;
-        entity.transform.localRotation = Quaternion.Euler(reaction.PlateOffsetEuler);
+        reaction.ApplyPlatePlacement(transform);
     }
 
     // 귀속 음식 분리
@@ -49,6 +49,8 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
         if (entity == null || entity != currentFood) return;
 
         entity.transform.SetParent(null, true);
+        if (entity.TryGetComponent(out IngredientReaction reaction))
+            reaction.RestoreOriginalScale();
         currentFood = null;
     }
 }

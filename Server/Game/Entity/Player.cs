@@ -79,7 +79,7 @@ public class Player : Entity
 
     public ValueTask Send(ReadOnlyMemory<byte> packet)
     {
-        return Session.SendAsync(packet);
+        return LatencySimulator.SendAsync(Session, packet);
     }
 
     public void ApplyDamage(int damage)

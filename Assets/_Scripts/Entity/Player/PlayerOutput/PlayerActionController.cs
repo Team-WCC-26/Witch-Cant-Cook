@@ -1,7 +1,9 @@
+using System;
 using UnityEngine;
 
 public class PlayerActionController
 {
+    public static event Action<PlayerBrain> RemotePunchPlayed;
     private readonly PlayerBrain brain;
 
     private readonly PlayerAnimController animController;
@@ -17,6 +19,7 @@ public class PlayerActionController
     private bool canAction = true;
     private float actionTime;
     private bool pendingPrimaryAction;
+    private bool isLaunchJumpActive;
     private EntityCategory pendingPrimaryCategory;
 
 
@@ -32,11 +35,13 @@ public class PlayerActionController
 
     public void UpdateTick(PlayerCombinedState state)
     {
+        brain.Rocket?.UpdateFlightState(state);
+        if (!movement.IsEjectionActive) isLaunchJumpActive = false;
         UpdateActionState();
         movement.UpdateGroundState();
 
         // Update default locomotion and airborne animation parameters.
-        if (state.PhysicalMode == PlayerPhysicalMode.Default)
+        if (state.PhysicalMode == PlayerPhysicalMode.Default && !(brain.Rocket != null && brain.Rocket.IsFlying))
         {
             animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         }
@@ -51,6 +56,7 @@ public class PlayerActionController
                     break;
 
                 case PlayerPhysicalMode.Ragdoll:
+                    brain.Interact.CancelPendingAttackImpact();
                     brain.Interact.ForceDropHeld();
                     ragdollController.Enter();
                     break;
@@ -66,6 +72,7 @@ public class PlayerActionController
 
     public void FixedTick(PlayerCombinedState state)
     {
+        if (brain.Rocket != null && brain.Rocket.FixedTick(state)) return;
         movement.UpdateEjectionMovement(state.PhysicalMode == PlayerPhysicalMode.Default);
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
         {
@@ -90,13 +97,14 @@ public class PlayerActionController
     }
 
     #region Action
-    public void PunchAction()
+    public bool PunchAction()
     {
-        if (!canAction) return;
+        if (!canAction) return false;
 
         animController.PlayPrimaryAction();
         canAction = false;
         RecordPrimaryAction(EntityCategory.Player);
+        return true;
     }
 
     public bool TryEquipAction()
@@ -131,12 +139,14 @@ public class PlayerActionController
 
         animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         animController.PlayPrimaryAction();
+        if (state.HeldEntityCategory == EntityCategory.Player)
+            RemotePunchPlayed?.Invoke(brain);
     }
 
     public void PlayRemoteJumpStart()
     {
         if (brain.StateResolver is not RemotePlayerStateResolver) return;
-        animController.PlayRemoteJumpStart();
+        animController.PlayJumpStart();
     }
 
     private void UpdateActionState()
@@ -160,6 +170,7 @@ public class PlayerActionController
 
     public void CancelAction()
     {
+        brain.Interact.CancelPendingAttackImpact();
         animController.CancelAction();
         canAction = true;
         actionTime = 0;
@@ -175,8 +186,16 @@ public class PlayerActionController
         animController.PlayJumpAnim();
     }
 
+    public void PlayLaunchJumpStart()
+    {
+        isLaunchJumpActive = true;
+        animController.UpdateTick(brain.StateResolver.CurrentState, false, false);
+        animController.PlayJumpStart();
+    }
+
     private bool IsGroundedForAnimation()
     {
+        if (isLaunchJumpActive && movement.IsEjectionActive) return false;
         return brain.StateResolver is RemotePlayerStateResolver remote
             ? remote.IsGroundedForAnimation
             : movement.IsGroundedNow;

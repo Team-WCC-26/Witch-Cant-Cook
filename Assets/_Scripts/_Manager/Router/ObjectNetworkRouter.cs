@@ -130,8 +130,9 @@ public class ObjectNetworkRouter : MonoBehaviour
             if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
                 continue;
 
-            if (catchable.TryGetComponent(out IngredientReaction reaction))
-                reaction.GaugeUI?.ShowProgress(packet.Process);
+            if (catchable.TryGetComponent(out IngredientReaction reaction) &&
+                !reaction.IsActionCompleted(IngredientAction.Cut))
+                reaction.ApplyCutProgress(packet.Process);
         }
     }
 
@@ -160,6 +161,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        IngredientEgg.HandleDestroyedEntity(entityId);
         pendingParentChanges.Remove(entityId);
 
         if (!catchableDics.TryGetValue(entityId, out CatchableObj catchable))

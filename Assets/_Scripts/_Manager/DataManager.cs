@@ -24,11 +24,15 @@ public class DataManager : Singleton<DataManager>
     [SerializeField] private GameData<IngredientStat> ingredientStat = new();
     [SerializeField] private GameData<Recipe> recipe = new();
     [SerializeField] private GameData<IngredientCombination> ingredientCombination = new();
+    [SerializeField] private GameData<IngredientGroup> ingredientGroup = new();
+    [SerializeField] private GameData<Stage> stageInfo = new();
 
     public GameData<Ingredient> GetIngredient() => ingredient;
     public GameData<IngredientStat> GetIngredientStat() => ingredientStat;
     public GameData<Recipe> GetRecipe() => recipe;
     public GameData<IngredientCombination> GetIngredientCombination() => ingredientCombination;
+    public GameData<IngredientGroup> GetIngredientGroup() => ingredientGroup;
+    public GameData<Stage> GetStage() => stageInfo;
 
     public bool IsDataLoaded { get; private set; }
 
@@ -159,6 +163,11 @@ public class DataManager : Singleton<DataManager>
             var field = gameDataFields[i];
             Type dataType = field.FieldType.GetGenericArguments()[0]; // T
 
+            // Existing scenes may not have configured the optional board tables yet.
+            if ((dataType == typeof(IngredientGroup) || dataType == typeof(Stage)) &&
+                !gspreadReader.HasSheet(dataType.Name))
+                continue;
+
             float p = total > 0 ? (float)i / total : 1f;
             textCb?.Invoke($"{dataType.Name} 바인딩/저장 중...");
             valueCb?.Invoke(p);
@@ -235,6 +244,7 @@ public class DataManager : Singleton<DataManager>
             TextAsset asset = Resources.Load<TextAsset>($"Json/{dataType.Name}");
             if (asset == null)
             {
+                if (dataType == typeof(IngredientGroup) || dataType == typeof(Stage)) continue;
                 Debug.LogError($"[DataManager] Resources JSON is missing: {dataType.Name}");
                 return false;
             }

@@ -17,6 +17,9 @@ public class IngredientTraitFragile : IngredientTrait
     public event Action<Vector3, Vector3> OnBroken;
 
     private bool isBroken;
+    private bool breakBlock;
+
+    #region Unity Callbacks
 
     private void Reset()
     {
@@ -29,11 +32,6 @@ public class IngredientTraitFragile : IngredientTrait
             catchable = GetComponent<CatchableObj>();
     }
 
-    protected override void StartTrait()
-    {
-        isBroken = false;
-    }
-
     private void OnCollisionEnter(Collision collision)
     {
         // Only the last holder's client may request the replacement and destruction.
@@ -41,7 +39,7 @@ public class IngredientTraitFragile : IngredientTrait
         if (catchable == null || !catchable.IsLocalOwner)
             return;
 
-        if (isBroken)
+        if (isBroken || breakBlock)
             return;
 
         if (collision.relativeVelocity.magnitude < breakImpactThreshold)
@@ -50,6 +48,26 @@ public class IngredientTraitFragile : IngredientTrait
         if (collision.contactCount == 0) return;
         ContactPoint contact = collision.GetContact(0);
         Break(contact.point, contact.normal);
+    }
+
+    #endregion
+
+    public bool TryBreakBlock()
+    {
+        if (isBroken || breakBlock) return false;
+        breakBlock = true;
+        return true;
+    }
+
+    public void ReleaseBreakBlock()
+    {
+        breakBlock = false;
+    }
+
+    protected override void StartTrait()
+    {
+        isBroken = false;
+        breakBlock = false;
     }
 
     private void Break(Vector3 point, Vector3 normal)

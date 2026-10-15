@@ -27,8 +27,6 @@ public class Stove() : ContainerTool(new SingleSlotStorage()), IFixedTool
         if (entity is Pan pan && base.Insert(pan))
         {
             pan.Parent = this;
-            pan.SetCookEnable(true);
-            pan.StartCook();
 
             return true;
         }

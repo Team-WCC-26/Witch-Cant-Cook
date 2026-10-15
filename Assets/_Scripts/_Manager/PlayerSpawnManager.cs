@@ -127,6 +127,8 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         if (!ContainsPlayer(playerId))
             SpawnPlayer(playerId);
 
+        StageSelectionSession.Instance.OnPlayerEntered(playerId);
+
         UIManager.Hide<LobbyRouterUI>();
     }
 
@@ -144,6 +146,8 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
             return false;
 
         Transform point = spawnPoint != null ? spawnPoint : spawnRoot;
+
+        player.Rocket?.StopFlight();
 
         player.transform.SetPositionAndRotation(
             point.position,

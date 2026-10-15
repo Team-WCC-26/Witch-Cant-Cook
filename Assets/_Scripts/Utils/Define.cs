@@ -42,6 +42,7 @@ public class Define
         Pot = 40,
         Plate = 50,
         PrepTable = 60,
+        JumpAssist = 70,
         Oven = 80,
     }
 

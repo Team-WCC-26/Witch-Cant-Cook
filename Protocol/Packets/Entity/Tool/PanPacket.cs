@@ -2,6 +2,7 @@ using MemoryPack;
 
 namespace Protocol;
 
+// discarded
 [MemoryPackable]
 [PacketId(PacketId.C_PanStoveExit)]
 [PacketId(PacketId.S_PanStoveExit)]

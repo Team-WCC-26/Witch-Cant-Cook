@@ -26,6 +26,7 @@ public class PotInteraction : MapObjInteraction,
 
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
+    [SerializeField] private Animator cookingVisualAnimator;
 
     [Header("솥 시점")]
     [SerializeField] private CinemachineCamera potCamera;
@@ -48,6 +49,20 @@ public class PotInteraction : MapObjInteraction,
 
     #endregion
 
+    private static readonly int IsCookingHash = Animator.StringToHash("IsCooking");
+    private static readonly int CookingRattleHash = Animator.StringToHash("CookingRattle");
+    private static readonly int PunchRattleHash = Animator.StringToHash("PunchRattle");
+    private static readonly int EjectBounceHash = Animator.StringToHash("EjectBounce");
+    private static readonly int IngredientIntakeHash = Animator.StringToHash("IngredientIntake");
+    private static readonly int CookingIdleHash = Animator.StringToHash("Idle");
+    private const float PunchRattleDuration = 0.55f;
+    private const float IngredientIntakeDuration = 0.62f;
+    // 0.78초 클립과 짧은 전환이 끝날 때까지 다음 배출 연출을 대기시킨다.
+    private const float EjectBounceDuration = 0.85f;
+    private bool cookingVisualActive;
+    private float visualOverrideUntilTime;
+    private int visualOverrideStateHash;
+
     private PotState state = PotState.Idle;
     public PotState State => state;
 
@@ -62,6 +77,7 @@ public class PotInteraction : MapObjInteraction,
     // Player entry
     private readonly List<PlayerBrain> trappedPlayers = new();
     private readonly HashSet<string> pendingPlayerEntries = new(); // Awaiting server response
+    private bool playerEnteredDuringEjection;
 
     // Network 
     private ObjectNetworkRouter objectRouter;
@@ -69,19 +85,27 @@ public class PotInteraction : MapObjInteraction,
     private float? pendingCookingDuration;
     private long lastCookCompleteEffectDishId;
 
-    #region Lifecycle
-
-    // 솥 패킷에서 오브젝트를 찾을 라우터 연결
-    public override void InitializeRouter(MapObjNetworkRouter router)
-    {
-        base.InitializeRouter(router);
-        objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
-    }
+    #region Unity Callbacks
 
     // 솥 활성화 초기화
     private void OnEnable()
     {
         ResetPotData();
+    }
+
+    // 게이지가 실제 표시되는 동안에만 시각용 솥 애니메이션을 재생한다.
+    private void LateUpdate()
+    {
+        if (Time.time < visualOverrideUntilTime) return;
+
+        bool shouldPlay = state == PotState.Cooking &&
+            gaugeUI != null && gaugeUI.gameObject.activeInHierarchy;
+        if (cookingVisualAnimator == null || shouldPlay == cookingVisualActive) return;
+
+        cookingVisualActive = shouldPlay;
+        cookingVisualAnimator.SetBool(IsCookingHash, shouldPlay);
+        if (shouldPlay)
+            cookingVisualAnimator.Play(CookingRattleHash, 0, Random.value);
     }
 
     // 솥 보관물 반환 및 초기화
@@ -92,9 +116,86 @@ public class PotInteraction : MapObjInteraction,
         ResetPotData();
     }
 
+    // 진입 대상 서버 요청
+    private void OnTriggerEnter(Collider other)
+    {
+        if (TryGetPlayer(other, out PlayerBrain player))
+        {
+            RequestPlayerEntry(player);
+            return;
+        }
+
+        CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
+        if (catchable == null) return;
+        if (storedObjects.Contains(catchable) || !pendingObjects.Add(catchable)) return;
+
+        RequestObjEntry(catchable);
+    }
+
+    // 선택 시 배출 기준 방향과 랜덤 범위 표시
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 origin = GetEjectPosition();
+        float length = Mathf.Max(0.1f, ejectGizmoLength);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(origin, 0.08f);
+        Gizmos.DrawLine(origin, origin + GetWorldEjectDirection(ejectBaseDirection) * length);
+
+        float minY = Mathf.Min(ejectRandomRangeYMin, ejectRandomRangeYMax);
+        float maxY = Mathf.Max(ejectRandomRangeYMin, ejectRandomRangeYMax);
+        Vector3[] endpoints = new Vector3[8];
+        int index = 0;
+
+        for (int y = 0; y < 2; y++)
+        {
+            for (int x = 0; x < 2; x++)
+            {
+                for (int z = 0; z < 2; z++)
+                {
+                    Vector3 offset = new(
+                        x == 0 ? -ejectRandomRangeX : ejectRandomRangeX,
+                        y == 0 ? minY : maxY,
+                        z == 0 ? -ejectRandomRangeZ : ejectRandomRangeZ);
+                    endpoints[index++] = origin + GetWorldEjectDirection(ejectBaseDirection + offset) * length;
+                }
+            }
+        }
+
+        Gizmos.color = Color.cyan;
+        foreach (Vector3 endpoint in endpoints)
+            Gizmos.DrawLine(origin, endpoint);
+
+        DrawEjectRangeEdge(endpoints, 0, 1);
+        DrawEjectRangeEdge(endpoints, 0, 2);
+        DrawEjectRangeEdge(endpoints, 1, 3);
+        DrawEjectRangeEdge(endpoints, 2, 3);
+        DrawEjectRangeEdge(endpoints, 4, 5);
+        DrawEjectRangeEdge(endpoints, 4, 6);
+        DrawEjectRangeEdge(endpoints, 5, 7);
+        DrawEjectRangeEdge(endpoints, 6, 7);
+        DrawEjectRangeEdge(endpoints, 0, 4);
+        DrawEjectRangeEdge(endpoints, 1, 5);
+        DrawEjectRangeEdge(endpoints, 2, 6);
+        DrawEjectRangeEdge(endpoints, 3, 7);
+    }
+
+    #endregion
+
+    #region Lifecycle
+
+    // 솥 패킷에서 오브젝트를 찾을 라우터 연결
+    public override void InitializeRouter(MapObjNetworkRouter router)
+    {
+        base.InitializeRouter(router);
+        objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
+    }
+
     // 솥 데이터 초기화
     private void ResetPotData()
     {
+        foreach (PlayerBrain player in trappedPlayers)
+            PlayerGlow.SetActive(player, false);
         RestorePlayerInput();
         RestorePlayerCamera();
         state = PotState.Idle;
@@ -111,6 +212,7 @@ public class PotInteraction : MapObjInteraction,
         // Player entry
         trappedPlayers.Clear();
         pendingPlayerEntries.Clear();
+        playerEnteredDuringEjection = false;
 
         // Network
         pendingCookCompletePacket = null;
@@ -124,6 +226,14 @@ public class PotInteraction : MapObjInteraction,
         ejectRandom = null;
 
         gaugeUI?.Hide();
+        cookingVisualActive = false;
+        visualOverrideUntilTime = 0f;
+        visualOverrideStateHash = 0;
+        if (cookingVisualAnimator != null)
+        {
+            cookingVisualAnimator.SetBool(IsCookingHash, false);
+            cookingVisualAnimator.Play(CookingIdleHash, 0, 0f);
+        }
     }
 
     // 실행 중 솥 코루틴 중단
@@ -144,22 +254,6 @@ public class PotInteraction : MapObjInteraction,
             if (catchable == null) continue;
             ObjectPoolManager.Instance.Push(catchable.gameObject);
         }
-    }
-
-    // 진입 대상 서버 요청
-    private void OnTriggerEnter(Collider other)
-    {
-        if (TryGetPlayer(other, out PlayerBrain player))
-        {
-            RequestPlayerEntry(player);
-            return;
-        }
-
-        CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
-        if (catchable == null) return;
-        if (storedObjects.Contains(catchable) || !pendingObjects.Add(catchable)) return;
-
-        RequestObjEntry(catchable);
     }
 
     #endregion
@@ -198,9 +292,13 @@ public class PotInteraction : MapObjInteraction,
         else
         {
             StoreETC(catchable);
-            if (entryState == PotState.Ejecting)
+            if (entryState == PotState.Ejecting && storedObjects.Contains(catchable))
                 postEjectObjects.Add(catchable);
         }
+
+        // 재료, 그릇 등 서버가 수락해 보관한 모든 오브젝트에 같은 연출을 적용한다.
+        if (entryState != PotState.Ejecting && storedObjects.Contains(catchable))
+            PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
     }
 
     // 솥 조리 시작 결과 수신
@@ -372,36 +470,85 @@ public class PotInteraction : MapObjInteraction,
         pendingCookingDuration = null;
         gaugeUI?.Hide();
         ChangeState(PotState.Ejecting);
-        ejectCoroutine = StartCoroutine(EjectRoutine());
+        // 플레이어가 든 솥을 강제 배출할 때는 모든 클라이언트에서 펀치 흔들림을 마친 뒤 배출한다.
+        bool waitForPunchRattle = packet.PlayerIds.Count > 0 && pendingCookCompletePacket == null;
+        ejectCoroutine = StartCoroutine(EjectSequenceRoutine(waitForPunchRattle));
     }
 
-    // 서버 배출 순서대로 순차 처리
-    private IEnumerator EjectRoutine()
+    private IEnumerator EjectSequenceRoutine(bool waitForPunchRattle)
     {
+        if (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
+        {
+            // 펀치가 로컬에서 재생되지 않은 클라이언트도 같은 순서로 흔들림을 재생한다.
+            if (waitForPunchRattle &&
+                (visualOverrideStateHash != PunchRattleHash || Time.time >= visualOverrideUntilTime))
+                PlayVisualOverride(PunchRattleHash, PunchRattleDuration);
+
+            while (Time.time < visualOverrideUntilTime)
+                yield return null;
+        }
+
+        bool ejectedAny = false;
         while (activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0)
         {
-            Vector3 direction = GetEjectDirection();
+            // 각 대상의 배출 애니메이션과 실제 배출을 같은 프레임에 시작한다.
+            if (cookingVisualAnimator != null)
+                PlayVisualOverride(EjectBounceHash, EjectBounceDuration, 0.05f);
 
-            if (activeEjectPlayers.Count > 0)
-            {
-                EjectPlayer(activeEjectPlayers.Dequeue(), direction);
-            }
+            EjectNextTarget();
+            ejectedAny = true;
+
+            bool hasMore = activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0;
+            float visualDuration = cookingVisualAnimator != null ? EjectBounceDuration : 0f;
+            float delay = hasMore
+                ? Mathf.Max(ejectInterval, visualDuration)
+                : visualDuration;
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
             else
-            {
-                CatchableObj next = activeEjectObjects.Dequeue();
-                bool isCompletedBowl = pendingCookCompletePacket != null &&
-                    next != null &&
-                    next.NetworkId == pendingCookCompletePacket.DishEntityId;
-                float force = isCompletedBowl ? bowlEjectForce : ejectForce;
-                EjectObject(next, force, direction);
-            }
-
-            if ((activeEjectPlayers.Count > 0 || activeEjectObjects.Count > 0) && ejectInterval > 0f)
-                yield return new WaitForSeconds(ejectInterval);
+                yield return null;
         }
+
+        // 대상이 없어도 코루틴 등록이 끝난 뒤 다음 패킷을 처리한다.
+        if (!ejectedAny)
+            yield return null;
 
         ejectCoroutine = null;
         FinishPacketEjection();
+    }
+
+    private void PlayVisualOverride(int stateHash, float duration, float blendDuration = 0f)
+    {
+        if (cookingVisualAnimator == null) return;
+
+        visualOverrideUntilTime = Time.time + duration;
+        visualOverrideStateHash = stateHash;
+        cookingVisualActive = false;
+        cookingVisualAnimator.SetBool(IsCookingHash, false);
+        if (blendDuration > 0f)
+            cookingVisualAnimator.CrossFadeInFixedTime(stateHash, blendDuration, 0, 0f);
+        else
+            cookingVisualAnimator.Play(stateHash, 0, 0f);
+    }
+
+    // 서버 목록 순서대로 플레이어 또는 오브젝트 한 개를 배출한다.
+    private void EjectNextTarget()
+    {
+        Vector3 direction = GetEjectDirection();
+
+        if (activeEjectPlayers.Count > 0)
+        {
+            EjectPlayer(activeEjectPlayers.Dequeue(), direction);
+        }
+        else
+        {
+            CatchableObj next = activeEjectObjects.Dequeue();
+            bool isCompletedBowl = pendingCookCompletePacket != null &&
+                next != null &&
+                next.NetworkId == pendingCookCompletePacket.DishEntityId;
+            float force = isCompletedBowl ? bowlEjectForce : ejectForce;
+            EjectObject(next, force, direction);
+        }
     }
 
     // 보관 오브젝트 물리 배출
@@ -478,6 +625,8 @@ public class PotInteraction : MapObjInteraction,
         CatchableObj[] enteredDuringEjection = postEjectObjects.ToArray();
         postEjectObjects.Clear();
         ChangeState(PotState.Idle);
+        bool swallowedAfterEjection = playerEnteredDuringEjection;
+        playerEnteredDuringEjection = false;
 
         foreach (CatchableObj catchable in enteredDuringEjection)
         {
@@ -488,61 +637,17 @@ public class PotInteraction : MapObjInteraction,
             etcObjects.Remove(catchable);
 
             HandleIdleEntry(catchable);
+            swallowedAfterEjection |= storedObjects.Contains(catchable);
         }
+
+        if (swallowedAfterEjection)
+            PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
 
         TryStartCooking();
         pendingCookCompletePacket = null;
 
         if (pendingEjectPackets.Count > 0)
             BeginPacketEjection(pendingEjectPackets.Dequeue());
-    }
-
-    // 선택 시 배출 기준 방향과 랜덤 범위 표시
-    private void OnDrawGizmosSelected()
-    {
-        Vector3 origin = GetEjectPosition();
-        float length = Mathf.Max(0.1f, ejectGizmoLength);
-
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(origin, 0.08f);
-        Gizmos.DrawLine(origin, origin + GetWorldEjectDirection(ejectBaseDirection) * length);
-
-        float minY = Mathf.Min(ejectRandomRangeYMin, ejectRandomRangeYMax);
-        float maxY = Mathf.Max(ejectRandomRangeYMin, ejectRandomRangeYMax);
-        Vector3[] endpoints = new Vector3[8];
-        int index = 0;
-
-        for (int y = 0; y < 2; y++)
-        {
-            for (int x = 0; x < 2; x++)
-            {
-                for (int z = 0; z < 2; z++)
-                {
-                    Vector3 offset = new(
-                        x == 0 ? -ejectRandomRangeX : ejectRandomRangeX,
-                        y == 0 ? minY : maxY,
-                        z == 0 ? -ejectRandomRangeZ : ejectRandomRangeZ);
-                    endpoints[index++] = origin + GetWorldEjectDirection(ejectBaseDirection + offset) * length;
-                }
-            }
-        }
-
-        Gizmos.color = Color.cyan;
-        foreach (Vector3 endpoint in endpoints)
-            Gizmos.DrawLine(origin, endpoint);
-
-        DrawEjectRangeEdge(endpoints, 0, 1);
-        DrawEjectRangeEdge(endpoints, 0, 2);
-        DrawEjectRangeEdge(endpoints, 1, 3);
-        DrawEjectRangeEdge(endpoints, 2, 3);
-        DrawEjectRangeEdge(endpoints, 4, 5);
-        DrawEjectRangeEdge(endpoints, 4, 6);
-        DrawEjectRangeEdge(endpoints, 5, 7);
-        DrawEjectRangeEdge(endpoints, 6, 7);
-        DrawEjectRangeEdge(endpoints, 0, 4);
-        DrawEjectRangeEdge(endpoints, 1, 5);
-        DrawEjectRangeEdge(endpoints, 2, 6);
-        DrawEjectRangeEdge(endpoints, 3, 7);
     }
 
     // 로컬 배출 방향을 안전한 월드 방향으로 변환
@@ -627,6 +732,7 @@ public class PotInteraction : MapObjInteraction,
     {
         if (player == null) return;
 
+        PlayerGlow.SetActive(player, false);
         trappedPlayers.Remove(player);
         pendingPlayerEntries.Remove(player.PlayerId);
         if (player.Interact?.HeldObj != null)
@@ -710,7 +816,15 @@ public class PotInteraction : MapObjInteraction,
         pendingPlayerEntries.Remove(packet.PlayerId);
         if (PlayerSpawnManager.Instance == null) return;
         if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player)) return;
-        if (!trappedPlayers.Contains(player)) trappedPlayers.Add(player);
+        if (!trappedPlayers.Contains(player))
+        {
+            trappedPlayers.Add(player);
+            if (state == PotState.Ejecting)
+                playerEnteredDuringEjection = true;
+            else
+                PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
+        }
+        PlayerGlow.SetActive(player, true);
         if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
         {
             if (trappedLocalInput == null && player.Input != null)
@@ -832,6 +946,7 @@ public class PotInteraction : MapObjInteraction,
     public void OnPunched(PlayerBrain player)
     {
         if (state == PotState.Ejecting) return;
+        PlayVisualOverride(PunchRattleHash, PunchRattleDuration);
         if (storedObjects.Count == 0 && trappedPlayers.Count == 0) return;
         RequestForceEject();
     }
@@ -840,6 +955,7 @@ public class PotInteraction : MapObjInteraction,
 
 }
 
+#region Editor
 #if UNITY_EDITOR
 [UnityEditor.CustomEditor(typeof(PotInteraction))]
 public class PotInteractionEditor : UnityEditor.Editor
@@ -866,3 +982,4 @@ public class PotInteractionEditor : UnityEditor.Editor
     }
 }
 #endif
+#endregion

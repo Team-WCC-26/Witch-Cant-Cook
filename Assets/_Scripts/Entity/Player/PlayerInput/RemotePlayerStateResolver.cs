@@ -237,7 +237,19 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
             ProtocolTypeConverter.ToClientCombinedState(packet.CombinedState)
         );
 
-        ApplyRemoteTransform(packet.Position, packet.Rotation);
+        Quaternion rotation = DataConverter.NumericsToUnity(packet.Rotation);
+        bool rocketFlight = CurrentState.Interaction == PlayerInteraction.SpecialInteract &&
+                            CurrentState.HeldEntityCategory == EntityCategory.Ingredient;
+        Vector3 direction = rotation * Vector3.forward;
+        Quaternion bodyRotation = rotation;
+        if (rocketFlight)
+        {
+            Vector3 horizontal = new(direction.x, 0f, direction.z);
+            if (horizontal.sqrMagnitude > 0.001f)
+                bodyRotation = Quaternion.LookRotation(horizontal, Vector3.up);
+        }
+        SetRemoteTarget(DataConverter.NumericsToUnity(packet.Position), bodyRotation);
+        brain.Rocket?.ApplyRemoteFlight(rocketFlight, direction, DataConverter.NumericsToUnity(packet.Position));
     }
 
     public void ApplyRemoteState(PlayerCombinedState remoteState)

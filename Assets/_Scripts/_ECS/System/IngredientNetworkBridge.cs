@@ -30,6 +30,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     private void OnEnable()
     {
         Instance = this;
+        IngredientEgg.ResetPanTransfers();
 
         if (ServerManager.Instance != null)
         {
@@ -94,6 +95,38 @@ public class IngredientNetworkBridge : MonoBehaviour
             Debug.LogError("[Network Error] ServerManager.Instance not found.");
         }
     }
+    /// <summary>
+    /// 테스트용
+    /// </summary>
+    /// <param name="ingredientID"></param>
+    /// <param name="spawnPos"></param>
+    public void SendSpawnPacketToServer(int ingredientID, GameObject spawnPos)
+    {
+        if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded) return;
+
+        float3 targetPosition = (float3)spawnPos.transform.position;
+
+        IngredientSpawnPacket spawnPacket = new()
+        {
+            EntityId = 0,
+            IngredientID = ingredientID,
+            Position = new System.Numerics.Vector3(targetPosition.x, targetPosition.y, targetPosition.z),
+            Quaternion = System.Numerics.Quaternion.Identity
+        };
+
+        byte[] sendBuffer = PacketSerializer.Serialize(spawnPacket);
+
+        if (ServerManager.Instance != null)
+        {
+            ServerManager.Instance.SendData(sendBuffer).Forget();
+            Debug.Log($"[Network Send] Ingredient spawn requested. ID: {ingredientID}, Position: {targetPosition}");
+        }
+        else
+        {
+            Debug.LogError("[Network Error] ServerManager.Instance not found.");
+        }
+    }
+
 
     public void SendSpawnPacketToServer(int ingredientID, float3 pos)
     {

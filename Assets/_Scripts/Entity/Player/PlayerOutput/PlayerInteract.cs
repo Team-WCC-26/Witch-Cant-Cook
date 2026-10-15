@@ -5,7 +5,14 @@ using UnityEngine;
 
 public class PlayerInteract
 {
+    private enum PendingAttackImpact { None, Punch, Knife }
+    private const float RemotePunchRadiusBonus = 0.15f;
+    private const float RemotePunchDistanceBonus = 0.25f;
+
     private readonly PlayerBrain brain;
+    private PendingAttackImpact pendingAttackImpact;
+    private CatchableObj pendingKnife;
+    private float pendingImpactDeadline;
 
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
@@ -20,6 +27,7 @@ public class PlayerInteract
         DrawDebugInteractRay();
 
         if (!PlayerSpawnManager.Instance.IsMine(brain.PlayerId)) return;
+        if (brain.Rocket != null && brain.Rocket.IsFlying) return;
 
         switch (interaction)
         {
@@ -46,8 +54,11 @@ public class PlayerInteract
         IInteractTarget target = FindInteractTarget();
         if (target is not CatchableObj obj)
         {
-            brain.ActionController.PunchAction();
-            target.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+            if (brain.ActionController.PunchAction())
+            {
+                pendingAttackImpact = PendingAttackImpact.Punch;
+                pendingImpactDeadline = Time.time + 2f;
+            }
             return;
         }
         if (obj.IsHold) return;
@@ -59,6 +70,14 @@ public class PlayerInteract
     private void RequestHeldPrimaryAction()
     {
         if (!IsHolding) return;
+
+        OvenButton ovenButton = FindInteractTarget().GetTargetComponent<OvenButton>();
+        if (ovenButton != null)
+        {
+            brain.ActionController.PunchAction();
+            ovenButton.OnPunched(brain);
+            return;
+        }
 
         if (TryUseHeldPrimaryAction()) return;
         if (TryUseHeldObjectReceiver()) return;
@@ -85,6 +104,7 @@ public class PlayerInteract
     
     private void RequestSecondaryAction()
     {
+        if (TryGetHeldComponent(out IHeldSecondaryAction action) && action.TryUseSecondary(this)) return;
         EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
         switch (category)
@@ -138,6 +158,8 @@ public class PlayerInteract
     {
         if (!IsHolding) return;
 
+        brain.Rocket?.StopFlight();
+
         CatchableObj target = HeldObj;
         EntityThrowPacket packet = new()
         {
@@ -185,6 +207,98 @@ public class PlayerInteract
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
+    public void QueueKnifeImpact()
+    {
+        pendingAttackImpact = PendingAttackImpact.Knife;
+        pendingKnife = HeldObj;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
+    public void CancelPendingAttackImpact()
+    {
+        pendingAttackImpact = PendingAttackImpact.None;
+        pendingKnife = null;
+        pendingImpactDeadline = 0f;
+    }
+
+    public void OnPunchImpact()
+    {
+        if (!TryConsumeAttackImpact(PendingAttackImpact.Punch, out _)) return;
+
+        if (TryFindPunchedPlayer(BuildInteractRay(), GetInteractRadius(), brain.InteractDistance) is PlayerHitWobble playerHit)
+        {
+            playerHit.PlayHit(brain.transform.position);
+            return;
+        }
+
+        IInteractTarget target = FindInteractTarget();
+        if (target is CatchableObj) return;
+        target?.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+    }
+
+    public void OnRemotePunchImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+
+        Transform facing = brain.FacingRoot != null ? brain.FacingRoot : brain.transform;
+        Vector3 origin = brain.Col != null ? brain.Col.bounds.center : facing.position + Vector3.up;
+        PlayerHitWobble playerHit = TryFindPunchedPlayer(
+            new Ray(origin, facing.forward),
+            GetInteractRadius() + RemotePunchRadiusBonus,
+            brain.InteractDistance + RemotePunchDistanceBonus);
+        playerHit?.PlayHit(brain.transform.position);
+    }
+
+    private PlayerHitWobble TryFindPunchedPlayer(Ray ray, float radius, float distance)
+    {
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            radius,
+            ray.direction,
+            distance,
+            Physics.AllLayers,
+            QueryTriggerInteraction.Ignore);
+
+        float nearestDistance = float.PositiveInfinity;
+        Collider nearestCollider = null;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.transform.IsChildOf(brain.transform)) continue;
+            if (hit.distance >= nearestDistance) continue;
+            nearestDistance = hit.distance;
+            nearestCollider = hit.collider;
+        }
+
+        if (nearestCollider == null) return null;
+        PlayerBrain target = nearestCollider.GetComponentInParent<PlayerBrain>();
+        return target != null && target != brain
+            ? target.GetComponent<PlayerHitWobble>()
+            : null;
+    }
+
+    public void OnKnifeImpact()
+    {
+        if (!TryConsumeAttackImpact(PendingAttackImpact.Knife, out CatchableObj knife)) return;
+        if (HeldObj != knife || knife == null) return;
+
+        if (FindInteractTarget() is not CatchableObj target) return;
+        if (!target.TryGetComponent(out IngredientReaction _)) return;
+        RequestEntityInteract(target.NetworkId);
+    }
+
+    private bool TryConsumeAttackImpact(PendingAttackImpact expected, out CatchableObj knife)
+    {
+        knife = pendingKnife;
+        if (pendingAttackImpact != expected) return false;
+
+        bool valid = Time.time <= pendingImpactDeadline &&
+            PlayerSpawnManager.Instance != null &&
+            PlayerSpawnManager.Instance.IsMine(brain.PlayerId) &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default;
+        CancelPendingAttackImpact();
+        return valid;
+    }
+
     public bool TryUseEquipment()
     {
         if (!IsHolding) return false;
@@ -197,6 +311,8 @@ public class PlayerInteract
     {
         if (target == null) return false;
         if (HeldObj != target) return false;
+
+        brain.Rocket?.StopFlight();
 
         brain.ActionController.CancelAction();
         HeldObj = null;
@@ -227,6 +343,8 @@ public class PlayerInteract
     {
         if (target == null) return;
 
+        brain.Rocket?.StopFlight();
+
         brain.ActionController.CancelAction();
         target.OnPick(brain);
         Transform holdParent = target.IsEquipment
@@ -243,6 +361,8 @@ public class PlayerInteract
     public void ApplyThrown(CatchableObj target)
     {
         if (target == null || HeldObj != target) return;
+
+        brain.Rocket?.StopFlight();
 
         brain.ActionController.CancelAction();
         HeldObj = null;

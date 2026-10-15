@@ -49,9 +49,17 @@ MonoBehaviour:
   useGSpread: 1
   gspreadReader: {fileID: 8302323175505027827}
   destroyGSpreadReaderAfterInit: 0
+  ingredient:
+    data: []
+  ingredientStat:
+    data: []
   recipe:
     data: []
   ingredientCombination:
+    data: []
+  ingredientGroup:
+    data: []
+  stageInfo:
     data: []
 --- !u!114 &8302323175505027827
 MonoBehaviour:
@@ -76,4 +84,8 @@ MonoBehaviour:
     sheetId: 784575298
   - className: IngredientCombination
     sheetId: 1550184003
+  - className: Stage
+    sheetId: 1843734264
+  - className: IngredientGroup
+    sheetId: 2043908905
   timeoutSeconds: 30

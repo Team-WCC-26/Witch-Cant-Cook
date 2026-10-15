@@ -13,6 +13,9 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     private bool isJumpLocked = false;
     private bool hasJumpLockStarted = false;
     private float nextJumpAllowedTime;
+    private float rocketEndSnapshotUntil;
+    private Vector3 rocketEndPosition;
+    private Quaternion rocketEndRotation;
     public LocalPlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         inputFSM = new PlayerInputFSM(brain);
@@ -103,6 +106,20 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         physicalFSM.EnterRagdoll();
     }
 
+    public void SendRocketSnapshot(bool ended)
+    {
+        // Keep the terminal pose for two send intervals so batching preserves short flights.
+        rocketEndSnapshotUntil = ended ? Time.time + SendInterval * 2f : 0f;
+        if (ended)
+        {
+            rocketEndPosition = brain.Rb != null ? brain.Rb.position : brain.transform.position;
+            rocketEndRotation = Quaternion.LookRotation(brain.Rocket.FlightDirection, Vector3.up);
+        }
+        if (ServerManager.Instance == null) return;
+        sendTimer = 0f;
+        SendMovementPacket();
+    }
+
     private void SendMovementPacket()
     {
         PlayerCombinedState outgoingState = CurrentState;
@@ -125,11 +142,24 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         Quaternion facingRotation = brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
+        Vector3 position = brain.Rb != null ? brain.Rb.position : brain.transform.position;
+
+        // Reuse the existing special-action snapshot marker; no new wire format is required.
+        bool endingRocket = Time.time < rocketEndSnapshotUntil;
+        if (brain.Rocket != null && (brain.Rocket.IsFlying || endingRocket) &&
+            brain.Interact.HeldObj != null && brain.Interact.HeldObj.GetComponent<IngredientCarrot>() != null &&
+            CurrentState.PhysicalMode == PlayerPhysicalMode.Default)
+        {
+            outgoingState = new PlayerCombinedState(CurrentState.PhysicalMode,
+                Vector2.zero, false, PlayerInteraction.SpecialInteract, EntityCategory.Ingredient);
+            facingRotation = endingRocket ? rocketEndRotation : Quaternion.LookRotation(brain.Rocket.FlightDirection, Vector3.up);
+            if (endingRocket) position = rocketEndPosition;
+        }
 
         PlayerMovementPacket packet = new()
         {
             PlayerId = brain.PlayerId,
-            Position = DataConverter.UnityToNumerics(brain.transform.position),
+            Position = DataConverter.UnityToNumerics(position),
             Rotation = DataConverter.UnityToNumerics(facingRotation),
             CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(outgoingState)
         };
@@ -148,7 +178,12 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     // Keeps jump input alive until the next physics tick.
     private void CacheJumpRequest(PlayerPhysicalMode physicalMode)
     {
-        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
+        if (brain.Rocket != null && brain.Rocket.IsFlying)
+        {
+            pendingJumpRequested = false;
+            return;
+        }
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked || brain.Input.IsMovementBlocked)
         {
             pendingJumpRequested = false;
             isJumpLocked = false;
@@ -170,11 +205,12 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     {
         bool jumpRequested =
             physicalMode == PlayerPhysicalMode.Default
-            && !brain.Input.IsInputBlocked
+            && !brain.Input.IsInputBlocked && !brain.Input.IsMovementBlocked
             && pendingJumpRequested
             && !isJumpLocked
             && Time.time >= nextJumpAllowedTime
             && !brain.ActionController.Movement.IsForcedMovementActive
+            && !(brain.Rocket != null && brain.Rocket.IsFlying)
             && brain.ActionController.CanRequestJump;
 
         if (jumpRequested)

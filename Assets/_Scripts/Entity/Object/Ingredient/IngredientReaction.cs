@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 [Flags]
@@ -34,7 +35,6 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     [Header("Components")]
     [SerializeField] private MeshFilter meshFilter;
     [SerializeField] private Renderer targetRenderer;
-    [SerializeField] private ParticleSystem cutParticle;
 
     [Header("Interact Gauge")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
@@ -42,38 +42,94 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private IngredientAction completedActions = IngredientAction.None;
     private int curHP;
     private int maxHP;
+    private float lastCutProcess;
+    private Coroutine wobbleRoutine;
+    private Transform wobblePivot;
+    private MeshFilter wobbleMeshFilter;
+    private MeshRenderer wobbleMeshRenderer;
+    private MaterialPropertyBlock wobblePropertyBlock;
+    private float wobbleDirection = 1f;
+
+    [Header("Cut Hit Wobble")]
+    [SerializeField, Min(0f)] private float wobbleAngle = 12f;
+    [SerializeField, Min(0.01f)] private float wobbleDuration = 0.35f;
     public float CurGuage => 1 - (float)curHP / maxHP;
     public InteractionGaugeUI GaugeUI => gaugeUI;
+
+    [Header("Placement")]
+    [SerializeField] private TransformData panPlacement;
+    [SerializeField] private TransformData platePlacement;
+    [SerializeField, HideInInspector] private Vector3 plateOffsetPos = Vector3.zero;
+    [SerializeField, HideInInspector] private Vector3 plateOffsetEuler = Vector3.zero;
+    public Vector3 PlateOffsetPos => plateOffsetPos;
+    public Vector3 PlateOffsetEuler => plateOffsetEuler;
+
+    private Vector3 originalScale;
+    private bool hasOriginalScale;
+
+    [Header("Action Visuals")]
+    [SerializeField] private IngredientActionVisual[] actionVisuals;
+
+    #region Unity Callbacks
+
+    private void Awake()
+    {
+        CacheOriginalScale();
+        InitializeGauge();
+    }
+
+    private void OnDisable()
+    {
+        StopHitWobble();
+    }
+
+    #endregion
 
     public bool IsActionCompleted(IngredientAction action)
     {
         return (completedActions & action) != 0;
     }
 
-    [Header("Plate Offset")]
-    [SerializeField] private Vector3 plateOffsetPos = Vector3.zero;
-    [SerializeField] private Vector3 plateOffsetEuler = Vector3.zero;
-    public Vector3 PlateOffsetPos => plateOffsetPos;
-    public Vector3 PlateOffsetEuler => plateOffsetEuler;
-
-    [Header("Action Visuals")]
-    [SerializeField] private IngredientActionVisual[] actionVisuals;
-
-    private void Awake()
+    public void ApplyPanPlacement(Transform slot)
     {
-        InitializeGauge();
+        ApplyPlacement(slot, panPlacement, Vector3.zero, Vector3.zero);
+    }
+
+    public void ApplyPlatePlacement(Transform slot)
+    {
+        ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+    }
+
+    public void RestoreOriginalScale()
+    {
+        CacheOriginalScale();
+        transform.localScale = originalScale;
     }
 
     public void ResetForPool()
     {
+        RestoreOriginalScale();
+        StopHitWobble();
         InitializeGauge();
         lastAction = IngredientAction.None;
         completedActions = IngredientAction.None;
+        lastCutProcess = 0f;
+        wobbleDirection = 1f;
 
         gaugeUI?.Hide();
-        if (cutParticle != null)
-            cutParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ApplyVisual(IngredientAction.None);
+    }
+
+    public void ApplyCutProgress(float process)
+    {
+        if (IsActionCompleted(IngredientAction.Cut)) return;
+
+        process = Mathf.Clamp01(process);
+        gaugeUI?.ShowProgress(1f - process);
+
+        if (process <= lastCutProcess + 0.0001f || process >= 1f) return;
+        lastCutProcess = process;
+        PlayHitWobble();
     }
 
     public bool Interact(IngredientAction action, int dmg = 0)
@@ -95,11 +151,6 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         // Apply damage and check for completion
         curHP = (int)MathF.Max(0, curHP - dmg);
-        if (action == IngredientAction.Cut)
-        {
-            PlayCutParticle();
-        }
-
         // TODO: Apply mesh and shader changes based on HP progress.
         // TODO: Show completed state flag.
         if (curHP <= 0)
@@ -132,10 +183,34 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         CompleteAction(action);
     }
 
+    private void CacheOriginalScale()
+    {
+        if (hasOriginalScale) return;
+        originalScale = transform.localScale;
+        hasOriginalScale = true;
+    }
+
+    private void ApplyPlacement(Transform slot, TransformData placement,
+        Vector3 defaultPosition, Vector3 defaultRotation)
+    {
+        CacheOriginalScale();
+        transform.SetParent(slot, false);
+        transform.localPosition = placement != null ? placement.PositionOffset : defaultPosition;
+        transform.localRotation = Quaternion.Euler(placement != null ? placement.RotationOffset : defaultRotation);
+        transform.localScale = placement != null && !placement.Scale.Equals(Vector3.zero)
+            ? placement.Scale : originalScale;
+    }
+
     private void CompleteAction(IngredientAction action)
     {
         IngredientAction newlyCompleted = action & ~completedActions;
         completedActions |= action;
+        if ((newlyCompleted & IngredientAction.Cut) != 0)
+        {
+            StopHitWobble();
+            gaugeUI?.Hide();
+            PlayCutParticle();
+        }
         ApplyVisual(completedActions);
         if (newlyCompleted != IngredientAction.None)
             OnActionCompleted?.Invoke(newlyCompleted);
@@ -216,9 +291,91 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void PlayCutParticle()
     {
-        if (cutParticle == null) return;
-        cutParticle.Clear(true);
-        cutParticle.Play(true);
+        Vector3 position = targetRenderer != null ? targetRenderer.bounds.center : transform.position;
+        IngredientCutVfx.PlayAt(position, catchable != null ? catchable.Data as Ingredient : null);
+    }
+
+    private void PlayHitWobble()
+    {
+        if (!isActiveAndEnabled || wobbleAngle <= 0f || meshFilter == null ||
+            targetRenderer is not MeshRenderer sourceRenderer ||
+            meshFilter.transform != sourceRenderer.transform ||
+            meshFilter.sharedMesh == null)
+            return;
+
+        if (wobblePivot == null)
+        {
+            GameObject pivotObject = new GameObject("CutHitWobblePivot");
+            wobblePivot = pivotObject.transform;
+            wobblePivot.SetParent(meshFilter.transform, false);
+
+            GameObject visualObject = new GameObject("CutHitWobbleVisual");
+            visualObject.transform.SetParent(wobblePivot, false);
+            visualObject.layer = sourceRenderer.gameObject.layer;
+            wobbleMeshFilter = visualObject.AddComponent<MeshFilter>();
+            wobbleMeshRenderer = visualObject.AddComponent<MeshRenderer>();
+            wobbleMeshRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
+            wobbleMeshRenderer.receiveShadows = sourceRenderer.receiveShadows;
+            wobbleMeshRenderer.lightProbeUsage = sourceRenderer.lightProbeUsage;
+            wobbleMeshRenderer.reflectionProbeUsage = sourceRenderer.reflectionProbeUsage;
+            wobbleMeshRenderer.renderingLayerMask = sourceRenderer.renderingLayerMask;
+            wobbleMeshRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
+            wobbleMeshRenderer.sortingOrder = sourceRenderer.sortingOrder;
+            wobblePropertyBlock = new MaterialPropertyBlock();
+        }
+
+        if (wobbleRoutine != null)
+            StopCoroutine(wobbleRoutine);
+
+        wobbleMeshFilter.sharedMesh = meshFilter.sharedMesh;
+        wobbleMeshRenderer.sharedMaterials = sourceRenderer.sharedMaterials;
+        for (int i = 0; i < wobbleMeshRenderer.sharedMaterials.Length; i++)
+        {
+            sourceRenderer.GetPropertyBlock(wobblePropertyBlock, i);
+            wobbleMeshRenderer.SetPropertyBlock(wobblePropertyBlock, i);
+        }
+
+        Bounds bounds = meshFilter.sharedMesh.bounds;
+        Vector3 pivot = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+        wobblePivot.localPosition = pivot;
+        wobblePivot.GetChild(0).localPosition = -pivot;
+        wobblePivot.localRotation = Quaternion.identity;
+        wobblePivot.gameObject.SetActive(true);
+        sourceRenderer.enabled = false;
+
+        wobbleDirection = -wobbleDirection;
+        wobbleRoutine = StartCoroutine(HitWobbleRoutine());
+    }
+
+    private IEnumerator HitWobbleRoutine()
+    {
+        float elapsed = 0f;
+        while (elapsed < wobbleDuration)
+        {
+            float progress = Mathf.Clamp01(elapsed / wobbleDuration);
+            float angle = Mathf.Sin(progress * Mathf.PI * 3f) * (1f - progress) * wobbleAngle * wobbleDirection;
+            wobblePivot.localRotation = Quaternion.Euler(angle * 0.25f, 0f, angle);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        wobbleRoutine = null;
+        StopHitWobble();
+    }
+
+    private void StopHitWobble()
+    {
+        if (wobbleRoutine != null)
+        {
+            StopCoroutine(wobbleRoutine);
+            wobbleRoutine = null;
+        }
+
+        if (wobblePivot == null || !wobblePivot.gameObject.activeSelf) return;
+        wobblePivot.localRotation = Quaternion.identity;
+        wobblePivot.gameObject.SetActive(false);
+        if (targetRenderer != null)
+            targetRenderer.enabled = true;
     }
     #endregion
 }
