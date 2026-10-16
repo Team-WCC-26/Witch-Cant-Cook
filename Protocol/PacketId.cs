@@ -153,6 +153,9 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_JumpPadPlayerExit = 422,
     S_JumpPadEvent = 423,
 
+    // Pan
+    S_PanEject = 425,
+
     // 기타 패킷 (00~)
     // ...
 }

@@ -119,13 +119,25 @@ public class Player : Entity
 
         if (mask.HasFlag(DirtyMask.Transform))
         {
+            var state = State;
+
             packet.Players.Add(new()
             {
                 PlayerId = PlayerId,
                 Position = Position,
                 Rotation = Rotation,
-                CombinedState = State
+                CombinedState = state
             });
+
+            if (state.Interaction != PlayerInteraction.None)
+            {
+                _state = new(
+                    state.PhysicalMode,
+                    state.MoveDir,
+                    state.IsRun,
+                    PlayerInteraction.None,
+                    state.HeldObjType);
+            }
         }
 
         if (mask.HasFlag(DirtyMask.Ping))
