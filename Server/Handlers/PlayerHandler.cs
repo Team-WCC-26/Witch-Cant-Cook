@@ -15,6 +15,23 @@ public class PlayerHandler : PacketHandlerBase
             session.Player.Position = packet.Position;
             session.Player.Rotation = packet.Rotation;
             session.Player.State = packet.CombinedState;
+
+            if (packet.CombinedState.Interaction == PlayerInteraction.Drop &&
+                session.Player.HoldingEntity is Pan pan &&
+                !pan.IsDestroyed &&
+                pan.Ingredient is Ingredient ingredient &&
+                !ingredient.IsDestroyed)
+            {
+                PanEjectPacket ejectPacket = new()
+                {
+                    PanEntityId = pan.EntityId,
+                    IngredientEntityId = ingredient.EntityId,
+                    Position = session.Player.Position,
+                    EjectSeed = (int)TimeUtil.NowMs()
+                };
+
+                room.BroadCast(PacketSerializer.Serialize(ejectPacket, true));
+            }
         });
     }
 
