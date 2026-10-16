@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Protocol;
 using Server;
 using UnityEngine;
@@ -16,6 +17,9 @@ public class PanInteraction : MonoBehaviour,
     private StoveInteraction currentStove;
     private long pendingIngredientId;
     private long pendingTossId;
+    private readonly NetworkResponseWait tossResponse = new();
+    private static readonly Dictionary<long, PanInteraction> tossRequests = new();
+    private long trackedTossId;
     private float pendingCookDuration = -1f;
     private IngredientEgg pendingEgg;
     private long pendingEggId;
@@ -40,6 +44,7 @@ public class PanInteraction : MonoBehaviour,
 
     private void OnDisable()
     {
+        CancelTossTracking();
         pendingEgg?.CancelPanInsert();
         pendingEgg = null;
         pendingEggId = 0;
@@ -55,6 +60,11 @@ public class PanInteraction : MonoBehaviour,
         pendingTossId = 0;
         currentStove?.ReleasePan(this);
         currentStove = null;
+    }
+
+    private void Update()
+    {
+        tossResponse.Tick();
     }
 
     #endregion
@@ -188,6 +198,7 @@ public class PanInteraction : MonoBehaviour,
     [field: SerializeField, Min(0.01f)] private float tossUpForce = 2f;
     [field: SerializeField, Min(0.01f)] private float triggerDisableDuration = 0.5f;
     [field: SerializeField, Min(0.01f)] private float damageImmuneDuration = 1f;
+    [SerializeField, Min(0.01f)] private float tossResponseTimeout = 2f;
 
     private Coroutine triggerRestoreCoroutine;
 
@@ -215,8 +226,49 @@ public class PanInteraction : MonoBehaviour,
                 direction * tossForce + Vector3.up * tossUpForce)
         };
 
+        CancelTossTracking();
         pendingTossId = ingredient.NetworkId;
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        trackedTossId = ingredient.NetworkId;
+        tossRequests[trackedTossId] = this;
+        tossResponse.Begin("Pan toss", trackedTossId, tossResponseTimeout, () => pendingTossId = 0);
+        SendToss(packet);
+    }
+
+    private async void SendToss(EntityThrowPacket packet)
+    {
+        try
+        {
+            await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        }
+        catch (System.Exception exception)
+        {
+            NetworkResponseWait.Error("Pan toss", packet.EntityId, $"Send failed: {exception.Message}");
+            // Keep the response deadline: a failed write does not prove the server did not receive it.
+        }
+    }
+
+    public static bool TryResolveToss(long entityId, out PanInteraction pan)
+    {
+        return tossRequests.TryGetValue(entityId, out pan) && pan != null;
+    }
+
+    public static void ForgetToss(long entityId)
+    {
+        if (TryResolveToss(entityId, out PanInteraction pan)) pan.CancelTossTracking();
+    }
+
+    public bool TryAcceptTossResponse()
+    {
+        return tossResponse.TryComplete();
+    }
+
+    private void CancelTossTracking()
+    {
+        if (trackedTossId != 0 && tossRequests.TryGetValue(trackedTossId, out PanInteraction pan) && pan == this)
+            tossRequests.Remove(trackedTossId);
+        trackedTossId = 0;
+        pendingTossId = 0;
+        tossResponse.Cancel();
     }
 
     private void DisablePanTrigger()
@@ -412,7 +464,6 @@ public class PanInteraction : MonoBehaviour,
     public void HandleEntityThrown(CatchableObj entity)
     {
         if (entity == null) return;
-        if (currentIngredient == null || currentIngredient.Catchable != entity) return;
 
         pendingTossId = 0;
         DisablePanTrigger();

@@ -12,6 +12,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public Dictionary<long, CatchableObj> catchableDics = new();
     private readonly Dictionary<long, long> pendingParentChanges = new();
+    private readonly Dictionary<long, IEntityThrowParentReceiver> detachedThrowParents = new();
 
     [SerializeField] private MapObjNetworkRouter mapObjRouter;
 
@@ -49,6 +50,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void OnDisable()
     {
+        detachedThrowParents.Clear();
         if (subscribeRoutine != null)
         {
             StopCoroutine(subscribeRoutine);
@@ -101,6 +103,12 @@ public class ObjectNetworkRouter : MonoBehaviour
 
         long previousParentId = catchable.ParentEntityId;
         if (previousParentId == parentEntityId) return;
+        if (parentEntityId != 0) PanInteraction.ForgetToss(catchable.NetworkId);
+
+        detachedThrowParents.Remove(catchable.NetworkId);
+        if (parentEntityId == 0 && TryResolveParent(previousParentId, out IEntityParentReceiver previousParent) &&
+            previousParent is IEntityThrowParentReceiver throwParent)
+            detachedThrowParents[catchable.NetworkId] = throwParent;
 
         NotifyParent(previousParentId, catchable, false);
 
@@ -118,6 +126,9 @@ public class ObjectNetworkRouter : MonoBehaviour
     public void HandleEntityPicked(CatchableObj catchable)
     {
         if (catchable == null) return;
+
+        PanInteraction.ForgetToss(catchable.NetworkId);
+        detachedThrowParents.Remove(catchable.NetworkId);
 
         NotifyParent(catchable.ParentEntityId, catchable, false);
         catchable.ParentEntityId = 0;
@@ -140,18 +151,32 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         EntityThrowPacket packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
 
+        bool isTrackedToss = PanInteraction.TryResolveToss(packet.EntityId, out PanInteraction requestingPan);
+        if (isTrackedToss && !requestingPan.TryAcceptTossResponse()) return;
+
         if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
         {
-            Debug.LogError($"Throw target not found. EntityId: {packet.EntityId}");
+            NetworkResponseWait.Error("Entity throw", packet.EntityId, "Target not found");
+            PanInteraction.ForgetToss(packet.EntityId);
             return;
         }
 
         long previousParentId = catchable.ParentEntityId;
-        if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
+        if (isTrackedToss)
+        {
+            requestingPan.HandleEntityThrown(catchable);
+        }
+        else if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
             receiver is IEntityThrowParentReceiver throwReceiver)
         {
             throwReceiver.HandleEntityThrown(catchable);
         }
+        else if (detachedThrowParents.TryGetValue(packet.EntityId, out IEntityThrowParentReceiver detachedParent))
+        {
+            if (detachedParent is not UnityEngine.Object obj || obj != null)
+                detachedParent.HandleEntityThrown(catchable);
+        }
+        detachedThrowParents.Remove(packet.EntityId);
 
         NotifyParent(previousParentId, catchable, false);
         catchable.Holder?.Interact.ApplyThrown(catchable);
@@ -161,6 +186,8 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        PanInteraction.ForgetToss(entityId);
+        detachedThrowParents.Remove(entityId);
         IngredientEgg.HandleDestroyedEntity(entityId);
         pendingParentChanges.Remove(entityId);
 
@@ -209,6 +236,8 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public void Remove(long networkId)
     {
+        PanInteraction.ForgetToss(networkId);
+        detachedThrowParents.Remove(networkId);
         pendingParentChanges.Remove(networkId);
         catchableDics.Remove(networkId);
     }
@@ -317,6 +346,8 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void Unregister(long entityId)
     {
+        PanInteraction.ForgetToss(entityId);
+        detachedThrowParents.Remove(entityId);
         pendingParentChanges.Remove(entityId);
         ReleaseNetworkBoundState(entityId);
         catchableDics.Remove(entityId);
