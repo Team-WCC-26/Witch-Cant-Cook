@@ -82,9 +82,8 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         {
             InitRoot(); //방어코드
 
-            ResetPoolable(go);
-
             go.SetActive(false);
+            ResetPoolable(go);
             go.transform.SetParent(_poolRoot);
             // Restore after reparenting, which otherwise preserves the pot's world scale.
             RestorePrefabScale(go, key);

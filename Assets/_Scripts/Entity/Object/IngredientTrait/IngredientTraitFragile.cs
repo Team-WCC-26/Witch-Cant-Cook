@@ -36,7 +36,7 @@ public class IngredientTraitFragile : IngredientTrait
     {
         // Only the last holder's client may request the replacement and destruction.
         // Check before latching isBroken so remote collisions cannot consume a later pickup.
-        if (catchable == null || !catchable.IsLocalOwner)
+        if (!IsTraitAvailable || catchable == null || !catchable.IsLocalOwner)
             return;
 
         if (isBroken || breakBlock)
@@ -54,7 +54,7 @@ public class IngredientTraitFragile : IngredientTrait
 
     public bool TryBreakBlock()
     {
-        if (isBroken || breakBlock) return false;
+        if (!IsTraitAvailable || isBroken || breakBlock) return false;
         breakBlock = true;
         return true;
     }

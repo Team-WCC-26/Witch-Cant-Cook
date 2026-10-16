@@ -3,7 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(CatchableObj))]
 [RequireComponent(typeof(IngredientTraitFly))]
 [RequireComponent(typeof(Rigidbody))]
-public class IngredientSalmon : IngredientTrait
+public class IngredientNalchi : IngredientTrait
 {
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
@@ -54,6 +54,7 @@ public class IngredientSalmon : IngredientTrait
 
         flyDelayTimer.Stop();
         stunTimer.Stop();
+        flyTrait.StopFlying();
     }
 
     private void Update()
@@ -65,7 +66,7 @@ public class IngredientSalmon : IngredientTrait
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (isStunned)
+        if (!IsTraitAvailable || isStunned)
             return;
 
         // 살짝 내려놓고 착지하는 정도의 약한 충돌은 무시하고,
@@ -84,7 +85,7 @@ public class IngredientSalmon : IngredientTrait
 
     private void BeginFly()
     {
-        if (isStunned)
+        if (!IsTraitAvailable || isStunned)
             return;
 
         // 비행 중에는 스크립트가 직접 위치를 옮기므로, 물리 힘의 영향을 받지 않게 kinematic으로 전환.

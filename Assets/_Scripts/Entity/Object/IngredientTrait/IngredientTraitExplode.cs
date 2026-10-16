@@ -39,7 +39,7 @@ public class IngredientTraitExplode : IngredientTrait
 
     public void Explode()
     {
-        if (exploded) return;
+        if (!IsTraitAvailable || exploded) return;
         exploded = true;
 
         Vector3 origin = transform.position;

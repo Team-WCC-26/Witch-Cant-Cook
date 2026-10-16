@@ -86,8 +86,8 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
     {
         var packet = MemoryPackSerializer.Deserialize<JoinRoomPacket>(data.Span);
 
-        if (packet.RoomId != "N" && packet.RoomId != "F")
-            StageSelectionSession.Instance.OnRoomJoined(packet.PlayerCnt >= 2);
+        if (packet.RoomId == "N" || packet.RoomId == "F") return;
+        StageSelectionSession.Instance.OnRoomJoined(packet.PlayerCnt >= 2);
 
         //_chat.gameObject.SetActive(true);
 
@@ -102,6 +102,7 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
         }
 
         UIManager.Hide<LobbyRouterUI>();
+        RoomHudSession.Instance.SetRoomInfo(packet.RoomId, packet.PlayerId, packet.OtherPlayerId);
     }
 
     private void SpawnPlayer(string playerId)

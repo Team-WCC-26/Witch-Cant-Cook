@@ -76,6 +76,7 @@ public class IngredientOnion : IngredientTrait
 
     private void SpawnTearArea()
     {
+        if (!IsTraitAvailable) return;
         if (areaCreator != null)
         {
             areaCreator.CreateArea(eArea);

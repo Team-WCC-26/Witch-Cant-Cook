@@ -4,8 +4,18 @@ using UnityEngine;
 
 public abstract class IngredientTrait : MonoBehaviour
 {
+    public bool IsTraitAvailable
+    {
+        get
+        {
+            IngredientReaction reaction = GetComponentInParent<IngredientReaction>(true);
+            return isActiveAndEnabled && (reaction == null || !reaction.IsActionCompleted(IngredientAction.Cut));
+        }
+    }
+
     private void OnEnable()
     {
+        if (!IsTraitAvailable) { enabled = false; return; }
         StartTrait();
     }
 

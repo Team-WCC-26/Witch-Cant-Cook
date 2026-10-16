@@ -23,6 +23,7 @@ public enum eUIPosition
 public class UIManager : Singleton<UIManager>
 {
     private List<Transform> parents;
+    public bool HasUIParents => parents != null && parents.Exists(parent => parent != null);
     private List<UIBase> uiList = new();
 
     //public UILoading LoadingScreen;
@@ -33,23 +34,43 @@ public class UIManager : Singleton<UIManager>
         Instance.parents = parents;
     }
 
+    private Transform ResolveParent(eUIPosition position)
+    {
+        int index = (int)position;
+        if (parents != null)
+        {
+            if (index >= 0 && index < parents.Count && parents[index] != null)
+                return parents[index];
+
+            // Existing scenes use one shared UI parent instead of separate layer containers.
+            foreach (Transform parent in parents)
+                if (parent != null) return parent;
+        }
+        throw new System.InvalidOperationException("[UIManager] No UI parent is configured. Assign UICanvas Parents.");
+    }
+
     /// <typeparam name="T">UIBase를 상속받은 클래스 이름</typeparam>
     /// <param name="param">원하는 모든 형태의 변수 전달 가능</param>
     /// <returns>T 반환</returns>
     public async static Task<T> Show<T>(params object[] param) where T : UIBase
     {
-        Instance.uiList.RemoveAll(obj => obj == null);
+        var manager = Instance;
+        if (manager == null)
+            throw new System.InvalidOperationException("[UIManager] Add UIManager to the scene before showing UI.");
+        manager.uiList.RemoveAll(obj => obj == null);
 
-        UIBase ui = Instance.uiList.Find(obj => obj.name == typeof(T).ToString());
+        UIBase ui = manager.uiList.Find(obj => obj.name == typeof(T).ToString());
 
         if (ui == null)
         {
             //TODO : ResourceManager로부터 프리팹 에셋 로드.
             var prefab = Resources.Load<T>($"UI/{typeof(T).Name}");
-            ui = Instantiate(prefab, Instance.parents[(int)prefab.uiPosition]);
+            if (prefab == null)
+                throw new System.InvalidOperationException($"[UIManager] Prefab not found at Resources/UI/{typeof(T).Name}.");
+            ui = Instantiate(prefab, manager.ResolveParent(prefab.uiPosition));
 
             ui.name = ui.name.Replace("(Clone)", "");
-            Instance.uiList.Add(ui);
+            manager.uiList.Add(ui);
         }
         ui.gameObject.SetActive(ui.isActiveInCreated);
         ui.opened?.Invoke(param);

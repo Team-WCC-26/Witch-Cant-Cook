@@ -5,8 +5,8 @@ using UnityEngine;
 /// 벽이나 다른 오브젝트에 가까워지면 방향을 전환하는 재료 속성.
 ///
 /// 스폰 후 비행을 시작하기까지의 대기 시간은 이 트레잇이 아니라
-/// IngredientSalmon이 자체 IngredientTraitTimer로 관리한다.
-/// 대기가 끝나면 IngredientSalmon이 StartFlying()을 호출해 비행을 시작시킨다.
+/// IngredientNalchi이 자체 IngredientTraitTimer로 관리한다.
+/// 대기가 끝나면 IngredientNalchi이 StartFlying()을 호출해 비행을 시작시킨다.
 /// </summary>
 public class IngredientTraitFly : IngredientTrait
 {
@@ -70,11 +70,11 @@ public class IngredientTraitFly : IngredientTrait
     }
 
     /// <summary>
-    /// 비행을 시작한다. IngredientSalmon이 스폰 대기 타이머 종료 시 호출한다.
+    /// 비행을 시작한다. IngredientNalchi이 스폰 대기 타이머 종료 시 호출한다.
     /// </summary>
     public void StartFlying()
     {
-        if (isFlying)
+        if (!IsTraitAvailable || isFlying)
             return;
 
         isFlying = true;
@@ -89,10 +89,15 @@ public class IngredientTraitFly : IngredientTrait
     }
 
     /// <summary>
-    /// 비행을 멈춘다. 예: 플레이어가 재료를 집었을 때 IngredientSalmon에서 호출.
+    /// 비행을 멈춘다. 예: 플레이어가 재료를 집었을 때 IngredientNalchi에서 호출.
     /// </summary>
     public void StopFlying()
     {
+        if (isFlying && rb != null)
+        {
+            CatchableObj catchable = GetComponent<CatchableObj>();
+            if (catchable == null || !catchable.IsHold) rb.isKinematic = false;
+        }
         isFlying = false;
         wanderTimer.Stop();
     }

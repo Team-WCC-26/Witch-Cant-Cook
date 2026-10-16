@@ -38,7 +38,7 @@ public class IngredientHoneyBottle : IngredientTrait
 
     private void OnBroken(Vector3 point, Vector3 normal)
     {
-        if (areaCreated) return;
+        if (!IsTraitAvailable || areaCreated) return;
         areaCreated = true;
 
         if (areaCreator != null)
