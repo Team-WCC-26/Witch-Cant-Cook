@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>
@@ -37,6 +38,7 @@ public class ConveyorItemState
 /// </summary>
 public class ConveyorBeltController : MonoBehaviour
 {
+    private static readonly ProfilerMarker UpdateMarker = new("Ingredient.Conveyor.Update");
     [SerializeField] private int beltId; // DB의 beltID와 동일한 값을 인스펙터에서 입력
     [SerializeField] private ConveyorPath path;
     [SerializeField] private float beltSpeed = 2f;
@@ -142,6 +144,7 @@ public class ConveyorBeltController : MonoBehaviour
 
     void Update()
     {
+        using var updateScope = UpdateMarker.Auto();
         MoveItemsOnBelt();
         //ScrollBeltTexture();
     }

@@ -366,7 +366,7 @@ public class ObjectNetworkRouter : MonoBehaviour
             belt.UnregisterItem(entityId);
         }
 
-        IngredientEntityLifecycle.RequestDestroy(entityId);
+        ObjectPoolManager.Instance.NotifyNetworkStateReleased(entityId);
     }
 
     private void Register(long entityId, CatchableObj catchable)

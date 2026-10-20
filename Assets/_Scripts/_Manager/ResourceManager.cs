@@ -8,6 +8,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 public class ResourceManager : Singleton<ResourceManager>
 {
+    public bool IsPreloaded { get; private set; }
     // 알맹이
     private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
 
@@ -27,8 +28,10 @@ public class ResourceManager : Singleton<ResourceManager>
 
     public async UniTask Init()
     {
+        IsPreloaded = false;
         await InitializeAsync();
         await PreloadAssetsAsync();
+        IsPreloaded = true;
     }
 
     /// <summary>
@@ -168,6 +171,7 @@ public class ResourceManager : Singleton<ResourceManager>
 
         _handleCache.Clear();
         _assetCache.Clear();
+        IsPreloaded = false;
 
     }
 

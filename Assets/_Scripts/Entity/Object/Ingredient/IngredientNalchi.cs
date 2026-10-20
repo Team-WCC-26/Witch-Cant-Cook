@@ -9,6 +9,8 @@ public class IngredientNalchi : IngredientTrait
     [SerializeField] private CatchableObj catchable;
     [SerializeField] private IngredientTraitFly flyTrait;
     [SerializeField] private Rigidbody rb;
+    [Tooltip("비행 중 재생할 Animator. 비워 두면 자신 또는 자식에서 자동으로 찾는다.")]
+    [SerializeField] private Animator flightAnimator;
 
     [Header("Fly Timing")]
     [Tooltip("스폰 후(또는 내려놓은 후) 비행을 시작하기까지 대기 시간.")]
@@ -35,6 +37,9 @@ public class IngredientNalchi : IngredientTrait
 
         if (rb == null)
             rb = GetComponent<Rigidbody>();
+
+        if (flightAnimator == null)
+            flightAnimator = GetComponentInChildren<Animator>(true);
     }
 
     protected override void StartTrait()
@@ -44,6 +49,7 @@ public class IngredientNalchi : IngredientTrait
 
         isStunned = false;
         flyTrait.StopFlying();
+        SetFlightAnimation(false);
         BeginFlyDelay();
     }
 
@@ -55,6 +61,7 @@ public class IngredientNalchi : IngredientTrait
         flyDelayTimer.Stop();
         stunTimer.Stop();
         flyTrait.StopFlying();
+        SetFlightAnimation(false);
     }
 
     private void Update()
@@ -62,6 +69,7 @@ public class IngredientNalchi : IngredientTrait
         float dt = Time.deltaTime;
         flyDelayTimer.Tick(dt);
         stunTimer.Tick(dt);
+        SetFlightAnimation(flyTrait.IsFlying);
     }
 
     private void OnCollisionEnter(Collision collision)
@@ -91,8 +99,19 @@ public class IngredientNalchi : IngredientTrait
         // 비행 중에는 스크립트가 직접 위치를 옮기므로, 물리 힘의 영향을 받지 않게 kinematic으로 전환.
         rb.isKinematic = true;
         flyTrait.StartFlying();
+        SetFlightAnimation(flyTrait.IsFlying);
     }
     #endregion
+
+    private void SetFlightAnimation(bool flying)
+    {
+        if (flightAnimator == null) return;
+
+        // Disable evaluation while held/stunned so transform curves cannot fight physics or holding.
+        // Enabling resumes the controller's default flight state without additional parameters.
+        if (flightAnimator.enabled != flying)
+            flightAnimator.enabled = flying;
+    }
 
     #region Stun
     private void EnterStun()
@@ -101,6 +120,7 @@ public class IngredientNalchi : IngredientTrait
 
         flyDelayTimer.Stop();
         flyTrait.StopFlying();
+        SetFlightAnimation(false);
 
         // kinematic을 풀어 중력이 작용하게 해서 바닥으로 떨어지도록 한다.
         rb.isKinematic = false;
@@ -126,10 +146,12 @@ public class IngredientNalchi : IngredientTrait
         isStunned = false;
 
         flyTrait.StopFlying();
+        SetFlightAnimation(false);
     }
 
     private void OnDropped()
     {
+        SetFlightAnimation(false);
         // 손에서 놓으면 물리(중력)가 적용되도록 kinematic을 해제한다.
         // 이걸 안 해주면 CatchableObj가 들고 있는 동안 켜둔 kinematic이 그대로 남아
         // 놓은 자리에 그대로 박제된 것처럼 보인다.

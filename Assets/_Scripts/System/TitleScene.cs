@@ -81,6 +81,15 @@ public class TitleScene : MonoBehaviour
             string key = pair.Key;
             int count = pair.Value;
 
+            // Ingredient preparation uses real prefab keys and finishes before leaving loading.
+            if (key == "Ingredients")
+            {
+                var bridge = FindFirstObjectByType<IngredientNetworkBridge>();
+                if (bridge != null)
+                    await UniTask.WaitUntil(() => bridge == null || bridge.Spawner.IsReady);
+                continue;
+            }
+
             ObjectPoolManager.Instance.PrewarmPool(key, count);
         }
 
