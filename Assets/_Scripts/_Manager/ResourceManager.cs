@@ -10,6 +10,7 @@ public class ResourceManager : Singleton<ResourceManager>
 {
     // 알맹이
     private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
+    public bool IsPreloaded { get; private set; }
 
     // 로드된 에셋을 관리하는 캐시 딕셔너리
     private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
@@ -134,7 +135,7 @@ public class ResourceManager : Singleton<ResourceManager>
         }
 
         await UniTask.WhenAll(loadTasks);
-
+        IsPreloaded = true;
         return true;
     }
 
@@ -161,6 +162,7 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public void ReleaseAll()
     {
+        IsPreloaded = false;
         foreach (var handle in _handleCache.Values)
         {
             Addressables.Release(handle);

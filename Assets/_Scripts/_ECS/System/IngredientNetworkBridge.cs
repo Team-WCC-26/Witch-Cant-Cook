@@ -3,7 +3,6 @@ using Cysharp.Threading.Tasks;
 using MemoryPack;
 using Protocol;
 using Server;
-using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -26,6 +25,13 @@ public class IngredientNetworkBridge : MonoBehaviour
     //};
 
     [SerializeField] private GameObject spawnPointObj;
+    public IngredientSpawnProcessor Spawner { get; private set; }
+
+    private void Awake()
+    {
+        Spawner = GetComponent<IngredientSpawnProcessor>();
+        if (Spawner == null) Spawner = gameObject.AddComponent<IngredientSpawnProcessor>();
+    }
 
     private void OnEnable()
     {
@@ -167,15 +173,12 @@ public class IngredientNetworkBridge : MonoBehaviour
 
         IngredientSpawnPacket packet = MemoryPackSerializer.Deserialize<IngredientSpawnPacket>(data.Span);
 
-        EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-        Entity requestEntity = entityManager.CreateEntity(typeof(IngredientSpawnRequest));
-
-        entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
+        Spawner.Enqueue(new IngredientSpawnCommand
         {
             IngredientID = packet.IngredientID,
             NetworkID = packet.EntityId,
-            Position = new float3(packet.Position.X, packet.Position.Y, packet.Position.Z),
-            Rotation = new quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W),
+            Position = new Vector3(packet.Position.X, packet.Position.Y, packet.Position.Z),
+            Rotation = new Quaternion(packet.Quaternion.X, packet.Quaternion.Y, packet.Quaternion.Z, packet.Quaternion.W),
             ConveyId = 0 // 컨베이어 벨트용 스폰이 아니므로 사용 안 함 (기존 스폰 경로 유지)
         });
     }
@@ -183,7 +186,7 @@ public class IngredientNetworkBridge : MonoBehaviour
     /// <summary>
     /// 컨베이어 벨트 위 재료 스폰 전용 핸들러.
     /// 이 패킷엔 Position/Rotation이 없으므로, ConveyId로 ConveyorSpawnPoint를 찾아
-    /// 그 지점의 좌표/회전값을 대신 채워서 기존 IngredientSpawnRequest 흐름에 태운다.
+    /// 그 지점의 좌표/회전값을 GO 스폰 큐에 전달한다.
     /// </summary>
     public void OnConveySpawnReceived(ReadOnlyMemory<byte> data)
     {
@@ -198,15 +201,12 @@ public class IngredientNetworkBridge : MonoBehaviour
             return;
         }
 
-        EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-        Entity requestEntity = entityManager.CreateEntity(typeof(IngredientSpawnRequest));
-
-        entityManager.SetComponentData(requestEntity, new IngredientSpawnRequest
+        Spawner.Enqueue(new IngredientSpawnCommand
         {
             IngredientID = packet.IngredientId,
             NetworkID = packet.EntityId,
-            Position = (float3)spawnPoint.Position,
-            Rotation = (quaternion)spawnPoint.Rotation,
+            Position = spawnPoint.Position,
+            Rotation = spawnPoint.Rotation,
             ConveyId = packet.ConveyId
         });
     }
