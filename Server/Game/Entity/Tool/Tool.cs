@@ -19,9 +19,6 @@ public abstract class Tool() : Entity, IInteractable
 
     public override void Destroy()
     {
-        base.Destroy();
-
-        Room.TimerManager.Schedule(3000, this, static t => t.Respawn());
     }
 
     public abstract bool Interact(Player player);
