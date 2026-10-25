@@ -97,6 +97,29 @@ public class Player : Entity
         });
     }
 
+    // 리스폰: 소유/부모 정보를 초기화하고 클라의 고정 스폰포인트로 되돌리도록 패킷 전송
+    public void Respawn()
+    {
+        Entity? heldEntity = HoldingEntity;
+
+        if (heldEntity != null)
+        {
+            heldEntity.Parent = null;
+        }
+
+        Parent = null;
+        Hp = MaxHp;
+
+        if (Room == null) return;
+
+        PlayerRespawnPacket packet = new()
+        {
+            PlayerID = PlayerId
+        };
+
+        Room.BroadCast(PacketSerializer.Serialize(packet, true));
+    }
+
     public void AddBatch(ReadOnlyMemory<byte> packet)
     {
         _batch.Add(packet);

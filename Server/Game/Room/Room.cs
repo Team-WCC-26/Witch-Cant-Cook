@@ -213,6 +213,10 @@ public class Room
                 //_cookManager.RegisterCookingTool(id, tool as CookingTool);
                 break;
 
+            case 90:
+                tool = new TrashCan();
+                break;
+
             default:
                 tool = null;
                 break;
@@ -230,19 +234,6 @@ public class Room
         RegisterEntity(entityId, tool);
 
         return tool;
-    }
-
-    public void DestroyIngredient(long id)
-    {
-        if (_entities.Remove(id, out var entity))
-        {
-            entity.Parent = null;
-
-            if (entity is Ingredient ingredient)
-            {
-                ingredient.IngredientBehaviour?.Clear();
-            }
-        }
     }
 
     //public void CombineEntity(long resultId, long removeId, Entity entity)
@@ -354,7 +345,7 @@ public class Room
     {
         if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        if (entity is Oven || entity is Pot)
+        if (entity is Oven || entity is Pot || entity is TrashCan)
         {
             return (entity as ContainerTool).AddPlayer(player);
         }
@@ -366,7 +357,7 @@ public class Room
     {
         if (!_entities.TryGetValue(toolId, out var entity) || entity.IsDestroyed) return false;
 
-        if (entity is Oven || entity is Pot)
+        if (entity is Oven || entity is Pot || entity is TrashCan)
         {
             return (entity as ContainerTool).RemovePlayer(player);
         }
@@ -469,7 +460,17 @@ public class Room
         if (entity is not Dish dish || dish.Ingredient == null) return false;
 
         _dishManager.SubmitDish(dish.Ingredient.IngredientId);
+
         dish.Destroy();
+        dish.Parent = null;
+
+        DishEjectPacket packet = new()
+        {
+            DishEntityId = dish.EntityId,
+            EjectSeed = (int)TimeUtil.NowMs()
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
 
         return true;
     }
