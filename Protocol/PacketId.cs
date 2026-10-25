@@ -131,6 +131,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_RoomMoney = 406,
 
+    S_RoomPendingMoney = 408,
+
     // Pot
     C_PotForceEject = 410,
     S_PotEject = 411,
