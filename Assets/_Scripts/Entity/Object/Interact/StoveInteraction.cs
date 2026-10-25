@@ -105,9 +105,9 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
         if (item.IsHold || !item.IsLocalOwner || item.ParentEntityId != NetworkId) return;
         if (item.NetworkId == 0 || ServerManager.Instance == null) return;
 
-        PanStoveExitPacket packet = new()
+        EntityExitPacket packet = new()
         {
-            PanEntityId = item.NetworkId
+            EntityId = item.NetworkId
         };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }

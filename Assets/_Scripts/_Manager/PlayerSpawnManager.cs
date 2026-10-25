@@ -128,6 +128,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
             SpawnPlayer(playerId);
 
         StageSelectionSession.Instance.OnPlayerEntered(playerId);
+        RoomHudSession.Instance.OnPlayerEntered(playerId);
 
         UIManager.Hide<LobbyRouterUI>();
     }
@@ -135,6 +136,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     private void MemberLeft(ReadOnlyMemory<byte> data)
     {
         PlayerLeavePacket packet = MemoryPackSerializer.Deserialize<PlayerLeavePacket>(data.Span);
+        RoomHudSession.Instance.OnPlayerLeft(packet.PlayerID);
 
         if (!players.TryGetValue(packet.PlayerID, out PlayerBrain player)) return;
         Destroy(player.gameObject);

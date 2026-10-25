@@ -17,6 +17,8 @@ public class TitleScene : MonoBehaviour
 
     [Header("Scene & Asset Settings")]
     [SerializeField] private string mainSceneName = "DirectPlayground";
+    [Header("Ingredient Prewarm")]
+    [SerializeField, Min(0)] private int ingredientPrewarmCount = 50;
 
     /// <summary>
     /// Pool prewarm 대상 - 임시
@@ -25,7 +27,6 @@ public class TitleScene : MonoBehaviour
     /// </summary>
     private readonly Dictionary<string, int> _prewarmTargets = new()
     {
-        { "Ingredients", 50 },
         { "Tools", 5 }
     };
 
@@ -58,6 +59,9 @@ public class TitleScene : MonoBehaviour
         loadingPanel.SetActive(true);
 
         await UniTask.WaitUntil(() => DataManager.Instance.IsDataLoaded);
+        // Finish the existing asset load and ingredient prewarm before activating the map.
+        await UniTask.WaitUntil(() => ResourceManager.Instance != null && ResourceManager.Instance.IsPreloaded);
+        IngredientSpawnProcessor.PrewarmIngredients(ingredientPrewarmCount);
 
 
         // 1. map scene preload --------------------------------------

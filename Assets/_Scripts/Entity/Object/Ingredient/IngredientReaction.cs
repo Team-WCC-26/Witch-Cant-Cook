@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
 
@@ -66,6 +67,12 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private Vector3 originalScale;
     private bool hasOriginalScale;
+    private bool hasOriginalState;
+    private Mesh originalMesh;
+    private Material[] originalMaterials;
+    private bool originalRendererEnabled;
+    private readonly List<MonoBehaviour> traitComponents = new();
+    private readonly List<bool> originalTraitEnabled = new();
 
     [Header("Action Visuals")]
     [SerializeField] private IngredientActionVisual[] actionVisuals;
@@ -74,6 +81,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void Awake()
     {
+        CacheOriginalState();
         CacheOriginalScale();
         InitializeGauge();
     }
@@ -98,6 +106,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public void ApplyPlatePlacement(Transform slot)
     {
         ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+        transform.localScale = Vector3.one;
     }
 
     public void RestoreOriginalScale()
@@ -108,6 +117,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     public void ResetForPool()
     {
+        CacheOriginalState();
         RestoreOriginalScale();
         StopHitWobble();
         InitializeGauge();
@@ -117,7 +127,49 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         wobbleDirection = 1f;
 
         gaugeUI?.Hide();
-        ApplyVisual(IngredientAction.None);
+        if (meshFilter != null) meshFilter.sharedMesh = originalMesh;
+        if (targetRenderer != null)
+        {
+            targetRenderer.sharedMaterials = originalMaterials;
+            targetRenderer.enabled = originalRendererEnabled;
+        }
+        // Pool return deactivates the object first, so restoration cannot start effects here.
+        for (int i = 0; i < traitComponents.Count; i++)
+            if (traitComponents[i] != null) traitComponents[i].enabled = originalTraitEnabled[i];
+    }
+
+    private void CacheOriginalState()
+    {
+        if (hasOriginalState) return;
+        if (meshFilter == null) meshFilter = GetComponentInChildren<MeshFilter>(true);
+        if (targetRenderer == null && meshFilter != null) targetRenderer = meshFilter.GetComponent<Renderer>();
+        originalMesh = meshFilter != null ? meshFilter.sharedMesh : null;
+        if (targetRenderer != null)
+        {
+            originalMaterials = targetRenderer.sharedMaterials;
+            originalRendererEnabled = targetRenderer.enabled;
+        }
+        foreach (MonoBehaviour component in GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (component is not IngredientTrait && component is not IngredientTraitBounce &&
+                component is not IngredientTraitTracker && component is not IngredientTraitAreaCreator) continue;
+            // A nested ingredient has its own lifecycle and must retain its own state.
+            if (component.GetComponentInParent<IngredientReaction>(true) != this) continue;
+            traitComponents.Add(component);
+            originalTraitEnabled.Add(component.enabled);
+        }
+        hasOriginalState = true;
+    }
+
+    private void DisableTraitsAfterCut()
+    {
+        CacheOriginalState();
+        foreach (MonoBehaviour component in traitComponents)
+        {
+            if (component == null) continue;
+            component.enabled = false; // OnDisable cancels timers, flight, and subscriptions.
+            component.StopAllCoroutines();
+        }
     }
 
     public void ApplyCutProgress(float process)
@@ -207,6 +259,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
+            DisableTraitsAfterCut();
             StopHitWobble();
             gaugeUI?.Hide();
             PlayCutParticle();

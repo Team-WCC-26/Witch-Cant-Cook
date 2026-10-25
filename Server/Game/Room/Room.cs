@@ -1,4 +1,4 @@
-using Protocol;
+ï»¿using Protocol;
 
 namespace Server;
 
@@ -21,9 +21,13 @@ public class Room
     private int _playerCnt = 0;
     private int _tick = 0;
 
-    // ·ë °ø¿ë ÀçÈ­ (¿ä¸® Á¦Ãâ ¼º°ø ½Ã Áö±Ş, ÁÖ¹æ ¾÷±×·¹ÀÌµå¿¡ »ç¿ë)
+    // ë£¸ ê³µìš© ì¬í™” (ìš”ë¦¬ ì œì¶œ ì„±ê³µ ì‹œ ì§€ê¸‰, ì£¼ë°© ì—…ê·¸ë ˆì´ë“œì— ì‚¬ìš©)
     public int Money => _money;
     private int _money = 0;
+
+    // ìŠ¤í…Œì´ì§€ ì¢…ë£Œ ì‹œ ë³´ìœ ëŸ‰ì— ì •ì‚°ë˜ëŠ” ì„ì‹œ ë³´ìœ ëŸ‰ (íšë“ ì˜ˆì •ëŸ‰)
+    public int PendingMoney => _pendingMoney;
+    private int _pendingMoney = 0;
 
     private long _nextEntityId = 0;
 
@@ -57,6 +61,7 @@ public class Room
         _playerCnt = 0;
         _tick = 0;
         _money = 0;
+        _pendingMoney = 0;
         _nextEntityId = 0;
         _doors.Clear();
 
@@ -73,7 +78,7 @@ public class Room
             _timerManager.Cancel(_stageTimer.Value);
         }
 
-        _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.OnStageTimeout());
+        _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.EndStage());
 
         _dishManager.Start();
         _ingredientSpawner.Start();
@@ -260,8 +265,8 @@ public class Room
     }
 
     /// <summary>
-    /// Room Á¢¼Ó
-    /// <para/> »ç¿ë½Ã PushJob¾È¿¡ ³Ö¾îÁà¾ß ÇÔ
+    /// Room ì ‘ì†
+    /// <para/> ì‚¬ìš©ì‹œ PushJobì•ˆì— ë„£ì–´ì¤˜ì•¼ í•¨
     /// </summary>
     public void Enter(Player player)
     {
@@ -271,8 +276,8 @@ public class Room
     }
 
     /// <summary>
-    /// Room Á¢¼Ó ÇØÁ¦
-    /// <para/> »ç¿ë½Ã PushJob¾È¿¡ ³Ö¾îÁà¾ß ÇÔ
+    /// Room ì ‘ì† í•´ì œ
+    /// <para/> ì‚¬ìš©ì‹œ PushJobì•ˆì— ë„£ì–´ì¤˜ì•¼ í•¨
     /// </summary>
     public void Leave(Player player)
     {
@@ -417,13 +422,13 @@ public class Room
         _doors[doorId].EndInteract(playerId);
     }
 
-    public void AddMoney(int amount)
+    public void AddPendingMoney(int amount)
     {
         if (amount <= 0) return;
 
-        _money += amount;
+        _pendingMoney += amount;
 
-        BroadCastMoney();
+        BroadCastPendingMoney();
     }
 
     public bool TrySpendMoney(int cost)
@@ -448,9 +453,19 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
+    private void BroadCastPendingMoney()
+    {
+        RoomPendingMoneyPacket packet = new()
+        {
+            Money = _pendingMoney
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
+    }
+
     public bool ServeDish(long dishId)
     {
-        if (!Entities.TryGetValue(dishId, out var entity)) return false;
+        if (!Entities.TryGetValue(dishId, out var entity) || entity.IsDestroyed) return false;
         if (entity is not Dish dish || dish.Ingredient == null) return false;
 
         _dishManager.SubmitDish(dish.Ingredient.IngredientId);
@@ -468,7 +483,7 @@ public class Room
 
     public void UnregisterEntity(long id)
     {
-        _entities.Remove(id); // GC È¿À²º¸¸é¼­ ÇÊ¿ä½Ã Pool·Î ¹İÈ¯
+        _entities.Remove(id); // GC íš¨ìœ¨ë³´ë©´ì„œ í•„ìš”ì‹œ Poolë¡œ ë°˜í™˜
     }
 
     private void FlushSend()
@@ -525,11 +540,26 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
-    private void OnStageTimeout()
+    /// <summary>
+    /// ìŠ¤í…Œì´ì§€ ì¢…ë£Œ (íƒ€ì„ì•„ì›ƒ ë˜ëŠ” í´ë¼ ìš”ì²­)
+    /// <para/> ì„ì‹œ ë³´ìœ ëŸ‰ì„ ë³´ìœ ëŸ‰ì— ì •ì‚°í•˜ê³  ê²°ê³¼ë¥¼ ì „ì†¡
+    /// </summary>
+    public void EndStage()
     {
+        bool isSuccess = _dishManager.IsStageSuccess();
+        int pendingMoney = _pendingMoney;
+
         Stop();
 
-        StageStopPacket packet = new();
+        _money += pendingMoney;
+        _pendingMoney = 0;
+
+        StageStopPacket packet = new()
+        {
+            PendingMoney = pendingMoney,
+            Money = _money,
+            IsSuccess = isSuccess
+        };
 
         BroadCast(PacketSerializer.Serialize(packet, true));
     }

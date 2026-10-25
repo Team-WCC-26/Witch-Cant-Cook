@@ -81,7 +81,7 @@ public class IngredientCorn : IngredientTrait
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!isActiveAndEnabled || isArmed || hasExploded)
+        if (!IsTraitAvailable || isArmed || hasExploded)
             return;
 
         if (IsSelfCollision(collision.collider))
@@ -226,7 +226,7 @@ public class IngredientCorn : IngredientTrait
 
     private void TriggerCornEffect()
     {
-        if (hasExploded) return;
+        if (!IsTraitAvailable || hasExploded) return;
         hasExploded = true;
         explodeTrait.Explode();
         PushIngredientToPool(catchable);

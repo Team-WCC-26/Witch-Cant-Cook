@@ -5,7 +5,7 @@ using Server;
 using UnityEngine;
 
 // UI-owned stage packet receiver. Uses the existing ServerManager API unchanged.
-// Boards and test UI share this receiver instead of registering competing handlers.
+// Boards and the HUD share this receiver instead of registering competing handlers.
 public sealed class StageSelectionSession : MonoBehaviour
 {
     private static StageSelectionSession instance;
@@ -77,6 +77,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         HasStageSelection = !hasOtherPlayers;
         selectionSyncNeeded = false;
         pendingRequestedStage = 0;
+        RoomHudSession.Instance.OnRoomJoined();
         Changed?.Invoke();
     }
 

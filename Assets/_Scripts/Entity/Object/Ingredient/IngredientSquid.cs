@@ -78,7 +78,7 @@ public class IngredientSquid : IngredientTrait
     private void TrySpray(System.Action sprayAction)
     {
         Debug.Log($"[Squid] TrySpray called, canSpray={canSpray}");
-        if (!canSpray)
+        if (!IsTraitAvailable || !canSpray)
             return;
 
         canSpray = false;

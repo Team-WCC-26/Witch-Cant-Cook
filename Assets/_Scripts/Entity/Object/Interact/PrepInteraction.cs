@@ -86,12 +86,9 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     // 범위를 벗어난 아이템의 서버 보관 관계를 해제한다.
     private static void RequestDetach(CatchableObj item)
     {
-        Vector3 velocity = item.Rb != null ? item.Rb.linearVelocity : Vector3.zero;
-        EntityThrowPacket packet = new()
+        EntityExitPacket packet = new()
         {
-            EntityId = item.NetworkId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(item.transform.position),
-            Velocity = ProtocolTypeConverter.ToNumericsVector3(velocity)
+            EntityId = item.NetworkId
         };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }

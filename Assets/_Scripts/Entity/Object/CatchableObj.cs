@@ -52,7 +52,16 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public Collider Col => col;
     public Rigidbody Rb => rb;
-    public bool CanBePicked => canBePicked;
+    public bool CanBePicked => canBePicked && !IsSubmissionPending;
+    public bool IsSubmissionPending { get; private set; }
+
+    // Shared by submission zones on this client; reset when the object is recycled.
+    public bool TryBeginSubmission()
+    {
+        if (IsSubmissionPending || IsHold || Holder != null) return false;
+        IsSubmissionPending = true;
+        return true;
+    }
     public EntityCategory Category => category;
     public EntityCategory AcceptedCategories =>
         Category == EntityCategory.Ingredient && acceptedCategories == EntityCategory.None
@@ -163,6 +172,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         LastHolderPlayerId = null;
         IsHold = false;
         IsRespawning = false;
+        IsSubmissionPending = false;
         canBePicked = initialCanBePicked;
         releaseFromPrep = null;
 

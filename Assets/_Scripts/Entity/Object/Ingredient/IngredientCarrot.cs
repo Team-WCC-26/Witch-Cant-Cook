@@ -36,7 +36,7 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
 
     public CatchableObj Catchable => catchable;
     public CarrotRocketSettings Settings => rocketSettings;
-    public bool CanRocket => isActiveAndEnabled && reaction != null &&
+    public bool CanRocket => IsTraitAvailable && reaction != null &&
                              !reaction.IsActionCompleted(IngredientAction.Cut);
     public event Action<bool> FlightStateChanged;
 
@@ -48,14 +48,12 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
 
     protected override void StartTrait()
     {
-        reaction.OnActionCompleted += OnActionCompleted;
         catchable.OnDropped += OnDropped;
         SetFlightPresentation(false);
     }
 
     protected override void StopTrait()
     {
-        reaction.OnActionCompleted -= OnActionCompleted;
         catchable.OnDropped -= OnDropped;
         StopRocket();
     }
@@ -117,11 +115,6 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
         if (presentingFlight == flying) return;
         presentingFlight = flying;
         FlightStateChanged?.Invoke(flying);
-    }
-
-    private void OnActionCompleted(IngredientAction action)
-    {
-        if ((action & IngredientAction.Cut) != 0) StopRocket();
     }
 
     private void OnDropped() => StopRocket();

@@ -49,6 +49,16 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
         }
     }
 
+    public override void Destroy()
+    {
+        base.Destroy();
+
+        foreach (var entity in _storage)
+        {
+            entity.Destroy();
+        }
+    }
+
     public virtual bool AddPlayer(Player player)
     {
         if (player.Parent != null) return false;

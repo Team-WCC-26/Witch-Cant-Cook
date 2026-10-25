@@ -18,6 +18,7 @@ public class IngredientTraitAreaCreator : MonoBehaviour
 
     private void Spawn(Define.eIngredient ingredient, Vector3 position)
     {
+        if (!isActiveAndEnabled) return;
         IngredientNetworkBridge.Instance.SendSpawnPacketToServer(
             (int)ingredient, new float3(position.x, position.y, position.z));
     }

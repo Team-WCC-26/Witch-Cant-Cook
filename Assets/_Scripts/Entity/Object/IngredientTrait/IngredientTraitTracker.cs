@@ -51,6 +51,8 @@ public class IngredientTraitTracker : MonoBehaviour
             rb.linearVelocity = Vector3.zero;
     }
 
+    private void OnDisable() => StopTracking();
+
     private void FixedUpdate()
     {
         if (!isTracking || target == null)

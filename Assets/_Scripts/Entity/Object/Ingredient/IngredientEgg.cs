@@ -66,7 +66,7 @@ public class IngredientEgg : IngredientTrait
 
     public bool TryInsertIntoPan(PanInteraction pan)
     {
-        if (pendingPan != null || catchable == null || catchable.NetworkId <= 0 ||
+        if (!IsTraitAvailable || pendingPan != null || catchable == null || catchable.NetworkId <= 0 ||
             catchable.IsHold || !catchable.IsLocalOwner || !wasThrown || hasLanded ||
             fragileTrait == null || IngredientNetworkBridge.Instance == null ||
             ServerManager.Instance == null || !fragileTrait.TryBreakBlock())
@@ -262,6 +262,7 @@ public class IngredientEgg : IngredientTrait
 
     private void OnBroken(Vector3 point, Vector3 normal)
     {
+        if (!IsTraitAvailable) return;
         if (areaCreator != null)
         {
             areaCreator.CreateArea(eArea, point, normal);

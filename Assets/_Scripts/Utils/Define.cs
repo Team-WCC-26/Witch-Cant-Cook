@@ -14,7 +14,7 @@ public class Define
         Flour = 10800,
         Tomato = 10900,
         Onion = 11000,
-        Salmon = 11100,
+        Nalchi = 11100,
         Honey = 11200,
         MandragoraRoot = 11300,
         Salt = 11400,

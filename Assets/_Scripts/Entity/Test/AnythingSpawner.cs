@@ -14,7 +14,7 @@ public class AnythingSpawner : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
-            IngredientNetworkBridge.Instance.SendSpawnPacketToServer((int)Define.eIngredient.Carrot, SpawnPos);
+            IngredientNetworkBridge.Instance.SendSpawnPacketToServer((int)Define.eIngredient.Nalchi, SpawnPos);
         }
         if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
         {
