@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 namespace Server;
@@ -63,6 +63,8 @@ public class RoomManager
         _rooms.Remove(roomId, out var room);
         if (room == null) return;
 
+        // 소멸 플래그를 Stop() 전에 설정 (이후 실행되는 샤드 등록 job이 소멸된 룸을 등록하지 않도록)
+        room.MarkDestroyed();
         room.Stop();
         room.GetShard().UnregisterRoom(roomId);
     }
@@ -76,7 +78,7 @@ public class RoomManager
         {
             newId = RandomNumberGenerator.GetString(_idChars, _idLength);
 
-            if (++attempts > 1000) throw new Exception("Id ���� ���� -> ���� �и� �ʿ�");
+            if (++attempts > 1000) throw new Exception("Id 생성 실패 -> 서버 분리 필요");
         } while (_rooms.ContainsKey(newId));
 
         return newId;

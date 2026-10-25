@@ -31,12 +31,28 @@ public class Room
 
     private long _nextEntityId = 0;
 
-    private Shard _shard;
+    // 룸 소멸 여부 (RoomManager.RemoveRoom에서만 설정되며 되돌리지 않음)
+    // 주의: Stop()은 스테이지 정리일 뿐 소멸이 아니므로 이 플래그를 건드리지 않는다
+    public bool IsDestroyed => _destroyed;
+    private volatile bool _destroyed = false;
+
+    // 작업 실행 샤드는 JobQueue가 단일 출처로 관리한다
+    private readonly JobQueue _jobQueue;
 
     private readonly Dictionary<DoorId, Door> _doors = new();
 
     public TimerManager TimerManager => _timerManager;
     private TimerManager _timerManager = new();
+
+    // === 부하 측정 (소유 샤드 스레드 단일 작성자, 리밸런서는 근사 읽기) ===
+    public long TickCostEmaUs => Volatile.Read(ref _tickCostEmaUs);
+    private long _tickCostEmaUs = 0; // Room.Tick 비용 EMA (μs)
+
+    public long JobCostEmaUs => Volatile.Read(ref _jobCostEmaUs);
+    private long _jobCostEmaUs = 0; // 작업 1개당 비용 EMA (μs)
+
+    public long JobCount => Volatile.Read(ref _jobCount);
+    private long _jobCount = 0; // 누적 실행 작업 수
 
     private const long StagePlayTimeMs = 4 * 60 * 1000;
 
@@ -51,6 +67,7 @@ public class Room
         Name = name;
         Password = password;
 
+        _jobQueue = new(this);
         _ingredientSpawner = new(this, _timerManager, 2000);
         _dishManager = new(this, _timerManager);
     }
@@ -140,16 +157,37 @@ public class Room
         return _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
     }
 
-    public void PushJob(Action job) => _shard.Push(job);
+    public void PushJob(Action job) => _jobQueue.Push(job);
 
-    public void InitShard(Shard shard)
-    {
-        _shard = shard;
-    }
+    public void InitShard(Shard shard) => _jobQueue.InitShard(shard);
+
+    // 마이그레이션 시작 (소스 샤드 스레드의 마이그레이션 작업 M 내부에서 호출)
+    public void BeginMigration(Shard target) => _jobQueue.BeginMigration(target);
 
     public Shard GetShard()
     {
-        return _shard;
+        return _jobQueue.CurrentShard!;
+    }
+
+    // 마지막 재배치 시각 (리밸런서가 기록, 룸 단위 재배치 쿨다운용)
+    public long LastMovedAtMs { get; private set; }
+
+    public void MarkMoved() => LastMovedAtMs = TimeUtil.NowMs();
+
+    // 룸 소멸 표시 (RoomManager.RemoveRoom에서만 호출 - 이후 실행되는 샤드 등록 job이 등록하지 않도록)
+    public void MarkDestroyed() => _destroyed = true;
+
+    // 샤드 루프가 Room.Tick 하나를 실행한 뒤 호출 (소유 샤드 스레드 전용)
+    public void RecordTickCost(long costUs)
+    {
+        _tickCostEmaUs += (long)((costUs - _tickCostEmaUs) * ShardBalanceConfig.EmaAlpha);
+    }
+
+    // JobQueue가 작업 하나를 실행한 뒤 호출 (소유 샤드 스레드 전용)
+    public void RecordJobExecuted(long costUs)
+    {
+        _jobCostEmaUs += (long)((costUs - _jobCostEmaUs) * ShardBalanceConfig.EmaAlpha);
+        _jobCount++;
     }
 
     public void MakeDirty(Entity entity)
