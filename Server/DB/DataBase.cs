@@ -13,6 +13,7 @@ public class DataBase
     //public IReadOnlyDictionary<IngredientStatePair, int> Recipes => _recipes;
     public IReadOnlyDictionary<int, List<IngredientGroup>> IngredientGroups => _ingredientGroups;
     public IReadOnlyDictionary<int, List<RecipeGroup>> RecipeGroups => _recipeGroups;
+    public IReadOnlyDictionary<int, StageData> Stages => _stages;
 
     private readonly Dictionary<int, IngredientData> _ingredients = new();
     private readonly Dictionary<int, IngredientStatData> _ingredientStats = new();
@@ -22,6 +23,7 @@ public class DataBase
     //private readonly Dictionary<IngredientStatePair, int> _recipes = new();
     private readonly Dictionary<int, List<IngredientGroup>> _ingredientGroups = new();
     private readonly Dictionary<int, List<RecipeGroup>> _recipeGroups = new();
+    private readonly Dictionary<int, StageData> _stages = new(); // stageNum 기준
 
     //private readonly Dictionary<IngredientStatePair, HashSet<RecipeKey>> _recipeCandidate = new();
 
@@ -49,6 +51,7 @@ public class DataBase
             string dish = "Recipe";
             string ingredientGroup = "IngredientGroup";
             string recipeGroup = "RecipeGroup";
+            string stage = "Stage";
 
             // 재료 데이터 파싱
             string json = await GetStringAsync(client, url + export + ingredient);
@@ -126,6 +129,16 @@ public class DataBase
                 }
 
                 list.Add(groupData);
+            }
+
+            // 스테이지 데이터 파싱
+            json = await GetStringAsync(client, url + export + stage);
+
+            _stages.Clear();
+
+            foreach (var stageData in JsonConvert.DeserializeObject<List<StageData>>(json))
+            {
+                _stages[stageData.StageNum] = stageData;
             }
         };
 

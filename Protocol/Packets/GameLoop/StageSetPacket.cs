@@ -23,4 +23,7 @@ public partial class StageStartPacket
 [PacketId(PacketId.S_StageStop)]
 public partial class StageStopPacket
 {
+    public int PendingMoney { get; set; } // 획득 예정량 (스테이지 동안 모인 임시 보유량)
+    public int Money { get; set; } // 최종 보유량 (정산 후)
+    public bool IsSuccess { get; set; } // 스테이지 성공 여부
 }
