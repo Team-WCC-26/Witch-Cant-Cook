@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Protocol;
@@ -12,6 +13,18 @@ public class SubmitTriggerZone : MonoBehaviour
     public enum FrontFace { PositiveZ, NegativeZ, PositiveX, NegativeX, PositiveY, NegativeY }
     [Tooltip("Auto: 트리거는 받침대, 일반 콜라이더는 정면 벽으로 사용합니다.")]
     [SerializeField] private SubmissionSurface surface = SubmissionSurface.Auto;
+    [Tooltip("이 받침대의 종. 비워 두면 기존 공통 Bell 이벤트를 사용합니다.")]
+    [SerializeField] private Bell submissionBell;
+    private Bell subscribedBell;
+    private bool usingGlobalBell;
+    [Header("Confirmed Plate Return")]
+    [SerializeField] private Transform suctionPoint;
+    [SerializeField] private Transform returnPoint;
+    [SerializeField, Min(0.01f)] private float suctionDuration = 0.3f;
+    [SerializeField, Min(0.01f)] private float ejectDuration = 0.2f;
+    [Tooltip("Return Point 기준 로컬 방향. 비어 있으면 제출 영역 기준입니다.")]
+    [SerializeField] private Vector3 ejectDirection = new(0f, 1f, 1f);
+    [SerializeField, Min(0f)] private float ejectForce = 3f;
     [Tooltip("플레이어 쪽을 향한 BoxCollider 면을 선택하세요. 오브젝트의 로컬 축 기준입니다.")]
     [SerializeField] private FrontFace frontFace;
     [SerializeField] private bool logDiagnostics = true;
@@ -39,6 +52,8 @@ public class SubmitTriggerZone : MonoBehaviour
     // Local send order only. The server does not acknowledge acceptance yet.
     private static readonly List<SubmissionRequest> pending = new();
     private static bool sending;
+    private static readonly List<SubmitTriggerZone> activeZones = new();
+    private static readonly Dictionary<long, SubmitTriggerZone> submittingZones = new();
 
     private sealed class RestSample
     {
@@ -56,18 +71,36 @@ public class SubmitTriggerZone : MonoBehaviour
         public double QualifiedAt;
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetQueue() { pending.Clear(); sending = false; }
+    private static void ResetQueue()
+    {
+        pending.Clear(); sending = false;
+        activeZones.Clear(); submittingZones.Clear();
+    }
     private void Awake() => zone = GetComponent<BoxCollider>();
     private void OnEnable()
     {
         if (zone == null) zone = GetComponent<BoxCollider>();
+        if (!activeZones.Contains(this)) activeZones.Add(this);
         if (surface != SubmissionSurface.Auto)
             zone.isTrigger = surface == SubmissionSurface.Pedestal;
+        if (ActiveSurface == SubmissionSurface.Pedestal)
+        {
+            subscribedBell = submissionBell;
+            usingGlobalBell = subscribedBell == null;
+            if (usingGlobalBell) Bell.OnBellRung += OnBellRung;
+            else subscribedBell.Rung += OnBellRung;
+        }
         lastStatus = $"대기: {ActiveSurface}, 정면={frontFace}, IsTrigger={zone.isTrigger}";
         if (logDiagnostics) Debug.Log($"[Submit Ready] {name}: {lastStatus}", this);
     }
     private void OnDisable()
     {
+        activeZones.Remove(this);
+        StopAllCoroutines();
+        if (usingGlobalBell) Bell.OnBellRung -= OnBellRung;
+        if (subscribedBell != null) subscribedBell.Rung -= OnBellRung;
+        usingGlobalBell = false;
+        subscribedBell = null;
         foreach (var pair in samples)
             if (pair.Key != null) pair.Key.OnPicked -= pair.Value.Reset;
         samples.Clear();
@@ -102,7 +135,9 @@ public class SubmitTriggerZone : MonoBehaviour
         if (item != null) item.OnPicked -= sample.Reset;
         samples.Remove(item);
     }
-    private void FixedUpdate()
+    private void FixedUpdate() => UpdatePedestalSamples();
+
+    private void UpdatePedestalSamples()
     {
         if (ActiveSurface != SubmissionSurface.Pedestal) return;
         touching.Clear();
@@ -128,7 +163,7 @@ public class SubmitTriggerZone : MonoBehaviour
                 samples.Add(item, sample);
                 item.OnPicked += sample.Reset;
             }
-            if (!CheckEligibility(item) || item.Rb == null) { sample.Reset(); continue; }
+            if (!CheckEligibility(item, false) || item.Rb == null) { sample.Reset(); continue; }
             CatchableObj food = item.GetComponent<PlateInteraction>().CurrentFood;
             bool still = item.Rb.linearVelocity.sqrMagnitude <= linearSpeedTolerance * linearSpeedTolerance &&
                 item.Rb.angularVelocity.sqrMagnitude <= angularSpeedTolerance * angularSpeedTolerance;
@@ -141,8 +176,27 @@ public class SubmitTriggerZone : MonoBehaviour
             sample.HasPose = true;
             if (!still) { sample.Since = double.NaN; continue; }
             if (double.IsNaN(sample.Since)) sample.Since = now;
-            if (now - sample.Since >= stationarySeconds) Enqueue(item, sample.Since + stationarySeconds);
+            // Being stationary makes this plate ready, but only ringing the bell submits it.
         }
+    }
+
+    private void OnBellRung()
+    {
+        if (ActiveSurface != SubmissionSurface.Pedestal) return;
+        UpdatePedestalSamples();
+        double now = Time.unscaledTimeAsDouble;
+        int submitted = 0;
+        foreach (var pair in samples)
+        {
+            if (double.IsNaN(pair.Value.Since) || now - pair.Value.Since < stationarySeconds ||
+                !CheckEligibility(pair.Key, false)) continue;
+            // The ringer can request every ready plate, including the teammate's plates.
+            // The existing server rejects already-destroyed dishes; no protocol change.
+            Enqueue(pair.Key, now, false);
+            if (pair.Key.IsSubmissionPending) submitted++;
+        }
+        lastStatus = $"종 일괄 제출: {submitted}개 (정지 {stationarySeconds:0.##}초 이상)";
+        if (logDiagnostics) Debug.Log($"[Submit Bell] {lastStatus}", this);
     }
     private void OnCollisionEnter(Collision collision) => CheckFrontContact(collision);
     private void OnCollisionStay(Collision collision) => CheckFrontContact(collision);
@@ -194,13 +248,13 @@ public class SubmitTriggerZone : MonoBehaviour
         Gizmos.DrawWireSphere(origin + direction * 0.5f, 0.04f);
     }
 
-    private static string SubmissionBlock(CatchableObj item)
+    private static string SubmissionBlock(CatchableObj item, bool requireLocalOwner = true)
     {
         if (item == null) return "접시 콜라이더가 아닙니다.";
         if (!item.gameObject.activeInHierarchy) return "비활성 접시";
-        if (item.IsSubmissionPending) return "이미 제출 요청됨";
+        if (item.IsSubmissionPending || item.IsSubmissionReturning) return "이미 제출 요청 또는 반환 중";
         if (item.IsHold || item.Holder != null) return "손에 든 접시";
-        if (!item.IsLocalOwner) return "이 클라이언트의 소유가 아닌 접시";
+        if (requireLocalOwner && !item.IsLocalOwner) return "이 클라이언트의 소유가 아닌 접시";
         if (item.NetworkId <= 0) return "서버 엔티티 ID 없음";
         if (item.ParentEntityId > 0) return $"다른 도구에 들어 있는 접시: Parent={item.ParentEntityId}";
         if (!item.TryGetComponent(out PlateInteraction plate) || plate.IsEmpty) return "빈 접시 또는 음식 정보 없음";
@@ -208,9 +262,9 @@ public class SubmitTriggerZone : MonoBehaviour
         if (!state.IsStageRunning) return "스테이지 시작 알림 미수신 또는 이미 종료됨";
         return state.RemainingSeconds(Time.unscaledTimeAsDouble) <= 0 ? "스테이지 타이머 0초" : null;
     }
-    private bool CheckEligibility(CatchableObj item)
+    private bool CheckEligibility(CatchableObj item, bool requireLocalOwner = true)
     {
-        string reason = SubmissionBlock(item);
+        string reason = SubmissionBlock(item, requireLocalOwner);
         if (reason == null) return true;
         if (item != null && !item.IsSubmissionPending) ReportBlocked(item, reason);
         return false;
@@ -222,9 +276,10 @@ public class SubmitTriggerZone : MonoBehaviour
         reportedBlocks[item.NetworkId] = reason;
         Debug.Log($"[Submit Blocked] {lastStatus}", this);
     }
-    private static void Enqueue(CatchableObj item, double qualifiedAt)
+    private void Enqueue(CatchableObj item, double qualifiedAt, bool requireLocalOwner = true)
     {
-        if (ServerManager.Instance == null || SubmissionBlock(item) != null || !item.TryBeginSubmission()) return;
+        if (ServerManager.Instance == null || SubmissionBlock(item, requireLocalOwner) != null || !item.TryBeginSubmission()) return;
+        submittingZones[item.NetworkId] = this;
         pending.Add(new SubmissionRequest { Item = item, EntityId = item.NetworkId, QualifiedAt = qualifiedAt });
         Debug.Log($"[Submit Queued] EntityId={item.NetworkId}, conditionTime={qualifiedAt:F3}", item);
     }
@@ -254,7 +309,7 @@ public class SubmitTriggerZone : MonoBehaviour
                     DishOrderManager.ReportSubmission(item.GetComponent<PlateInteraction>(), request.EntityId);
                     Debug.Log($"[Submit TX] C_ServeDish EntityId={request.EntityId}", item);
                     await ServerManager.Instance.SendData(PacketSerializer.Serialize(new ServeDishPacket { EntityId = request.EntityId }));
-                    // Existing server destroys the plate; never award or remove food locally.
+                    // Server removes the food and confirms return with S_DishEject.
                 }
                 catch (Exception error)
                 {
@@ -265,5 +320,97 @@ public class SubmitTriggerZone : MonoBehaviour
             }
         }
         finally { sending = false; }
+    }
+
+    public static bool PlayConfirmedPlateReturn(CatchableObj plate)
+    {
+        if (plate == null || plate.IsSubmissionReturning) return false;
+        submittingZones.TryGetValue(plate.NetworkId, out SubmitTriggerZone owner);
+        submittingZones.Remove(plate.NetworkId);
+        // Remote clients did not necessarily send this submission. Resolve the nearby station.
+        if (owner == null || !owner.isActiveAndEnabled)
+        {
+            float closest = float.PositiveInfinity;
+            foreach (SubmitTriggerZone candidate in activeZones)
+            {
+                if (candidate == null || !candidate.isActiveAndEnabled) continue;
+                float distance = (candidate.zone.bounds.ClosestPoint(plate.transform.position) - plate.transform.position).sqrMagnitude;
+                if (distance >= closest) continue;
+                closest = distance;
+                owner = candidate;
+            }
+        }
+        if (owner == null) return false;
+        owner.StartCoroutine(owner.ReturnPlate(plate));
+        return true;
+    }
+
+    private IEnumerator ReturnPlate(CatchableObj item)
+    {
+        long id = item.NetworkId;
+        Vector3 originalPosition = item.transform.position;
+        Quaternion originalRotation = item.transform.rotation;
+        bool launched = false;
+        item.SetSubmissionReturning(true);
+        item.Holder?.Interact.TryReleaseHeld(item);
+        item.OnDrop();
+        item.ChangePickState(false);
+        item.SetPhysicsState(false);
+        try
+        {
+            Vector3 intake = suctionPoint != null ? suctionPoint.position : zone.bounds.center;
+            yield return MovePlate(item, id, intake, originalRotation, suctionDuration);
+            if (!IsSamePlate(item, id)) yield break;
+            // S_DishEject can arrive before the world snapshot that removes the food.
+            // Wait for server confirmation; never delete its food locally.
+            float deadline = Time.unscaledTime + 2f;
+            PlateInteraction plate = item.GetComponent<PlateInteraction>();
+            while (IsSamePlate(item, id) && !plate.IsEmpty && Time.unscaledTime < deadline) yield return null;
+            if (!IsSamePlate(item, id)) yield break;
+            if (!plate.IsEmpty)
+            {
+                Debug.LogWarning($"[Submit Return] 음식 삭제 확인 대기 초과: {id}", item);
+                yield break;
+            }
+            Vector3 exit = returnPoint != null ? returnPoint.position : originalPosition;
+            Quaternion rotation = returnPoint != null ? returnPoint.rotation : originalRotation;
+            // Ejection is a separate animation, after intake and food removal finish.
+            yield return MovePlate(item, id, exit, rotation, ejectDuration);
+            if (!IsSamePlate(item, id)) yield break;
+            item.SetPhysicsState(true);
+            Transform directionBasis = returnPoint != null ? returnPoint : transform;
+            if (item.Rb != null && ejectDirection.sqrMagnitude > 0f)
+                item.Rb.AddForce(directionBasis.TransformDirection(ejectDirection).normalized * ejectForce, ForceMode.Impulse);
+            launched = true;
+        }
+        finally
+        {
+            if (IsSamePlate(item, id))
+            {
+                if (!launched) item.transform.SetPositionAndRotation(originalPosition, originalRotation);
+                item.SetPhysicsState(true);
+                item.ChangePickState(true);
+                item.ReleaseSubmissionLock();
+                item.SetSubmissionReturning(false);
+            }
+        }
+    }
+
+    private static bool IsSamePlate(CatchableObj item, long id) =>
+        item != null && item.gameObject.activeInHierarchy && item.NetworkId == id;
+
+    private static IEnumerator MovePlate(CatchableObj item, long id, Vector3 destination, Quaternion rotation, float duration)
+    {
+        Vector3 start = item.transform.position;
+        Quaternion startRotation = item.transform.rotation;
+        float elapsed = 0f;
+        while (IsSamePlate(item, id) && elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, duration));
+            item.transform.SetPositionAndRotation(Vector3.Lerp(start, destination, t), Quaternion.Slerp(startRotation, rotation, t));
+            yield return null;
+        }
+        if (IsSamePlate(item, id)) item.transform.SetPositionAndRotation(destination, rotation);
     }
 }

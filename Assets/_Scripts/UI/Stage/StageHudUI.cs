@@ -18,6 +18,7 @@ public sealed class StageHudUI : UIBase
     [SerializeField, Min(.01f)] private float informationSlideDuration = .4f;
     [SerializeField, Min(0f)] private float panelStagger = .06f;
     private RoomHudSession session;
+    public string MoneyDisplayText => moneyText != null ? moneyText.text : "moneyText 미연결";
     private int displayedSeconds = -1;
     private Vector2 clockShownPosition;
     private Vector2[] panelShownPositions;
@@ -79,9 +80,15 @@ public sealed class StageHudUI : UIBase
         }
         else if (!state.IsStageRunning) RestorePositions();
         if (roundText != null)
+        {
             roundText.text = state.HasStageSelection ? $"Round - {state.StageNumber}" : "Round - --";
+            StageSettlementData result = state.LatestSettlement;
+            if (!state.IsStageRunning && result != null && result.StageNumber == state.StageNumber)
+                roundText.text += result.IsSuccess ? " / 성공" : " / 실패";
+        }
         if (moneyText != null)
-            moneyText.text = "획득 황금 콩 - " + (state.HasMoney ? state.Money.ToString("N0", CultureInfo.InvariantCulture) : "--");
+            moneyText.text = (state.IsStageRunning ? "획득 예정 황금 콩 - " : "획득 황금 콩 - ") +
+                (state.HasPendingMoney ? state.PendingMoney.ToString("N0", CultureInfo.InvariantCulture) : "--");
         displayedSeconds = -1;
         RefreshClock();
     }

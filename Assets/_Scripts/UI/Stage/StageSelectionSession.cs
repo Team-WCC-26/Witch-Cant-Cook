@@ -38,6 +38,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     public event Action Changed;
     public event Action<int> StageSelected;
     public event Action<int> StageStarted;
+    public event Action<StageStopPacket> StageStopped;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize() => _ = Instance;
@@ -146,7 +147,10 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageStop(ReadOnlyMemory<byte> bytes)
     {
+        StageStopPacket packet = PacketSerializer.Deserialize<StageStopPacket>(bytes);
         IsStageRunning = false;
+        // Apply the final currency snapshot before Changed refreshes any HUD or board.
+        StageStopped?.Invoke(packet);
         Changed?.Invoke();
     }
 

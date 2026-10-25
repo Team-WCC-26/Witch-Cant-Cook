@@ -7,14 +7,15 @@ public sealed class RoomHudState
     public const int StageDurationSeconds = 240;
     public int Money { get; private set; }
     public bool HasMoney { get; private set; }
+    public int PendingMoney { get; private set; }
+    public bool HasPendingMoney { get; private set; }
     public int StageNumber { get; private set; } = 1;
     public bool HasStageSelection { get; private set; }
     public bool IsStageRunning { get; private set; }
     public IReadOnlyList<StageSettlementData> Settlements { get; }
     public StageSettlementData LatestSettlement => settlements.Count > 0 ? settlements[settlements.Count - 1] : null;
     public int? StageStartMoney => activeRunNumber != 0 ? activeStartMoney : null;
-    public int? CurrentStageEarnedMoney => activeRunNumber != 0 && activeStartMoney.HasValue && HasMoney
-        ? Money - activeStartMoney.Value : (int?)null;
+    public int? CurrentStageEarnedMoney => HasPendingMoney ? PendingMoney : (int?)null;
     private readonly List<StageSettlementData> settlements = new();
     private int nextRunNumber;
     private int activeRunNumber;
@@ -29,6 +30,8 @@ public sealed class RoomHudState
     {
         Money = 0;
         HasMoney = false;
+        PendingMoney = 0;
+        HasPendingMoney = false;
         StageNumber = 1;
         HasStageSelection = false;
         IsStageRunning = false;
@@ -51,13 +54,14 @@ public sealed class RoomHudState
 
     public void ApplyStage(int number, bool hasSelection, bool running, double now)
     {
-        if (IsStageRunning && (!running || StageNumber != number)) FinishSettlement();
         if (running && (!IsStageRunning || StageNumber != number))
         {
             activeRunNumber = ++nextRunNumber;
             activeStageNumber = number;
             // Never assume zero or use a first reward snapshot as the starting balance.
             activeStartMoney = HasMoney ? Money : (int?)null;
+            PendingMoney = 0;
+            HasPendingMoney = true;
             hasStarted = true;
             endTime = now + StageDurationSeconds;
         }
@@ -67,14 +71,30 @@ public sealed class RoomHudState
         IsStageRunning = running;
     }
 
-    private void FinishSettlement()
+    public bool ApplyPendingMoney(int total)
     {
-        if (activeRunNumber == 0) return;
+        // Ignore late progress after the final snapshot. Snapshots are totals, never deltas.
+        if (!IsStageRunning || activeRunNumber == 0) return false;
+        bool changed = !HasPendingMoney || PendingMoney != total;
+        PendingMoney = total;
+        HasPendingMoney = true;
+        return changed;
+    }
+
+    public bool ApplyStageSettlement(int earnedMoney, int finalMoney, bool isSuccess)
+    {
+        // One final result per observed start. Do not add rewards on either client.
+        if (activeRunNumber == 0) return false;
         settlements.Add(new StageSettlementData(activeRunNumber, activeStageNumber,
-            activeStartMoney, HasMoney ? Money : (int?)null));
+            activeStartMoney, finalMoney, earnedMoney, isSuccess));
+        ApplyMoney(finalMoney);
+        PendingMoney = earnedMoney;
+        HasPendingMoney = true;
+        IsStageRunning = false;
         activeRunNumber = 0;
         activeStageNumber = 0;
         activeStartMoney = null;
+        return true;
     }
 
     public int RemainingSeconds(double now) => IsStageRunning
