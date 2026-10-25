@@ -14,9 +14,10 @@ public class EntityHandler : PacketHandlerBase
         room.PushJob(() =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity) || entity.IsDestroyed) return;
+            if (entity is Tool) return;
             if (entity.Parent is Player holder && holder != session.Player) return;
 
-            room.DestroyIngredient(packet.EntityId);
+            entity.Destroy();
 
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });

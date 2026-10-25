@@ -51,8 +51,6 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
 
     public override void Destroy()
     {
-        base.Destroy();
-
         foreach (var entity in _storage)
         {
             entity.Destroy();

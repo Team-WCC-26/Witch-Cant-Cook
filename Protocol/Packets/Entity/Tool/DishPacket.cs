@@ -25,6 +25,15 @@ public partial class ServeDishPacket
     public long EntityId { get; set; }
 }
 
+// 요리 제출 판정 후 빈 접시 배출
+[MemoryPackable]
+[PacketId(PacketId.S_DishEject)]
+public partial class DishEjectPacket
+{
+    public long DishEntityId { get; set; }
+    public int EjectSeed { get; set; }
+}
+
 //[MemoryPackable]
 //[PacketId(PacketId.C_ClearDish)]
 //[PacketId(PacketId.S_ClearDish)]
