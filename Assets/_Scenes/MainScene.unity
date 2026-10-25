@@ -5391,57 +5391,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -3717389791683320856, guid: 6e7bae22932735f4b84ddc75e7df1450, type: 3}
---- !u!1 &257672042
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 257672043}
-  - component: {fileID: 257672044}
-  m_Layer: 0
-  m_Name: ConveyerController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &257672043
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 257672042}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1232478941}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &257672044
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 257672042}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7c581b8f359b07f40911f78e7494397a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ConveyorBeltController
-  beltId: 80001
-  path: {fileID: 0}
-  beltSpeed: 2
-  beltRenderer: {fileID: 0}
-  rotationLerpSpeed: 10
-  maxLateralOffset: 0.35
-  settleDuration: 0.2
 --- !u!1 &257994332
 GameObject:
   m_ObjectHideFlags: 0
@@ -15407,7 +15356,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f785930b4f9c943428611485ffeb018d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientNetworkBridge
-  spawnPointObj: {fileID: 1139685867}
+  spawnPointObj: {fileID: 0}
 --- !u!1 &897327784
 GameObject:
   m_ObjectHideFlags: 0
@@ -19091,6 +19040,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 672621867}
     m_Modifications:
+    - target: {fileID: 1009770782843157854, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: m_Size.x
+      value: 0.39444187
+      objectReference: {fileID: 0}
+    - target: {fileID: 1009770782843157854, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: m_Size.y
+      value: 1.3173996
+      objectReference: {fileID: 0}
+    - target: {fileID: 1009770782843157854, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: m_Center.x
+      value: -0.23285282
+      objectReference: {fileID: 0}
+    - target: {fileID: 1009770782843157854, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: m_Center.y
+      value: 1.4537479
+      objectReference: {fileID: 0}
+    - target: {fileID: 1009770782843157854, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: m_Center.z
+      value: -0.011518797
+      objectReference: {fileID: 0}
     - target: {fileID: 2728337112447414883, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
       propertyPath: m_Name
       value: AWS_Table_002 (2)
@@ -19154,6 +19123,18 @@ PrefabInstance:
     - target: {fileID: 5012136000999754236, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.2672
+      objectReference: {fileID: 0}
+    - target: {fileID: 7392377397599507679, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: m_Icon
+      value: 
+      objectReference: {fileID: -5487077368411116049, guid: 0000000000000000d000000000000000, type: 0}
+    - target: {fileID: 8885566748964489225, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: surface
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8885566748964489225, guid: eff51ee080b9c1c4f803def550798bea, type: 3}
+      propertyPath: frontFace
+      value: 2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -19875,51 +19856,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1138920905}
   m_Mesh: {fileID: 8733429697405204941, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
---- !u!1 &1139685867
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1139685868}
-  - component: {fileID: 1139685869}
-  m_Layer: 0
-  m_Name: SP_Ingredients
-  m_TagString: Untagged
-  m_Icon: {fileID: 7174288486110832750, guid: 0000000000000000d000000000000000, type: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1139685868
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1139685867}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6.77, y: 0.993, z: 11.618}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1848980561}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1139685869
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1139685867}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41370955d81d8ad4bbc8a15941b58bec, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ConveyorSpawnPoint
-  beltId: 80001
 --- !u!1 &1140738855
 GameObject:
   m_ObjectHideFlags: 0
@@ -21741,7 +21677,6 @@ Transform:
   m_Children:
   - {fileID: 1993472484}
   - {fileID: 975634611}
-  - {fileID: 257672043}
   - {fileID: 1848980561}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -32496,7 +32431,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 310375024}
-  - {fileID: 1139685868}
   - {fileID: 419647608}
   - {fileID: 179071243}
   m_Father: {fileID: 1232478941}
