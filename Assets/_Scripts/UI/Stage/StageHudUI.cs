@@ -88,7 +88,9 @@ public sealed class StageHudUI : UIBase
         }
         if (moneyText != null)
             moneyText.text = (state.IsStageRunning ? "획득 예정 황금 콩 - " : "획득 황금 콩 - ") +
-                (state.HasPendingMoney ? state.PendingMoney.ToString("N0", CultureInfo.InvariantCulture) : "--");
+                (state.HasPendingMoney ? state.PendingMoney.ToString("N0", CultureInfo.InvariantCulture) : "--") +
+                "\n팀 보유 황금 콩 - " +
+                (state.HasMoney ? state.Money.ToString("N0", CultureInfo.InvariantCulture) : "--");
         displayedSeconds = -1;
         RefreshClock();
     }

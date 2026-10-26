@@ -35,7 +35,7 @@ public class ConveyorItemState
 /// - 벨트 끝 도달 판정은 이 스크립트가 하지 않는다. 별도의 ConveyorEndTrigger가
 ///   담당하고, 감지되면 UnregisterItem()을 호출해 이 리스트에서만 빠진다.
 /// </summary>
-public class ConveyorBeltController : MonoBehaviour
+public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
 {
     [SerializeField] private int beltId; // DB의 beltID와 동일한 값을 인스펙터에서 입력
     [SerializeField] private ConveyorPath path;
@@ -142,6 +142,7 @@ public class ConveyorBeltController : MonoBehaviour
 
     void Update()
     {
+        if (StageReturnFlow.IsSettlementActive) return;
         MoveItemsOnBelt();
         //ScrollBeltTexture();
     }
@@ -214,6 +215,13 @@ public class ConveyorBeltController : MonoBehaviour
         }
     }
 
+    public void ResetClientStage()
+    {
+        foreach (ConveyorItemState item in itemsOnBelt)
+            ConveyorBeltRegistry.ClearOwner(item.ServerItemId, this);
+        itemsOnBelt.Clear();
+        itemLookup.Clear();
+    }
     private void ScrollBeltTexture()
     {
         if (beltRenderer == null) return;

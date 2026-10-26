@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Resources;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -25,6 +24,7 @@ public class UIManager : Singleton<UIManager>
     private List<Transform> parents;
     public bool HasUIParents => parents != null && parents.Exists(parent => parent != null);
     private List<UIBase> uiList = new();
+    private readonly Dictionary<string, Task<UIBase>> pendingLoads = new();
 
     //public UILoading LoadingScreen;
     public static TaskCompletionSource<bool> SceneChangeTask;
@@ -34,6 +34,20 @@ public class UIManager : Singleton<UIManager>
         Instance.parents = parents;
     }
 
+    private async Task<UIBase> CreateUIAsync<T>(string address) where T : UIBase
+    {
+        ResourceManager resources = ResourceManager.Instance;
+        if (resources == null)
+            throw new System.InvalidOperationException("[UIManager] ResourceManager is required to load UI.");
+        GameObject asset = await resources.LoadAsync<GameObject>(address);
+        if (asset == null || !asset.TryGetComponent<T>(out var prefab))
+            throw new System.InvalidOperationException($"[UIManager] Addressable UI prefab missing or invalid: {address}.");
+        if (this == null) throw new System.InvalidOperationException("[UIManager] Manager was destroyed while loading UI.");
+        UIBase ui = Instantiate(prefab, ResolveParent(prefab.uiPosition));
+        ui.name = address;
+        uiList.Add(ui);
+        return ui;
+    }
     private Transform ResolveParent(eUIPosition position)
     {
         int index = (int)position;
@@ -63,14 +77,14 @@ public class UIManager : Singleton<UIManager>
 
         if (ui == null)
         {
-            //TODO : ResourceManager로부터 프리팹 에셋 로드.
-            var prefab = Resources.Load<T>($"UI/{typeof(T).Name}");
-            if (prefab == null)
-                throw new System.InvalidOperationException($"[UIManager] Prefab not found at Resources/UI/{typeof(T).Name}.");
-            ui = Instantiate(prefab, manager.ResolveParent(prefab.uiPosition));
-
-            ui.name = ui.name.Replace("(Clone)", "");
-            manager.uiList.Add(ui);
+            string address = typeof(T).Name;
+            if (!manager.pendingLoads.TryGetValue(address, out Task<UIBase> loading))
+            {
+                loading = manager.CreateUIAsync<T>(address);
+                manager.pendingLoads.Add(address, loading);
+            }
+            try { ui = await loading; }
+            finally { manager.pendingLoads.Remove(address); }
         }
         ui.gameObject.SetActive(ui.isActiveInCreated);
         ui.opened?.Invoke(param);
