@@ -197,7 +197,7 @@ public class PotInteraction : MapObjInteraction,
         foreach (PlayerBrain player in trappedPlayers)
         {
             if (player != null && player.Health != null)
-                player.Health.IsInvulnerable = false;
+                player.Health.IsDmgBlocked = false;
             PlayerGlow.SetActive(player, false);
         }
         RestorePlayerInput();
@@ -737,7 +737,7 @@ public class PotInteraction : MapObjInteraction,
         if (player == null) return;
 
         if (player.Health != null)
-            player.Health.IsInvulnerable = false;
+            player.Health.IsDmgBlocked = false;
         PlayerGlow.SetActive(player, false);
         trappedPlayers.Remove(player);
         pendingPlayerEntries.Remove(player.PlayerId);
@@ -831,7 +831,7 @@ public class PotInteraction : MapObjInteraction,
                 PlayVisualOverride(IngredientIntakeHash, IngredientIntakeDuration, 0.04f);
         }
         if (player.Health != null)
-            player.Health.IsInvulnerable = true;
+            player.Health.IsDmgBlocked = true;
         PlayerGlow.SetActive(player, true);
         if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
         {

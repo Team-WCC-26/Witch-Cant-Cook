@@ -5,6 +5,7 @@ public class PlayerPhysicalFSM
     private readonly PlayerBrain brain;
 
     private float modeStartTime = 0f;
+    private bool isRecoveryPaused;
 
     public PlayerPhysicalMode CurrentMode { get; private set; }
 
@@ -23,7 +24,7 @@ public class PlayerPhysicalFSM
                 break;
 
             case PlayerPhysicalMode.Ragdoll:
-                if (Time.time >= modeStartTime + brain.RagdollStunDuration)
+                if (!isRecoveryPaused && Time.time >= modeStartTime + brain.RagdollStunDuration)
                 {
                     SetMode(PlayerPhysicalMode.Default);
                     brain.Health.Reset();
@@ -40,6 +41,14 @@ public class PlayerPhysicalFSM
         }
 
         SetMode(PlayerPhysicalMode.Ragdoll);
+    }
+
+    public void SetRecoveryPaused(bool paused)
+    {
+        if (isRecoveryPaused == paused) return;
+        isRecoveryPaused = paused;
+        if (!paused && CurrentMode == PlayerPhysicalMode.Ragdoll)
+            modeStartTime = Time.time;
     }
 
     private void SetMode(PlayerPhysicalMode mode)

@@ -106,6 +106,11 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         physicalFSM.EnterRagdoll();
     }
 
+    public void SetRagdollRecoveryPaused(bool paused)
+    {
+        physicalFSM.SetRecoveryPaused(paused);
+    }
+
     public void SendRocketSnapshot(bool ended)
     {
         // Keep the terminal pose for two send intervals so batching preserves short flights.

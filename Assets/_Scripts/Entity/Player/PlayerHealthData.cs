@@ -5,7 +5,7 @@ public sealed class PlayerHealthData
 {
     public float CurHealth { get; private set; }
     public float MaxHealth { get; }
-    public bool IsInvulnerable { get; set; }
+    public bool IsDmgBlocked { get; set; }
     public bool IsRagdoll => CurHealth <= 0f;
     public float NormalizedHealth => MaxHealth <= 0f ? 0f : CurHealth / MaxHealth;
 
@@ -23,10 +23,16 @@ public sealed class PlayerHealthData
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f || IsInvulnerable || IsRagdoll || Time.time < nextDamageTime) return;
+        if (amount <= 0f || IsDmgBlocked || IsRagdoll || Time.time < nextDamageTime) return;
 
         SetHealth(CurHealth - amount);
         nextDamageTime = Time.time + damageCooldown;
+    }
+
+    public void InstantDeath()
+    {
+        if (IsDmgBlocked) return;
+        SetHealth(0f);
     }
 
     public void Heal(float amount)
@@ -55,7 +61,7 @@ public sealed class PlayerHealthData
     // Remove together with the temporary P key block in PlayerBrain.Update.
     public void DebugDepleteHealth()
     {
-        if (IsInvulnerable) return;
+        if (IsDmgBlocked) return;
         SetHealth(0f);
     }
     #endregion
