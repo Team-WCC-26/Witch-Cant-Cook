@@ -37,13 +37,10 @@ public class GameLoopHandler : PacketHandlerBase
     public static void StopStage(Session session, PacketPackageInfo package)
     {
         var room = session.Player.Room;
-        var packet = DeSerialize<StageStopPacket>(package.Body);
 
         room.PushJob(() =>
         {
-            room.Stop();
-
-            room.BroadCast(PacketSerializer.Serialize(packet, true));
+            room.EndStage();
         });
     }
 }

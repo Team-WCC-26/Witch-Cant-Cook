@@ -11,8 +11,16 @@ public sealed class RoomHudSession : MonoBehaviour
     private StageSelectionSession stages;
     public RoomHudState State { get; } = new();
     public LobbyHudState Lobby { get; } = new();
+    public int PendingMoneyPacketCount { get; private set; }
+    public int? LastReceivedPendingMoney { get; private set; }
+    public int? PendingMoneyBeforeLastPacket { get; private set; }
+    public int? PendingMoneyAfterLastPacket { get; private set; }
+    public double LastPendingMoneyReceivedAt { get; private set; }
+    public bool LastPendingMoneyStageRunning { get; private set; }
     public event Action Changed;
     public event Action<StageSettlementData> SettlementRecorded;
+    // The server broadcasts a pending snapshot for each rewarded submission.
+    public event Action<int, int> PendingMoneyIncreased;
 
     public static RoomHudSession Instance
     {
@@ -42,6 +50,7 @@ public sealed class RoomHudSession : MonoBehaviour
     {
         stages = StageSelectionSession.Instance;
         stages.Changed += OnStageChanged;
+        stages.StageStopped += OnStageStopped;
         StageManager.DoorOpened += OnDoorOpened;
         OnStageChanged();
     }
@@ -55,12 +64,20 @@ public sealed class RoomHudSession : MonoBehaviour
     {
         if (server != null) return;
         server = FindFirstObjectByType<ServerManager>();
-        if (server != null) server.RegisterHandler(PacketId.S_RoomMoney, OnRoomMoney);
+        if (server == null) return;
+        server.RegisterHandler(PacketId.S_RoomMoney, OnRoomMoney);
+        server.RegisterHandler(PacketId.S_RoomPendingMoney, OnRoomPendingMoney);
     }
 
     public void OnRoomJoined()
     {
         State.ResetRoom();
+        PendingMoneyPacketCount = 0;
+        LastReceivedPendingMoney = null;
+        PendingMoneyBeforeLastPacket = null;
+        PendingMoneyAfterLastPacket = null;
+        LastPendingMoneyReceivedAt = 0;
+        LastPendingMoneyStageRunning = false;
         Lobby.Reset();
         OnStageChanged();
     }
@@ -94,20 +111,48 @@ public sealed class RoomHudSession : MonoBehaviour
 
     private void OnStageChanged()
     {
-        StageSettlementData previousSettlement = State.LatestSettlement;
         State.ApplyStage(stages.SelectedStageId, stages.HasStageSelection, stages.IsStageRunning,
             Time.unscaledTimeAsDouble);
         if (State.IsStageRunning) Lobby.BeginStage();
         Changed?.Invoke();
-        if (State.LatestSettlement != null && State.LatestSettlement != previousSettlement)
-            SettlementRecorded?.Invoke(State.LatestSettlement);
+    }
+
+    private void OnRoomPendingMoney(ReadOnlyMemory<byte> bytes)
+    {
+        int total = PacketSerializer.Deserialize<RoomPendingMoneyPacket>(bytes).Money;
+        PendingMoneyBeforeLastPacket = State.HasPendingMoney ? State.PendingMoney : (int?)null;
+        LastReceivedPendingMoney = total;
+        LastPendingMoneyReceivedAt = Time.unscaledTimeAsDouble;
+        LastPendingMoneyStageRunning = State.IsStageRunning;
+        PendingMoneyPacketCount++;
+        bool changed = State.ApplyPendingMoney(total);
+        PendingMoneyAfterLastPacket = State.HasPendingMoney ? State.PendingMoney : (int?)null;
+        Debug.Log($"[Money Pending] received={total}, displayed={State.PendingMoney}, stageRunning={State.IsStageRunning}, changed={changed}", this);
+        if (changed) Changed?.Invoke();
+        if (changed && PendingMoneyBeforeLastPacket.HasValue && total > PendingMoneyBeforeLastPacket.Value)
+            PendingMoneyIncreased?.Invoke(total - PendingMoneyBeforeLastPacket.Value, total);
+    }
+
+    private void OnStageStopped(StageStopPacket packet)
+    {
+        if (!State.ApplyStageSettlement(packet.PendingMoney, packet.Money, packet.IsSuccess)) return;
+        Changed?.Invoke();
+        SettlementRecorded?.Invoke(State.LatestSettlement);
     }
 
     private void OnDisable()
     {
-        if (stages != null) stages.Changed -= OnStageChanged;
+        if (stages != null)
+        {
+            stages.Changed -= OnStageChanged;
+            stages.StageStopped -= OnStageStopped;
+        }
         StageManager.DoorOpened -= OnDoorOpened;
-        if (server != null) server.UnRegisterHandler(PacketId.S_RoomMoney);
+        if (server != null)
+        {
+            server.UnRegisterHandler(PacketId.S_RoomMoney);
+            server.UnRegisterHandler(PacketId.S_RoomPendingMoney);
+        }
         server = null;
     }
 

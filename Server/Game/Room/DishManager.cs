@@ -10,10 +10,14 @@ internal class DishManager
     private IReadOnlyDictionary<int, DishData> _dishses => ServerContext.Instance.DataBase.Dishes;
     //private IReadOnlyDictionary<IngredientStatePair, int> _recipes => ServerContext.Instance.DataBase.Recipes;
     private IReadOnlyDictionary<int, List<RecipeGroup>> _recipeGroups => ServerContext.Instance.DataBase.RecipeGroups;
+    private IReadOnlyDictionary<int, StageData> _stages => ServerContext.Instance.DataBase.Stages;
     private readonly Random _random = new();
 
     private List<DishData> _currentDishes = new();
     private int _totalWeight;
+
+    private int _goal = 0;
+    private int _successCount = 0;
 
     private Dictionary<int, Queue<TimerHandle>> _timeLimitHandleDict = new();
     private TimerHandle _spawnDelayHandle;
@@ -30,6 +34,7 @@ internal class DishManager
         if (_running) return;
 
         _running = true;
+        _successCount = 0;
         OnSelectTimer();
     }
 
@@ -58,6 +63,9 @@ internal class DishManager
     public void SetStage(int stage)
     {
         if (!_recipeGroups.TryGetValue(stage, out var group)) throw new ArgumentException($"존재하지 않는 스테이지입니다. Stage: {stage}");
+        if (!_stages.TryGetValue(stage, out var stageData)) throw new ArgumentException($"존재하지 않는 스테이지입니다. Stage: {stage}");
+
+        _goal = stageData.Goal;
 
         _currentDishes.Clear();
 
@@ -85,6 +93,11 @@ internal class DishManager
         throw new InvalidOperationException("재료 선택에 실패했습니다.");
     }
 
+    public bool IsStageSuccess()
+    {
+        return _successCount >= _goal;
+    }
+
     public void SubmitDish(int recipeId)
     {
         if (_timeLimitHandleDict.TryGetValue(recipeId, out var handles) && handles.TryDequeue(out var handle))
@@ -93,7 +106,9 @@ internal class DishManager
 
             BroadCastDishState(recipeId, DishState.Success);
 
-            _room.AddMoney(_dishses[recipeId].Money);
+            _successCount++;
+
+            _room.AddPendingMoney(_dishses[recipeId].Money);
         }
         else
         {

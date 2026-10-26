@@ -46,6 +46,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_Notification = 213,
 
+    S_PlayerRespawn = 215,
+
     C_InteractDoor = 250,
 
     C_StopInteractDoor = 252,
@@ -131,6 +133,8 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     S_RoomMoney = 406,
 
+    S_RoomPendingMoney = 408,
+
     // Pot
     C_PotForceEject = 410,
     S_PotEject = 411,
@@ -155,6 +159,12 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     // Pan
     S_PanEject = 425,
+
+    // Dish
+    S_DishEject = 427,
+
+    // TrashCan
+    S_TrashCanEject = 429,
 
     // 기타 패킷 (00~)
     // ...

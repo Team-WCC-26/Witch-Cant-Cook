@@ -52,7 +52,21 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public Collider Col => col;
     public Rigidbody Rb => rb;
-    public bool CanBePicked => canBePicked;
+    public bool CanBePicked => canBePicked && !IsSubmissionPending && !IsSubmissionReturning;
+    public bool IsSubmissionPending { get; private set; }
+    public bool IsSubmissionReturning { get; private set; }
+    public void SetSubmissionReturning(bool returning) => IsSubmissionReturning = returning;
+
+    // Shared by submission zones on this client; reset when the object is recycled.
+    public bool TryBeginSubmission()
+    {
+        if (IsSubmissionPending || IsSubmissionReturning || IsHold || Holder != null) return false;
+        IsSubmissionPending = true;
+        return true;
+    }
+
+    // A server-confirmed food removal can leave a live empty plate behind.
+    public void ReleaseSubmissionLock() => IsSubmissionPending = false;
     public EntityCategory Category => category;
     public EntityCategory AcceptedCategories =>
         Category == EntityCategory.Ingredient && acceptedCategories == EntityCategory.None
@@ -163,6 +177,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         LastHolderPlayerId = null;
         IsHold = false;
         IsRespawning = false;
+        IsSubmissionPending = false;
+        IsSubmissionReturning = false;
         canBePicked = initialCanBePicked;
         releaseFromPrep = null;
 

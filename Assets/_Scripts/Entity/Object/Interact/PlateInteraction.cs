@@ -52,5 +52,8 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
         if (entity.TryGetComponent(out IngredientReaction reaction))
             reaction.RestoreOriginalScale();
         currentFood = null;
+        // The server may preserve the empty plate. Its submission lock must not survive
+        // the confirmed removal of its food, or neither player can use it again locally.
+        if (TryGetComponent(out CatchableObj plate)) plate.ReleaseSubmissionLock();
     }
 }
