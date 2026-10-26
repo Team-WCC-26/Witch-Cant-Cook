@@ -59,6 +59,8 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_JumpPadEvent);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_TrashCanEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerExit);
         isSubscribed = false;
     }
 
@@ -72,6 +74,8 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
         ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
         ServerManager.Instance.RegisterHandler(PacketId.S_JumpPadEvent, OnJumpPadEvent);
+        ServerManager.Instance.RegisterHandler(PacketId.S_TrashCanEject, OnTrashCanEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerExit, OnToolPlayerExited);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -231,6 +235,11 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private void OnPotPlayerEntered(ReadOnlyMemory<byte> data)
     {
         ToolPlayerEnterPacket packet = MemoryPackSerializer.Deserialize<ToolPlayerEnterPacket>(data.Span);
+        if (TryGetMapObject(packet.ToolEntityId, out TrashCanInteraction trashCan))
+        {
+            trashCan.HandlePlayerEnter(packet);
+            return;
+        }
         if (TryGetPotReceiver(packet.ToolEntityId, out IPotNetworkReceiver receiver))
             receiver.HandlePotPlayerEnter(packet);
     }
@@ -262,5 +271,26 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     }
 
     #endregion
+
+    private void OnTrashCanEjected(ReadOnlyMemory<byte> data)
+    {
+        TrashCanEjectPacket packet = PacketSerializer.Deserialize<TrashCanEjectPacket>(data.Span);
+        if (TryGetMapObject(packet.TrashCanEntityId, out TrashCanInteraction trashCan))
+            trashCan.HandleEject(packet);
+    }
+
+    private void OnToolPlayerExited(ReadOnlyMemory<byte> data)
+    {
+        ToolPlayerExitPacket packet = PacketSerializer.Deserialize<ToolPlayerExitPacket>(data.Span);
+        if (TryGetMapObject(packet.ToolEntityId, out TrashCanInteraction trashCan))
+            trashCan.HandlePlayerExit(packet);
+    }
+
+    public bool TryRespawnTrashPlayer(string playerId)
+    {
+        foreach (MapObjInteraction mapObj in mapObjects.Values)
+            if (mapObj is TrashCanInteraction trashCan && trashCan.TryRespawnPlayer(playerId)) return true;
+        return false;
+    }
 
 }

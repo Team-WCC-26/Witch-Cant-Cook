@@ -15,6 +15,7 @@ public enum EntityCategory
     PrepTable = 1 << 8,
     Oven = 1 << 9,
     Pot = 1 << 10,
+    TrashCan = 1 << 11,
 
     All = ~0
 }

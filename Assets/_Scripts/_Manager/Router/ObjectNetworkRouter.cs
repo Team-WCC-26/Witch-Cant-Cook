@@ -14,6 +14,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     private readonly Dictionary<long, long> pendingParentChanges = new();
     private readonly Dictionary<long, IEntityThrowParentReceiver> detachedThrowParents = new();
     private readonly Dictionary<long, int> dishEjectSeeds = new();
+    private readonly Dictionary<long, long> containerEjections = new();
 
     [SerializeField] private MapObjNetworkRouter mapObjRouter;
 
@@ -29,6 +30,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         pendingParentChanges.Clear();
         detachedThrowParents.Clear();
         dishEjectSeeds.Clear();
+        containerEjections.Clear();
         IngredientEgg.ResetPanTransfers();
     }
 
@@ -64,6 +66,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void OnDisable()
     {
+        containerEjections.Clear();
         detachedThrowParents.Clear();
         dishEjectSeeds.Clear();
         if (subscribeRoutine != null)
@@ -126,6 +129,12 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         if (parentEntityId == -1) parentEntityId = 0;
         if (catchable.ParentEntityId == -1) catchable.ParentEntityId = 0;
+        // 배출 결과보다 늦게 도착한 과거 삽입 결과로 다시 보관하지 않는다.
+        if (containerEjections.TryGetValue(catchable.NetworkId, out long ejectParentId))
+        {
+            if (parentEntityId == ejectParentId) return;
+            if (parentEntityId != 0) containerEjections.Remove(catchable.NetworkId);
+        }
 
         long previousParentId = catchable.ParentEntityId;
         if (previousParentId == parentEntityId) return;
@@ -152,6 +161,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     public void HandleEntityPicked(CatchableObj catchable)
     {
         if (catchable == null) return;
+        containerEjections.Remove(catchable.NetworkId);
 
         PanInteraction.ForgetToss(catchable.NetworkId);
         detachedThrowParents.Remove(catchable.NetworkId);
@@ -212,6 +222,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        containerEjections.Remove(entityId);
         PanInteraction.ForgetToss(entityId);
         detachedThrowParents.Remove(entityId);
         IngredientEgg.HandleDestroyedEntity(entityId);
@@ -225,7 +236,10 @@ public class ObjectNetworkRouter : MonoBehaviour
         // Destroyed food must leave its container before pooling resets its identity.
         // Otherwise PlateInteraction retains a pooled food reference and a submission lock.
         if (TryResolveParent(catchable.ParentEntityId, out IEntityParentReceiver parent))
+        {
+            if (parent is TrashCanInteraction trashCan) trashCan.HandleDestroyedObj(catchable);
             parent.HandleEntityRemoved(catchable);
+        }
         catchable.ParentEntityId = 0;
 
         catchableDics.Remove(entityId);
@@ -269,6 +283,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public void Remove(long networkId)
     {
+        containerEjections.Remove(networkId);
         PanInteraction.ForgetToss(networkId);
         detachedThrowParents.Remove(networkId);
         pendingParentChanges.Remove(networkId);
@@ -277,6 +292,28 @@ public class ObjectNetworkRouter : MonoBehaviour
     public bool TryGet(long networkId, out CatchableObj obj)
     {
         return catchableDics.TryGetValue(networkId, out obj);
+    }
+
+    public void BeginContainerEjection(CatchableObj obj, long parentId)
+    {
+        containerEjections[obj.NetworkId] = parentId;
+    }
+
+    public void DetachForContainerEjection(CatchableObj obj)
+    {
+        NotifyParent(obj.ParentEntityId, obj, false);
+        if (obj.Holder != null)
+        {
+            obj.Holder.Interact.TryReleaseHeld(obj);
+            obj.OnDrop();
+        }
+        obj.ParentEntityId = 0;
+    }
+
+    public void EndContainerEjection(long entityId, long parentId)
+    {
+        if (containerEjections.TryGetValue(entityId, out long currentParent) && currentParent == parentId)
+            containerEjections.Remove(entityId);
     }
 
     public bool TryApplyIngredientCombine(
@@ -379,6 +416,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void Unregister(long entityId)
     {
+        containerEjections.Remove(entityId);
         PanInteraction.ForgetToss(entityId);
         detachedThrowParents.Remove(entityId);
         pendingParentChanges.Remove(entityId);

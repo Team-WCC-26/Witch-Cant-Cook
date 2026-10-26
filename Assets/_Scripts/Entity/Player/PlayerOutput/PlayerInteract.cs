@@ -73,7 +73,17 @@ public class PlayerInteract
     {
         if (!IsHolding) return;
 
-        OvenButton ovenButton = FindInteractTarget().GetTargetComponent<OvenButton>();
+        IInteractTarget target = FindInteractTarget();
+        IPunchReceiver trashBtn = target.GetTargetComponent<TrashCanBtn>() ??
+            (IPunchReceiver)target.GetTargetComponent<TrashCanInteraction>();
+        if (trashBtn != null)
+        {
+            brain.ActionController.PunchAction();
+            trashBtn.OnPunched(brain);
+            return;
+        }
+
+        OvenButton ovenButton = target.GetTargetComponent<OvenButton>();
         if (ovenButton != null)
         {
             brain.ActionController.PunchAction();

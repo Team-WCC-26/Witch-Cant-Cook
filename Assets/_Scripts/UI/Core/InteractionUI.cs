@@ -59,7 +59,9 @@ public sealed class InteractionUI : UIBase
         if (heldObject.IsSubmissionPending || heldObject.IsSubmissionReturning) return string.Empty;
         string primary;
         // Match PlayerInteract's priority: oven button, held action, receiver, drop.
-        if (target.GetTargetComponent<OvenButton>() != null) primary = "누르기";
+        if (target.GetTargetComponent<OvenButton>() != null ||
+            target.GetTargetComponent<TrashCanBtn>() != null ||
+            target.GetTargetComponent<TrashCanInteraction>() != null) primary = "누르기";
         else if (heldObject.TryGetComponent<KnifeInteraction>(out _))
             primary = target.GetTargetComponent<Bell>() != null ? "제출" : "공격";
         else if (heldObject.TryGetComponent<PanInteraction>(out PanInteraction heldPan))
@@ -78,6 +80,8 @@ public sealed class InteractionUI : UIBase
     private static string GetEmptyHandPrimary(IInteractTarget target)
     {
         if (target.GetTargetComponent<OvenButton>() != null) return "누르기";
+        if (target.GetTargetComponent<TrashCanBtn>() != null ||
+            target.GetTargetComponent<TrashCanInteraction>() != null) return "누르기";
         if (target.GetTargetComponent<Bell>() != null) return "제출";
         if (target.GetTargetComponent<StagePageCylinder>() is StagePageCylinder page)
             return page.Direction == StagePageCylinder.PageDirection.Previous ? "이전" : "다음";
