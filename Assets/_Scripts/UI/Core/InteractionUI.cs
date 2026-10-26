@@ -72,9 +72,7 @@ public sealed class InteractionUI : UIBase
             primary = "넣기";
         else primary = "놓기";
 
-        string secondary = heldObject.TryGetComponent<IngredientCarrot>(out var carrot) && carrot.CanRocket
-            ? "로켓 타기" : "던지기";
-        return string.IsNullOrEmpty(primary) ? $"우클릭 - {secondary}" : $"좌클릭 - {primary}\n우클릭 - {secondary}";
+        return string.IsNullOrEmpty(primary) ? string.Empty : $"좌클릭 - {primary}";
     }
 
     private static string GetEmptyHandPrimary(IInteractTarget target)
