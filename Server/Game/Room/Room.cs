@@ -64,6 +64,18 @@ public class Room
 
     private TimerHandle? _stageTimer;
 
+    // 스테이지 종료 후 정산 유예 타이머 (룸 핑 최대값만큼 제출을 더 받는다)
+    private TimerHandle? _settleTimer;
+
+    // 정산 결과 전송 후 룸의 모든 플레이어 확인 대기 중 여부
+    private bool _awaitingResultConfirm = false;
+
+    // 정산 결과를 확인한 플레이어 (전원 확인 시 로비로 복귀)
+    private readonly HashSet<string> _stageResultConfirms = new();
+
+    // 마지막 정산 결과 (확인 대기 중 재접속한 플레이어의 스냅샷 동기화용)
+    private StageResultSnapshot? _lastStageResult;
+
     private IngredientSpawner _ingredientSpawner;
     private DishManager _dishManager;
 
@@ -101,6 +113,17 @@ public class Room
             _timerManager.Cancel(_stageTimer.Value);
         }
 
+        // 이전 스테이지의 정산 유예/확인 대기가 남아있으면 정리한다 (재시작 시 이중 정산 방지)
+        if (_settleTimer != null)
+        {
+            _timerManager.Cancel(_settleTimer.Value);
+            _settleTimer = null;
+        }
+
+        _awaitingResultConfirm = false;
+        _stageResultConfirms.Clear();
+        _lastStageResult = null;
+
         _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.EndStage());
 
         _dishManager.Start();
@@ -113,19 +136,10 @@ public class Room
         _ingredientSpawner.Stop();
         _timerManager.Clear();
         _stageTimer = null;
-
-        List<Entity> entities = new(_entities.Values);
-        foreach (var entity in entities)
-        {
-            entity.Parent = null;
-            if (entity is Ingredient ingredient)
-            {
-                ingredient.IngredientBehaviour?.Clear();
-            }
-        }
-
-        _entities.Clear();
-        _dirtyEntities.Clear();
+        _settleTimer = null;
+        _awaitingResultConfirm = false;
+        _stageResultConfirms.Clear();
+        _lastStageResult = null;
     }
 
     public void Tick(long deltaTime)
@@ -348,6 +362,9 @@ public class Room
         };
 
         BroadCast(PacketSerializer.Serialize(packet, true));
+
+        // 정산 확인 대기 중 인원이 줄면 남은 인원 기준으로 로비 복귀를 재평가한다
+        CheckAllConfirmed();
     }
 
     /// <summary>
@@ -384,6 +401,12 @@ public class Room
             Money = _money,
             PendingMoney = _pendingMoney
         };
+
+        // 정산 결과 확인 대기 중이면 결과를 싣는다 (유예/확인 대기 중 브로드캐스트는 끊긴 세션에 폐기된다)
+        if (_awaitingResultConfirm && _lastStageResult != null)
+        {
+            snapshot.StageResult = _lastStageResult;
+        }
 
         foreach (var player in _players)
         {
@@ -734,26 +757,140 @@ public class Room
     }
 
     /// <summary>
-    /// 스테이지 종료 (타임아웃 또는 클라 요청)
-    /// <para/> 임시 보유량을 보유량에 정산하고 결과를 전송
+    /// 스테이지 시간 종료 (타임아웃 또는 클라 요청)
+    /// <para/> 종료 알림(StageStop)을 전송하고 룸 핑 최대값만큼 제출 유예 후 정산한다 (SettleStage)
     /// </summary>
     public void EndStage()
     {
+        // 이미 유예/정산 확인 대기 중이면 무시한다 (타이머 만료와 클라 종료 요청 중복)
+        if (_settleTimer != null || _awaitingResultConfirm) return;
+
+        // 새 주문 선택과 재료 스폰만 중지한다 (진행 중 주문의 제출은 유예 기간 동안 계속 받는다)
+        _dishManager.StopSelect();
+        _ingredientSpawner.Stop();
+        _timerManager.Clear();
+        _stageTimer = null;
+
+        StageStopPacket packet = new();
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
+
+        _settleTimer = _timerManager.Schedule(GetMaxPingMs(), this, static room => room.SettleStage());
+    }
+
+    /// <summary>
+    /// 정산 결과 확인 (사용시 PushJob안에 넣어줘야 함)
+    /// <para/> 룸의 모든 플레이어가 확인하면 로비로 복귀한다
+    /// </summary>
+    public void ConfirmStageResult(Player player)
+    {
+        // 정산 결과 전송 전의 확인은 무시한다
+        if (!_awaitingResultConfirm) return;
+        if (!_players.Contains(player)) return;
+
+        _stageResultConfirms.Add(player.PlayerId);
+
+        CheckAllConfirmed();
+    }
+
+    // 유예 시간 종료: 제출 접수를 마감하고 임시 보유량을 보유량에 정산한 뒤 결과를 전송한다
+    private void SettleStage()
+    {
+        _settleTimer = null;
+
         bool isSuccess = _dishManager.IsStageSuccess();
         int pendingMoney = _pendingMoney;
 
+        // 유예 기간 동안 시작된 조리 타이머 등 잔여 타이머를 정리한다
         Stop();
 
         _money += pendingMoney;
         _pendingMoney = 0;
 
-        StageStopPacket packet = new()
+        StageResultPacket packet = new()
         {
             PendingMoney = pendingMoney,
             Money = _money,
             IsSuccess = isSuccess
         };
 
+        // 확인 대기 중 재접속하면 브로드캐스트를 받지 못하므로 스냅샷으로 재전달하기 위해 결과를 보관한다
+        _lastStageResult = new StageResultSnapshot()
+        {
+            PendingMoney = packet.PendingMoney,
+            Money = packet.Money,
+            IsSuccess = packet.IsSuccess
+        };
+
         BroadCast(PacketSerializer.Serialize(packet, true));
+
+        _awaitingResultConfirm = true;
+    }
+
+    // 전원이 확인했는지 재평가한다 (확인 추가 또는 퇴장으로 인원 변화 시 호출)
+    private void CheckAllConfirmed()
+    {
+        if (!_awaitingResultConfirm) return;
+        if (_players.Count == 0) return;
+        if (_stageResultConfirms.Count < _players.Count) return;
+
+        ReturnToLobby();
+    }
+
+    // 전원 확인 완료: 로비 문을 열고 이동을 지시한다 (실제 이동 연산은 클라이언트가 수행)
+    private void ReturnToLobby()
+    {
+        _awaitingResultConfirm = false;
+        _stageResultConfirms.Clear();
+        _lastStageResult = null;
+
+        HandleDoorOpened(_doors[DoorId.Lobby]);
+
+        LobbyMovePacket packet = new();
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
+
+        ClearKitchenEntities();
+    }
+
+    // 주방에 남은 엔티티 정리: 재료는 Destroy 동기화로 클라에서도 제거하고,
+    // 도구는 다음 스테이지에서 클라가 재등록하므로 동기화 없이 회수한다
+    private void ClearKitchenEntities()
+    {
+        List<Entity> entities = new(_entities.Values);
+
+        foreach (var entity in entities)
+        {
+            if (entity is Ingredient ingredient)
+            {
+                if (!ingredient.IsDestroyed)
+                {
+                    ingredient.Destroy();
+                }
+
+                continue;
+            }
+
+            entity.Parent = null;
+            UnregisterEntity(entity.EntityId);
+        }
+    }
+
+    // 룸 플레이어 핑 최대값 (ms) — 스테이지 종료 후 제출 유예 시간
+    private long GetMaxPingMs()
+    {
+        long maxPing = 0;
+
+        foreach (var player in _players)
+        {
+            long ping = (long)Math.Ceiling(player.Ping);
+
+            if (ping > maxPing)
+            {
+                maxPing = ping;
+            }
+        }
+
+        return maxPing;
     }
 }

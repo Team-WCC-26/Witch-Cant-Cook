@@ -53,6 +53,14 @@ internal class DishManager
         _timerManager.Cancel(_spawnDelayHandle);
     }
 
+    // 새 주문 선택만 중지한다 (진행 중인 주문은 유지 — 스테이지 종료 후 제출 유예 기간 동안 접수)
+    public void StopSelect()
+    {
+        _running = false;
+
+        _timerManager.Cancel(_spawnDelayHandle);
+    }
+
     private void ScheduleSelect(int delayMs)
     {
         if (!_running) return;

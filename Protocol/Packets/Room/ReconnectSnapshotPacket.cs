@@ -48,6 +48,7 @@ public partial class SnapshotData
     public List<DishSnapshot> DishOrders { get; set; } = new();
     public List<SpawnerSnapshot> Spawners { get; set; } = new();    // 벨트별 스포너 식별자 + 다음 생성 남은 시간
     public long NextOrderRemainingMs { get; set; }                  // 다음 주문 생성 딜레이 남은 시간
+    public StageResultSnapshot? StageResult { get; set; }           // 정산 결과 확인 대기 중일 때만 설정 (null이 아니면 클라는 정산 UI를 띄운다)
 }
 
 /// <summary>
@@ -140,4 +141,16 @@ public partial class DishSnapshot
 {
     public int RecipeId { get; set; }
     public long RemainingMs { get; set; }
+}
+
+/// <summary>
+/// 스냅샷 정산 결과 상태 (정산 결과 확인 대기 중일 때 SnapshotData.StageResult로 설정)
+/// <para/> 확인 대기가 아닌 스테이지 종료 상태(로비 복귀 완료)는 StageRunning=false + 로비 문 열림(Doors)으로 판단한다
+/// </summary>
+[MemoryPackable]
+public partial class StageResultSnapshot
+{
+    public int PendingMoney { get; set; } // 획득 예정량 (정산 확정분)
+    public int Money { get; set; }        // 최종 보유량 (정산 후)
+    public bool IsSuccess { get; set; }   // 스테이지 성공 여부
 }

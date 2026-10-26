@@ -39,4 +39,13 @@ public class GameLoopHandler : PacketHandlerBase
             room.EndStage();
         });
     }
+
+    [PacketHandler(PacketId.C_StageResultConfirm)]
+    public static void ConfirmStageResult(Session session, PacketPackageInfo package)
+    {
+        session.Player.PushGameplayJob(session, room =>
+        {
+            room.ConfirmStageResult(session.Player);
+        });
+    }
 }
