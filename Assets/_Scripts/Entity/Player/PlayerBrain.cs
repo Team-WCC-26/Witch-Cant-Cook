@@ -130,6 +130,16 @@ public sealed class PlayerBrain : MonoBehaviour
     {
         if (!isInitialized) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Temporary ragdoll test: remove this block and PlayerHealthData.DebugDepleteHealth together.
+        if (stateResolver is LocalPlayerStateResolver &&
+            UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.pKey.wasPressedThisFrame)
+        {
+            Health.DebugDepleteHealth();
+        }
+#endif
+
         stateResolver.UpdateTick();
         interact.Handle(stateResolver.CurrentState.Interaction);
         actionController.UpdateTick(stateResolver.CurrentState);

@@ -48,4 +48,14 @@ public sealed class PlayerHealthData
         CurHealth = nextHealth;
         HealthChanged?.Invoke(this);
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    #region Temporary Ragdoll Test
+    // Remove together with the temporary P key block in PlayerBrain.Update.
+    public void DebugDepleteHealth()
+    {
+        SetHealth(0f);
+    }
+    #endregion
+#endif
 }
