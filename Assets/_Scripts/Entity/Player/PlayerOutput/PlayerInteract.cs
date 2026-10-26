@@ -13,6 +13,8 @@ public class PlayerInteract
     private PendingAttackImpact pendingAttackImpact;
     private CatchableObj pendingKnife;
     private float pendingImpactDeadline;
+    private CatchableObj preparedThrow;
+    private uint throwReleaseVersion;
 
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
@@ -117,6 +119,14 @@ public class PlayerInteract
     private void RequestSecondaryAction()
     {
         if (TryGetHeldComponent(out IHeldSecondaryAction action) && action.TryUseSecondary(this)) return;
+        if (IsHolding && HeldObj.Category == EntityCategory.Ingredient)
+        {
+            preparedThrow = HeldObj;
+            throwReleaseVersion = brain.Input.SecondaryReleaseVersion;
+            // A press and release can both arrive before this frame's input is handled.
+            if (!brain.Input.IsSecondaryHeld) RequestThrow();
+            return;
+        }
         EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
 
         switch (category)
@@ -168,6 +178,7 @@ public class PlayerInteract
 
     public void RequestDropHeld()
     {
+        CancelThrowPreparation();
         if (!IsHolding) return;
 
         brain.Rocket?.StopFlight();
@@ -190,14 +201,13 @@ public class PlayerInteract
 
     private void RequestThrow()
     {
+        CancelThrowPreparation();
         brain.ActionController.CancelAction();
         if (!IsHolding) return;
 
         CatchableObj target = HeldObj;
 
-        Transform throwOrigin = GetThrowOrigin();
-        Vector3 throwPosition = GetThrowPosition(target);
-        Vector3 velocity = GetThrowDirection(throwOrigin) * GetThrowForce();
+        GetThrowLaunch(target, out Vector3 throwPosition, out Vector3 velocity);
 
         EntityThrowPacket packet = new()
         {
@@ -331,6 +341,7 @@ public class PlayerInteract
     {
         if (target == null) return false;
         if (HeldObj != target) return false;
+        CancelThrowPreparation();
 
         brain.Rocket?.StopFlight();
 
@@ -362,6 +373,7 @@ public class PlayerInteract
     public void ApplyPicked(CatchableObj target)
     {
         if (target == null) return;
+        CancelThrowPreparation();
 
         brain.Rocket?.StopFlight();
 
@@ -381,6 +393,7 @@ public class PlayerInteract
     public void ApplyThrown(CatchableObj target)
     {
         if (target == null || HeldObj != target) return;
+        CancelThrowPreparation();
 
         brain.Rocket?.StopFlight();
 
@@ -390,6 +403,43 @@ public class PlayerInteract
     #endregion
 
     #region Throw Action Helper
+    public void CancelThrowPreparation()
+    {
+        preparedThrow = null;
+        brain.ThrowTrajectory?.Hide();
+    }
+
+    public void UpdateThrowPreparation()
+    {
+        if (preparedThrow == null || HeldObj != preparedThrow ||
+            brain.StateResolver is not LocalPlayerStateResolver || !brain.Input.isActiveAndEnabled ||
+            brain.Input.IsInputBlocked || brain.StateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default ||
+            (brain.Rocket != null && brain.Rocket.IsFlying))
+        {
+            CancelThrowPreparation();
+            return;
+        }
+
+        if (brain.Input.SecondaryReleaseVersion != throwReleaseVersion)
+        {
+            RequestThrow();
+            return;
+        }
+        if (!brain.Input.IsSecondaryHeld)
+        {
+            CancelThrowPreparation();
+            return;
+        }
+        GetThrowLaunch(preparedThrow, out Vector3 startPos, out Vector3 velocity);
+        brain.ThrowTrajectory.Show(preparedThrow, startPos, velocity);
+    }
+
+    private void GetThrowLaunch(CatchableObj target, out Vector3 startPos, out Vector3 velocity)
+    {
+        startPos = GetThrowPosition(target);
+        velocity = GetThrowDirection(GetThrowOrigin()) * GetThrowForce();
+    }
+
     private Transform GetThrowOrigin()
     {
         return brain.PlayerCam != null

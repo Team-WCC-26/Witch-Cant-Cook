@@ -73,6 +73,8 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
     [field: SerializeField] public float ThrowAngle { get; private set; } = 0.0f;
+    [field: SerializeField, Min(0.1f)] public float ThrowMaxDistance { get; private set; } = 15f;
+    [field: SerializeField] public Material ThrowTrajectoryMaterial { get; private set; }
 
     [field: Header("Health")]
     [field: SerializeField, Min(0f)] public float MaxHealth { get; private set; } = 100f;
@@ -97,6 +99,7 @@ public sealed class PlayerBrain : MonoBehaviour
     #region Properties
     public PlayerActionController ActionController => actionController;
     public PlayerInteract Interact => interact;
+    public PlayerThrowTracker ThrowTrajectory { get; private set; }
     public PlayerStateResolver StateResolver => stateResolver;
     public Camera PlayerCam => playerCamera;
     public PlayerHealthData Health { get; private set; }
@@ -126,6 +129,7 @@ public sealed class PlayerBrain : MonoBehaviour
         actionController = new PlayerActionController(this);
         EnsureInteractionCasts();
         interact = new PlayerInteract(this);
+        ThrowTrajectory = new PlayerThrowTracker(this);
         _ = Rocket;
     }
 
@@ -148,6 +152,16 @@ public sealed class PlayerBrain : MonoBehaviour
         actionController.UpdateTick(stateResolver.CurrentState);
     }
 
+    private void LateUpdate()
+    {
+        if (isInitialized) interact.UpdateThrowPreparation();
+    }
+
+    private void OnDisable()
+    {
+        interact?.CancelThrowPreparation();
+    }
+
     private void FixedUpdate()
     {
         if (!isInitialized) return;
@@ -158,6 +172,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void OnDestroy()
     {
+        ThrowTrajectory?.Dispose();
         if (Health != null)
         {
             Health.HealthChanged -= OnHealthChanged;
