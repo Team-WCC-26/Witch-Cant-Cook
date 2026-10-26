@@ -8,9 +8,8 @@ public class ToolHandler : PacketHandlerBase
     public static void SpawnTool(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<ToolSpawnPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (room.GenerateTool(packet.ToolId, out var entityId) == null)
             {
@@ -28,9 +27,8 @@ public class ToolHandler : PacketHandlerBase
     public static void RegisterTool(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<ToolRegisterPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (room.GenerateTool(packet.ToolId, out var entityId) == null)
             {
@@ -48,9 +46,8 @@ public class ToolHandler : PacketHandlerBase
     public static void ServeDish(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<ServeDishPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.ServeDish(packet.EntityId);
         });
@@ -60,9 +57,8 @@ public class ToolHandler : PacketHandlerBase
     public static void EnterPot(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<ToolPlayerEnterPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (room.EnterToolPlayer(packet.ToolEntityId, session.Player))
             {
@@ -75,9 +71,8 @@ public class ToolHandler : PacketHandlerBase
     public static void ExitPot(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<ToolPlayerExitPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (room.ExitToolPlayer(packet.ToolEntityId, session.Player))
             {
@@ -90,9 +85,8 @@ public class ToolHandler : PacketHandlerBase
     public static void ForceEjectPot(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<PotForceEjectPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.ForceEjectTool(packet.PotEntityId);
         });
@@ -102,9 +96,8 @@ public class ToolHandler : PacketHandlerBase
     public static void EnterJumpPad(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<JumpPadPlayerEnterPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.EnterJumpPad(packet.PadEntityId);
         });
@@ -114,9 +107,8 @@ public class ToolHandler : PacketHandlerBase
     public static void ExitJumpPad(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<JumpPadPlayerExitPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.ExitJumpPad(packet.PadEntityId);
         });

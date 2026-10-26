@@ -10,9 +10,8 @@ public class IngredientHandler : PacketHandlerBase
     public static void SpawnIngredient(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<IngredientSpawnPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!DB.Ingredients.ContainsKey(packet.IngredientID))
             {

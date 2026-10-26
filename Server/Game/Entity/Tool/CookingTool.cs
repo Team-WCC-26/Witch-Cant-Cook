@@ -114,6 +114,14 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
         _cookable = enable;
     }
 
+    // 조리 완료까지 남은 시간 (조리 중이 아니면 0) — 재접속 스냅샷 수집용
+    public long GetCookRemainingMs()
+    {
+        if (!_timerManager.CheckHandleValid(_cookTimer)) return 0;
+
+        return _timerManager.RemainingTime(_cookTimer);
+    }
+
     //public override bool TryCombine(ICombinable other, out ICombinable combinable)
     //{
     //    combinable = this;

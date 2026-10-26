@@ -2,16 +2,6 @@
 
 namespace Server;
 
-/// <summary>
-/// 점프대 장전 상태
-/// </summary>
-public enum JumpPadChargeState
-{
-    Idle,       // 대기
-    Charging,   // 장전 중
-    Return,     // 복귀 중 (발사/취소 후 복귀, 복귀 중에는 새 장전을 시작하지 않는다)
-}
-
 public class JumpPad : Tool
 {
     private const long ChargeTimeMs = 1000;
@@ -110,5 +100,26 @@ public class JumpPad : Tool
         };
 
         Room.BroadCast(PacketSerializer.Serialize(packet, true));
+    }
+
+    // 재접속 스냅샷 수집용: 현재 장전 상태/탑승자/발사 회차/타이머 남은 시간을 조회한다
+    public JumpPadSnapshot GetSnapshot()
+    {
+        return new JumpPadSnapshot()
+        {
+            State = _state,
+            RiderCount = _riderCount,
+            FireRound = _fireRound,
+            ChargeRemainingMs = GetTimerRemainingMs(_chargeTimer),
+            ReturnRemainingMs = GetTimerRemainingMs(_returnTimer)
+        };
+    }
+
+    // 유효한 타이머의 남은 시간 조회 (유효하지 않으면 0)
+    private long GetTimerRemainingMs(TimerHandle? handle)
+    {
+        if (handle == null || !Room.TimerManager.CheckHandleValid(handle.Value)) return 0;
+
+        return Room.TimerManager.RemainingTime(handle.Value);
     }
 }

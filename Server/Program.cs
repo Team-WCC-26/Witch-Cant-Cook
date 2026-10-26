@@ -18,6 +18,9 @@ class Program
 
         await ServerContext.Instance.DataBase.Init();
 
+        // 세션 레지스트리 시작 (하트비트 감시 / 재접속 유예 / 스냅샷 ACK 타임아웃 타이머)
+        ServerContext.Instance.SessionRegistry.Start();
+
         var host = SuperSocketHostBuilder
             .Create<PacketPackageInfo, PacketPipelineFilter>()
 
@@ -59,6 +62,13 @@ class Program
             //.UseUdp()
             .Build();
 
-        await host.RunAsync();
+        try
+        {
+            await host.RunAsync();
+        }
+        finally
+        {
+            ServerContext.Instance.SessionRegistry.Stop();
+        }
     }
 }

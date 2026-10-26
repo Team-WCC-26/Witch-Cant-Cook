@@ -44,10 +44,19 @@ public static class PacketDispatcher
 
     public static void Dispatch(IAppSession session, PacketId id, PacketPackageInfo package)
     {
-        if (((ushort)id & 1) > 0) // Ŭ�� ��Ŷ�� �ƴ� ���
+        if (((ushort)id & 1) > 0) // 클라 패킷이 아닐 경우
         {
             Console.WriteLine($"Wrong Packet Id: {id}");
             return;
+        }
+
+        // 모든 수신 경로(직접/지연 시뮬 포함)의 단일 진입점에서 수신 시각을 갱신한다 (하트비트 타임아웃 판정용)
+        if (session is Session gameSession)
+        {
+            gameSession.LastReceivedAtMs = Environment.TickCount64;
+
+            // 세션 협상/연결 상태 게이팅: 허용되지 않은 패킷은 폐기한다
+            if (!gameSession.AllowDispatch(id)) return;
         }
 
         if (_handlers.TryGetValue(id, out var handler))

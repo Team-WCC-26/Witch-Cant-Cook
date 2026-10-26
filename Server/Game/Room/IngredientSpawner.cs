@@ -74,6 +74,23 @@ public class IngredientSpawner
         }
     }
 
+    // 벨트별 스포너 식별자와 다음 생성까지 남은 시간 — 재접속 스냅샷 수집용
+    public List<SpawnerSnapshot> GetSpawnRemainingList()
+    {
+        List<SpawnerSnapshot> spawners = new();
+
+        foreach (var schedule in _beltSchedules.Values)
+        {
+            spawners.Add(new SpawnerSnapshot()
+            {
+                ConveyId = schedule.BeltId,
+                RemainingMs = _timerManager.RemainingTime(schedule.Handle)
+            });
+        }
+
+        return spawners;
+    }
+
     private void OnSpawnTimer(BeltSchedule schedule)
     {
         if (!_running) return;
@@ -97,6 +114,8 @@ public class IngredientSpawner
     private class BeltSchedule
     {
         public TimerHandle Handle;
+
+        public int BeltId => _beltId;
 
         private List<IngredientData> _currentIngredients = new();
         private int _totalWeight = 0;
