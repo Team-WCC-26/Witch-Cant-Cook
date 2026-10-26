@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public sealed class PlayerCameraController : MonoBehaviour
 {
@@ -32,6 +33,7 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private bool canControlCursor = false;
 
+    #region Unity Callbacks
     private void Awake()
     {
         if (brain == null && !TryGetComponent(out brain))
@@ -102,25 +104,6 @@ public sealed class PlayerCameraController : MonoBehaviour
         ApplyCursor(false);
     }
 
-    public void SetLocalControlActive(bool isActive)
-    {
-        if (!isActive)
-        {
-            if (canControlCursor)
-            {
-                ApplyCursor(false);
-            }
-
-            canControlCursor = false;
-            enabled = false;
-            return;
-        }
-
-        canControlCursor = true;
-        enabled = true;
-        ApplyCursor(lockCursor);
-    }
-
     private void Update()
     {
         if (input == null || brain == null || yawRoot == null || pitchRoot == null)
@@ -128,7 +111,24 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
 
-        Vector2 look = input.RawLookDelta;
+        bool cursorChanged = false;
+        if (canControlCursor && lockCursor && Application.isFocused && !input.IsInputBlocked)
+        {
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                ApplyCursor(false);
+                cursorChanged = true;
+            }
+            else if (Cursor.lockState != CursorLockMode.Locked
+                && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                ApplyCursor(true);
+                cursorChanged = true;
+            }
+        }
+
+        Vector2 look = !cursorChanged && Cursor.lockState == CursorLockMode.Locked
+            && !Cursor.visible ? input.RawLookDelta : Vector2.zero;
 
         if (look.sqrMagnitude >= 0.000001f)
         {
@@ -172,6 +172,26 @@ public sealed class PlayerCameraController : MonoBehaviour
         {
             ApplyCursor(focus && lockCursor);
         }
+    }
+    #endregion
+
+    public void SetLocalControlActive(bool isActive)
+    {
+        if (!isActive)
+        {
+            if (canControlCursor)
+            {
+                ApplyCursor(false);
+            }
+
+            canControlCursor = false;
+            enabled = false;
+            return;
+        }
+
+        canControlCursor = true;
+        enabled = true;
+        ApplyCursor(lockCursor);
     }
 
     private static float NormalizeAngle(float euler)
