@@ -8,7 +8,6 @@ public class PanInteraction : MonoBehaviour,
     IHeldPrimaryAction,
     IHeldObjectReceiver,
     IEntityParentReceiver,
-    IEntityThrowParentReceiver,
     ICookReceiver,
     IClientStageResettable
 {
@@ -25,6 +24,8 @@ public class PanInteraction : MonoBehaviour,
         pendingTossId = 0;
         currentIngredient = null;
         currentStove = null;
+        lastEjectedIngredientId = 0;
+        lastEjectSeed = 0;
     }
     [SerializeField] private CatchableObj catchable;
     [SerializeField] private ColliderRelay itemTrigger;
@@ -35,6 +36,8 @@ public class PanInteraction : MonoBehaviour,
     private readonly NetworkResponseWait tossResponse = new();
     private static readonly Dictionary<long, PanInteraction> tossRequests = new();
     private long trackedTossId;
+    private long lastEjectedIngredientId;
+    private int lastEjectSeed;
     private float pendingCookDuration = -1f;
     private IngredientEgg pendingEgg;
     private long pendingEggId;
@@ -77,6 +80,8 @@ public class PanInteraction : MonoBehaviour,
         pendingTossId = 0;
         currentStove?.ReleasePan(this);
         currentStove = null;
+        lastEjectedIngredientId = 0;
+        lastEjectSeed = 0;
     }
 
     private void Update()
@@ -228,38 +233,26 @@ public class PanInteraction : MonoBehaviour,
         CatchableObj ingredient = currentIngredient.Catchable;
         if (ingredient == null || ingredient.NetworkId == 0) return;
         if (ServerManager.Instance == null) return;
-
-        Vector3 direction = catchable.Holder != null
-            ? catchable.Holder.transform.forward
-            : transform.forward;
-        direction.y = 0f;
-        direction = direction.sqrMagnitude > 0f ? direction.normalized : Vector3.forward;
-
-        EntityThrowPacket packet = new()
-        {
-            EntityId = ingredient.NetworkId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(ingredient.transform.position),
-            Velocity = ProtocolTypeConverter.ToNumericsVector3(
-                direction * tossForce + Vector3.up * tossUpForce)
-        };
+        if (catchable == null || catchable.Holder == null || !catchable.IsLocalOwner) return;
+        if (catchable.Holder.StateResolver is not LocalPlayerStateResolver resolver) return;
 
         CancelTossTracking();
         pendingTossId = ingredient.NetworkId;
         trackedTossId = ingredient.NetworkId;
         tossRequests[trackedTossId] = this;
         tossResponse.Begin("Pan toss", trackedTossId, tossResponseTimeout, () => pendingTossId = 0);
-        SendToss(packet);
+        SendToss(resolver, trackedTossId);
     }
 
-    private async void SendToss(EntityThrowPacket packet)
+    private async void SendToss(LocalPlayerStateResolver resolver, long ingredientId)
     {
         try
         {
-            await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+            await resolver.SendPanEject();
         }
         catch (System.Exception exception)
         {
-            NetworkResponseWait.Error("Pan toss", packet.EntityId, $"Send failed: {exception.Message}");
+            NetworkResponseWait.Error("Pan toss", ingredientId, $"Send failed: {exception.Message}");
             // Keep the response deadline: a failed write does not prove the server did not receive it.
         }
     }
@@ -274,9 +267,57 @@ public class PanInteraction : MonoBehaviour,
         if (TryResolveToss(entityId, out PanInteraction pan)) pan.CancelTossTracking();
     }
 
-    public bool TryAcceptTossResponse()
+    public bool TryApplyPanEject(PanEjectPacket packet, CatchableObj ingredient, ObjectNetworkRouter router)
     {
-        return tossResponse.TryComplete();
+        if (catchable == null || ingredient.Rb == null || ingredient.Col == null)
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Required physics components not found");
+            return false;
+        }
+        if (lastEjectedIngredientId == packet.IngredientEntityId && lastEjectSeed == packet.EjectSeed)
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Duplicate response ignored");
+            return false;
+        }
+
+        if (ingredient.IsHold ||
+            (ingredient.ParentEntityId != 0 && ingredient.ParentEntityId != -1 &&
+             ingredient.ParentEntityId != catchable.NetworkId) ||
+            (currentIngredient != null && currentIngredient.Catchable != ingredient))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Ingredient no longer belongs to this pan");
+            return false;
+        }
+
+        if (trackedTossId == packet.IngredientEntityId)
+        {
+            if (!tossResponse.TryComplete()) return false;
+        }
+        else if (catchable.IsLocalOwner && catchable.IsHold)
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "No matching local request");
+            return false;
+        }
+
+        Vector3 direction = catchable.Holder != null
+            ? catchable.Holder.transform.forward : transform.forward;
+        direction.y = 0f;
+        direction = direction.sqrMagnitude > 0f ? direction.normalized : Vector3.forward;
+        Vector3 ejectPos = ingredient.transform.position;
+
+        // Parent release may already have arrived through WorldState.
+        router.DetachForContainerEjection(ingredient);
+        HandleEntityRemoved(ingredient);
+        ApplyTossProtection(ingredient);
+        ingredient.ApplyThrow(new EntityThrowPacket
+        {
+            EntityId = packet.IngredientEntityId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(ejectPos),
+            Velocity = ProtocolTypeConverter.ToNumericsVector3(direction * tossForce + Vector3.up * tossUpForce)
+        });
+        lastEjectedIngredientId = packet.IngredientEntityId;
+        lastEjectSeed = packet.EjectSeed;
+        return true;
     }
 
     private void CancelTossTracking()
@@ -477,8 +518,8 @@ public class PanInteraction : MonoBehaviour,
         DetachItem(ingredient);
     }
 
-    // IEntityThrowParentReceiver: 팬에서 배출된 재료의 예외 처리를 적용한다.
-    public void HandleEntityThrown(CatchableObj entity)
+    // 배출 직후 재삽입과 충돌 데미지를 잠시 막는다.
+    private void ApplyTossProtection(CatchableObj entity)
     {
         if (entity == null) return;
 

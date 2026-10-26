@@ -60,6 +60,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
         ServerManager.Instance.RegisterHandler(PacketId.S_DishEject, HandleDishEject);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -84,6 +85,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityDestroy);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolSpawn);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_DishEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
         isSubscribed = false;
     }
 
@@ -107,6 +109,25 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         foreach (EntityDestroyPacket packet in packets)
             RemoveAndRelease(packet.EntityId);
+    }
+
+    private void HandlePanEject(ReadOnlyMemory<byte> data)
+    {
+        PanEjectPacket packet = PacketSerializer.Deserialize<PanEjectPacket>(data);
+        if (!catchableDics.TryGetValue(packet.PanEntityId, out CatchableObj panObj) ||
+            panObj == null || !panObj.TryGetComponent(out PanInteraction pan))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.PanEntityId, "Pan not found");
+            return;
+        }
+        if (!catchableDics.TryGetValue(packet.IngredientEntityId, out CatchableObj ingredient) ||
+            ingredient == null || !ingredient.TryGetComponent<IngredientReaction>(out _))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Ingredient not found");
+            return;
+        }
+
+        pan.TryApplyPanEject(packet, ingredient, this);
     }
 
     private void HandleEntityParentChanged(IReadOnlyList<EntityChangeParentPacket> packets)
@@ -187,9 +208,6 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         EntityThrowPacket packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
 
-        bool isTrackedToss = PanInteraction.TryResolveToss(packet.EntityId, out PanInteraction requestingPan);
-        if (isTrackedToss && !requestingPan.TryAcceptTossResponse()) return;
-
         if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
         {
             NetworkResponseWait.Error("Entity throw", packet.EntityId, "Target not found");
@@ -198,11 +216,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         }
 
         long previousParentId = catchable.ParentEntityId;
-        if (isTrackedToss)
-        {
-            requestingPan.HandleEntityThrown(catchable);
-        }
-        else if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
+        if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
             receiver is IEntityThrowParentReceiver throwReceiver)
         {
             throwReceiver.HandleEntityThrown(catchable);

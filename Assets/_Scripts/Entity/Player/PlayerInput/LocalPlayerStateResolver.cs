@@ -1,6 +1,7 @@
 using Protocol;
 using Server;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public sealed class LocalPlayerStateResolver : PlayerStateResolver
 {
@@ -98,7 +99,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         }
 
         sendTimer = 0f;
-        SendMovementPacket();
+        _ = SendMovementPacket();
     }
 
     public void EnterRagdoll()
@@ -122,13 +123,29 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         }
         if (ServerManager.Instance == null) return;
         sendTimer = 0f;
-        SendMovementPacket();
+        _ = SendMovementPacket();
     }
 
-    private void SendMovementPacket()
+    public UniTask SendPanEject()
+    {
+        return SendMovementPacket(true);
+    }
+
+    private UniTask SendMovementPacket(bool ejectPan = false)
     {
         PlayerCombinedState outgoingState = CurrentState;
-        if (brain.ActionController.ConsumePrimaryAction(out EntityCategory category)
+        if (ejectPan)
+        {
+            // A one-shot Drop in the movement snapshot is the existing server pan-eject command.
+            outgoingState = new PlayerCombinedState(
+                CurrentState.PhysicalMode,
+                CurrentState.MoveDir,
+                CurrentState.IsRun,
+                PlayerInteraction.HeldPrimary,
+                EntityCategory.Pan,
+                CurrentState.JumpRequested);
+        }
+        else if (brain.ActionController.ConsumePrimaryAction(out EntityCategory category)
             && CurrentState.PhysicalMode == PlayerPhysicalMode.Default)
         {
             // Send the action that actually played, once, without changing local input state.
@@ -169,7 +186,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(outgoingState)
         };
 
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        return ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     private EntityCategory ResolveHeldEntityCategory()
