@@ -9,9 +9,11 @@ public sealed class StageSettlementData
     // Server-confirmed earnings, independent of wallet spending or the start snapshot.
     public int EarnedMoney { get; }
     public bool IsSuccess { get; }
+    public int CompletedDishCount { get; }
+    public int? Goal { get; }
 
     public StageSettlementData(int runNumber, int stageNumber, int? startMoney, int endMoney,
-        int earnedMoney, bool isSuccess)
+        int earnedMoney, bool isSuccess, int completedDishCount = 0, int? goal = null)
     {
         RunNumber = runNumber;
         StageNumber = stageNumber;
@@ -19,5 +21,7 @@ public sealed class StageSettlementData
         EndMoney = endMoney;
         EarnedMoney = earnedMoney;
         IsSuccess = isSuccess;
+        CompletedDishCount = completedDishCount;
+        Goal = goal;
     }
 }

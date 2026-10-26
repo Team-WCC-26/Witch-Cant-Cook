@@ -32,10 +32,9 @@ public sealed class StageReturnState
         Phase = StageReturnPhase.AwaitingSettlement;
         return true;
     }
-    public bool RequestReturn(bool allowRetry = false)
+    public bool RequestReturn()
     {
-        if (Phase != StageReturnPhase.Settlement &&
-            !(allowRetry && Phase == StageReturnPhase.WaitingForServer)) return false;
+        if (Phase != StageReturnPhase.Settlement) return false;
         Phase = StageReturnPhase.WaitingForServer;
         return true;
     }

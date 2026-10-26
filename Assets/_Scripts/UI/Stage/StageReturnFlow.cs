@@ -1,9 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Protocol;
 using Server;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using Cysharp.Threading.Tasks;
 
 // S_StageStop ends play; S_StageResult shows results. Confirmation waits for S_LobbyMove.
 public sealed class StageReturnFlow : MonoBehaviour
@@ -28,10 +31,16 @@ public sealed class StageReturnFlow : MonoBehaviour
     public StageReturnState State { get; } = new();
     public string ConfirmationIssue { get; private set; }
     public bool IsConfirming { get; private set; }
-    public bool CanConfirmResult => !IsConfirming && !lobbyMovePending &&
-        (State.Phase == StageReturnPhase.Settlement ||
-        (State.Phase == StageReturnPhase.WaitingForServer && Time.unscaledTime >= confirmRetryAt));
-    private float confirmRetryAt;
+    public bool CanConfirmResult => !IsConfirming && !lobbyMovePending && State.Phase == StageReturnPhase.Settlement;
+    private readonly HashSet<string> confirmedPlayers = new();
+    public bool HasResultConfirmation(string playerId) => !string.IsNullOrEmpty(playerId) && confirmedPlayers.Contains(playerId);
+
+    // Future server confirmation notifications can call this with an actual participant ID.
+    public void ApplyResultConfirmation(string playerId)
+    {
+        if (!State.ShowsSettlement || string.IsNullOrEmpty(playerId) || !room.Lobby.Players.Contains(playerId)) return;
+        if (confirmedPlayers.Add(playerId)) Changed?.Invoke();
+    }
     public event Action Changed;
     public event Action LobbyReturnCompleted;
     private RoomHudSession room;
@@ -82,10 +91,10 @@ public sealed class StageReturnFlow : MonoBehaviour
         if (returning != null) StopCoroutine(returning);
         returning = null;
         wasRunning = false;
+        confirmedPlayers.Clear();
         lobbyMovePending = false;
         ConfirmationIssue = null;
         IsConfirming = false;
-        confirmRetryAt = 0f;
         lastSpawnIssue = null;
         State.Reset();
         RestoreCursor();
@@ -103,8 +112,8 @@ public sealed class StageReturnFlow : MonoBehaviour
             lobbyMovePending = false;
             ConfirmationIssue = null;
             IsConfirming = false;
-            confirmRetryAt = 0f;
             State.StartStage();
+            confirmedPlayers.Clear();
             RestoreCursor();
             PauseOrderPresentation(false);
             Changed?.Invoke();
@@ -114,10 +123,10 @@ public sealed class StageReturnFlow : MonoBehaviour
     private void OnSettlement(StageSettlementData data)
     {
         if (!State.RecordSettlement(data)) return;
+        confirmedPlayers.Clear();
         SubmitTriggerZone.StopUnsentRequests();
         ConfirmationIssue = null;
         IsConfirming = false;
-        confirmRetryAt = 0f;
         Debug.Log("[Stage Return] S_StageResult 수신. 결산 확인 버튼을 기다립니다.", this);
         if (!cursorCaptured)
         {
@@ -131,6 +140,7 @@ public sealed class StageReturnFlow : MonoBehaviour
         // Final totals are authoritative. Plate return animations may finish independently.
         StopPlayerActions();
         Changed?.Invoke();
+        StageSettlementWorldUI.EnsureLoadedBoards().Forget();
     }
     private static void StopPlayerActions()
     {
@@ -163,15 +173,15 @@ public sealed class StageReturnFlow : MonoBehaviour
             Changed?.Invoke();
             return;
         }
-        if (!State.RequestReturn(allowRetry: true)) return;
+        if (!State.RequestReturn()) return;
         int run = State.Settlement.RunNumber;
         ConfirmationIssue = null;
         IsConfirming = true;
-        confirmRetryAt = Time.unscaledTime + 5f;
         Changed?.Invoke();
         try
         {
             await server.SendData(PacketSerializer.Serialize(new StageResultConfirmPacket()));
+            if (State.Settlement?.RunNumber == run) ApplyResultConfirmation(room.Lobby.LocalPlayerId);
             Debug.Log($"[Stage Return] C_StageResultConfirm 전송. player={room.Lobby.LocalPlayerId}, id={(ushort)PacketId.C_StageResultConfirm}. S_LobbyMove 대기 중.", this);
         }
         catch (Exception error)
@@ -201,10 +211,15 @@ public sealed class StageReturnFlow : MonoBehaviour
         Debug.Log("[Stage Return] S_LobbyMove 수신. 로비 복귀를 시작합니다.", this);
         ConfirmationIssue = null;
         lobbyMovePending = true;
+        foreach (string playerId in room.Lobby.Players) confirmedPlayers.Add(playerId);
+        Changed?.Invoke();
         TryReturnFromLobbyMove();
     }
     private void Update()
     {
+        // F confirmation belongs to the stage flow, independent of any screen-space popup.
+        if (Application.isFocused && State.Phase == StageReturnPhase.Settlement && CanConfirmResult &&
+            Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) ConfirmResult();
         if (room != null && room.State.HasStageTimeExpired(Time.unscaledTimeAsDouble) && State.WaitForSettlement())
         {
             // Keep accepted submissions and HUD alive until S_StageResult.
@@ -310,8 +325,6 @@ public sealed class StageReturnFlow : MonoBehaviour
                 }
             }
             room.NotifyLobbyReturned();
-            StageSettlementUI ui = FindFirstObjectByType<StageSettlementUI>();
-            if (ui != null) yield return ui.FadeOut();
             RestoreCursor();
             State.CompleteReturn();
             completed = true;

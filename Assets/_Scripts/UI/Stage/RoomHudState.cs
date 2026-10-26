@@ -14,6 +14,7 @@ public sealed class RoomHudState
     public bool IsStageRunning { get; private set; }
     public bool HasStageTimeEnded { get; private set; }
     public bool HasActiveStage => activeRunNumber != 0;
+    public int CompletedDishCount { get; private set; }
     public IReadOnlyList<StageSettlementData> Settlements { get; }
     public StageSettlementData LatestSettlement => settlements.Count > 0 ? settlements[settlements.Count - 1] : null;
     public int? StageStartMoney => activeRunNumber != 0 ? activeStartMoney : null;
@@ -31,6 +32,7 @@ public sealed class RoomHudState
     public void ResetRoom()
     {
         Money = 0;
+        CompletedDishCount = 0;
         HasMoney = false;
         PendingMoney = 0;
         HasPendingMoney = false;
@@ -60,6 +62,7 @@ public sealed class RoomHudState
         if (running && (!IsStageRunning || StageNumber != number))
         {
             activeRunNumber = ++nextRunNumber;
+            CompletedDishCount = 0;
             HasStageTimeEnded = false;
             activeStageNumber = number;
             // Never assume zero or use a first reward snapshot as the starting balance.
@@ -85,12 +88,19 @@ public sealed class RoomHudState
         return changed;
     }
 
-    public bool ApplyStageSettlement(int earnedMoney, int finalMoney, bool isSuccess)
+    public bool RecordSuccessfulDish()
+    {
+        if (activeRunNumber == 0) return false;
+        CompletedDishCount++;
+        return true;
+    }
+
+    public bool ApplyStageSettlement(int earnedMoney, int finalMoney, bool isSuccess, int? goal = null)
     {
         // One final result per observed start. Do not add rewards on either client.
         if (activeRunNumber == 0) return false;
         settlements.Add(new StageSettlementData(activeRunNumber, activeStageNumber,
-            activeStartMoney, finalMoney, earnedMoney, isSuccess));
+            activeStartMoney, finalMoney, earnedMoney, isSuccess, CompletedDishCount, goal));
         ApplyMoney(finalMoney);
         PendingMoney = earnedMoney;
         HasPendingMoney = true;

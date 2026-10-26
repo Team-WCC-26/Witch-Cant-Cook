@@ -159,7 +159,12 @@ public sealed class RoomHudSession : MonoBehaviour
 
     private void OnStageResult(StageResultPacket packet)
     {
-        if (!State.ApplyStageSettlement(packet.PendingMoney, packet.Money, packet.IsSuccess)) return;
+        int? goal = null;
+        DataManager data = DataManager.Instance;
+        if (data != null && data.IsDataLoaded)
+            foreach (Stage stage in data.GetStage().GetAll())
+                if (stage != null && stage.stageNum == State.StageNumber) { goal = stage.goal; break; }
+        if (!State.ApplyStageSettlement(packet.PendingMoney, packet.Money, packet.IsSuccess, goal)) return;
         Changed?.Invoke();
         SettlementRecorded?.Invoke(State.LatestSettlement);
     }

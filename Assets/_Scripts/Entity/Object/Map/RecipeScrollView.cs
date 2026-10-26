@@ -9,6 +9,33 @@ public class RecipeScrollView : MonoBehaviour
     [SerializeField] private RectTransform cardRoot;
     [SerializeField] private RecipeOrderCardUI[] cards = Array.Empty<RecipeOrderCardUI>();
     public const int Capacity = 3;
+    private StageReturnFlow stageFlow;
+    private Canvas recipeCanvas;
+    private bool canvasStateCached;
+    private bool originalCanvasEnabled;
+
+    private void OnEnable()
+    {
+        if (!canvasStateCached)
+        {
+            recipeCanvas = GetComponent<Canvas>();
+            originalCanvasEnabled = recipeCanvas != null && recipeCanvas.enabled;
+            canvasStateCached = true;
+        }
+        stageFlow = StageReturnFlow.Instance;
+        stageFlow.Changed += RefreshCanvasVisibility;
+        RefreshCanvasVisibility();
+    }
+
+    private void OnDisable()
+    {
+        if (stageFlow != null) stageFlow.Changed -= RefreshCanvasVisibility;
+    }
+
+    private void RefreshCanvasVisibility()
+    {
+        if (recipeCanvas != null) recipeCanvas.enabled = originalCanvasEnabled && !stageFlow.State.ShowsSettlement;
+    }
 
     public void Configure(RectTransform root, RecipeOrderCardUI[] views) { cardRoot = root; cards = views; }
     private void Awake()

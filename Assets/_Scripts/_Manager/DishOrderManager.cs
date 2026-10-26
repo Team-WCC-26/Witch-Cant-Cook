@@ -104,7 +104,10 @@ public class DishOrderManager : MonoBehaviour
 
     private void ReceivePacket(ReadOnlyMemory<byte> data)
     {
-        receivedPackets.Enqueue(PacketSerializer.Deserialize<DishStatePacket>(data));
+        DishStatePacket packet = PacketSerializer.Deserialize<DishStatePacket>(data);
+        // Capture before the presentation queue: S_StageResult may arrive in the same frame.
+        if (packet.State == DishState.Success) moneySession?.State.RecordSuccessfulDish();
+        receivedPackets.Enqueue(packet);
     }
 
     private void Update()
