@@ -13,6 +13,11 @@ public class IngredientTraitBounce : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float minSpeed = 5f;
 
+    private void Awake()
+    {
+        if (rb == null) rb = GetComponent<Rigidbody>();
+    }
+
     private void Reset()
     {
         rb = GetComponent<Rigidbody>();
@@ -20,7 +25,7 @@ public class IngredientTraitBounce : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!isActiveAndEnabled) return;
+        if (!isActiveAndEnabled || rb == null) return;
 
         Rigidbody otherRb = collision.rigidbody;
 
