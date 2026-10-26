@@ -76,6 +76,30 @@ public static class LatencySimulator
     }
 
     /// <summary>
+    /// 세션의 현재 수신/송신 지연값을 조회한다 (지연 미설정 세션은 false, 예외 없음)
+    /// </summary>
+    public static bool TryGetLatency(IAppSession session, out int receiveDelayMs, out int sendDelayMs)
+    {
+        SimulatedSession? sim = Find(session.SessionID, session);
+
+        if (sim == null)
+        {
+            receiveDelayMs = 0;
+            sendDelayMs = 0;
+
+            return false;
+        }
+
+        lock (sim.Lock)
+        {
+            receiveDelayMs = sim.Receive.DelayMs;
+            sendDelayMs = sim.Send.DelayMs;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// 수신 경로 진입점. 지연 설정 세션은 항상 큐잉 후 FIFO dispatch (지연 0 포함),
     /// 미설정 세션은 기존 직접 dispatch.
     /// </summary>

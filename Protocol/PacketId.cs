@@ -18,6 +18,15 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     C_Ping = 8,
     S_Pong = 9,
 
+    C_SessionHello = 14,
+    S_SessionTicket = 15,
+
+    C_ReconnectRequest = 16,
+    S_ReconnectResult = 17,
+
+    C_SnapshotApplied = 18,
+    S_ReconnectSnapshot = 19,
+
     C_PingResult = 10,
 
     C_SetLatency = 12, // 테스트용 지연 시뮬레이터

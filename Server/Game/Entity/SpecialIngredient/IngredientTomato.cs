@@ -121,6 +121,37 @@ public sealed class IngredientTomato : IngredientBehaviour, IPickupHandler, IDro
         });
     }
 
+    // 스냅샷 수집용: 기절(Stunned)/활성(Active) 상태만 클라에 동기화된 상태이므로 이것만 전달한다
+    public override bool TryGetEffectState(out IngredientEffectSnapshot effect)
+    {
+        if (_stunned && TryGetRemainingTime(_stunTimer, out long stunRemainingMs))
+        {
+            effect = new IngredientEffectSnapshot()
+            {
+                State = IngredientActivationState.Stunned,
+                RemainingMs = stunRemainingMs,
+            };
+
+            return true;
+        }
+
+        if (_active)
+        {
+            effect = new IngredientEffectSnapshot()
+            {
+                State = IngredientActivationState.Active,
+                RemainingMs = 0,
+                TargetPlayerId = _targetPlayerId
+            };
+
+            return true;
+        }
+
+        effect = new IngredientEffectSnapshot();
+
+        return false;
+    }
+
     // 두 플레이어가 응답한 거리 중 가장 가까운 플레이어를 타겟으로 결정한다
     private void RequestNearest(Action<string?> onDecided)
     {

@@ -9,9 +9,8 @@ public class EntityHandler : PacketHandlerBase
     public static void DestroyEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityDestroyPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity) || entity.IsDestroyed) return;
             if (entity is Tool) return;
@@ -27,9 +26,8 @@ public class EntityHandler : PacketHandlerBase
     public static void InteractEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityInteractPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.InteractEntity(packet.TargetEntityId, session.Player);
         });
@@ -39,9 +37,8 @@ public class EntityHandler : PacketHandlerBase
     public static void InsertEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityInsertPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.SubjectEntityId, out var subject) || subject.IsDestroyed) return;
             if (subject.Parent is Player holder && holder != session.Player) return;
@@ -54,9 +51,8 @@ public class EntityHandler : PacketHandlerBase
     public static void ExitEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityExitPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
 
@@ -80,9 +76,8 @@ public class EntityHandler : PacketHandlerBase
     public static void CollideIngredient(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<IngredientCollisionPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
             if (entity is not Ingredient ingredient || ingredient.IsDestroyed) return;
@@ -95,9 +90,8 @@ public class EntityHandler : PacketHandlerBase
     public static void IngredientDistanceResponse(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<IngredientDistanceResponsePacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
             if (entity is not Ingredient ingredient || ingredient.IsDestroyed) return;
@@ -110,9 +104,8 @@ public class EntityHandler : PacketHandlerBase
     public static void ThrowEntity(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<EntityThrowPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
             if (entity.IsDestroyed) return;

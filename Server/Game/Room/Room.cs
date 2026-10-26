@@ -29,6 +29,10 @@ public class Room
     public int PendingMoney => _pendingMoney;
     private int _pendingMoney = 0;
 
+    // 현재 스테이지 (재접속 스냅샷 동기화용)
+    public int Stage => _stage;
+    private int _stage = 0;
+
     private long _nextEntityId = 0;
 
     // 룸 소멸 여부 (RoomManager.RemoveRoom에서만 설정되며 되돌리지 않음)
@@ -40,6 +44,8 @@ public class Room
     private readonly JobQueue _jobQueue;
 
     private readonly Dictionary<DoorId, Door> _doors = new();
+
+    public IReadOnlyDictionary<DoorId, Door> Doors => _doors;
 
     public TimerManager TimerManager => _timerManager;
     private TimerManager _timerManager = new();
@@ -154,7 +160,8 @@ public class Room
 
     public bool IsEnable()
     {
-        return _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
+        // 파괴된 방은 참가 대상에서 제외한다 (회수 경합에서 대기 중 참가 작업 방어)
+        return !_destroyed && _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
     }
 
     public void PushJob(Action job) => _jobQueue.Push(job);
@@ -197,6 +204,8 @@ public class Room
 
     public void SetStage(int stage)
     {
+        _stage = stage;
+
         _ingredientSpawner.SetStage(stage);
         _dishManager.SetStage(stage);
     }
@@ -299,8 +308,16 @@ public class Room
     /// </summary>
     public void Enter(Player player)
     {
-        _players.Add(player);
+        // 파괴된 방 참가 금지 (참가 작업 대기 중 방이 회수된 경우)
+        if (_destroyed) return;
+
+        // 중복 참가 방지 (동일 Player가 두 번 등록되지 않게 한다)
+        if (_players.Contains(player)) return;
+
+        // player.Room을 멤버십 등록 전에 설정한다: 참가 작업 실행 중 종료 이벤트가 룸을 읽는 경합에서
+        // 멤버십 누락 판정(정리 누락/레코드 오만료)이 나오지 않게 한다
         player.Room = this;
+        _players.Add(player);
         _playerCnt++;
     }
 
@@ -310,7 +327,9 @@ public class Room
     /// </summary>
     public void Leave(Player player)
     {
-        _players.Remove(player);
+        // 등록되지 않은 플레이어의 퇴장은 무시한다 (playerCnt 언더플로 가드)
+        if (!_players.Remove(player)) return;
+
         player.Room = null;
 
         if (player.Parent is CookingTool cookingTool)
@@ -329,6 +348,141 @@ public class Room
         };
 
         BroadCast(PacketSerializer.Serialize(packet, true));
+    }
+
+    /// <summary>
+    /// 유예 만료/명시적 종료된 플레이어의 최종 정리
+    /// <para/> 사용시 PushJob안에 넣어줘야 함. 호출부에서 Detached 상태를 재검사해 이미 재접속됐으면 실행하지 않는다
+    /// </summary>
+    public void RemovePlayerFinal(Player player)
+    {
+        // 이미 나갔거나 재접속으로 복귀한 경우는 정리하지 않는다 (실행 시점 재검사)
+        if (!_players.Contains(player)) return;
+
+        // 쥐고 있던 Entity를 떨어뜨린다 (부모 해제 시 Player.HoldingEntity도 함께 정리된다)
+        if (player.HoldingEntity != null)
+        {
+            player.HoldingEntity.Parent = null;
+        }
+
+        Leave(player);
+    }
+
+    /// <summary>
+    /// 재접속 스냅샷 생성: 서버가 추적하는 현재 상태를 읽어 만든다 (Dirty Consume 없이 읽기만 한다)
+    /// <para/> 반드시 PushJob(샤드 작업) 안에서 호출해 일관 시점에 생성해야 한다
+    /// <para/> 서버가 추적하지 않는 값(도구/재료 Transform 등)은 포함하지 않는다
+    /// </summary>
+    public SnapshotData CreateReconnectSnapshot()
+    {
+        SnapshotData snapshot = new()
+        {
+            RoomId = Id,
+            Stage = _stage,
+            StageRunning = _stageTimer != null,
+            StageRemainingMs = (_stageTimer != null) ? _timerManager.RemainingTime(_stageTimer.Value) : 0,
+            Money = _money,
+            PendingMoney = _pendingMoney
+        };
+
+        foreach (var player in _players)
+        {
+            snapshot.Players.Add(new PlayerSnapshot()
+            {
+                StablePlayerId = player.PlayerId,
+                EntityId = player.EntityId,
+                Position = player.Position,
+                Rotation = player.Rotation,
+                State = player.State,
+                Hp = player.Hp,
+                Ping = player.Ping,
+                ParentEntityId = (player.Parent == null) ? -1 : player.Parent.EntityId,
+                HoldingEntityId = (player.HoldingEntity == null) ? -1 : player.HoldingEntity.EntityId
+            });
+        }
+
+        foreach (var entity in _entities.Values)
+        {
+            if (entity is Player) continue;
+            if (entity.IsDestroyed) continue;
+
+            EntitySnapshot entitySnapshot = new()
+            {
+                EntityId = entity.EntityId,
+                Kind = (entity is Ingredient) ? SnapshotEntityKind.Ingredient : SnapshotEntityKind.Tool,
+                ParentEntityId = (entity.Parent == null) ? -1 : entity.Parent.EntityId,
+                ParentPlayerId = (entity.Parent as Player)?.PlayerId
+            };
+
+            switch (entity)
+            {
+                case Ingredient ingredient:
+                    entitySnapshot.IngredientId = ingredient.IngredientId;
+                    entitySnapshot.ProcessState = ingredient.ProcessState;
+                    entitySnapshot.IngredientHp = ingredient.Hp;
+
+                    if (ingredient.IngredientBehaviour != null && ingredient.IngredientBehaviour.TryGetEffectState(out var effect))
+                    {
+                        entitySnapshot.Effect = effect;
+                    }
+                    break;
+
+                case Tool tool:
+                    entitySnapshot.ToolId = tool.ToolId;
+                    break;
+            }
+
+            // 컨테이너 자식 목록
+            if (entity is ContainerTool container)
+            {
+                foreach (var child in container.Items)
+                {
+                    entitySnapshot.ChildEntityIds.Add(child.EntityId);
+                }
+            }
+
+            // 조리중 여부 + 남은 시간 / 점프대 상태
+            switch (entity)
+            {
+                case Pot pot:
+                    entitySnapshot.CookRemainingMs = pot.GetCookRemainingMs();
+                    break;
+
+                case CookingTool cooking:
+                    entitySnapshot.CookRemainingMs = cooking.GetCookRemainingMs();
+                    break;
+
+                case JumpPad jumpPad:
+                    entitySnapshot.JumpPad = jumpPad.GetSnapshot();
+                    break;
+            }
+
+            snapshot.Entities.Add(entitySnapshot);
+        }
+
+        foreach (var door in _doors.Values)
+        {
+            snapshot.Doors.Add(new DoorSnapshot()
+            {
+                DoorId = door.DoorId,
+                IsOpen = door.IsOpen,
+                OpenRemainingMs = door.GetOpenRemainingMs()
+            });
+        }
+
+        foreach (var (recipeId, remainingMs) in _dishManager.GetActiveOrders())
+        {
+            snapshot.DishOrders.Add(new DishSnapshot()
+            {
+                RecipeId = recipeId,
+                RemainingMs = remainingMs
+            });
+        }
+
+        snapshot.NextOrderRemainingMs = _dishManager.GetNextOrderRemainingMs();
+        snapshot.Spawners.AddRange(_ingredientSpawner.GetSpawnRemainingList());
+
+        return snapshot;
     }
 
     public void BroadCastForce(byte[] packet)

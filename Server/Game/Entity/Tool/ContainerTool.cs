@@ -7,6 +7,9 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
     public Entity? First => _storage.First;
     protected IContainerStorage _storage { get; init; } = storage;
 
+    // 컨테이너에 담긴 Entity 목록 (재접속 스냅샷 수집용)
+    public IEnumerable<Entity> Items => _storage;
+
     public IReadOnlyList<Player> InsidePlayers => _insidePlayers;
     private readonly List<Player> _insidePlayers = new();
     private TimerHandle _damageTimer;

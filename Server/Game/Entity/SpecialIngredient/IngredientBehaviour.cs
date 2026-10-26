@@ -70,6 +70,21 @@ public abstract class IngredientBehaviour
         return TimerManager.Schedule(delayMs, state, callback);
     }
 
+    // 스냅샷 수집용: 유효한 타이머의 남은 시간 조회 (유효하지 않으면 false)
+    protected bool TryGetRemainingTime(TimerHandle handle, out long remainingMs)
+    {
+        if (_timerManager == null || !_timerManager.CheckHandleValid(handle))
+        {
+            remainingMs = 0;
+
+            return false;
+        }
+
+        remainingMs = _timerManager.RemainingTime(handle);
+
+        return true;
+    }
+
     protected void Cancel(ref TimerHandle handle)
     {
         if (handle.Id != 0 && _timerManager != null)
@@ -153,6 +168,15 @@ public abstract class IngredientBehaviour
 
     public virtual void OnEnable() { }
     public virtual void OnDisable() { }
+
+    // 스냅샷 수집용: 현재 클라이언트에 동기화된 상태의 특수 효과 (진행 중인 클라 동기 상태가 없으면 false)
+    // 클라이언트에 상태 패킷으로 전달되지 않는 내부 타이머는 스냅샷에 임의 생성하지 않는다
+    public virtual bool TryGetEffectState(out IngredientEffectSnapshot effect)
+    {
+        effect = new IngredientEffectSnapshot();
+
+        return false;
+    }
 }
 
 public interface IPickupHandler
