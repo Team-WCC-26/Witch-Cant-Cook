@@ -20,6 +20,9 @@ public static class JsonResourceIO
         string json = JsonUtility.ToJson(wrapperObj, true);
         string path = Path.Combine(FolderPath, $"{fileNameWithoutExt}.json");
 
+        if (File.Exists(path) && string.Equals(File.ReadAllText(path), json, StringComparison.Ordinal))
+            return;
+
         File.WriteAllText(path, json);
 
         AssetDatabase.ImportAsset(path);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -22,11 +23,42 @@ public class GSpreadReader : Singleton<GSpreadReader>
     [SerializeField] private List<SheetInfo> sheets = new List<SheetInfo>();
     [SerializeField] private float timeoutSeconds = 30f;
 
+    [SerializeField] private string driveApiKey = "";
+
+    private Task<bool> initTask;
+    private SheetCache currentCache;
+    private string lastDownloadedTsv;
+    private string CachePath => Path.Combine(Application.persistentDataPath, "GSpreadCache.json");
+
+    [Serializable]
+    private class SheetCache
+    {
+        public string source;
+        public string version;
+        public List<CachedSheet> sheets = new List<CachedSheet>();
+    }
+
+    [Serializable]
+    private class CachedSheet
+    {
+        public string sheetId;
+        public string className;
+        public string tsv;
+    }
+
+    [Serializable]
+    private class DriveMetadata
+    {
+        public string version;
+    }
+
     [NonSerialized] public bool isInit = false;
 
     public event Action<float, string> OnLoadProgress;
     public event Action OnLoadComplete;
     public event Action<string> OnLoadFailed;
+
+    #region Unity Callbacks
 
     private async void Start()
     {
@@ -38,43 +70,14 @@ public class GSpreadReader : Singleton<GSpreadReader>
         await Init();
     }
 
-    public async Task<bool> Init()
+    #endregion
+
+    public Task<bool> Init()
     {
-        if (isInit) return true;
-
-        if (string.IsNullOrEmpty(url))
-        {
-            Debug.LogError("[GSpread] URL is not set.");
-            OnLoadFailed?.Invoke("URL이 설정되지 않았습니다.");
-            return false;
-        }
-
-        int successCount = 0;
-
-        for (int i = 0; i < sheets.Count; i++)
-        {
-            var sheet = sheets[i];
-            float progress = sheets.Count > 0 ? (float)i / sheets.Count : 1f;
-
-            OnLoadProgress?.Invoke(progress, $"{sheet.className} 로딩 중...");
-
-            bool success = await LoadSheet(sheet);
-            if (!success)
-            {
-                Debug.LogError($"[GSpread] Failed to load sheet: {sheet.className}");
-                OnLoadFailed?.Invoke($"{sheet.className} 로딩 실패");
-                return false;
-            }
-
-            successCount++;
-        }
-
-        isInit = true;
-
-        OnLoadProgress?.Invoke(1f, "완료");
-        OnLoadComplete?.Invoke();
-
-        return true;
+        if (isInit) return Task.FromResult(true);
+        if (initTask != null && !initTask.IsCompleted) return initTask;
+        initTask = InitInternal();
+        return initTask;
     }
 
     public bool HasSheet(string className) => sheets.Exists(sheet => sheet.className == className);
@@ -118,8 +121,124 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
     public async Task<bool> ReloadAll()
     {
+        if (initTask != null && !initTask.IsCompleted) return await initTask;
         isInit = false;
-        return await Init();
+        initTask = InitInternal(true);
+        return await initTask;
+    }
+
+    private async Task<bool> InitInternal(bool forceDownload = false)
+    {
+        if (isInit) return true;
+
+        if (string.IsNullOrEmpty(url))
+        {
+            Debug.LogError("[GSpread] URL is not set.");
+            OnLoadFailed?.Invoke("URL이 설정되지 않았습니다.");
+            return false;
+        }
+
+        string version = await GetRemoteVersion();
+        currentCache = !forceDownload && !string.IsNullOrEmpty(version) ? ReadCache(version) : null;
+        var nextCache = new SheetCache { source = url.Trim(), version = version };
+
+        for (int i = 0; i < sheets.Count; i++)
+        {
+            var sheet = sheets[i];
+            float progress = sheets.Count > 0 ? (float)i / sheets.Count : 1f;
+
+            OnLoadProgress?.Invoke(progress, $"{sheet.className} 로딩 중...");
+
+            CachedSheet cachedSheet = currentCache?.sheets?.Find(entry =>
+                entry.sheetId == sheet.sheetId && entry.className == sheet.className);
+            bool success;
+            string tsv;
+            if (cachedSheet != null && !string.IsNullOrEmpty(cachedSheet.tsv))
+            {
+                tsv = cachedSheet.tsv;
+                sheet.datas = TsvToDictionary(tsv);
+                success = true;
+            }
+            else
+            {
+                success = await LoadSheet(sheet);
+                tsv = lastDownloadedTsv;
+            }
+            if (!success)
+            {
+                Debug.LogError($"[GSpread] Failed to load sheet: {sheet.className}");
+                OnLoadFailed?.Invoke($"{sheet.className} 로딩 실패");
+                return false;
+            }
+
+            nextCache.sheets.Add(new CachedSheet
+            {
+                sheetId = sheet.sheetId, className = sheet.className, tsv = tsv
+            });
+        }
+
+        currentCache = null;
+        if (!string.IsNullOrEmpty(version)) SaveCache(nextCache);
+        isInit = true;
+
+        OnLoadProgress?.Invoke(1f, "완료");
+        OnLoadComplete?.Invoke();
+
+        return true;
+    }
+
+    private async Task<string> GetRemoteVersion()
+    {
+        if (string.IsNullOrWhiteSpace(driveApiKey)) return null;
+        string[] segments = url.Trim().Split('/');
+        int documentIndex = Array.IndexOf(segments, "d");
+        if (documentIndex < 0 || documentIndex + 1 >= segments.Length) return null;
+
+        string requestUrl = $"https://www.googleapis.com/drive/v3/files/{UnityWebRequest.EscapeURL(segments[documentIndex + 1])}?fields=version";
+        using (var request = UnityWebRequest.Get(requestUrl))
+        {
+            request.timeout = (int)timeoutSeconds;
+            request.SetRequestHeader("X-Goog-Api-Key", driveApiKey.Trim());
+            await request.SendWebRequest();
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning("[GSpread] Version lookup failed. Downloading sheets normally.");
+                return null;
+            }
+
+            try { return JsonUtility.FromJson<DriveMetadata>(request.downloadHandler.text)?.version; }
+            catch (Exception) { return null; }
+        }
+    }
+
+    private SheetCache ReadCache(string version)
+    {
+        try
+        {
+            if (!File.Exists(CachePath)) return null;
+            var cache = JsonUtility.FromJson<SheetCache>(File.ReadAllText(CachePath));
+            return cache != null && cache.source == url.Trim() && cache.version == version ? cache : null;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[GSpread] Cache could not be read: {exception.Message}");
+            return null;
+        }
+    }
+
+    private void SaveCache(SheetCache cache)
+    {
+        try
+        {
+            Directory.CreateDirectory(Application.persistentDataPath);
+            string json = JsonUtility.ToJson(cache);
+            if (File.Exists(CachePath) && File.ReadAllText(CachePath) == json) return;
+            File.WriteAllText(CachePath, json);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[GSpread] Cache could not be saved: {exception.Message}");
+        }
     }
 
     private async Task<bool> LoadSheet(SheetInfo sheet)
@@ -148,6 +267,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
             }
 
             sheet.datas = TsvToDictionary(response);
+            lastDownloadedTsv = response;
             return true;
         }
     }
