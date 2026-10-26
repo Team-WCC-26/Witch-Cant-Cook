@@ -62,11 +62,13 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField, Min(0f)] public float RecoveryDelay { get; private set; } = 0.1f;
 
     [field: Header("Interaction")]
-    [field: SerializeField] public LayerMask InteractLayerMask { get; private set; } = (1 << 7) | (1 << 10);
-    [field: SerializeField] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
-    [field: SerializeField, Min(0.01f)] public float InteractDistance { get; private set; } = 3.0f;
-    [field: SerializeField] public float InteractRadius { get; private set; } = 0.35f;
-    [field: SerializeField] public bool DebugInteraction { get; private set; } = false;
+    [field: SerializeField] public PhysicsCastProbe[] InteractionCasts { get; private set; } = System.Array.Empty<PhysicsCastProbe>();
+    [field: SerializeField] public PhysicsCastProbe CameraInteractionCast { get; private set; }
+    [field: SerializeField, HideInInspector] public LayerMask InteractLayerMask { get; private set; } = (1 << 7) | (1 << 10);
+    [field: SerializeField, HideInInspector] public Vector3 InteractRayStartOffset { get; private set; } = new(0f, 0f, 0.3f);
+    [field: SerializeField, HideInInspector, Min(0.01f)] public float InteractDistance { get; private set; } = 3.0f;
+    [field: SerializeField, HideInInspector] public float InteractRadius { get; private set; } = 0.35f;
+    [field: SerializeField, HideInInspector] public bool DebugInteraction { get; private set; } = false;
 
     [field: Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
@@ -122,6 +124,7 @@ public sealed class PlayerBrain : MonoBehaviour
             Glow.enabled = false;
 
         actionController = new PlayerActionController(this);
+        EnsureInteractionCasts();
         interact = new PlayerInteract(this);
         _ = Rocket;
     }
@@ -195,9 +198,35 @@ public sealed class PlayerBrain : MonoBehaviour
     public void BindCamera(Camera cam, CinemachineCamera virtualCam)
     {
         playerCamera = cam;
+        if (CameraInteractionCast != null)
+            CameraInteractionCast.Origin = cam != null ? cam.transform : transform;
         virtualCamera = virtualCam;
         virtualCamera.Target.TrackingTarget = CameraFollowTarget;
         virtualCamera.Target.LookAtTarget = CameraLookAtTarget;
+    }
+
+    private void EnsureInteractionCasts()
+    {
+        // Older scenes without probe references retain their serialized aiming settings.
+        if (InteractionCasts != null && InteractionCasts.Length > 0) return;
+
+        PhysicsCastProbe nearCast = gameObject.AddComponent<PhysicsCastProbe>();
+        nearCast.Origin = FacingRoot != null ? FacingRoot : transform;
+        nearCast.OriginCollider = Col;
+        nearCast.Distance = 0.5f;
+        nearCast.LayerMask = InteractLayerMask;
+        nearCast.DebugCast = DebugInteraction;
+        nearCast.DebugColor = Color.green;
+
+        CameraInteractionCast = gameObject.AddComponent<PhysicsCastProbe>();
+        CameraInteractionCast.Type = PhysicsCastProbe.CastType.SphereCast;
+        CameraInteractionCast.Origin = playerCamera != null ? playerCamera.transform : transform;
+        CameraInteractionCast.StartOffset = InteractRayStartOffset;
+        CameraInteractionCast.Distance = InteractDistance;
+        CameraInteractionCast.Radius = InteractRadius;
+        CameraInteractionCast.LayerMask = InteractLayerMask;
+        CameraInteractionCast.DebugCast = DebugInteraction;
+        InteractionCasts = new[] { nearCast, CameraInteractionCast };
     }
 
     private void SetLocalControlActive(bool isMine)
