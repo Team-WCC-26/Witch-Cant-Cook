@@ -52,9 +52,11 @@ public sealed class RoomHudPresenter : MonoBehaviour
             if (mode != 1) UIManager.Hide<LobbyHudUI>();
             if (mode != 2) UIManager.Hide<StageHudUI>();
             if (mode != 3) UIManager.Hide<StageSettlementUI>();
+            if (mode != 1 && mode != 2) UIManager.Hide<InteractionUI>();
             if (mode == 1) await UIManager.Show<LobbyHudUI>();
             if (mode == 2) await UIManager.Show<StageHudUI>(true);
             if (mode == 3) await UIManager.Show<StageSettlementUI>();
+            if (mode == 1 || mode == 2) await UIManager.Show<InteractionUI>();
             shownMode = mode;
         }
         catch (Exception exception)

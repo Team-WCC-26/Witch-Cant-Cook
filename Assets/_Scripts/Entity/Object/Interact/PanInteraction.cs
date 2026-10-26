@@ -41,6 +41,8 @@ public class PanInteraction : MonoBehaviour,
 
     public CatchableObj Catchable => catchable;
     public bool HasIngredient => currentIngredient != null;
+    public bool CanReceiveIngredient => currentIngredient == null && pendingIngredientId == 0 &&
+        catchable != null && catchable.NetworkId != 0;
 
     #region Unity Callbacks
 

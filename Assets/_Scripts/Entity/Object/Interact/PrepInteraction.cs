@@ -21,6 +21,7 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     private CatchableObj currentItem;
     private readonly ObjPlacement placement = new();
     private readonly HashSet<long> pendingEntities = new();
+    public bool CanReceivePan => IsRegistered && itemSlot != null && currentItem == null && pendingEntities.Count == 0;
 
     private void OnEnable()
     {

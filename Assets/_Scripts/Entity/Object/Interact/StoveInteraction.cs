@@ -16,6 +16,7 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     private PanInteraction currentPan;
     private long pendingPanId;
     private readonly ObjPlacement placement = new();
+    public bool CanReceivePan => IsRegistered && currentPan == null;
 
     #region Unity Lifecycle
 
