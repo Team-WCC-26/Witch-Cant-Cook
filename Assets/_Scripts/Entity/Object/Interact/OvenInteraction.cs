@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [DefaultExecutionOrder(100)]
-public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookReceiver
+public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookReceiver, IClientStageResettable
 {
     #region Inspector
 
@@ -152,6 +152,26 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #region Public API
 
+    public void ResetClientStage()
+    {
+        requestVersion++;
+        btnTween?.Kill();
+        btnTween = null;
+        if (mainBtn != null) mainBtn.localPosition = btnRestPos;
+        HideAllGauges();
+        RestoreIngredients();
+        ReleasePlayerRecovery();
+        currentIngredients.Clear();
+        capturedIngredients.Clear();
+        capturedPlayers.Clear();
+        removedIngredients.Clear();
+        responseDeadline = 0f;
+        cookingDeadline = 0f;
+        minOpenTime = float.PositiveInfinity;
+        nextPlayerDmgTime = 0f;
+        state = OvenState.Idle;
+        if (doorController != null) doorController.OpenDoor();
+    }
     // 버튼 입력 진입점. 로컬 입력일 때만 서버 요청을 보낸다.
     public void PressButton(PlayerBrain player)
     {

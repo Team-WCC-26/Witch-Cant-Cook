@@ -54,6 +54,24 @@ public class SubmitTriggerZone : MonoBehaviour
     private static bool sending;
     private static readonly List<SubmitTriggerZone> activeZones = new();
     private static readonly Dictionary<long, SubmitTriggerZone> submittingZones = new();
+    private static int requestGeneration;
+
+    public static void ResetAllClientStageState()
+    {
+        requestGeneration++;
+        pending.Clear();
+        submittingZones.Clear();
+        foreach (SubmitTriggerZone zone in activeZones)
+        {
+            if (zone == null) continue;
+            zone.StopAllCoroutines();
+            foreach (var pair in zone.samples)
+                if (pair.Key != null) pair.Key.OnPicked -= pair.Value.Reset;
+            zone.samples.Clear();
+            zone.overlaps.Clear();
+            zone.reportedBlocks.Clear();
+        }
+    }
 
     private sealed class RestSample
     {
@@ -74,6 +92,7 @@ public class SubmitTriggerZone : MonoBehaviour
     private static void ResetQueue()
     {
         pending.Clear(); sending = false;
+        requestGeneration = 0;
         activeZones.Clear(); submittingZones.Clear();
     }
     private void Awake() => zone = GetComponent<BoxCollider>();
@@ -129,6 +148,7 @@ public class SubmitTriggerZone : MonoBehaviour
         overlaps.Remove(other);
         if (!overlaps.ContainsValue(item)) RemoveSample(item);
     }
+    private void OnTriggerStay(Collider other) => OnTriggerEnter(other);
     private void RemoveSample(CatchableObj item)
     {
         if (!samples.TryGetValue(item, out RestSample sample)) return;
@@ -289,10 +309,11 @@ public class SubmitTriggerZone : MonoBehaviour
     }
     private static async UniTask SendPendingAsync()
     {
+        int generation = requestGeneration;
         sending = true;
         try
         {
-            while (pending.Count > 0)
+            while (generation == requestGeneration && pending.Count > 0)
             {
                 pending.Sort((a, b) =>
                 {

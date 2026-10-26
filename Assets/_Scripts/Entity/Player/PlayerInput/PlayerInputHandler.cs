@@ -16,12 +16,22 @@ public class PlayerInputHandler : MonoBehaviour
     //InputSystem key input event sender
     public event Action<KeyInput> InputPerformed;
 
-    public bool IsInputBlocked { get; set; }
+    private bool inputBlocked;
+    public bool IsInputBlocked { get => inputBlocked || StageReturnFlow.IsInputBlocked; set => inputBlocked = value; }
     public bool IsMovementBlocked { get; set; }
     private Vector2 rawMoveDir;
     private Vector2 rawLookDelta;
     private bool rawIsRunning;
     private bool rawIsJumpHeld;
+    public void ResetForStageReturn()
+    {
+        inputBlocked = false;
+        IsMovementBlocked = false;
+        rawMoveDir = Vector2.zero;
+        rawLookDelta = Vector2.zero;
+        rawIsRunning = false;
+        rawIsJumpHeld = false;
+    }
     public Vector2 RawMoveDir { get => (IsInputBlocked || IsMovementBlocked) ? Vector2.zero : rawMoveDir; private set => rawMoveDir = value; }
     public Vector2 RawLookDelta { get => IsInputBlocked ? Vector2.zero : rawLookDelta; private set => rawLookDelta = value; }
     public bool RawIsRunning { get => !IsInputBlocked && !IsMovementBlocked && rawIsRunning; private set => rawIsRunning = value; }

@@ -14,6 +14,23 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     private float rotationLerpSpeed = 15f;
 
     public float VerticalSpeed { get; private set; }
+    public void ResetForStageReturn(Pose pose)
+    {
+        targetPosition = pose.position;
+        targetRotation = pose.rotation;
+        hasRemoteTransform = false;
+        lastSnapshotTime = 0f;
+        snapshotVerticalSpeed = 0f;
+        VerticalSpeed = 0f;
+        previousRemoteInteraction = PlayerInteraction.None;
+        jumpArmed = false;
+        jumpConsumed = false;
+        pendingJumpStart = false;
+        lastDescendingClearance = float.PositiveInfinity;
+        lastDescendingSpeed = 0f;
+        SetCurrentState(new PlayerCombinedState(PlayerPhysicalMode.Default, Vector2.zero,
+            false, PlayerInteraction.None, EntityCategory.Player));
+    }
     public bool IsGroundedForAnimation { get; private set; }
 
     private const float JumpStartMinSpeed = 1.5f;

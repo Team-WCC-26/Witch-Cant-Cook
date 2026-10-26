@@ -2,8 +2,17 @@ using Protocol;
 using Server;
 using UnityEngine;
 
-public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrimaryReceiver, IEntityParentReceiver
+public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrimaryReceiver, IEntityParentReceiver, IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        currentPan?.ReleaseFromStove(this);
+        currentPan = null;
+        pendingPanId = 0;
+        if (isActiveAndEnabled) placement.Released += HandlePlacementReleased;
+    }
     private PanInteraction currentPan;
     private long pendingPanId;
     private readonly ObjPlacement placement = new();

@@ -42,7 +42,7 @@ public sealed class TEST_SetStage : MonoBehaviour
 
     private async void RequestTestStageStart()
     {
-        if (session == null || !session.IsRoomReady || !session.HasStageSelection ||
+        if (StageReturnFlow.IsInputBlocked || session == null || !session.IsRoomReady || !session.HasStageSelection ||
             session.IsStageRunning || startRequested) return;
         if (kitchenDoor == null) kitchenDoor = GameObject.Find("KitchenDoor");
         if (kitchenDoor == null)

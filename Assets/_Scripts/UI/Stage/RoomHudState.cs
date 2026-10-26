@@ -101,5 +101,7 @@ public sealed class RoomHudState
         ? (int)Math.Ceiling(Math.Max(0d, endTime - now))
         : hasStarted ? 0 : StageDurationSeconds;
 
+    public bool HasStageTimeExpired(double now) => IsStageRunning && hasStarted && now >= endTime;
+
     public static string FormatTime(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
 }

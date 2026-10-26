@@ -9,8 +9,23 @@ public class PanInteraction : MonoBehaviour,
     IHeldObjectReceiver,
     IEntityParentReceiver,
     IEntityThrowParentReceiver,
-    ICookReceiver
+    ICookReceiver,
+    IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        CancelTossTracking();
+        pendingEgg?.CancelPanInsert();
+        pendingEgg = null;
+        pendingEggId = 0;
+        RestorePanTriggerNow();
+        HideCookGauge();
+        pendingIngredientId = 0;
+        pendingCookDuration = -1f;
+        pendingTossId = 0;
+        currentIngredient = null;
+        currentStove = null;
+    }
     [SerializeField] private CatchableObj catchable;
     [SerializeField] private ColliderRelay itemTrigger;
     private IngredientReaction currentIngredient;

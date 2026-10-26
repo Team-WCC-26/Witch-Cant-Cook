@@ -23,12 +23,17 @@ public sealed class IngredientSpawnProcessor : MonoBehaviour
     private readonly Queue<IngredientSpawnCommand> requests = new(500);
     private ObjectNetworkRouter objectRouter;
     public int PendingCount => requests.Count;
+    public void ClearPending() => requests.Clear();
 
-    public void Enqueue(in IngredientSpawnCommand request) => requests.Enqueue(request);
+    public void Enqueue(in IngredientSpawnCommand request)
+    {
+        if (!StageReturnFlow.IsSettlementActive) requests.Enqueue(request);
+    }
     private void Update() => ProcessPending();
 
     public void ProcessPending()
     {
+        if (StageReturnFlow.IsSettlementActive) return;
         if (DataManager.Instance == null || !DataManager.Instance.IsDataLoaded ||
             ResourceManager.Instance == null || !ResourceManager.Instance.IsPreloaded || ObjectPoolManager.Instance == null)
             return;

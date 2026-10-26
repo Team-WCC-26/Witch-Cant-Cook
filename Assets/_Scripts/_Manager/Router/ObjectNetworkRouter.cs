@@ -20,6 +20,18 @@ public class ObjectNetworkRouter : MonoBehaviour
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
 
+    // Only after the server confirms its round entities have been cleared.
+    public void ResetClientStage()
+    {
+        var ids = new List<long>(catchableDics.Keys);
+        foreach (long id in ids) RemoveAndRelease(id);
+        catchableDics.Clear();
+        pendingParentChanges.Clear();
+        detachedThrowParents.Clear();
+        dishEjectSeeds.Clear();
+        IngredientEgg.ResetPanTransfers();
+    }
+
     private void Awake()
     {
         if (mapObjRouter == null)
@@ -225,6 +237,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void HandleToolSpawn(ReadOnlyMemory<byte> data)
     {
+        if (StageReturnFlow.IsSettlementActive) return;
         ToolSpawnPacket packet = MemoryPackSerializer.Deserialize<ToolSpawnPacket>(data.Span)!;
 
         if (!Define.TryGetEntityCategory((Define.eToolId)packet.ToolId, out EntityCategory category))

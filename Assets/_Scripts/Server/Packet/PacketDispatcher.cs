@@ -46,6 +46,16 @@ namespace Server
                 var packet = PacketSerializer.Deserialize<DishStatePacket>(data);
                 UnityEngine.Debug.Log($"<color=#87CEFA>[Submit RX] S_DishState / DishStatePacket {{ RecipeId={packet.RecipeId}, State={packet.State} ({(int)packet.State}) }} handlerRegistered={_packetHandlers.ContainsKey(id)}</color>");
             }
+            else if (id == PacketId.S_OpenDoor)
+            {
+                var packet = PacketSerializer.Deserialize<OpenDoorPacket>(data);
+                UnityEngine.Debug.Log($"[Stage Return RX] S_OpenDoor door={packet.DoorId}, handlerRegistered={_packetHandlers.ContainsKey(id)}");
+            }
+            else if (id == PacketId.S_StageStop)
+            {
+                var packet = PacketSerializer.Deserialize<StageStopPacket>(data);
+                UnityEngine.Debug.Log($"[Stage Return RX] S_StageStop earned={packet.PendingMoney}, wallet={packet.Money}, success={packet.IsSuccess}, handlerRegistered={_packetHandlers.ContainsKey(id)}");
+            }
             else if (id == PacketId.S_RoomPendingMoney)
             {
                 var packet = PacketSerializer.Deserialize<RoomPendingMoneyPacket>(data);
