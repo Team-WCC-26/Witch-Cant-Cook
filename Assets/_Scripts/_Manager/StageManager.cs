@@ -128,7 +128,12 @@ public class StageManager : Singleton<StageManager>
         switch (packet.DoorId)
         {
             case DoorId.Lobby:
-                lobbyDoor.Open();
+                if (kitchenDoor != null)
+                {
+                    kitchenDoor.gameObject.SetActive(true);
+                    kitchenDoor.Close();
+                }
+                if (lobbyDoor != null) lobbyDoor.Open();
                 break;
 
             case DoorId.Kitchen:

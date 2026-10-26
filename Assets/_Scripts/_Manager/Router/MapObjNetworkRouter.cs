@@ -24,6 +24,16 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private bool isRegisterar;
     public bool IsRegistrar => isRegisterar;
 
+    public void ResetStageRegistration()
+    {
+        registerQueue.Clear();
+        registerTargets.Clear();
+        mapObjects.Clear();
+        currentRegisterTarget = null;
+        foreach (MapObjInteraction target in FindObjectsByType<MapObjInteraction>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            target.SetNetworkId(0);
+    }
+
     #region Unity Callbacks
 
     private void OnEnable()
@@ -121,7 +131,11 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         foreach (MapObjInteraction mapObj in targets)
         {
             mapObj.InitializeRouter(this);
-            if (mapObj.IsRegistered) continue;
+            if (mapObj.IsRegistered)
+            {
+                mapObjects[mapObj.NetworkId] = mapObj;
+                continue;
+            }
 
             registerTargets.Add(mapObj);
 

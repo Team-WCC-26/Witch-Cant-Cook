@@ -18,6 +18,7 @@ public sealed class RoomHudSession : MonoBehaviour
     public double LastPendingMoneyReceivedAt { get; private set; }
     public bool LastPendingMoneyStageRunning { get; private set; }
     public event Action Changed;
+    public event Action RoomJoined;
     public event Action<StageSettlementData> SettlementRecorded;
     // The server broadcasts a pending snapshot for each rewarded submission.
     public event Action<int, int> PendingMoneyIncreased;
@@ -79,7 +80,14 @@ public sealed class RoomHudSession : MonoBehaviour
         LastPendingMoneyReceivedAt = 0;
         LastPendingMoneyStageRunning = false;
         Lobby.Reset();
+        RoomJoined?.Invoke();
         OnStageChanged();
+    }
+
+    public void NotifyLobbyReturned()
+    {
+        Lobby.BeginLobby(Time.unscaledTimeAsDouble);
+        Changed?.Invoke();
     }
 
     public void SetRoomInfo(string code, string localPlayerId, string otherPlayerId)

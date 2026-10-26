@@ -7,8 +7,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DefaultExecutionOrder(100)]
-public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookReceiver
+public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookReceiver, IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        requestVersion++;
+        buttonTween?.Kill();
+        buttonTween = null;
+        if (mainButton != null) mainButton.localPosition = buttonRestPosition;
+        HideAllGauges();
+        RestoreIngredients();
+        currentIngredients.Clear();
+        pendingIngredients.Clear();
+        capturedIngredients.Clear();
+        capturedPlayers.Clear();
+        state = OvenState.Idle;
+    }
     [SerializeField] private Transform mainButton;
     [SerializeField] private ColliderRelay buttonRelay;
     [SerializeField] private BoxCollider innerTrigger;

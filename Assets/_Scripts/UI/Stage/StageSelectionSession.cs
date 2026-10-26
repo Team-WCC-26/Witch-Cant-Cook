@@ -112,6 +112,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     {
         TryRegister();
         if (!IsRoomReady) throw new InvalidOperationException("Join a room before selecting a stage.");
+        if (StageReturnFlow.IsInputBlocked) throw new InvalidOperationException("Wait for the lobby return before selecting a stage.");
         if (!HasStageSelection) throw new InvalidOperationException("Wait for the room's selected stage before changing pages.");
         pendingRequestedStage = stageId;
         try

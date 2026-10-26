@@ -3,8 +3,16 @@ using Server;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver
+public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver, IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        currentItem = null;
+        pendingEntities.Clear();
+        if (isActiveAndEnabled) placement.Released += HandlePlacementReleased;
+    }
     private const float PanFrontYaw = 90f;
 
     [SerializeField] private Transform itemSlot;

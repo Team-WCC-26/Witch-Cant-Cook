@@ -49,6 +49,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
     private void RoutePlayerState(IReadOnlyList<PlayerMovementPacket> packets)
     {
+        if (StageReturnFlow.IsInputBlocked) return;
         // Movement fan-out
         if (PlayerSpawnManager.Instance == null) return;
 
@@ -69,6 +70,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
     private void RouteEntityPickup(IReadOnlyList<EntityPickupPacket> packets)
     {
+        if (StageReturnFlow.IsInputBlocked) return;
         // Pickup authority
         if (PlayerSpawnManager.Instance == null) return;
 

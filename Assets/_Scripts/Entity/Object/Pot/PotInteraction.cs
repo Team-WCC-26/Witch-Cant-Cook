@@ -16,7 +16,8 @@ public class PotInteraction : MapObjInteraction,
     IPunchReceiver,
     IEntityParentReceiver,
     ICookReceiver,
-    IPotNetworkReceiver
+    IPotNetworkReceiver,
+    IClientStageResettable
 {
     #region Inspecter
 
@@ -192,6 +193,12 @@ public class PotInteraction : MapObjInteraction,
     }
 
     // 솥 데이터 초기화
+    public void ResetClientStage()
+    {
+        StopPotCoroutines();
+        ResetPotData();
+    }
+
     private void ResetPotData()
     {
         foreach (PlayerBrain player in trappedPlayers)

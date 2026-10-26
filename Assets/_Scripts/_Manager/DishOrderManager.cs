@@ -27,6 +27,19 @@ public class DishOrderManager : MonoBehaviour
     private float successHideAt;
     private RoomHudSession moneySession;
     private readonly ConcurrentQueue<(int Earned, int Total)> earnedRewards = new();
+    private bool stagePresentationPaused;
+
+    public void SetStagePresentationPaused(bool paused)
+    {
+        stagePresentationPaused = paused;
+        if (!paused) return;
+        while (receivedPackets.TryDequeue(out _)) { }
+        while (earnedRewards.TryDequeue(out _)) { }
+        orders.Clear();
+        visibleOrders.Clear();
+        foreach (RecipeScrollView view in views) if (view != null) view.Clear();
+        if (successCanvas != null) successCanvas.SetActive(false);
+    }
 
     [Header("Runtime Status (read only while playing)")]
     [SerializeField] private string lastPacket;
@@ -72,6 +85,7 @@ public class DishOrderManager : MonoBehaviour
         if (views.Count == 0)
             Debug.LogWarning("DishOrderManager: no scroll views assigned.", this);
 
+        if (StageReturnFlow.IsSettlementActive) SetStagePresentationPaused(true);
         RefreshViews();
     }
 
@@ -98,6 +112,7 @@ public class DishOrderManager : MonoBehaviour
         TryRegister();
 
         // Always update Unity objects on the main thread, regardless of the dispatcher's caller.
+        if (stagePresentationPaused) return;
         while (receivedPackets.TryDequeue(out DishStatePacket packet))
         {
             DishSubmissionVfx.PlayForServerResult(packet.State);
