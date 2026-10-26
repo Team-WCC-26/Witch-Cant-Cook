@@ -246,7 +246,10 @@ public class ObjectNetworkRouter : MonoBehaviour
             return;
         }
         Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
-        Quaternion rot = Quaternion.identity;
+        var rotation = packet.Quaternion;
+        Quaternion rot = rotation.LengthSquared() > 0.000001f
+            ? new Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W).normalized
+            : Quaternion.identity;
 
         GameObject go = ObjectPoolManager.Instance.Pop(category.ToString(), pos, rot);
         if (go == null) return;
