@@ -56,6 +56,19 @@ public class SubmitTriggerZone : MonoBehaviour
     private static readonly Dictionary<long, SubmitTriggerZone> submittingZones = new();
     private static int requestGeneration;
 
+    // Server stop is the hard send cutoff. Keep sent dishes and their return animations alive.
+    public static void StopUnsentRequests()
+    {
+        requestGeneration++;
+        foreach (SubmissionRequest request in pending)
+        {
+            if (!IsSamePlate(request.Item, request.EntityId)) continue;
+            request.Item.ReleaseSubmissionLock();
+            submittingZones.Remove(request.EntityId);
+        }
+        pending.Clear();
+    }
+
     public static void ResetAllClientStageState()
     {
         requestGeneration++;

@@ -49,13 +49,18 @@ public sealed class InitialToolSpawnSetup : MonoBehaviour
     {
         room = RoomHudSession.Instance;
         room.RoomJoined += ResetRequests;
+        room.LobbyMoveReceived += ResetRequests;
         StageManager.DoorOpened += OnDoorOpened;
     }
 
     private void OnDisable()
     {
         StageManager.DoorOpened -= OnDoorOpened;
-        if (room != null) room.RoomJoined -= ResetRequests;
+        if (room != null)
+        {
+            room.RoomJoined -= ResetRequests;
+            room.LobbyMoveReceived -= ResetRequests;
+        }
         requestGeneration++;
     }
 

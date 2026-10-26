@@ -32,9 +32,10 @@ public sealed class StageReturnState
         Phase = StageReturnPhase.AwaitingSettlement;
         return true;
     }
-    public bool RequestReturn()
+    public bool RequestReturn(bool allowRetry = false)
     {
-        if (Phase != StageReturnPhase.Settlement) return false;
+        if (Phase != StageReturnPhase.Settlement &&
+            !(allowRetry && Phase == StageReturnPhase.WaitingForServer)) return false;
         Phase = StageReturnPhase.WaitingForServer;
         return true;
     }
@@ -42,6 +43,12 @@ public sealed class StageReturnState
     {
         if (Phase != StageReturnPhase.Settlement && Phase != StageReturnPhase.WaitingForServer) return false;
         Phase = StageReturnPhase.Returning;
+        return true;
+    }
+    public bool CancelReturnRequest()
+    {
+        if (Phase != StageReturnPhase.WaitingForServer) return false;
+        Phase = StageReturnPhase.Settlement;
         return true;
     }
     public bool CompleteReturn()

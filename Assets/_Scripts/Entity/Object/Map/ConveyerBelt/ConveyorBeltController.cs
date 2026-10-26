@@ -142,7 +142,7 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
 
     void Update()
     {
-        if (StageReturnFlow.IsSettlementActive) return;
+        if (StageReturnFlow.IsInputBlocked) return;
         MoveItemsOnBelt();
         //ScrollBeltTexture();
     }

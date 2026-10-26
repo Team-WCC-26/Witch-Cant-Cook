@@ -19,6 +19,8 @@ public sealed class RoomHudSession : MonoBehaviour
     public bool LastPendingMoneyStageRunning { get; private set; }
     public event Action Changed;
     public event Action RoomJoined;
+    public event Action StageTimeEnded;
+    public event Action LobbyMoveReceived;
     public event Action<StageSettlementData> SettlementRecorded;
     // The server broadcasts a pending snapshot for each rewarded submission.
     public event Action<int, int> PendingMoneyIncreased;
@@ -52,6 +54,8 @@ public sealed class RoomHudSession : MonoBehaviour
         stages = StageSelectionSession.Instance;
         stages.Changed += OnStageChanged;
         stages.StageStopped += OnStageStopped;
+        stages.StageResultReceived += OnStageResult;
+        stages.LobbyMoveReceived += OnLobbyMove;
         StageManager.DoorOpened += OnDoorOpened;
         OnStageChanged();
     }
@@ -86,6 +90,7 @@ public sealed class RoomHudSession : MonoBehaviour
 
     public void NotifyLobbyReturned()
     {
+        stages.NotifyLobbyReturned();
         Lobby.BeginLobby(Time.unscaledTimeAsDouble);
         Changed?.Invoke();
     }
@@ -107,6 +112,8 @@ public sealed class RoomHudSession : MonoBehaviour
     private void OnDoorOpened(DoorId doorId)
     {
         if (doorId != DoorId.Lobby || !Lobby.IsInRoom || State.IsStageRunning) return;
+        // Door animation alone no longer authorizes the post-stage lobby transition.
+        if (State.HasActiveStage || State.LatestSettlement != null) return;
         Lobby.BeginLobby(Time.unscaledTimeAsDouble);
         Changed?.Invoke();
     }
@@ -143,6 +150,15 @@ public sealed class RoomHudSession : MonoBehaviour
 
     private void OnStageStopped(StageStopPacket packet)
     {
+        if (!State.ApplyStageTimeEnded()) return;
+        StageTimeEnded?.Invoke();
+        Changed?.Invoke();
+    }
+
+    private void OnLobbyMove() => LobbyMoveReceived?.Invoke();
+
+    private void OnStageResult(StageResultPacket packet)
+    {
         if (!State.ApplyStageSettlement(packet.PendingMoney, packet.Money, packet.IsSuccess)) return;
         Changed?.Invoke();
         SettlementRecorded?.Invoke(State.LatestSettlement);
@@ -154,6 +170,8 @@ public sealed class RoomHudSession : MonoBehaviour
         {
             stages.Changed -= OnStageChanged;
             stages.StageStopped -= OnStageStopped;
+            stages.StageResultReceived -= OnStageResult;
+            stages.LobbyMoveReceived -= OnLobbyMove;
         }
         StageManager.DoorOpened -= OnDoorOpened;
         if (server != null)

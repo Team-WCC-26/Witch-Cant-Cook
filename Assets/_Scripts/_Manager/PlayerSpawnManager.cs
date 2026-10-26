@@ -61,6 +61,40 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     }
 
     public IEnumerable<PlayerBrain> Players => players.Values;
+    public Transform InitialSpawnPoint => spawnRoot;
+
+    // Use the same initial spawn anchor on every client; keep the two players apart.
+    public bool TryGetLobbyReturnSpawns(IReadOnlyList<string> participants,
+        out Dictionary<string, Pose> poses, out string issue)
+    {
+        poses = new Dictionary<string, Pose>();
+        issue = null;
+        if (spawnRoot == null)
+        {
+            issue = "PlayerSpawnManager의 초기 스폰 위치(spawnRoot)를 지정하세요.";
+            return false;
+        }
+        if (participants == null || participants.Count == 0 || participants.Count > 2)
+        {
+            issue = "로비 참가자 정보 대기 중 (1~2명)";
+            return false;
+        }
+        var ids = new HashSet<string>();
+        foreach (string id in participants)
+        {
+            if (string.IsNullOrEmpty(id) || !ids.Add(id))
+            {
+                issue = "로비 참가자 ID가 없거나 중복되었습니다.";
+                return false;
+            }
+        }
+        for (int i = 0; i < participants.Count; i++)
+        {
+            Vector3 position = spawnRoot.TransformPoint(new Vector3((i - 0.5f) * 1.5f, 0f, 0f));
+            poses.Add(participants[i], new Pose(position, spawnRoot.rotation));
+        }
+        return true;
+    }
 
     public bool IsMine(string playerId)
     {

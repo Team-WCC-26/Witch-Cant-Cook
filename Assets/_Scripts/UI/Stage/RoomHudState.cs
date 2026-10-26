@@ -12,6 +12,8 @@ public sealed class RoomHudState
     public int StageNumber { get; private set; } = 1;
     public bool HasStageSelection { get; private set; }
     public bool IsStageRunning { get; private set; }
+    public bool HasStageTimeEnded { get; private set; }
+    public bool HasActiveStage => activeRunNumber != 0;
     public IReadOnlyList<StageSettlementData> Settlements { get; }
     public StageSettlementData LatestSettlement => settlements.Count > 0 ? settlements[settlements.Count - 1] : null;
     public int? StageStartMoney => activeRunNumber != 0 ? activeStartMoney : null;
@@ -35,6 +37,7 @@ public sealed class RoomHudState
         StageNumber = 1;
         HasStageSelection = false;
         IsStageRunning = false;
+        HasStageTimeEnded = false;
         hasStarted = false;
         endTime = 0d;
         settlements.Clear();
@@ -57,6 +60,7 @@ public sealed class RoomHudState
         if (running && (!IsStageRunning || StageNumber != number))
         {
             activeRunNumber = ++nextRunNumber;
+            HasStageTimeEnded = false;
             activeStageNumber = number;
             // Never assume zero or use a first reward snapshot as the starting balance.
             activeStartMoney = HasMoney ? Money : (int?)null;
@@ -74,7 +78,7 @@ public sealed class RoomHudState
     public bool ApplyPendingMoney(int total)
     {
         // Ignore late progress after the final snapshot. Snapshots are totals, never deltas.
-        if (!IsStageRunning || activeRunNumber == 0) return false;
+        if (activeRunNumber == 0) return false;
         bool changed = !HasPendingMoney || PendingMoney != total;
         PendingMoney = total;
         HasPendingMoney = true;
@@ -91,6 +95,7 @@ public sealed class RoomHudState
         PendingMoney = earnedMoney;
         HasPendingMoney = true;
         IsStageRunning = false;
+        HasStageTimeEnded = true;
         activeRunNumber = 0;
         activeStageNumber = 0;
         activeStartMoney = null;
@@ -101,7 +106,16 @@ public sealed class RoomHudState
         ? (int)Math.Ceiling(Math.Max(0d, endTime - now))
         : hasStarted ? 0 : StageDurationSeconds;
 
-    public bool HasStageTimeExpired(double now) => IsStageRunning && hasStarted && now >= endTime;
+    public bool ApplyStageTimeEnded()
+    {
+        if (activeRunNumber == 0 || HasStageTimeEnded) return false;
+        HasStageTimeEnded = true;
+        IsStageRunning = false;
+        return true;
+    }
+
+    public bool HasStageTimeExpired(double now) => activeRunNumber != 0 && hasStarted &&
+        (HasStageTimeEnded || now >= endTime);
 
     public static string FormatTime(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
 }

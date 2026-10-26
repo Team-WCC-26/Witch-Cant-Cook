@@ -53,8 +53,16 @@ namespace Server
             }
             else if (id == PacketId.S_StageStop)
             {
-                var packet = PacketSerializer.Deserialize<StageStopPacket>(data);
-                UnityEngine.Debug.Log($"[Stage Return RX] S_StageStop earned={packet.PendingMoney}, wallet={packet.Money}, success={packet.IsSuccess}, handlerRegistered={_packetHandlers.ContainsKey(id)}");
+                UnityEngine.Debug.Log($"[Stage Return RX] S_StageStop 시간 종료, handlerRegistered={_packetHandlers.ContainsKey(id)}");
+            }
+            else if (id == PacketId.S_StageResult)
+            {
+                var packet = PacketSerializer.Deserialize<StageResultPacket>(data);
+                UnityEngine.Debug.Log($"[Stage Return RX] S_StageResult earned={packet.PendingMoney}, wallet={packet.Money}, success={packet.IsSuccess}, handlerRegistered={_packetHandlers.ContainsKey(id)}");
+            }
+            else if (id == PacketId.S_LobbyMove)
+            {
+                UnityEngine.Debug.Log($"[Stage Return RX] S_LobbyMove handlerRegistered={_packetHandlers.ContainsKey(id)}");
             }
             else if (id == PacketId.S_RoomPendingMoney)
             {

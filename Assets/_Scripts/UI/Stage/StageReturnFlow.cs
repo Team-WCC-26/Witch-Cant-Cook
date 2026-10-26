@@ -2,10 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Protocol;
+using Server;
 using UnityEngine;
 
-// Existing packets only: S_StageStop shows settlement, then S_OpenDoor(Lobby)
-// confirms server cleanup and starts return using scene-configured spawn points.
+// S_StageStop ends play; S_StageResult shows results. Confirmation waits for S_LobbyMove.
 public sealed class StageReturnFlow : MonoBehaviour
 {
     private static StageReturnFlow instance;
@@ -26,6 +26,12 @@ public sealed class StageReturnFlow : MonoBehaviour
         (instance.room != null && instance.room.State.HasStageTimeExpired(Time.unscaledTimeAsDouble)));
     public static bool IsSettlementActive => instance != null && instance.State.ShowsSettlement;
     public StageReturnState State { get; } = new();
+    public string ConfirmationIssue { get; private set; }
+    public bool IsConfirming { get; private set; }
+    public bool CanConfirmResult => !IsConfirming && !lobbyMovePending &&
+        (State.Phase == StageReturnPhase.Settlement ||
+        (State.Phase == StageReturnPhase.WaitingForServer && Time.unscaledTime >= confirmRetryAt));
+    private float confirmRetryAt;
     public event Action Changed;
     public event Action LobbyReturnCompleted;
     private RoomHudSession room;
@@ -34,7 +40,7 @@ public sealed class StageReturnFlow : MonoBehaviour
     private bool cursorCaptured;
     private bool previousCursorVisible;
     private CursorLockMode previousCursorLock;
-    private bool lobbyDoorReturnPending;
+    private bool lobbyMovePending;
     private string lastSpawnIssue;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -50,21 +56,23 @@ public sealed class StageReturnFlow : MonoBehaviour
         room.SettlementRecorded += OnSettlement;
         room.Changed += OnRoomChanged;
         room.RoomJoined += ResetRoom;
-        StageManager.DoorOpened += OnDoorOpened;
+        room.StageTimeEnded += OnTimeEnded;
+        room.LobbyMoveReceived += OnLobbyMove;
         OnRoomChanged();
     }
     private void OnDisable()
     {
-        StageManager.DoorOpened -= OnDoorOpened;
         if (room != null)
         {
             room.SettlementRecorded -= OnSettlement;
             room.Changed -= OnRoomChanged;
             room.RoomJoined -= ResetRoom;
+            room.StageTimeEnded -= OnTimeEnded;
+            room.LobbyMoveReceived -= OnLobbyMove;
         }
         if (returning != null) StopCoroutine(returning);
         returning = null;
-        lobbyDoorReturnPending = false;
+        lobbyMovePending = false;
         State.Reset();
         RestoreCursor();
     }
@@ -74,7 +82,10 @@ public sealed class StageReturnFlow : MonoBehaviour
         if (returning != null) StopCoroutine(returning);
         returning = null;
         wasRunning = false;
-        lobbyDoorReturnPending = false;
+        lobbyMovePending = false;
+        ConfirmationIssue = null;
+        IsConfirming = false;
+        confirmRetryAt = 0f;
         lastSpawnIssue = null;
         State.Reset();
         RestoreCursor();
@@ -89,7 +100,10 @@ public sealed class StageReturnFlow : MonoBehaviour
             // A genuine server start remains authoritative, including test start paths.
             if (returning != null) StopCoroutine(returning);
             returning = null;
-            lobbyDoorReturnPending = false;
+            lobbyMovePending = false;
+            ConfirmationIssue = null;
+            IsConfirming = false;
+            confirmRetryAt = 0f;
             State.StartStage();
             RestoreCursor();
             PauseOrderPresentation(false);
@@ -100,8 +114,11 @@ public sealed class StageReturnFlow : MonoBehaviour
     private void OnSettlement(StageSettlementData data)
     {
         if (!State.RecordSettlement(data)) return;
-        State.RequestReturn();
-        Debug.Log("[Stage Return] 결산 수신. S_OpenDoor(Lobby)를 기다립니다.", this);
+        SubmitTriggerZone.StopUnsentRequests();
+        ConfirmationIssue = null;
+        IsConfirming = false;
+        confirmRetryAt = 0f;
+        Debug.Log("[Stage Return] S_StageResult 수신. 결산 확인 버튼을 기다립니다.", this);
         if (!cursorCaptured)
         {
             previousCursorLock = Cursor.lockState;
@@ -128,48 +145,108 @@ public sealed class StageReturnFlow : MonoBehaviour
             }
         }
     }
-    private void OnDoorOpened(DoorId door)
+    private void OnTimeEnded()
     {
-        if (door == DoorId.Lobby)
-            Debug.Log($"[Stage Return] 로비 문 알림 전달됨. phase={State.Phase}", this);
-        if (door != DoorId.Lobby || (State.Phase != StageReturnPhase.Settlement &&
+        SubmitTriggerZone.StopUnsentRequests();
+        if (!State.WaitForSettlement()) return;
+        StopPlayerActions();
+        Changed?.Invoke();
+    }
+
+    public async void ConfirmResult()
+    {
+        if (!CanConfirmResult) return;
+        ServerManager server = ServerManager.Instance;
+        if (server == null || !server.IsConnected)
+        {
+            ConfirmationIssue = "서버 연결을 확인한 뒤 다시 눌러주세요.";
+            Changed?.Invoke();
+            return;
+        }
+        if (!State.RequestReturn(allowRetry: true)) return;
+        int run = State.Settlement.RunNumber;
+        ConfirmationIssue = null;
+        IsConfirming = true;
+        confirmRetryAt = Time.unscaledTime + 5f;
+        Changed?.Invoke();
+        try
+        {
+            await server.SendData(PacketSerializer.Serialize(new StageResultConfirmPacket()));
+            Debug.Log($"[Stage Return] C_StageResultConfirm 전송. player={room.Lobby.LocalPlayerId}, id={(ushort)PacketId.C_StageResultConfirm}. S_LobbyMove 대기 중.", this);
+        }
+        catch (Exception error)
+        {
+            // Server confirmations are idempotent per player; allow explicit retry after failure.
+            if (State.Settlement?.RunNumber == run && !lobbyMovePending && State.CancelReturnRequest())
+            {
+                ConfirmationIssue = "확인 전송에 실패했습니다. 다시 눌러주세요.";
+                Changed?.Invoke();
+            }
+            Debug.LogException(error, this);
+        }
+        finally
+        {
+            if (State.Settlement?.RunNumber == run)
+            {
+                IsConfirming = false;
+                Changed?.Invoke();
+            }
+        }
+    }
+
+    private void OnLobbyMove()
+    {
+        if (lobbyMovePending || (State.Phase != StageReturnPhase.Settlement &&
             State.Phase != StageReturnPhase.WaitingForServer)) return;
-        lobbyDoorReturnPending = true;
-        TryReturnFromLobbyDoor();
+        Debug.Log("[Stage Return] S_LobbyMove 수신. 로비 복귀를 시작합니다.", this);
+        ConfirmationIssue = null;
+        lobbyMovePending = true;
+        TryReturnFromLobbyMove();
     }
     private void Update()
     {
         if (room != null && room.State.HasStageTimeExpired(Time.unscaledTimeAsDouble) && State.WaitForSettlement())
         {
-            // Keep the stage/HUD and accepted submission queue alive until S_StageStop.
+            // Keep accepted submissions and HUD alive until S_StageResult.
             StopPlayerActions();
             Changed?.Invoke();
         }
-        if (lobbyDoorReturnPending) TryReturnFromLobbyDoor();
+        if (lobbyMovePending) TryReturnFromLobbyMove();
     }
-    private void TryReturnFromLobbyDoor()
+    private void TryReturnFromLobbyMove()
     {
-        LobbyReturnSpawnPoints config = FindFirstObjectByType<LobbyReturnSpawnPoints>();
-        string issue = null;
-        if (config == null) issue = "씬에 LobbyReturnSpawnPoints를 추가하고 로비 스폰 위치를 지정하세요.";
-        else if (config.TryGetSpawns(room.Lobby.Players, out Dictionary<string, Pose> spawns, out issue))
+        PlayerSpawnManager players = FindFirstObjectByType<PlayerSpawnManager>();
+        if (players == null)
         {
-            if (ConfirmLobbyReturn(spawns, config.ResetMapRegistration))
+            ConfirmationIssue = "로비 이동 대기 · PlayerSpawnManager 등록 대기 중";
+            return;
+        }
+        bool ready = players.TryGetLobbyReturnSpawns(room.Lobby.Players,
+            out Dictionary<string, Pose> spawns, out string issue);
+        if (ready)
+        {
+            if (ConfirmLobbyReturn(spawns))
             {
-                Debug.Log($"[Stage Return] 로비 복귀 시작. players={spawns.Count}", this);
-                lobbyDoorReturnPending = false;
+                Debug.Log($"[Stage Return] 로비 복귀 시작. players={spawns.Count}, spawnSource=PlayerSpawnManager.spawnRoot", this);
+                lobbyMovePending = false;
                 lastSpawnIssue = null;
+                ConfirmationIssue = null;
+                Changed?.Invoke();
             }
             else if (lastSpawnIssue != "플레이어 스폰 등록 대기")
             {
                 lastSpawnIssue = "플레이어 스폰 등록 대기";
-                Debug.LogWarning($"[Stage Return] 로비 문 알림은 수신했지만 플레이어 등록을 기다립니다. lobbyPlayers={room.Lobby.Players.Count}", this);
+                ConfirmationIssue = "로비 이동 알림 수신 · 플레이어 등록을 기다리는 중";
+                Changed?.Invoke();
+                Debug.LogWarning($"[Stage Return] S_LobbyMove 수신 후 플레이어 등록을 기다립니다. lobbyPlayers={room.Lobby.Players.Count}", this);
             }
             return;
         }
         if (issue != lastSpawnIssue)
         {
             lastSpawnIssue = issue;
+            ConfirmationIssue = "로비 이동 대기 · " + issue;
+            Changed?.Invoke();
             Debug.LogWarning($"[Stage Return] {issue}", this);
         }
     }
