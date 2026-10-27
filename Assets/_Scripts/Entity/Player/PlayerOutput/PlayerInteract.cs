@@ -110,24 +110,12 @@ public class PlayerInteract
     private void RequestSecondaryAction()
     {
         if (TryGetHeldComponent(out IHeldSecondaryAction action) && action.TryUseSecondary(this)) return;
-        if (IsHolding && HeldObj.Category == EntityCategory.Ingredient)
-        {
-            preparedThrow = HeldObj;
-            throwReleaseVersion = brain.Input.SecondaryReleaseVersion;
-            // A press and release can both arrive before this frame's input is handled.
-            if (!brain.Input.IsSecondaryHeld) RequestThrow();
-            return;
-        }
-        EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
+        if (!IsHolding) return;
 
-        switch (category)
-        {
-            case EntityCategory.Player:
-                break;
-            default:
-                RequestThrow();
-                break;
-        }
+        preparedThrow = HeldObj;
+        throwReleaseVersion = brain.Input.SecondaryReleaseVersion;
+        // Press and release may arrive within the same frame.
+        if (!brain.Input.IsSecondaryHeld) RequestThrow();
     }
 
     private void RequestKeyInteract()

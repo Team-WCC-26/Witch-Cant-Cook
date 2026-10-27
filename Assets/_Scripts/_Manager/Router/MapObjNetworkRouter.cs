@@ -286,11 +286,4 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
             trashCan.HandlePlayerExit(packet);
     }
 
-    public bool TryRespawnTrashPlayer(string playerId)
-    {
-        foreach (MapObjInteraction mapObj in mapObjects.Values)
-            if (mapObj is TrashCanInteraction trashCan && trashCan.TryRespawnPlayer(playerId)) return true;
-        return false;
-    }
-
 }

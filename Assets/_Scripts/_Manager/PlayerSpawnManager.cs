@@ -23,7 +23,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     private readonly Dictionary<string, PlayerBrain> players = new();
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
-    private MapObjNetworkRouter mapObjRouter;
 
     //Packet Ids
     private PacketId _joinMemberID => PacketId.S_PlayerEnter;
@@ -232,8 +231,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     private void MemberRespawned(ReadOnlyMemory<byte> data)
     {
         PlayerRespawnPacket packet = PacketSerializer.Deserialize<PlayerRespawnPacket>(data.Span);
-        if (mapObjRouter == null) mapObjRouter = FindFirstObjectByType<MapObjNetworkRouter>();
-        if (mapObjRouter != null && mapObjRouter.TryRespawnTrashPlayer(packet.PlayerID)) return;
         RespawnPlayer(packet.PlayerID);
     }
     private IEnumerator WaitForServerManager()

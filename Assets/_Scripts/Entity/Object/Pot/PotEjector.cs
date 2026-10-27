@@ -78,15 +78,7 @@ public sealed class PotEjector : ObjEjector
         if (target is PlayerBrain player)
         {
             pot.PreparePlayerEjection(player);
-            // 플레이어 물리는 소유 클라이언트만 적용한다.
-            if (PlayerSpawnManager.Instance == null ||
-                !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
-            if (player.Rb == null || player.Rb.isKinematic) return;
-
-            player.ActionController.Movement.BeginEjectionMovement();
-            player.Rb.position = EjectPos;
-            player.Rb.linearVelocity = Vector3.zero;
-            player.Rb.AddForce(direction * pot.PlayerEjectForce, ForceMode.Impulse);
+            EjectPlayer(player, pot.PlayerEjectForce, direction);
         }
         else if (target is CatchableObj catchable)
         {
