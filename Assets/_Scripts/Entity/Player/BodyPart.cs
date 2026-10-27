@@ -53,6 +53,7 @@ public class BodyPart : MonoBehaviour
             return;
         }
 
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         rb.isKinematic = true;
         rb.useGravity = false;
         rb.detectCollisions = true;
@@ -60,7 +61,6 @@ public class BodyPart : MonoBehaviour
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         rb.maxDepenetrationVelocity = 0.8f;

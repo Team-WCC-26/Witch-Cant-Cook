@@ -89,6 +89,7 @@ public class IngredientNalchi : IngredientTrait
             return;
 
         // 비행 중에는 스크립트가 직접 위치를 옮기므로, 물리 힘의 영향을 받지 않게 kinematic으로 전환.
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         rb.isKinematic = true;
         flyTrait.StartFlying();
     }
@@ -104,6 +105,7 @@ public class IngredientNalchi : IngredientTrait
 
         // kinematic을 풀어 중력이 작용하게 해서 바닥으로 떨어지도록 한다.
         rb.isKinematic = false;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
         stunTimer.StartTimer(stunDuration, RecoverFromStun);
     }
@@ -134,6 +136,7 @@ public class IngredientNalchi : IngredientTrait
         // 이걸 안 해주면 CatchableObj가 들고 있는 동안 켜둔 kinematic이 그대로 남아
         // 놓은 자리에 그대로 박제된 것처럼 보인다.
         rb.isKinematic = false;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
         // 내려놓으면 스폰 직후와 동일하게 대기 후 다시 비행을 시작한다.
         BeginFlyDelay();

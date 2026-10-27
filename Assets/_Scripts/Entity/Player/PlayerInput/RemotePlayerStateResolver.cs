@@ -57,6 +57,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
         if (brain.Rb != null)
         {
+            brain.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             brain.Rb.isKinematic = true;
             brain.Rb.useGravity = false;
             brain.Rb.linearVelocity = Vector3.zero;

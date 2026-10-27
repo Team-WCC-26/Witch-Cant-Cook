@@ -216,6 +216,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             rb.isKinematic = false;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.useGravity = true;
             rb.Sleep();
         }

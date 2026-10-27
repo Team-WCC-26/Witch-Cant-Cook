@@ -81,7 +81,9 @@ public class PlayerRagdollController
                 continue;
             }
 
+            if (!active) part.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             part.Rb.isKinematic = !active;
+            if (active) part.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             part.Rb.useGravity = active;
             part.Rb.detectCollisions = true;
         }

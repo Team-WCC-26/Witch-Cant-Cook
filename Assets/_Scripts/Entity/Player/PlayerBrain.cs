@@ -123,6 +123,10 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void Awake()
     {
+        if (Rb != null)
+            Rb.collisionDetectionMode = Rb.isKinematic
+                ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+
         if (Glow != null)
             Glow.enabled = false;
 
