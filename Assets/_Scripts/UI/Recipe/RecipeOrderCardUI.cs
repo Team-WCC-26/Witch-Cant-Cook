@@ -17,7 +17,12 @@ public class RecipeOrderCardUI : MonoBehaviour
     private readonly System.Collections.Generic.List<RecipeIngredientUI> ingredientViews = new();
     public long OrderId { get; private set; } = -1;
     public RecipeCardData BoundData { get; private set; }
+    [Header("Font Sizes")]
+    [SerializeField, Min(1f)] private float dishFontSize = 38f;
+    [SerializeField, Min(1f)] private float timerFontSize = 28f;
+    [SerializeField, Min(1f)] private float methodFontSize = 16f;
     private int bindingVersion;
+    private void OnEnable() => ApplyTypography();
     private void OnDisable() => bindingVersion++;
 
     public void Configure(TMP_Text title, Image dish, RecipeTimerRing timer, TMP_Text seconds, Image[] methods,
@@ -25,10 +30,25 @@ public class RecipeOrderCardUI : MonoBehaviour
     {
         dishName = title; dishImage = dish; timerFill = timer; timeText = seconds;
         finalMethodImages = methods; finalMethodLabels = labels; ingredientPrefab = ingredient; ingredientRoot = content;
+        ApplyTypography();
+    }
+
+    private void ApplyTypography()
+    {
+        RecipeIngredientUI.SetReadableFont(dishName, dishFontSize, 30f, 52f);
+        RecipeIngredientUI.SetReadableFont(timeText, timerFontSize, 24f, 36f);
+        foreach (TMP_Text label in finalMethodLabels)
+            RecipeIngredientUI.SetReadableFont(label, methodFontSize, 12f, 34f);
+        Transform caption = transform.Find("Final Method Label");
+        if (caption != null)
+            RecipeIngredientUI.SetReadableFont(caption.GetComponent<TMP_Text>(), 20f, 18f, 28f);
+        if (ingredientRoot != null)
+            ingredientRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(ingredientRoot.rect.height, 164f));
     }
 
     public void Bind(DishOrder order, RecipeCardData data)
     {
+        ApplyTypography();
         int version = ++bindingVersion;
         Func<bool> current = () => this != null && bindingVersion == version;
         OrderId = order.Id;
