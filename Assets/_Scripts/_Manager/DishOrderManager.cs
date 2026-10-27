@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using Protocol;
 using Server;
 using UnityEngine;
 using UnityEngine.Serialization;
-using TMPro;
-using UnityEngine.UI;
 
 public class DishOrderManager : MonoBehaviour
 {
@@ -19,26 +16,21 @@ public class DishOrderManager : MonoBehaviour
     [Header("Local Preview (Play Mode context menu)")]
     [SerializeField] private int previewRecipeId = 1;
 
-    [Header("Submission Feedback")]
-    [SerializeField] private TMP_FontAsset successFont;
-    [SerializeField, Min(0.1f)] private float successDisplaySeconds = 2f;
-    private GameObject successCanvas;
-    private TMP_Text submissionResultText;
-    private float successHideAt;
     private RoomHudSession moneySession;
-    private readonly ConcurrentQueue<(int Earned, int Total)> earnedRewards = new();
+    private SubmissionRewardPopup rewardPopup;
+    private readonly ConcurrentQueue<int> successfulRecipes = new();
+    private readonly ConcurrentQueue<int> earnedRewards = new();
     private bool stagePresentationPaused;
 
     public void SetStagePresentationPaused(bool paused)
     {
         stagePresentationPaused = paused;
+        ClearSubmissionFeedback();
         if (!paused) return;
         while (receivedPackets.TryDequeue(out _)) { }
-        while (earnedRewards.TryDequeue(out _)) { }
         orders.Clear();
         visibleOrders.Clear();
         foreach (RecipeScrollView view in views) if (view != null) view.Clear();
-        if (successCanvas != null) successCanvas.SetActive(false);
     }
 
     [Header("Runtime Status (read only while playing)")]
@@ -73,6 +65,7 @@ public class DishOrderManager : MonoBehaviour
         dishOrderManager = this;
         moneySession = RoomHudSession.Instance;
         moneySession.PendingMoneyIncreased += OnPendingMoneyIncreased;
+        moneySession.RoomJoined += ClearSubmissionFeedback;
         views.Clear();
 
         foreach (RecipeScrollView view in scrollViews)
@@ -106,7 +99,9 @@ public class DishOrderManager : MonoBehaviour
     {
         DishStatePacket packet = PacketSerializer.Deserialize<DishStatePacket>(data);
         // Capture before the presentation queue: S_StageResult may arrive in the same frame.
-        if (packet.State == DishState.Success) moneySession?.State.RecordSuccessfulDish();
+        if (packet.State == DishState.Success && !stagePresentationPaused &&
+            moneySession != null && moneySession.State.RecordSuccessfulDish())
+            successfulRecipes.Enqueue(packet.RecipeId);
         receivedPackets.Enqueue(packet);
     }
 
@@ -123,10 +118,7 @@ public class DishOrderManager : MonoBehaviour
         }
 
         RefreshViews();
-        while (earnedRewards.TryDequeue(out var reward))
-            ShowSubmissionReward(reward.Earned, reward.Total);
-        if (successCanvas != null && Time.unscaledTime >= successHideAt)
-            successCanvas.SetActive(false);
+        PresentSubmissionRewards();
     }
 
     private bool ApplyState(int recipeId, DishState state)
@@ -240,9 +232,13 @@ public class DishOrderManager : MonoBehaviour
 
         registeredServer = null;
         dishOrderManager = null;
-        if (moneySession != null) moneySession.PendingMoneyIncreased -= OnPendingMoneyIncreased;
+        if (moneySession != null)
+        {
+            moneySession.PendingMoneyIncreased -= OnPendingMoneyIncreased;
+            moneySession.RoomJoined -= ClearSubmissionFeedback;
+        }
+        ClearSubmissionFeedback();
         moneySession = null;
-        while (earnedRewards.TryDequeue(out _)) { }
 
         while (receivedPackets.TryDequeue(out _)) { }
         orders.Clear();
@@ -252,7 +248,6 @@ public class DishOrderManager : MonoBehaviour
 
         foreach (RecipeScrollView view in views)
             if (view != null) view.Clear();
-        if (successCanvas != null) successCanvas.SetActive(false);
     }
 
     public static void ReportSubmission(PlateInteraction plate, long plateId)
@@ -262,63 +257,40 @@ public class DishOrderManager : MonoBehaviour
 
     public static void ReportSubmissionIssue(string reason) => Debug.LogWarning($"[Submit Issue] {reason}");
 
-    private void OnPendingMoneyIncreased(int earned, int total) => earnedRewards.Enqueue((earned, total));
-
-    private void ShowSubmissionReward(int earned, int total)
+    private void OnPendingMoneyIncreased(int earned, int total)
     {
-        if (successCanvas == null)
-        {
-            successCanvas = new GameObject("Submission Success Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
-            // Keep overlay UI at the scene root, independent of world canvases and CanvasGroups.
-            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(successCanvas, gameObject.scene);
-            Canvas canvas = successCanvas.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 1000;
-            CanvasScaler scaler = successCanvas.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            var labelObject = new GameObject("Success Text", typeof(RectTransform), typeof(TextMeshProUGUI));
-            labelObject.transform.SetParent(successCanvas.transform, false);
-            TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
-            submissionResultText = label;
-            // Reuse the recipe UI font so Korean glyphs use the project's existing font asset.
-            TMP_FontAsset font = successFont;
-            foreach (RecipeScrollView view in views)
-            {
-                if (font != null) break;
-                if (view == null) continue;
-                TMP_Text existing = view.GetComponentInChildren<TMP_Text>(true);
-                if (existing != null) font = existing.font;
-            }
-            if (font != null) label.font = font;
-            label.fontSize = 50;
-            label.enableAutoSizing = false;
-            label.alignment = TextAlignmentOptions.Center;
-            label.color = Color.white;
-            label.raycastTarget = false;
-            RectTransform rect = label.rectTransform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(1000, 200);
-        }
-        submissionResultText.text = $"이번 요리 +{earned.ToString("N0", CultureInfo.InvariantCulture)}콩\n스테이지 누적 {total.ToString("N0", CultureInfo.InvariantCulture)}콩";
-        submissionResultText.color = Color.green;
-        successHideAt = Time.unscaledTime + Mathf.Max(0.1f, successDisplaySeconds);
-        successCanvas.SetActive(true);
-        Debug.Log($"[Submit UI] {submissionResultText.text}", this);
+        if (!stagePresentationPaused) earnedRewards.Enqueue(earned);
     }
 
-    private void OnDestroy()
+    private void ClearSubmissionFeedback()
     {
-        if (successCanvas != null) Destroy(successCanvas);
+        while (successfulRecipes.TryDequeue(out _)) { }
+        while (earnedRewards.TryDequeue(out _)) { }
+        if (rewardPopup != null) rewardPopup.Clear();
+    }
+
+    private void PresentSubmissionRewards()
+    {
+        if (successfulRecipes.IsEmpty || earnedRewards.IsEmpty) return;
+        if (dataManager == null) dataManager = FindFirstObjectByType<DataManager>();
+        if (dataManager == null || !dataManager.IsDataLoaded) return;
+        if (rewardPopup == null) rewardPopup = FindFirstObjectByType<SubmissionRewardPopup>();
+        if (rewardPopup == null) return;
+        // Each rewarded submission has one success packet and one increased pending snapshot.
+        // Pair the two ordered streams even when their callbacks arrive in different frames.
+        while (successfulRecipes.TryPeek(out _) && earnedRewards.TryPeek(out _))
+        {
+            if (!successfulRecipes.TryDequeue(out int recipeId) || !earnedRewards.TryDequeue(out int earned)) break;
+            rewardPopup.Enqueue(ResolveRecipe(recipeId)?.iconName, earned);
+        }
     }
 
     [ContextMenu("Preview/Show Submission Success (Play Mode)")]
     private void PreviewSubmissionSuccess()
     {
-        if (Application.isPlaying && isActiveAndEnabled) ShowSubmissionReward(100, 250);
+        if (!Application.isPlaying || !isActiveAndEnabled) return;
+        SubmissionRewardPopup popup = FindFirstObjectByType<SubmissionRewardPopup>();
+        if (popup != null) popup.Enqueue(ResolveRecipe(previewRecipeId)?.iconName, 100);
     }
 
     [ContextMenu("Preview/Add Order (Play Mode)")]
@@ -344,3 +316,4 @@ public class DishOrderManager : MonoBehaviour
         if (ApplyState(previewRecipeId, state)) RefreshViews();
     }
 }
+
