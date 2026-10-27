@@ -67,8 +67,6 @@ public class ConveyorEndTrigger : MonoBehaviour
 
         byte[] sendBuffer = PacketSerializer.Serialize(packet);
         ServerManager.Instance.SendData(sendBuffer).Forget();
-
-        Debug.Log($"[ConveyorEndTrigger] Reached belt end, requested destroy. NetworkID: {networkId}");
     }
 
     /// <summary>

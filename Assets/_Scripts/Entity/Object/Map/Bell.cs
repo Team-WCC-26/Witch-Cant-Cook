@@ -17,7 +17,7 @@ public class Bell : MonoBehaviour, IInteractTarget, IPunchReceiver
 
     public void Ring()
     {
-        Debug.Log("Bell 面倒 惯积");
+        Debug.Log("[Bell] 面倒 惯积");
         Rung?.Invoke();
         OnBellRung?.Invoke();
     }

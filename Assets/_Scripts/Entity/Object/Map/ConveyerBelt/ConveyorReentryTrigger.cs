@@ -39,7 +39,5 @@ public class ConveyorReentryTrigger : MonoBehaviour
 
         float distance = belt.Path.GetNearestDistance(other.transform.position);
         belt.RegisterItemAtDistance(networkId, other.transform, other.gameObject, distance);
-
-        Debug.Log($"[ConveyorReentryTrigger] Re-registered dropped item. NetworkID: {networkId}, distance: {distance:F2}");
     }
 }
