@@ -18,6 +18,8 @@ public sealed class StageSettlementCamera : MonoBehaviour
     [SerializeField, Min(1f)] private float frameMargin = 1.15f;
     private readonly Vector3[] scrollCorners = new Vector3[4];
 
+    public Camera RenderingCamera => settlementCamera != null ? settlementCamera : GetComponent<Camera>();
+
     private Camera previousGameplayCamera;
     private bool previousGameplayEnabled;
     private bool showingSettlement;

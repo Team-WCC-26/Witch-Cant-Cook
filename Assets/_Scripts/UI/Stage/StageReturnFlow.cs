@@ -5,7 +5,6 @@ using System.Linq;
 using Protocol;
 using Server;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Cysharp.Threading.Tasks;
 
 // S_StageStop ends play; S_StageResult shows results. Confirmation waits for S_LobbyMove.
@@ -217,9 +216,6 @@ public sealed class StageReturnFlow : MonoBehaviour
     }
     private void Update()
     {
-        // F confirmation belongs to the stage flow, independent of any screen-space popup.
-        if (Application.isFocused && State.Phase == StageReturnPhase.Settlement && CanConfirmResult &&
-            Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) ConfirmResult();
         if (room != null && room.State.HasStageTimeExpired(Time.unscaledTimeAsDouble) && State.WaitForSettlement())
         {
             // Keep accepted submissions and HUD alive until S_StageResult.
