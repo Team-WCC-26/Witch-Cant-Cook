@@ -91,7 +91,7 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
 
-        ApplyCursor(lockCursor);
+        ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
     }
 
     private void OnDisable()
@@ -110,7 +110,6 @@ public sealed class PlayerCameraController : MonoBehaviour
         {
             return;
         }
-
         bool cursorChanged = false;
         if (canControlCursor && lockCursor && Application.isFocused && !input.IsInputBlocked)
         {
@@ -170,7 +169,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     {
         if (canControlCursor)
         {
-            ApplyCursor(focus && lockCursor);
+            ApplyCursor(focus && lockCursor && !StageReturnFlow.IsInputBlocked);
         }
     }
     #endregion
@@ -191,7 +190,7 @@ public sealed class PlayerCameraController : MonoBehaviour
 
         canControlCursor = true;
         enabled = true;
-        ApplyCursor(lockCursor);
+        ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
     }
 
     private static float NormalizeAngle(float euler)

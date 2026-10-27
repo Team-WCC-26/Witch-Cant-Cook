@@ -128,6 +128,9 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
         if (settlementCanvas != null) settlementCanvas.SetActive(visible);
         if (!visible) return;
 
+        // Reuse the authored camera, or create one for clients whose scene snapshot lacks it.
+        RectTransform cameraCanvas = settlementCanvas != null ? settlementCanvas.transform as RectTransform : transform as RectTransform;
+        StageSettlementCamera.EnsureForScroll(cameraCanvas);
         StageSettlementData result = flow.State.Settlement;
         if (recipeCanvas != null && loggedRun != result.RunNumber)
         {
