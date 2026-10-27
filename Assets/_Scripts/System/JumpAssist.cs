@@ -37,10 +37,12 @@ public class JumpAssist : MapObjInteraction
     private Quaternion restRotation;
     private Sequence motion;
     private PadState state;
-    private bool localPlayerEntered;
+    private bool localPresenceReported;
     private bool serverReady = true;
     private int lastFireRound;
     private readonly Dictionary<Collider, PlayerBrain> occupants = new();
+    private readonly Dictionary<Collider, CatchableObj> ingredients = new();
+    private readonly HashSet<CatchableObj> launchedIngredients = new();
     private readonly List<Collider> staleContacts = new();
     private readonly List<Flight> flights = new();
 
@@ -53,6 +55,10 @@ public class JumpAssist : MapObjInteraction
 
     private void OnTriggerStay(Collider other)
     {
+        CatchableObj ingredient = other.GetComponentInParent<CatchableObj>();
+        if (IsLaunchableIngredient(ingredient)) ingredients[other] = ingredient;
+        else ingredients.Remove(other);
+
         PlayerBrain player = other.GetComponentInParent<PlayerBrain>();
         if (player == null || other != player.Col || !IsStanding(player))
         {
@@ -65,6 +71,7 @@ public class JumpAssist : MapObjInteraction
     private void OnTriggerExit(Collider other)
     {
         occupants.Remove(other);
+        ingredients.Remove(other);
     }
 
     private void Update()
@@ -77,12 +84,21 @@ public class JumpAssist : MapObjInteraction
         }
         foreach (Collider contact in staleContacts) occupants.Remove(contact);
 
+        staleContacts.Clear();
+        foreach (var contact in ingredients)
+        {
+            if (contact.Key == null || !contact.Key.enabled || !contact.Key.gameObject.activeInHierarchy
+                || !IsLaunchableIngredient(contact.Value)) staleContacts.Add(contact.Key);
+        }
+        foreach (Collider contact in staleContacts) ingredients.Remove(contact);
+
         bool hasLocalPlayer = false;
         foreach (PlayerBrain player in occupants.Values)
         {
             if (player.StateResolver is LocalPlayerStateResolver) hasLocalPlayer = true;
         }
-        SendPlayerPresence(hasLocalPlayer);
+        // Each client reports one balanced enter/exit pair for its combined presence.
+        SendPresence(hasLocalPlayer || ingredients.Count > 0);
 
         for (int i = flights.Count - 1; i >= 0; i--)
         {
@@ -95,18 +111,20 @@ public class JumpAssist : MapObjInteraction
             }
         }
 
-        if (state == PadState.Waiting && occupants.Count == 0) CancelWaiting();
-        else if (state == PadState.Idle && IsRegistered && serverReady && occupants.Count > 0) BeginWaiting();
+        if (state == PadState.Waiting && occupants.Count == 0 && ingredients.Count == 0) CancelWaiting();
+        else if (state == PadState.Idle && IsRegistered && serverReady && (occupants.Count > 0 || ingredients.Count > 0)) BeginWaiting();
     }
 
     private void OnDisable()
     {
-        SendPlayerPresence(false);
+        SendPresence(false);
         motion?.Kill();
         motion = null;
         foreach (Flight flight in flights) RestorePlayer(flight);
         flights.Clear();
         occupants.Clear();
+        ingredients.Clear();
+        launchedIngredients.Clear();
         state = PadState.Idle;
         serverReady = true;
         if (Application.isPlaying) transform.localRotation = restRotation;
@@ -125,6 +143,7 @@ public class JumpAssist : MapObjInteraction
                 motion?.Kill();
                 state = PadState.Launching;
                 PreparePlayers();
+                LaunchIngredients();
                 motion = CreateMotion(restRotation);
                 motion.Goto(Mathf.Max(0.01f, activationDelay), true);
                 motion.OnComplete(FinishMotion);
@@ -147,10 +166,10 @@ public class JumpAssist : MapObjInteraction
         motion.OnComplete(FinishMotion);
     }
 
-    private void SendPlayerPresence(bool entered)
+    private void SendPresence(bool entered)
     {
-        if (localPlayerEntered == entered || !IsRegistered || ServerManager.Instance == null) return;
-        localPlayerEntered = entered;
+        if (localPresenceReported == entered || !IsRegistered || ServerManager.Instance == null) return;
+        localPresenceReported = entered;
         if (entered)
             _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(
                 new JumpPadPlayerEnterPacket { PadEntityId = NetworkId }));
@@ -164,6 +183,15 @@ public class JumpAssist : MapObjInteraction
         return player != null && player.isActiveAndEnabled && player.Col != null
             && player.Rb != null && player.Input != null && player.StateResolver != null
             && player.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default;
+    }
+
+    private static bool IsLaunchableIngredient(CatchableObj ingredient)
+    {
+        return ingredient != null && ingredient.isActiveAndEnabled
+            && ingredient.Category == EntityCategory.Ingredient && !ingredient.IsHold
+            && ingredient.Holder == null && ingredient.ParentEntityId <= 0
+            && !ingredient.IsSubmissionPending && !ingredient.IsSubmissionReturning
+            && ingredient.Rb != null && !ingredient.Rb.isKinematic;
     }
 
     private static bool IsStanding(PlayerBrain player)
@@ -214,6 +242,15 @@ public class JumpAssist : MapObjInteraction
     {
         foreach (PlayerBrain player in occupants.Values)
         {
+            if (IsStanding(player) && player.Interact != null
+                && player.Interact.HeldObj is CatchableObj heldIngredient
+                && heldIngredient.Category == EntityCategory.Ingredient)
+            {
+                if (player.StateResolver is LocalPlayerStateResolver) player.Interact.ForceDropHeld();
+                // Release immediately while the server confirms the ownership change.
+                if (player.Interact.TryReleaseHeld(heldIngredient)) heldIngredient.OnDrop();
+            }
+
             // Each client launches only its own player.
             if (!IsAvailable(player) || player.Rb.isKinematic
                 || player.StateResolver is not LocalPlayerStateResolver
@@ -243,6 +280,24 @@ public class JumpAssist : MapObjInteraction
             rb.AddForce(direction * Mathf.Max(0.01f, launchForce), ForceMode.Impulse);
             flight.player.ActionController.PlayLaunchJumpStart();
             flight.launched = true;
+        }
+    }
+
+    private void LaunchIngredients()
+    {
+        Quaternion baseRotation = transform.parent != null
+            ? transform.parent.rotation * restRotation : restRotation;
+        Vector3 horizontal = Vector3.ProjectOnPlane(baseRotation * Vector3.left, Vector3.up).normalized;
+        float angle = Mathf.Clamp(launchAngle, 1f, 89f) * Mathf.Deg2Rad;
+        Vector3 velocity = (horizontal * Mathf.Cos(angle) + Vector3.up * Mathf.Sin(angle)).normalized
+            * Mathf.Max(0.01f, launchForce);
+
+        launchedIngredients.Clear();
+        foreach (CatchableObj ingredient in ingredients.Values)
+        {
+            if (!IsLaunchableIngredient(ingredient) || !launchedIngredients.Add(ingredient)) continue;
+            ingredient.Rb.angularVelocity = Vector3.zero;
+            ingredient.Rb.linearVelocity = velocity;
         }
     }
 

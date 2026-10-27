@@ -62,4 +62,12 @@ public class Door
             }
         }
     }
+
+    // 문이 열리기까지 남은 시간 — 재접속 스냅샷 수집용 (열림 대기 중이 아니면 0)
+    public long GetOpenRemainingMs()
+    {
+        if (_openTimer == null || !_timerManager.CheckHandleValid(_openTimer.Value)) return 0;
+
+        return _timerManager.RemainingTime(_openTimer.Value);
+    }
 }

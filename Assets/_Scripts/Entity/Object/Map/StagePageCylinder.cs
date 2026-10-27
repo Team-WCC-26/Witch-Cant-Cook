@@ -27,6 +27,7 @@ public class StagePageCylinder : MonoBehaviour, IInteractTarget, IPunchReceiver
     }
 
     public EntityCategory Category => EntityCategory.None;
+    public PageDirection Direction => direction;
     public EntityCategory AcceptedCategories => EntityCategory.Player;
 
     public void Configure(StageSelectionController controller, PageDirection pageDirection)

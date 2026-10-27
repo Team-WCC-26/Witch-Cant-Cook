@@ -13,6 +13,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     private PlayerSpawnManager players;
     private bool selectionSyncNeeded;
     private int pendingRequestedStage;
+    private bool stageEndPending;
 
     public static StageSelectionSession Instance
     {
@@ -38,6 +39,9 @@ public sealed class StageSelectionSession : MonoBehaviour
     public event Action Changed;
     public event Action<int> StageSelected;
     public event Action<int> StageStarted;
+    public event Action<StageStopPacket> StageStopped;
+    public event Action<StageResultPacket> StageResultReceived;
+    public event Action LobbyMoveReceived;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize() => _ = Instance;
@@ -48,7 +52,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         instance = this;
     }
 
-    private void OnEnable() => StageManager.DoorOpened += OnDoorOpened;
+    private void OnEnable() => DoorController.DoorOpened += OnDoorOpened;
 
     private void Update()
     {
@@ -65,6 +69,8 @@ public sealed class StageSelectionSession : MonoBehaviour
         server.RegisterHandler(PacketId.S_StageSet, OnStageSet);
         server.RegisterHandler(PacketId.S_StageStart, OnStageStart);
         server.RegisterHandler(PacketId.S_StageStop, OnStageStop);
+        server.RegisterHandler(PacketId.S_StageResult, OnStageResult);
+        server.RegisterHandler(PacketId.S_LobbyMove, OnLobbyMove);
         players = FindFirstObjectByType<PlayerSpawnManager>();
     }
 
@@ -77,6 +83,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         HasStageSelection = !hasOtherPlayers;
         selectionSyncNeeded = false;
         pendingRequestedStage = 0;
+        stageEndPending = false;
         RoomHudSession.Instance.OnRoomJoined();
         Changed?.Invoke();
     }
@@ -111,6 +118,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     {
         TryRegister();
         if (!IsRoomReady) throw new InvalidOperationException("Join a room before selecting a stage.");
+        if (StageReturnFlow.IsInputBlocked) throw new InvalidOperationException("Wait for the lobby return before selecting a stage.");
         if (!HasStageSelection) throw new InvalidOperationException("Wait for the room's selected stage before changing pages.");
         pendingRequestedStage = stageId;
         try
@@ -135,6 +143,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageStart(ReadOnlyMemory<byte> bytes)
     {
+        if (stageEndPending) return;
         SelectedStageId = PacketSerializer.Deserialize<StageStartPacket>(bytes).StageNum;
         HasStageSelection = true;
         pendingRequestedStage = 0;
@@ -146,13 +155,40 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageStop(ReadOnlyMemory<byte> bytes)
     {
+        StageStopPacket packet = PacketSerializer.Deserialize<StageStopPacket>(bytes);
+        if (stageEndPending || !IsStageRunning) return;
+        stageEndPending = true;
         IsStageRunning = false;
+        // Time ended only. Pending rewards may still arrive before S_StageResult.
+        StageStopped?.Invoke(packet);
         Changed?.Invoke();
+    }
+
+    private void OnStageResult(ReadOnlyMemory<byte> bytes)
+    {
+        StageResultPacket packet = PacketSerializer.Deserialize<StageResultPacket>(bytes);
+        if (!stageEndPending && !IsStageRunning) return;
+        stageEndPending = true;
+        IsStageRunning = false;
+        StageResultReceived?.Invoke(packet);
+        Changed?.Invoke();
+    }
+
+    private void OnLobbyMove(ReadOnlyMemory<byte> bytes)
+    {
+        PacketSerializer.Deserialize<LobbyMovePacket>(bytes);
+        if (stageEndPending) LobbyMoveReceived?.Invoke();
+    }
+
+    public void NotifyLobbyReturned()
+    {
+        stageEndPending = false;
+        IsStageRunning = false;
     }
 
     private void OnDoorOpened(DoorId doorId)
     {
-        if (doorId != DoorId.Kitchen) return;
+        if (doorId != DoorId.Kitchen || stageEndPending) return;
         IsStageRunning = true;
         selectionSyncNeeded = false;
         Changed?.Invoke();
@@ -160,12 +196,14 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnDisable()
     {
-        StageManager.DoorOpened -= OnDoorOpened;
+        DoorController.DoorOpened -= OnDoorOpened;
         if (server != null)
         {
             server.UnRegisterHandler(PacketId.S_StageSet);
             server.UnRegisterHandler(PacketId.S_StageStart);
             server.UnRegisterHandler(PacketId.S_StageStop);
+            server.UnRegisterHandler(PacketId.S_StageResult);
+            server.UnRegisterHandler(PacketId.S_LobbyMove);
         }
         server = null;
     }

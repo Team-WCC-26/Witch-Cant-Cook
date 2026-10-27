@@ -10,10 +10,12 @@ public sealed class IngredientSalmon : IngredientBehaviour, IPickupHandler, IDro
     private TimerHandle _flyTimer;
     private TimerHandle _stunTimer;
     private bool _stunned;
+    private bool _flying;   // BeginFly 이후 클라에 Active로 동기화된 상태
 
     public override void OnEnable()
     {
         _stunned = false;
+        _flying = false;
         ScheduleFly();
     }
 
@@ -28,6 +30,7 @@ public sealed class IngredientSalmon : IngredientBehaviour, IPickupHandler, IDro
         Cancel(ref _flyTimer);
         Cancel(ref _stunTimer);
         _stunned = false;
+        _flying = false;
 
         return null;
     }
@@ -46,6 +49,7 @@ public sealed class IngredientSalmon : IngredientBehaviour, IPickupHandler, IDro
         if (_stunned) return null;
 
         _stunned = true;
+        _flying = false;
         Cancel(ref _flyTimer);
         Cancel(ref _stunTimer);
         _stunTimer = Schedule(_stunDurationMs, this, static salmon => salmon.RecoverFromStun());
@@ -56,6 +60,36 @@ public sealed class IngredientSalmon : IngredientBehaviour, IPickupHandler, IDro
             State = IngredientActivationState.Stunned,
             DurationMs = _stunDurationMs
         });
+    }
+
+    // 스냅샷 수집용: 기절(Stunned)/활성(Active) 상태만 클라에 동기화된 상태이므로 이것만 전달한다
+    public override bool TryGetEffectState(out IngredientEffectSnapshot effect)
+    {
+        if (_stunned && TryGetRemainingTime(_stunTimer, out long remainingMs))
+        {
+            effect = new IngredientEffectSnapshot()
+            {
+                State = IngredientActivationState.Stunned,
+                RemainingMs = remainingMs,
+            };
+
+            return true;
+        }
+
+        if (_flying)
+        {
+            effect = new IngredientEffectSnapshot()
+            {
+                State = IngredientActivationState.Active,
+                RemainingMs = 0,
+            };
+
+            return true;
+        }
+
+        effect = new IngredientEffectSnapshot();
+
+        return false;
     }
 
     private void ScheduleFly()
@@ -69,6 +103,8 @@ public sealed class IngredientSalmon : IngredientBehaviour, IPickupHandler, IDro
         _flyTimer = default;
 
         if (!Enabled || _stunned || Ingredient.Parent != null) return;
+
+        _flying = true;
 
         BroadcastState(IngredientActivationState.Active, null, 0);
     }

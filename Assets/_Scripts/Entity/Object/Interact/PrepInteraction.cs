@@ -3,8 +3,16 @@ using Server;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver
+public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPrimaryReceiver, IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        currentItem = null;
+        pendingEntities.Clear();
+        if (isActiveAndEnabled) placement.Released += HandlePlacementReleased;
+    }
     private const float PanFrontYaw = 90f;
 
     [SerializeField] private Transform itemSlot;
@@ -13,6 +21,7 @@ public class PrepInteraction : MapObjInteraction, IEntityParentReceiver, IPanPri
     private CatchableObj currentItem;
     private readonly ObjPlacement placement = new();
     private readonly HashSet<long> pendingEntities = new();
+    public bool CanReceivePan => IsRegistered && itemSlot != null && currentItem == null && pendingEntities.Count == 0;
 
     private void OnEnable()
     {

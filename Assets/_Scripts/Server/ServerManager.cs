@@ -15,6 +15,7 @@ namespace Server
 
         public WorldStateRouter Router { get; } = new();
         public bool IsEnterRoom = false;
+        public bool IsConnected => _stream != null && _client != null && _client.Connected;
 
         private string _localHost = "127.0.0.1";
 

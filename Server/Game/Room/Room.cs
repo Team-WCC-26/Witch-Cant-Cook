@@ -29,18 +29,52 @@ public class Room
     public int PendingMoney => _pendingMoney;
     private int _pendingMoney = 0;
 
+    // 현재 스테이지 (재접속 스냅샷 동기화용)
+    public int Stage => _stage;
+    private int _stage = 0;
+
     private long _nextEntityId = 0;
 
-    private Shard _shard;
+    // 룸 소멸 여부 (RoomManager.RemoveRoom에서만 설정되며 되돌리지 않음)
+    // 주의: Stop()은 스테이지 정리일 뿐 소멸이 아니므로 이 플래그를 건드리지 않는다
+    public bool IsDestroyed => _destroyed;
+    private volatile bool _destroyed = false;
+
+    // 작업 실행 샤드는 JobQueue가 단일 출처로 관리한다
+    private readonly JobQueue _jobQueue;
 
     private readonly Dictionary<DoorId, Door> _doors = new();
+
+    public IReadOnlyDictionary<DoorId, Door> Doors => _doors;
 
     public TimerManager TimerManager => _timerManager;
     private TimerManager _timerManager = new();
 
+    // === 부하 측정 (소유 샤드 스레드 단일 작성자, 리밸런서는 근사 읽기) ===
+    public long TickCostEmaUs => Volatile.Read(ref _tickCostEmaUs);
+    private long _tickCostEmaUs = 0; // Room.Tick 비용 EMA (μs)
+
+    public long JobCostEmaUs => Volatile.Read(ref _jobCostEmaUs);
+    private long _jobCostEmaUs = 0; // 작업 1개당 비용 EMA (μs)
+
+    public long JobCount => Volatile.Read(ref _jobCount);
+    private long _jobCount = 0; // 누적 실행 작업 수
+
     private const long StagePlayTimeMs = 4 * 60 * 1000;
 
     private TimerHandle? _stageTimer;
+
+    // 스테이지 종료 후 정산 유예 타이머 (룸 핑 최대값만큼 제출을 더 받는다)
+    private TimerHandle? _settleTimer;
+
+    // 정산 결과 전송 후 룸의 모든 플레이어 확인 대기 중 여부
+    private bool _awaitingResultConfirm = false;
+
+    // 정산 결과를 확인한 플레이어 (전원 확인 시 로비로 복귀)
+    private readonly HashSet<string> _stageResultConfirms = new();
+
+    // 마지막 정산 결과 (확인 대기 중 재접속한 플레이어의 스냅샷 동기화용)
+    private StageResultSnapshot? _lastStageResult;
 
     private IngredientSpawner _ingredientSpawner;
     private DishManager _dishManager;
@@ -51,6 +85,7 @@ public class Room
         Name = name;
         Password = password;
 
+        _jobQueue = new(this);
         _ingredientSpawner = new(this, _timerManager, 2000);
         _dishManager = new(this, _timerManager);
     }
@@ -78,6 +113,17 @@ public class Room
             _timerManager.Cancel(_stageTimer.Value);
         }
 
+        // 이전 스테이지의 정산 유예/확인 대기가 남아있으면 정리한다 (재시작 시 이중 정산 방지)
+        if (_settleTimer != null)
+        {
+            _timerManager.Cancel(_settleTimer.Value);
+            _settleTimer = null;
+        }
+
+        _awaitingResultConfirm = false;
+        _stageResultConfirms.Clear();
+        _lastStageResult = null;
+
         _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.EndStage());
 
         _dishManager.Start();
@@ -90,19 +136,10 @@ public class Room
         _ingredientSpawner.Stop();
         _timerManager.Clear();
         _stageTimer = null;
-
-        List<Entity> entities = new(_entities.Values);
-        foreach (var entity in entities)
-        {
-            entity.Parent = null;
-            if (entity is Ingredient ingredient)
-            {
-                ingredient.IngredientBehaviour?.Clear();
-            }
-        }
-
-        _entities.Clear();
-        _dirtyEntities.Clear();
+        _settleTimer = null;
+        _awaitingResultConfirm = false;
+        _stageResultConfirms.Clear();
+        _lastStageResult = null;
     }
 
     public void Tick(long deltaTime)
@@ -137,19 +174,41 @@ public class Room
 
     public bool IsEnable()
     {
-        return _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
+        // 파괴된 방은 참가 대상에서 제외한다 (회수 경합에서 대기 중 참가 작업 방어)
+        return !_destroyed && _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
     }
 
-    public void PushJob(Action job) => _shard.Push(job);
+    public void PushJob(Action job) => _jobQueue.Push(job);
 
-    public void InitShard(Shard shard)
-    {
-        _shard = shard;
-    }
+    public void InitShard(Shard shard) => _jobQueue.InitShard(shard);
+
+    // 마이그레이션 시작 (소스 샤드 스레드의 마이그레이션 작업 M 내부에서 호출)
+    public void BeginMigration(Shard target) => _jobQueue.BeginMigration(target);
 
     public Shard GetShard()
     {
-        return _shard;
+        return _jobQueue.CurrentShard!;
+    }
+
+    // 마지막 재배치 시각 (리밸런서가 기록, 룸 단위 재배치 쿨다운용)
+    public long LastMovedAtMs { get; private set; }
+
+    public void MarkMoved() => LastMovedAtMs = TimeUtil.NowMs();
+
+    // 룸 소멸 표시 (RoomManager.RemoveRoom에서만 호출 - 이후 실행되는 샤드 등록 job이 등록하지 않도록)
+    public void MarkDestroyed() => _destroyed = true;
+
+    // 샤드 루프가 Room.Tick 하나를 실행한 뒤 호출 (소유 샤드 스레드 전용)
+    public void RecordTickCost(long costUs)
+    {
+        _tickCostEmaUs += (long)((costUs - _tickCostEmaUs) * ShardBalanceConfig.EmaAlpha);
+    }
+
+    // JobQueue가 작업 하나를 실행한 뒤 호출 (소유 샤드 스레드 전용)
+    public void RecordJobExecuted(long costUs)
+    {
+        _jobCostEmaUs += (long)((costUs - _jobCostEmaUs) * ShardBalanceConfig.EmaAlpha);
+        _jobCount++;
     }
 
     public void MakeDirty(Entity entity)
@@ -159,6 +218,8 @@ public class Room
 
     public void SetStage(int stage)
     {
+        _stage = stage;
+
         _ingredientSpawner.SetStage(stage);
         _dishManager.SetStage(stage);
     }
@@ -261,8 +322,16 @@ public class Room
     /// </summary>
     public void Enter(Player player)
     {
-        _players.Add(player);
+        // 파괴된 방 참가 금지 (참가 작업 대기 중 방이 회수된 경우)
+        if (_destroyed) return;
+
+        // 중복 참가 방지 (동일 Player가 두 번 등록되지 않게 한다)
+        if (_players.Contains(player)) return;
+
+        // player.Room을 멤버십 등록 전에 설정한다: 참가 작업 실행 중 종료 이벤트가 룸을 읽는 경합에서
+        // 멤버십 누락 판정(정리 누락/레코드 오만료)이 나오지 않게 한다
         player.Room = this;
+        _players.Add(player);
         _playerCnt++;
     }
 
@@ -272,7 +341,9 @@ public class Room
     /// </summary>
     public void Leave(Player player)
     {
-        _players.Remove(player);
+        // 등록되지 않은 플레이어의 퇴장은 무시한다 (playerCnt 언더플로 가드)
+        if (!_players.Remove(player)) return;
+
         player.Room = null;
 
         if (player.Parent is CookingTool cookingTool)
@@ -291,6 +362,150 @@ public class Room
         };
 
         BroadCast(PacketSerializer.Serialize(packet, true));
+
+        // 정산 확인 대기 중 인원이 줄면 남은 인원 기준으로 로비 복귀를 재평가한다
+        CheckAllConfirmed();
+    }
+
+    /// <summary>
+    /// 유예 만료/명시적 종료된 플레이어의 최종 정리
+    /// <para/> 사용시 PushJob안에 넣어줘야 함. 호출부에서 Detached 상태를 재검사해 이미 재접속됐으면 실행하지 않는다
+    /// </summary>
+    public void RemovePlayerFinal(Player player)
+    {
+        // 이미 나갔거나 재접속으로 복귀한 경우는 정리하지 않는다 (실행 시점 재검사)
+        if (!_players.Contains(player)) return;
+
+        // 쥐고 있던 Entity를 떨어뜨린다 (부모 해제 시 Player.HoldingEntity도 함께 정리된다)
+        if (player.HoldingEntity != null)
+        {
+            player.HoldingEntity.Parent = null;
+        }
+
+        Leave(player);
+    }
+
+    /// <summary>
+    /// 재접속 스냅샷 생성: 서버가 추적하는 현재 상태를 읽어 만든다 (Dirty Consume 없이 읽기만 한다)
+    /// <para/> 반드시 PushJob(샤드 작업) 안에서 호출해 일관 시점에 생성해야 한다
+    /// <para/> 서버가 추적하지 않는 값(도구/재료 Transform 등)은 포함하지 않는다
+    /// </summary>
+    public SnapshotData CreateReconnectSnapshot()
+    {
+        SnapshotData snapshot = new()
+        {
+            RoomId = Id,
+            Stage = _stage,
+            StageRunning = _stageTimer != null,
+            StageRemainingMs = (_stageTimer != null) ? _timerManager.RemainingTime(_stageTimer.Value) : 0,
+            Money = _money,
+            PendingMoney = _pendingMoney
+        };
+
+        // 정산 결과 확인 대기 중이면 결과를 싣는다 (유예/확인 대기 중 브로드캐스트는 끊긴 세션에 폐기된다)
+        if (_awaitingResultConfirm && _lastStageResult != null)
+        {
+            snapshot.StageResult = _lastStageResult;
+        }
+
+        foreach (var player in _players)
+        {
+            snapshot.Players.Add(new PlayerSnapshot()
+            {
+                StablePlayerId = player.PlayerId,
+                EntityId = player.EntityId,
+                Position = player.Position,
+                Rotation = player.Rotation,
+                State = player.State,
+                Hp = player.Hp,
+                Ping = player.Ping,
+                ParentEntityId = (player.Parent == null) ? -1 : player.Parent.EntityId,
+                HoldingEntityId = (player.HoldingEntity == null) ? -1 : player.HoldingEntity.EntityId
+            });
+        }
+
+        foreach (var entity in _entities.Values)
+        {
+            if (entity is Player) continue;
+            if (entity.IsDestroyed) continue;
+
+            EntitySnapshot entitySnapshot = new()
+            {
+                EntityId = entity.EntityId,
+                Kind = (entity is Ingredient) ? SnapshotEntityKind.Ingredient : SnapshotEntityKind.Tool,
+                ParentEntityId = (entity.Parent == null) ? -1 : entity.Parent.EntityId,
+                ParentPlayerId = (entity.Parent as Player)?.PlayerId
+            };
+
+            switch (entity)
+            {
+                case Ingredient ingredient:
+                    entitySnapshot.IngredientId = ingredient.IngredientId;
+                    entitySnapshot.ProcessState = ingredient.ProcessState;
+                    entitySnapshot.IngredientHp = ingredient.Hp;
+
+                    if (ingredient.IngredientBehaviour != null && ingredient.IngredientBehaviour.TryGetEffectState(out var effect))
+                    {
+                        entitySnapshot.Effect = effect;
+                    }
+                    break;
+
+                case Tool tool:
+                    entitySnapshot.ToolId = tool.ToolId;
+                    break;
+            }
+
+            // 컨테이너 자식 목록
+            if (entity is ContainerTool container)
+            {
+                foreach (var child in container.Items)
+                {
+                    entitySnapshot.ChildEntityIds.Add(child.EntityId);
+                }
+            }
+
+            // 조리중 여부 + 남은 시간 / 점프대 상태
+            switch (entity)
+            {
+                case Pot pot:
+                    entitySnapshot.CookRemainingMs = pot.GetCookRemainingMs();
+                    break;
+
+                case CookingTool cooking:
+                    entitySnapshot.CookRemainingMs = cooking.GetCookRemainingMs();
+                    break;
+
+                case JumpPad jumpPad:
+                    entitySnapshot.JumpPad = jumpPad.GetSnapshot();
+                    break;
+            }
+
+            snapshot.Entities.Add(entitySnapshot);
+        }
+
+        foreach (var door in _doors.Values)
+        {
+            snapshot.Doors.Add(new DoorSnapshot()
+            {
+                DoorId = door.DoorId,
+                IsOpen = door.IsOpen,
+                OpenRemainingMs = door.GetOpenRemainingMs()
+            });
+        }
+
+        foreach (var (recipeId, remainingMs) in _dishManager.GetActiveOrders())
+        {
+            snapshot.DishOrders.Add(new DishSnapshot()
+            {
+                RecipeId = recipeId,
+                RemainingMs = remainingMs
+            });
+        }
+
+        snapshot.NextOrderRemainingMs = _dishManager.GetNextOrderRemainingMs();
+        snapshot.Spawners.AddRange(_ingredientSpawner.GetSpawnRemainingList());
+
+        return snapshot;
     }
 
     public void BroadCastForce(byte[] packet)
@@ -542,26 +757,140 @@ public class Room
     }
 
     /// <summary>
-    /// 스테이지 종료 (타임아웃 또는 클라 요청)
-    /// <para/> 임시 보유량을 보유량에 정산하고 결과를 전송
+    /// 스테이지 시간 종료 (타임아웃 또는 클라 요청)
+    /// <para/> 종료 알림(StageStop)을 전송하고 룸 핑 최대값만큼 제출 유예 후 정산한다 (SettleStage)
     /// </summary>
     public void EndStage()
     {
+        // 이미 유예/정산 확인 대기 중이면 무시한다 (타이머 만료와 클라 종료 요청 중복)
+        if (_settleTimer != null || _awaitingResultConfirm) return;
+
+        // 새 주문 선택과 재료 스폰만 중지한다 (진행 중 주문의 제출은 유예 기간 동안 계속 받는다)
+        _dishManager.StopSelect();
+        _ingredientSpawner.Stop();
+        _timerManager.Clear();
+        _stageTimer = null;
+
+        StageStopPacket packet = new();
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
+
+        _settleTimer = _timerManager.Schedule(GetMaxPingMs(), this, static room => room.SettleStage());
+    }
+
+    /// <summary>
+    /// 정산 결과 확인 (사용시 PushJob안에 넣어줘야 함)
+    /// <para/> 룸의 모든 플레이어가 확인하면 로비로 복귀한다
+    /// </summary>
+    public void ConfirmStageResult(Player player)
+    {
+        // 정산 결과 전송 전의 확인은 무시한다
+        if (!_awaitingResultConfirm) return;
+        if (!_players.Contains(player)) return;
+
+        _stageResultConfirms.Add(player.PlayerId);
+
+        CheckAllConfirmed();
+    }
+
+    // 유예 시간 종료: 제출 접수를 마감하고 임시 보유량을 보유량에 정산한 뒤 결과를 전송한다
+    private void SettleStage()
+    {
+        _settleTimer = null;
+
         bool isSuccess = _dishManager.IsStageSuccess();
         int pendingMoney = _pendingMoney;
 
+        // 유예 기간 동안 시작된 조리 타이머 등 잔여 타이머를 정리한다
         Stop();
 
         _money += pendingMoney;
         _pendingMoney = 0;
 
-        StageStopPacket packet = new()
+        StageResultPacket packet = new()
         {
             PendingMoney = pendingMoney,
             Money = _money,
             IsSuccess = isSuccess
         };
 
+        // 확인 대기 중 재접속하면 브로드캐스트를 받지 못하므로 스냅샷으로 재전달하기 위해 결과를 보관한다
+        _lastStageResult = new StageResultSnapshot()
+        {
+            PendingMoney = packet.PendingMoney,
+            Money = packet.Money,
+            IsSuccess = packet.IsSuccess
+        };
+
         BroadCast(PacketSerializer.Serialize(packet, true));
+
+        _awaitingResultConfirm = true;
+    }
+
+    // 전원이 확인했는지 재평가한다 (확인 추가 또는 퇴장으로 인원 변화 시 호출)
+    private void CheckAllConfirmed()
+    {
+        if (!_awaitingResultConfirm) return;
+        if (_players.Count == 0) return;
+        if (_stageResultConfirms.Count < _players.Count) return;
+
+        ReturnToLobby();
+    }
+
+    // 전원 확인 완료: 로비 문을 열고 이동을 지시한다 (실제 이동 연산은 클라이언트가 수행)
+    private void ReturnToLobby()
+    {
+        _awaitingResultConfirm = false;
+        _stageResultConfirms.Clear();
+        _lastStageResult = null;
+
+        HandleDoorOpened(_doors[DoorId.Lobby]);
+
+        LobbyMovePacket packet = new();
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
+
+        ClearKitchenEntities();
+    }
+
+    // 주방에 남은 엔티티 정리: 재료는 Destroy 동기화로 클라에서도 제거하고,
+    // 도구는 다음 스테이지에서 클라가 재등록하므로 동기화 없이 회수한다
+    private void ClearKitchenEntities()
+    {
+        List<Entity> entities = new(_entities.Values);
+
+        foreach (var entity in entities)
+        {
+            if (entity is Ingredient ingredient)
+            {
+                if (!ingredient.IsDestroyed)
+                {
+                    ingredient.Destroy();
+                }
+
+                continue;
+            }
+
+            entity.Parent = null;
+            UnregisterEntity(entity.EntityId);
+        }
+    }
+
+    // 룸 플레이어 핑 최대값 (ms) — 스테이지 종료 후 제출 유예 시간
+    private long GetMaxPingMs()
+    {
+        long maxPing = 0;
+
+        foreach (var player in _players)
+        {
+            long ping = (long)Math.Ceiling(player.Ping);
+
+            if (ping > maxPing)
+            {
+                maxPing = ping;
+            }
+        }
+
+        return maxPing;
     }
 }

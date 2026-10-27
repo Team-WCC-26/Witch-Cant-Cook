@@ -36,6 +36,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     [Header("Components")]
     [SerializeField] private MeshFilter meshFilter;
     [SerializeField] private Renderer targetRenderer;
+    [Tooltip("비워 두면 MeshFilter와 같은 오브젝트의 MeshCollider를 사용합니다. 상태별 시각 메시와 함께 갱신합니다.")]
+    [SerializeField] private MeshCollider meshCollider;
 
     [Header("Interact Gauge")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
@@ -69,10 +71,13 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private bool hasOriginalScale;
     private bool hasOriginalState;
     private Mesh originalMesh;
+    private Mesh originalColliderMesh;
     private Material[] originalMaterials;
     private bool originalRendererEnabled;
     private readonly List<MonoBehaviour> traitComponents = new();
     private readonly List<bool> originalTraitEnabled = new();
+    private readonly List<Collider> bounceMaterialColliders = new();
+    private readonly List<PhysicsMaterial> originalBounceMaterials = new();
 
     [Header("Action Visuals")]
     [SerializeField] private IngredientActionVisual[] actionVisuals;
@@ -128,6 +133,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         gaugeUI?.Hide();
         if (meshFilter != null) meshFilter.sharedMesh = originalMesh;
+        ApplyColliderMesh(originalColliderMesh);
         if (targetRenderer != null)
         {
             targetRenderer.sharedMaterials = originalMaterials;
@@ -136,6 +142,9 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         // Pool return deactivates the object first, so restoration cannot start effects here.
         for (int i = 0; i < traitComponents.Count; i++)
             if (traitComponents[i] != null) traitComponents[i].enabled = originalTraitEnabled[i];
+        for (int i = 0; i < bounceMaterialColliders.Count; i++)
+            if (bounceMaterialColliders[i] != null)
+                bounceMaterialColliders[i].sharedMaterial = originalBounceMaterials[i];
     }
 
     private void CacheOriginalState()
@@ -144,6 +153,9 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         if (meshFilter == null) meshFilter = GetComponentInChildren<MeshFilter>(true);
         if (targetRenderer == null && meshFilter != null) targetRenderer = meshFilter.GetComponent<Renderer>();
         originalMesh = meshFilter != null ? meshFilter.sharedMesh : null;
+        if (meshCollider == null && meshFilter != null)
+            meshCollider = meshFilter.GetComponent<MeshCollider>();
+        originalColliderMesh = meshCollider != null ? meshCollider.sharedMesh : null;
         if (targetRenderer != null)
         {
             originalMaterials = targetRenderer.sharedMaterials;
@@ -158,6 +170,15 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             traitComponents.Add(component);
             originalTraitEnabled.Add(component.enabled);
         }
+        if (traitComponents.Exists(component => component is IngredientTraitBounce))
+        {
+            foreach (Collider col in GetComponentsInChildren<Collider>(true))
+            {
+                if (col.GetComponentInParent<IngredientReaction>(true) != this) continue;
+                bounceMaterialColliders.Add(col);
+                originalBounceMaterials.Add(col.sharedMaterial);
+            }
+        }
         hasOriginalState = true;
     }
 
@@ -169,6 +190,15 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             if (component == null) continue;
             component.enabled = false; // OnDisable cancels timers, flight, and subscriptions.
             component.StopAllCoroutines();
+        }
+        // Clear the actual colliders here, including when Bounce was already disabled.
+        // A component's OnDisable alone is not an authoritative cut-state transition.
+        foreach (Collider col in bounceMaterialColliders)
+            if (col != null) col.sharedMaterial = null;
+        if (bounceMaterialColliders.Count > 0)
+        {
+            int remaining = bounceMaterialColliders.FindAll(col => col != null && col.sharedMaterial != null).Count;
+            Debug.Log($"[Mushroom Cut] entity={catchable?.NetworkId}, colliders={bounceMaterialColliders.Count}, materialRemaining={remaining}", this);
         }
     }
 
@@ -311,6 +341,18 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         if (meshFilter == null) return;
 
         meshFilter.sharedMesh = mesh;
+        ApplyColliderMesh(mesh);
+    }
+
+    private void ApplyColliderMesh(Mesh mesh)
+    {
+        if (meshCollider == null) return;
+        bool needsConvex = meshCollider.attachedRigidbody != null;
+        if (meshCollider.sharedMesh == mesh && (!needsConvex || meshCollider.convex)) return;
+        // Rebuild the collision shape as well as the visible mesh. Keep it valid when thrown.
+        meshCollider.sharedMesh = null;
+        if (needsConvex) meshCollider.convex = true;
+        meshCollider.sharedMesh = mesh;
     }
 
     private void ApplyMaterials(Material[] materials)

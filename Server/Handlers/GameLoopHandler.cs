@@ -7,10 +7,9 @@ public class GameLoopHandler : PacketHandlerBase
     [PacketHandler(PacketId.C_StageSet)]
     public static void SetStage(Session session, PacketPackageInfo package)
     {
-        var room = session.Player.Room;
         var packet = DeSerialize<StageSetPacket>(package.Body);
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.SetStage(packet.StageNum);
 
@@ -21,10 +20,9 @@ public class GameLoopHandler : PacketHandlerBase
     [PacketHandler(PacketId.C_StageStart)]
     public static void StartStage(Session session, PacketPackageInfo package)
     {
-        var room = session.Player.Room;
         var packet = DeSerialize<StageStartPacket>(package.Body);
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.SetStage(packet.StageNum);
             room.Start();
@@ -36,11 +34,18 @@ public class GameLoopHandler : PacketHandlerBase
     [PacketHandler(PacketId.C_StageStop)]
     public static void StopStage(Session session, PacketPackageInfo package)
     {
-        var room = session.Player.Room;
-
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.EndStage();
+        });
+    }
+
+    [PacketHandler(PacketId.C_StageResultConfirm)]
+    public static void ConfirmStageResult(Session session, PacketPackageInfo package)
+    {
+        session.Player.PushGameplayJob(session, room =>
+        {
+            room.ConfirmStageResult(session.Player);
         });
     }
 }

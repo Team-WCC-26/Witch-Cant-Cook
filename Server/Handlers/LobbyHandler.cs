@@ -8,9 +8,8 @@ public class LobbyHandler : PacketHandlerBase
     public static void InteractDoor(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<InteractDoorPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.InteractDoor(packet.DoorId, session.Player.PlayerId);
         });
@@ -20,9 +19,8 @@ public class LobbyHandler : PacketHandlerBase
     public static void StopInteractDoor(Session session, PacketPackageInfo package)
     {
         var packet = DeSerialize<InteractDoorPacket>(package.Body);
-        var room = session.Player.Room;
 
-        room.PushJob(() =>
+        session.Player.PushGameplayJob(session, room =>
         {
             room.StopInteractDoor(packet.DoorId, session.Player.PlayerId);
         });

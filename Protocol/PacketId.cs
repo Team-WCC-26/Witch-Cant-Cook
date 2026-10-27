@@ -20,6 +20,15 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_PingResult = 10,
 
+    C_SessionHello = 14,
+    S_SessionTicket = 15,
+
+    C_ReconnectRequest = 16,
+    S_ReconnectResult = 17,
+
+    C_SnapshotApplied = 18,
+    S_ReconnectSnapshot = 19,
+
     C_SetLatency = 12, // 테스트용 지연 시뮬레이터
 
     // 인증 관련 패킷 (100~199)
@@ -68,6 +77,11 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
 
     C_StageStop = 314,
     S_StageStop = 315,
+
+    C_StageResultConfirm = 316,
+    S_StageResult = 317,
+
+    S_LobbyMove = 319,
 
     //C_EntityRegister = 330,
     //S_EntityRegister = 331,

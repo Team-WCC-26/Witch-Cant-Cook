@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using Protocol;
 using Server;
 using System;
@@ -21,10 +21,15 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     [SerializeField] private CinemachineCamera virtualCamera = null;
 
     private readonly Dictionary<string, PlayerBrain> players = new();
+    private Coroutine subscribeRoutine;
+    private bool isSubscribed;
+    private MapObjNetworkRouter mapObjRouter;
 
     //Packet Ids
     private PacketId _joinMemberID => PacketId.S_PlayerEnter;
     private PacketId _leaveMemberID => PacketId.S_PlayerLeave;
+
+    #region Unity Callbacks
 
     protected override void Awake()
     {
@@ -33,22 +38,21 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
     private void OnEnable()
     {
-        StartCoroutine(WaitForServerManager());
-    }
-
-    private IEnumerator WaitForServerManager()
-    {
-        yield return new WaitUntil(() => ServerManager.Instance != null);
-
-        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
-        ServerManager.Instance.RegisterHandler(_leaveMemberID, MemberLeft);
+        subscribeRoutine = StartCoroutine(WaitForServerManager());
     }
 
     private void OnDisable()
     {
+        if (subscribeRoutine != null) StopCoroutine(subscribeRoutine);
+        subscribeRoutine = null;
+        if (!isSubscribed || ServerManager.Instance == null) return;
         ServerManager.Instance.UnRegisterHandler(_joinMemberID);
         ServerManager.Instance.UnRegisterHandler(_leaveMemberID);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PlayerRespawn);
+        isSubscribed = false;
     }
+
+    #endregion
 
     public string MyID
     {
@@ -57,6 +61,40 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     }
 
     public IEnumerable<PlayerBrain> Players => players.Values;
+    public Transform InitialSpawnPoint => spawnRoot;
+
+    // Use the same initial spawn anchor on every client; keep the two players apart.
+    public bool TryGetLobbyReturnSpawns(IReadOnlyList<string> participants,
+        out Dictionary<string, Pose> poses, out string issue)
+    {
+        poses = new Dictionary<string, Pose>();
+        issue = null;
+        if (spawnRoot == null)
+        {
+            issue = "PlayerSpawnManager의 초기 스폰 위치(spawnRoot)를 지정하세요.";
+            return false;
+        }
+        if (participants == null || participants.Count == 0 || participants.Count > 2)
+        {
+            issue = "로비 참가자 정보 대기 중 (1~2명)";
+            return false;
+        }
+        var ids = new HashSet<string>();
+        foreach (string id in participants)
+        {
+            if (string.IsNullOrEmpty(id) || !ids.Add(id))
+            {
+                issue = "로비 참가자 ID가 없거나 중복되었습니다.";
+                return false;
+            }
+        }
+        for (int i = 0; i < participants.Count; i++)
+        {
+            Vector3 position = spawnRoot.TransformPoint(new Vector3((i - 0.5f) * 1.5f, 0f, 0f));
+            poses.Add(participants[i], new Pose(position, spawnRoot.rotation));
+        }
+        return true;
+    }
 
     public bool IsMine(string playerId)
     {
@@ -148,13 +186,65 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
             return false;
 
         Transform point = spawnPoint != null ? spawnPoint : spawnRoot;
+        if (point == null) return false;
 
         player.Rocket?.StopFlight();
+        player.Health.Reset();
+        if (player.StateResolver is RemotePlayerStateResolver remote)
+            remote.ResetForStageReturn(new Pose(point.position, point.rotation));
+        player.ActionController.Movement.UpdateEjectionMovement(false);
+        player.ActionController.Movement.BeginForcedMovement(0f);
+        if (player.Interact.HeldObj is CatchableObj held && player.Interact.TryReleaseHeld(held)) held.OnDrop();
+        Vector3 previousPos = player.transform.position;
+        Quaternion rotationDelta = point.rotation * Quaternion.Inverse(player.transform.rotation);
+        var bodyPoses = new List<(Rigidbody body, Vector3 pos, Quaternion rot)>();
+        foreach (BodyPart part in player.BodyParts)
+        {
+            if (part == null || part.Rb == null || part.Rb.isKinematic) continue;
+            bodyPoses.Add((part.Rb, point.position + rotationDelta * (part.Rb.position - previousPos),
+                rotationDelta * part.Rb.rotation));
+        }
+        if (player.Rb != null)
+        {
+            if (!player.Rb.isKinematic)
+            {
+                player.Rb.linearVelocity = Vector3.zero;
+                player.Rb.angularVelocity = Vector3.zero;
+            }
+            player.Rb.position = point.position;
+            player.Rb.rotation = point.rotation;
+        }
 
         player.transform.SetPositionAndRotation(
             point.position,
             point.rotation);
+        foreach (var pose in bodyPoses)
+        {
+            pose.body.position = pose.pos;
+            pose.body.rotation = pose.rot;
+            pose.body.linearVelocity = Vector3.zero;
+            pose.body.angularVelocity = Vector3.zero;
+        }
 
         return true;
     }
+
+    private void MemberRespawned(ReadOnlyMemory<byte> data)
+    {
+        PlayerRespawnPacket packet = PacketSerializer.Deserialize<PlayerRespawnPacket>(data.Span);
+        if (mapObjRouter == null) mapObjRouter = FindFirstObjectByType<MapObjNetworkRouter>();
+        if (mapObjRouter != null && mapObjRouter.TryRespawnTrashPlayer(packet.PlayerID)) return;
+        RespawnPlayer(packet.PlayerID);
+    }
+    private IEnumerator WaitForServerManager()
+    {
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+
+        ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
+        ServerManager.Instance.RegisterHandler(_leaveMemberID, MemberLeft);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PlayerRespawn, MemberRespawned);
+        isSubscribed = true;
+        subscribeRoutine = null;
+    }
+
 }

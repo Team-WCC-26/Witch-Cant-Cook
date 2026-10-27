@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using Protocol;
 using Server;
 using UnityEngine;
@@ -24,6 +25,21 @@ public class DishOrderManager : MonoBehaviour
     private GameObject successCanvas;
     private TMP_Text submissionResultText;
     private float successHideAt;
+    private RoomHudSession moneySession;
+    private readonly ConcurrentQueue<(int Earned, int Total)> earnedRewards = new();
+    private bool stagePresentationPaused;
+
+    public void SetStagePresentationPaused(bool paused)
+    {
+        stagePresentationPaused = paused;
+        if (!paused) return;
+        while (receivedPackets.TryDequeue(out _)) { }
+        while (earnedRewards.TryDequeue(out _)) { }
+        orders.Clear();
+        visibleOrders.Clear();
+        foreach (RecipeScrollView view in views) if (view != null) view.Clear();
+        if (successCanvas != null) successCanvas.SetActive(false);
+    }
 
     [Header("Runtime Status (read only while playing)")]
     [SerializeField] private string lastPacket;
@@ -55,6 +71,8 @@ public class DishOrderManager : MonoBehaviour
         }
 
         dishOrderManager = this;
+        moneySession = RoomHudSession.Instance;
+        moneySession.PendingMoneyIncreased += OnPendingMoneyIncreased;
         views.Clear();
 
         foreach (RecipeScrollView view in scrollViews)
@@ -67,6 +85,7 @@ public class DishOrderManager : MonoBehaviour
         if (views.Count == 0)
             Debug.LogWarning("DishOrderManager: no scroll views assigned.", this);
 
+        if (StageReturnFlow.IsSettlementActive) SetStagePresentationPaused(true);
         RefreshViews();
     }
 
@@ -85,7 +104,10 @@ public class DishOrderManager : MonoBehaviour
 
     private void ReceivePacket(ReadOnlyMemory<byte> data)
     {
-        receivedPackets.Enqueue(PacketSerializer.Deserialize<DishStatePacket>(data));
+        DishStatePacket packet = PacketSerializer.Deserialize<DishStatePacket>(data);
+        // Capture before the presentation queue: S_StageResult may arrive in the same frame.
+        if (packet.State == DishState.Success) moneySession?.State.RecordSuccessfulDish();
+        receivedPackets.Enqueue(packet);
     }
 
     private void Update()
@@ -93,6 +115,7 @@ public class DishOrderManager : MonoBehaviour
         TryRegister();
 
         // Always update Unity objects on the main thread, regardless of the dispatcher's caller.
+        if (stagePresentationPaused) return;
         while (receivedPackets.TryDequeue(out DishStatePacket packet))
         {
             DishSubmissionVfx.PlayForServerResult(packet.State);
@@ -100,6 +123,8 @@ public class DishOrderManager : MonoBehaviour
         }
 
         RefreshViews();
+        while (earnedRewards.TryDequeue(out var reward))
+            ShowSubmissionReward(reward.Earned, reward.Total);
         if (successCanvas != null && Time.unscaledTime >= successHideAt)
             successCanvas.SetActive(false);
     }
@@ -119,11 +144,6 @@ public class DishOrderManager : MonoBehaviour
             case DishState.Success:
 
             case DishState.Fail:
-                // The protocol does not distinguish submission failure from order timeout.
-                string resultName = ResolveRecipe(recipeId)?.name ?? "이름 미확인";
-                ShowSubmissionMessage(state == DishState.Success ? "제출 성공!" : "주문 시간 초과 / 실패",
-                    $"서버 결과: RecipeId={recipeId} / {resultName}\nState={state}\n현재 패킷에는 제출 EntityId와 실패 사유가 없습니다.",
-                    state == DishState.Success ? Color.green : new Color(1f, 0.4f, 0.4f), 6f);
                 for (int i = 0; i < orders.Count; i++)
                 {
                     if (orders[i].RecipeId != recipeId) continue;
@@ -220,6 +240,9 @@ public class DishOrderManager : MonoBehaviour
 
         registeredServer = null;
         dishOrderManager = null;
+        if (moneySession != null) moneySession.PendingMoneyIncreased -= OnPendingMoneyIncreased;
+        moneySession = null;
+        while (earnedRewards.TryDequeue(out _)) { }
 
         while (receivedPackets.TryDequeue(out _)) { }
         orders.Clear();
@@ -235,54 +258,14 @@ public class DishOrderManager : MonoBehaviour
 
     public static void ReportSubmission(PlateInteraction plate, long plateId)
     {
-        if (dishOrderManager == null) return;
-        dishOrderManager.ShowSubmissionDetails(plate, plateId);
+        Debug.Log($"[Submit Request] EntityId={plateId}");
     }
 
-    public static void ReportSubmissionIssue(string reason)
-    {
-        if (dishOrderManager != null)
-            dishOrderManager.ShowSubmissionMessage("제출 요청 확인 필요", reason, Color.yellow, 8f);
-    }
+    public static void ReportSubmissionIssue(string reason) => Debug.LogWarning($"[Submit Issue] {reason}");
 
-    private void ShowSubmissionDetails(PlateInteraction plate, long plateId)
-    {
-        CatchableObj food = plate.CurrentFood;
-        CatchableData foodData = food != null ? food.Data : null;
-        if (dataManager == null) dataManager = FindFirstObjectByType<DataManager>();
-        var candidates = new List<Recipe>();
-        FoodRecipeIdentity identity = food != null ? food.GetComponent<FoodRecipeIdentity>() : null;
-        int submittedRecipeId = identity != null ? identity.RecipeId : 0;
-        if (submittedRecipeId > 0 && dataManager != null && dataManager.IsDataLoaded &&
-            dataManager.GetRecipe().TryGet(submittedRecipeId, out Recipe submittedRecipe))
-            candidates.Add(submittedRecipe);
+    private void OnPendingMoneyIncreased(int earned, int total) => earnedRewards.Enqueue((earned, total));
 
-        string recipeInfo = candidates.Count == 0 ? "매핑 없음 (음식 ID와 레시피 ID는 별개)" :
-            string.Join(", ", candidates.ConvertAll(recipe => $"{recipe.id} / {recipe.name}"));
-        var active = new List<DishOrder>();
-        orders.GetVisible(Time.unscaledTimeAsDouble, int.MaxValue, active);
-        bool matches = active.Exists(order => order.RecipeId == submittedRecipeId);
-        string comparison = submittedRecipeId <= 0 ? "음식에 RecipeId 없음: 일반 재료이거나 생성 정보 누락" :
-            matches ? "현재 주문에 같은 레시피 있음 (서버 성공 확정 아님)" : "현재 유효 주문에 같은 레시피 없음";
-        IngredientAction actions = IngredientAction.None;
-        if (food != null && food.TryGetComponent(out IngredientReaction reaction))
-            foreach (IngredientAction action in new[] { IngredientAction.Cut, IngredientAction.Grill, IngredientAction.Boil, IngredientAction.Cook })
-                if (reaction.IsActionCompleted(action)) actions |= action;
-        string orderInfo = active.Count == 0 ? "없음" : string.Join(", ", active.ConvertAll(order =>
-            $"{order.RecipeId} / {ResolveRecipe(order.RecipeId)?.name ?? "이름 미확인"}"));
-        string details = $"접시 EntityId={plateId} / 음식 EntityId={food?.NetworkId}\n" +
-            $"음식 데이터 ID={foodData?.id} / {foodData?.name ?? "미확인"}\n" +
-            $"음식 RecipeId={submittedRecipeId} / {recipeInfo}\n" +
-            $"로컬 조리 상태: {actions} ({(byte)actions})\n" +
-            $"주문 비교: {comparison}\n현재 주문: {orderInfo}\n" +
-            "서버 판정 대기 · 응답이 없어도 실패로 확정하지 않습니다.";
-        ShowSubmissionMessage("제출 요청", details, Color.white, 12f);
-    }
-
-    private void ShowSubmissionResult(bool succeeded) => ShowSubmissionMessage(
-        succeeded ? "제출 성공!" : "제출 실패!", "UI 미리보기", succeeded ? Color.green : Color.red, successDisplaySeconds);
-
-    private void ShowSubmissionMessage(string title, string details, Color color, float duration)
+    private void ShowSubmissionReward(int earned, int total)
     {
         if (successCanvas == null)
         {
@@ -319,13 +302,13 @@ public class DishOrderManager : MonoBehaviour
             RectTransform rect = label.rectTransform;
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(1600, 850);
+            rect.sizeDelta = new Vector2(1000, 200);
         }
-        submissionResultText.text = $"{title}\n<size=26>{details}</size>";
-        submissionResultText.color = color;
-        successHideAt = Time.unscaledTime + Mathf.Max(0.1f, duration);
+        submissionResultText.text = $"이번 요리 +{earned.ToString("N0", CultureInfo.InvariantCulture)}콩\n스테이지 누적 {total.ToString("N0", CultureInfo.InvariantCulture)}콩";
+        submissionResultText.color = Color.green;
+        successHideAt = Time.unscaledTime + Mathf.Max(0.1f, successDisplaySeconds);
         successCanvas.SetActive(true);
-        Debug.Log($"<color=#87CEFA>[Submit UI] Showing result: {submissionResultText.text}</color>", this);
+        Debug.Log($"[Submit UI] {submissionResultText.text}", this);
     }
 
     private void OnDestroy()
@@ -336,13 +319,7 @@ public class DishOrderManager : MonoBehaviour
     [ContextMenu("Preview/Show Submission Success (Play Mode)")]
     private void PreviewSubmissionSuccess()
     {
-        if (Application.isPlaying && isActiveAndEnabled) ShowSubmissionResult(true);
-    }
-
-    [ContextMenu("Preview/Show Submission Failure (Play Mode)")]
-    private void PreviewSubmissionFailure()
-    {
-        if (Application.isPlaying && isActiveAndEnabled) ShowSubmissionResult(false);
+        if (Application.isPlaying && isActiveAndEnabled) ShowSubmissionReward(100, 250);
     }
 
     [ContextMenu("Preview/Add Order (Play Mode)")]

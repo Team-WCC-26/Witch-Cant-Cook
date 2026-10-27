@@ -53,6 +53,14 @@ internal class DishManager
         _timerManager.Cancel(_spawnDelayHandle);
     }
 
+    // 새 주문 선택만 중지한다 (진행 중인 주문은 유지 — 스테이지 종료 후 제출 유예 기간 동안 접수)
+    public void StopSelect()
+    {
+        _running = false;
+
+        _timerManager.Cancel(_spawnDelayHandle);
+    }
+
     private void ScheduleSelect(int delayMs)
     {
         if (!_running) return;
@@ -96,6 +104,31 @@ internal class DishManager
     public bool IsStageSuccess()
     {
         return _successCount >= _goal;
+    }
+
+    // 현재 진행 중인 주문 목록 (레시피 ID와 남은 시한) — 재접속 스냅샷 수집용
+    public List<(int RecipeId, long RemainingMs)> GetActiveOrders()
+    {
+        List<(int, long)> orders = new();
+
+        foreach (var pair in _timeLimitHandleDict)
+        {
+            foreach (var handle in pair.Value)
+            {
+                orders.Add((pair.Key, _timerManager.RemainingTime(handle)));
+            }
+        }
+
+        return orders;
+    }
+
+    // 다음 주문 생성 딜레이까지 남은 시간 — 재접속 스냅샷 수집용 (딜레이 대기 중이 아니면 0)
+    public long GetNextOrderRemainingMs()
+    {
+        if (!_running) return 0;
+        if (!_timerManager.CheckHandleValid(_spawnDelayHandle)) return 0;
+
+        return _timerManager.RemainingTime(_spawnDelayHandle);
     }
 
     public void SubmitDish(int recipeId)

@@ -5,15 +5,23 @@ public sealed class StageSettlementData
     public int RunNumber { get; }
     public int StageNumber { get; }
     public int? StartMoney { get; }
-    public int? EndMoney { get; }
-    public int? EarnedMoney => StartMoney.HasValue && EndMoney.HasValue
-        ? EndMoney.Value - StartMoney.Value : (int?)null;
+    public int EndMoney { get; }
+    // Server-confirmed earnings, independent of wallet spending or the start snapshot.
+    public int EarnedMoney { get; }
+    public bool IsSuccess { get; }
+    public int CompletedDishCount { get; }
+    public int? Goal { get; }
 
-    public StageSettlementData(int runNumber, int stageNumber, int? startMoney, int? endMoney)
+    public StageSettlementData(int runNumber, int stageNumber, int? startMoney, int endMoney,
+        int earnedMoney, bool isSuccess, int completedDishCount = 0, int? goal = null)
     {
         RunNumber = runNumber;
         StageNumber = stageNumber;
         StartMoney = startMoney;
         EndMoney = endMoney;
+        EarnedMoney = earnedMoney;
+        IsSuccess = isSuccess;
+        CompletedDishCount = completedDishCount;
+        Goal = goal;
     }
 }

@@ -10,13 +10,18 @@ public class UICanvas : MonoBehaviour
     public static bool isSet { get; private set; }
     private TaskCompletionSource<bool> showTask;
 
-    private void Start()
+    #region Unity Callbacks
+    private IEnumerator Start()
     {
-        if (UIManager.Instance != null)
-        {
-            UIManager.SetParents(parents);
+        if (UIManager.Instance == null) yield break;
 
-            UIManager.Show<LobbyRouterUI>();
-        }
+        UIManager.SetParents(parents);
+
+        // GameManager owns preloading; show the initial UI after its assets are cached.
+        yield return new WaitUntil(() => ResourceManager.Instance != null && ResourceManager.Instance.IsPreloaded);
+
+        if (UIManager.Instance == null) yield break;
+        _ = UIManager.Show<LobbyRouterUI>();
     }
+    #endregion
 }

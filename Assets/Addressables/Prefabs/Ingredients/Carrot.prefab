@@ -39,6 +39,7 @@ Transform:
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6377451858481988806}
+  - {fileID: 6544519229134312629}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6474165321525448197
@@ -48,7 +49,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7294934431915186970}
-  m_Mesh: {fileID: 1560174279766999315, guid: 4058de6c3824d8746acff7022a8c666d, type: 3}
+  m_Mesh: {fileID: 5167598553062015541, guid: a6d97c3e6967c49409aa68ffa4ab0567, type: 3}
 --- !u!23 &9096194030915402447
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -197,8 +198,12 @@ MonoBehaviour:
   catchable: {fileID: -274396100364849250}
   meshFilter: {fileID: 6474165321525448197}
   targetRenderer: {fileID: 9096194030915402447}
-  cutParticle: {fileID: 1766117342703822864, guid: 7da4c5a0ec946914aaf1361a2a325467, type: 3}
+  meshCollider: {fileID: 0}
   gaugeUI: {fileID: 7544259488119471805}
+  wobbleAngle: 12
+  wobbleDuration: 0.35
+  panPlacement: {fileID: 0}
+  platePlacement: {fileID: 0}
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
   actionVisuals:
@@ -226,6 +231,32 @@ MonoBehaviour:
   targetLayers:
     serializedVersion: 2
     m_Bits: 128
+--- !u!114 &881106000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7294934431915186970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66a040b6f02541e6ac3ac203c38fc1db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientCarrot
+  catchable: {fileID: -274396100364849250}
+  reaction: {fileID: 6750885171012275325}
+  rocketSettings:
+    rocketDuration: 3
+    rocketLaunchHeight: 0.35
+    rocketSpeed: 12
+    rocketTurnSpeed: 120
+    rocketTurnMaxAngle: 75
+    rocketImpactForce: 8
+    collisionMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+  propulsionParticles: {fileID: 8017898336289795724}
+  propulsionAudio: {fileID: 0}
 --- !u!1001 &3672574928564234763
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -349,30 +380,84 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2b827591ddfb48348a9ad080db2ee689, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionGaugeUI
---- !u!114 &881106000
-MonoBehaviour:
+--- !u!1001 &6684076519247779292
+PrefabInstance:
   m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7959831534949777824}
+    m_Modifications:
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.04
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.095
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.00000004371139
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7083115891236119419, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+      propertyPath: m_Name
+      value: CarrotRocketExhaust
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+--- !u!4 &6544519229134312629 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 436939043344253289, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+  m_PrefabInstance: {fileID: 6684076519247779292}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7294934431915186970}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 66a040b6f02541e6ac3ac203c38fc1db, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::IngredientCarrot
-  catchable: {fileID: -274396100364849250}
-  reaction: {fileID: 6750885171012275325}
-  rocketSettings:
-    rocketDuration: 3
-    rocketSpeed: 12
-    rocketTurnSpeed: 120
-    rocketTurnMaxAngle: 75
-    rocketImpactForce: 8
-    collisionMask:
-      serializedVersion: 2
-      m_Bits: 4294967295
-  propulsionParticles: {fileID: 0}
-  propulsionAudio: {fileID: 0}
+--- !u!198 &8017898336289795724 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 3713165255106673488, guid: d96432486e6ca2f429d28286e7254386, type: 3}
+  m_PrefabInstance: {fileID: 6684076519247779292}
+  m_PrefabAsset: {fileID: 0}

@@ -22,11 +22,15 @@ public class GSpreadReader : Singleton<GSpreadReader>
     [SerializeField] private List<SheetInfo> sheets = new List<SheetInfo>();
     [SerializeField] private float timeoutSeconds = 30f;
 
+    private Task<bool> initTask;
+
     [NonSerialized] public bool isInit = false;
 
     public event Action<float, string> OnLoadProgress;
     public event Action OnLoadComplete;
     public event Action<string> OnLoadFailed;
+
+    #region Unity Callbacks
 
     private async void Start()
     {
@@ -38,43 +42,14 @@ public class GSpreadReader : Singleton<GSpreadReader>
         await Init();
     }
 
-    public async Task<bool> Init()
+    #endregion
+
+    public Task<bool> Init()
     {
-        if (isInit) return true;
-
-        if (string.IsNullOrEmpty(url))
-        {
-            Debug.LogError("[GSpread] URL is not set.");
-            OnLoadFailed?.Invoke("URL이 설정되지 않았습니다.");
-            return false;
-        }
-
-        int successCount = 0;
-
-        for (int i = 0; i < sheets.Count; i++)
-        {
-            var sheet = sheets[i];
-            float progress = sheets.Count > 0 ? (float)i / sheets.Count : 1f;
-
-            OnLoadProgress?.Invoke(progress, $"{sheet.className} 로딩 중...");
-
-            bool success = await LoadSheet(sheet);
-            if (!success)
-            {
-                Debug.LogError($"[GSpread] Failed to load sheet: {sheet.className}");
-                OnLoadFailed?.Invoke($"{sheet.className} 로딩 실패");
-                return false;
-            }
-
-            successCount++;
-        }
-
-        isInit = true;
-
-        OnLoadProgress?.Invoke(1f, "완료");
-        OnLoadComplete?.Invoke();
-
-        return true;
+        if (isInit) return Task.FromResult(true);
+        if (initTask != null && !initTask.IsCompleted) return initTask;
+        initTask = InitInternal();
+        return initTask;
     }
 
     public bool HasSheet(string className) => sheets.Exists(sheet => sheet.className == className);
@@ -118,8 +93,46 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
     public async Task<bool> ReloadAll()
     {
+        if (initTask != null && !initTask.IsCompleted) return await initTask;
         isInit = false;
-        return await Init();
+        initTask = InitInternal();
+        return await initTask;
+    }
+
+    private async Task<bool> InitInternal()
+    {
+        if (isInit) return true;
+
+        if (string.IsNullOrEmpty(url))
+        {
+            Debug.LogError("[GSpread] URL is not set.");
+            OnLoadFailed?.Invoke("URL이 설정되지 않았습니다.");
+            return false;
+        }
+
+        for (int i = 0; i < sheets.Count; i++)
+        {
+            var sheet = sheets[i];
+            float progress = sheets.Count > 0 ? (float)i / sheets.Count : 1f;
+
+            OnLoadProgress?.Invoke(progress, $"{sheet.className} 로딩 중...");
+
+            bool success = await LoadSheet(sheet);
+            if (!success)
+            {
+                Debug.LogError($"[GSpread] Failed to load sheet: {sheet.className}");
+                OnLoadFailed?.Invoke($"{sheet.className} 로딩 실패");
+                return false;
+            }
+
+        }
+
+        isInit = true;
+
+        OnLoadProgress?.Invoke(1f, "완료");
+        OnLoadComplete?.Invoke();
+
+        return true;
     }
 
     private async Task<bool> LoadSheet(SheetInfo sheet)

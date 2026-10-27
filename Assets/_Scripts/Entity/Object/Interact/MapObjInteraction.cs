@@ -7,16 +7,17 @@ public abstract class MapObjInteraction : MonoBehaviour, IInteractTarget
     [SerializeField] private Define.eToolId eToolId;
     [SerializeField] private EntityCategory acceptedCategories = EntityCategory.None;
 
-    public Define.eToolId ToolType => (Define.eToolId)eToolId;
-    public EntityCategory Category => eToolId switch
+    public virtual Define.eToolId ToolType => (Define.eToolId)eToolId;
+    public virtual EntityCategory Category => ToolType switch
     {
         Define.eToolId.Stove => EntityCategory.Stove,
         Define.eToolId.Pot => EntityCategory.Pot,
         Define.eToolId.PrepTable => EntityCategory.PrepTable,
         Define.eToolId.Oven => EntityCategory.Oven,
+        Define.eToolId.TrashCan => EntityCategory.TrashCan,
         _ => EntityCategory.None
     };
-    public EntityCategory AcceptedCategories => acceptedCategories;
+    public virtual EntityCategory AcceptedCategories => acceptedCategories;
 
     #endregion
 
@@ -24,7 +25,7 @@ public abstract class MapObjInteraction : MonoBehaviour, IInteractTarget
 
     protected MapObjNetworkRouter Router { get; private set; }
 
-    public int ToolId => (int)eToolId;
+    public int ToolId => (int)ToolType;
     private long networkId;
     public long NetworkId => networkId;
 

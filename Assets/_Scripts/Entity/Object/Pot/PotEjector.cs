@@ -1,0 +1,103 @@
+using System.Collections;
+using System.Collections.Generic;
+using Protocol;
+using UnityEngine;
+
+public sealed class PotEjector : ObjEjector
+{
+    private sealed class PotRequest : Request
+    {
+        public PotEjectPacket packet;
+        public bool waitPunchEffect;
+    }
+
+    private readonly PotInteraction pot;
+    private readonly Settings settings = new();
+
+    protected override Settings CurrentSettings
+    {
+        get
+        {
+            pot.ConfigureEjection(settings);
+            return settings;
+        }
+    }
+
+    public PotEjector(PotInteraction pot) : base(pot)
+    {
+        this.pot = pot;
+    }
+
+    public void Enqueue(PotEjectPacket packet)
+    {
+        if (packet == null) return;
+
+        base.Enqueue(new PotRequest
+        {
+            packet = packet,
+            seed = packet.EjectSeed,
+            // 솥의 자동 배출 지연은 이미 서버에서 기다린 뒤 패킷을 보낸다.
+            delay = 0f
+        });
+    }
+
+    protected override void OnRequestStarted(Request request)
+    {
+        PotRequest potRequest = (PotRequest)request;
+        potRequest.waitPunchEffect = potRequest.packet.PlayerIds.Count > 0 &&
+            !pot.HasCompletedDish;
+        pot.BeginEjection();
+    }
+
+    protected override IEnumerable<Object> GetTargets(Request request)
+    {
+        PotEjectPacket packet = ((PotRequest)request).packet;
+        foreach (string playerId in packet.PlayerIds)
+        {
+            PlayerBrain player = null;
+            PlayerSpawnManager.Instance?.TryGetPlayer(playerId, out player);
+            yield return player;
+        }
+
+        foreach (long entityId in packet.EntityIds)
+            yield return pot.FindEjectObj(entityId);
+    }
+
+    protected override IEnumerator WaitBeforeSequence(Request request)
+    {
+        return pot.WaitForEjectionVisual(((PotRequest)request).waitPunchEffect);
+    }
+
+    protected override float PlayEjectVisual()
+    {
+        return pot.PlayEjectionVisual();
+    }
+
+    protected override void EjectTarget(Object target, Vector3 direction)
+    {
+        if (target is PlayerBrain player)
+        {
+            pot.PreparePlayerEjection(player);
+            // 플레이어 물리는 소유 클라이언트만 적용한다.
+            if (PlayerSpawnManager.Instance == null ||
+                !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
+            if (player.Rb == null || player.Rb.isKinematic) return;
+
+            player.ActionController.Movement.BeginEjectionMovement();
+            player.Rb.position = EjectPos;
+            player.Rb.linearVelocity = Vector3.zero;
+            player.Rb.AddForce(direction * pot.PlayerEjectForce, ForceMode.Impulse);
+        }
+        else if (target is CatchableObj catchable)
+        {
+            float force = pot.GetObjEjectForce(catchable);
+            pot.PrepareObjEjection(catchable);
+            EjectObj(catchable, direction, force);
+        }
+    }
+
+    protected override void OnRequestCompleted()
+    {
+        pot.FinishEjection();
+    }
+}

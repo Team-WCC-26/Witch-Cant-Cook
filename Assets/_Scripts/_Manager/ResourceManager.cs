@@ -10,6 +10,7 @@ public class ResourceManager : Singleton<ResourceManager>
 {
     // 알맹이
     private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
+    private readonly Dictionary<string, Task<UnityEngine.Object>> pendingLoads = new();
     public bool IsPreloaded { get; private set; }
 
     // 로드된 에셋을 관리하는 캐시 딕셔너리
@@ -89,27 +90,42 @@ public class ResourceManager : Singleton<ResourceManager>
             return cachedAsset as T;
         }
 
-        var handle = Addressables.LoadAssetAsync<T>(key);
+        if (pendingLoads.TryGetValue(key, out Task<UnityEngine.Object> pendingLoad))
+        {
+            return await pendingLoad as T;
+        }
+
+        // Preloading and UI requests share one load and one retained handle per key.
+        var completion = new TaskCompletionSource<UnityEngine.Object>();
+        pendingLoads.Add(key, completion.Task);
+        AsyncOperationHandle<T> handle = default;
         try
         {
+            handle = Addressables.LoadAssetAsync<T>(key);
             await handle.ToUniTask();
             if (handle.Status == AsyncOperationStatus.Failed)
             {
-                Debug.LogError($"[ResourceManager] Failed to load asset: {key}");
-                return null;
+                throw handle.OperationException ?? new InvalidOperationException($"Failed to load asset: {key}");
             }
 
             // 두 dict 상태 동기화
             _handleCache.Add(key, handle);
             _assetCache.Add(key, handle.Result);
 
+            completion.TrySetResult(handle.Result);
             return handle.Result;
 
         }
         catch (Exception e)
         {
+            if (handle.IsValid()) Addressables.Release(handle);
+            completion.TrySetResult(null);
             Debug.LogError($"[ResourceManager] Failed to load asset: {key} - {e.Message}");
             return null;
+        }
+        finally
+        {
+            pendingLoads.Remove(key);
         }
     }
 

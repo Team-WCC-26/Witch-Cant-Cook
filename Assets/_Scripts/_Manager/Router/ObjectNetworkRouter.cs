@@ -13,11 +13,26 @@ public class ObjectNetworkRouter : MonoBehaviour
     public Dictionary<long, CatchableObj> catchableDics = new();
     private readonly Dictionary<long, long> pendingParentChanges = new();
     private readonly Dictionary<long, IEntityThrowParentReceiver> detachedThrowParents = new();
+    private readonly Dictionary<long, int> dishEjectSeeds = new();
+    private readonly Dictionary<long, long> containerEjections = new();
 
     [SerializeField] private MapObjNetworkRouter mapObjRouter;
 
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
+
+    // Only after the server confirms its round entities have been cleared.
+    public void ResetClientStage()
+    {
+        var ids = new List<long>(catchableDics.Keys);
+        foreach (long id in ids) RemoveAndRelease(id);
+        catchableDics.Clear();
+        pendingParentChanges.Clear();
+        detachedThrowParents.Clear();
+        dishEjectSeeds.Clear();
+        containerEjections.Clear();
+        IngredientEgg.ResetPanTransfers();
+    }
 
     private void Awake()
     {
@@ -44,13 +59,17 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, HandleEntityThrow);
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
+        ServerManager.Instance.RegisterHandler(PacketId.S_DishEject, HandleDishEject);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
         isSubscribed = true;
         subscribeRoutine = null;
     }
 
     private void OnDisable()
     {
+        containerEjections.Clear();
         detachedThrowParents.Clear();
+        dishEjectSeeds.Clear();
         if (subscribeRoutine != null)
         {
             StopCoroutine(subscribeRoutine);
@@ -65,6 +84,8 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityThrow);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityDestroy);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolSpawn);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_DishEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
         isSubscribed = false;
     }
 
@@ -74,10 +95,39 @@ public class ObjectNetworkRouter : MonoBehaviour
         RemoveAndRelease(packet.EntityId);
     }
 
+    private void HandleDishEject(ReadOnlyMemory<byte> data)
+    {
+        DishEjectPacket packet = PacketSerializer.Deserialize<DishEjectPacket>(data);
+        if (dishEjectSeeds.TryGetValue(packet.DishEntityId, out int seed) && seed == packet.EjectSeed) return;
+        if (!catchableDics.TryGetValue(packet.DishEntityId, out CatchableObj plate) ||
+            plate == null || !plate.TryGetComponent<PlateInteraction>(out _)) return;
+        if (SubmitTriggerZone.PlayConfirmedPlateReturn(plate))
+            dishEjectSeeds[packet.DishEntityId] = packet.EjectSeed;
+    }
+
     private void HandleEntityDestroyed(IReadOnlyList<EntityDestroyPacket> packets)
     {
         foreach (EntityDestroyPacket packet in packets)
             RemoveAndRelease(packet.EntityId);
+    }
+
+    private void HandlePanEject(ReadOnlyMemory<byte> data)
+    {
+        PanEjectPacket packet = PacketSerializer.Deserialize<PanEjectPacket>(data);
+        if (!catchableDics.TryGetValue(packet.PanEntityId, out CatchableObj panObj) ||
+            panObj == null || !panObj.TryGetComponent(out PanInteraction pan))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.PanEntityId, "Pan not found");
+            return;
+        }
+        if (!catchableDics.TryGetValue(packet.IngredientEntityId, out CatchableObj ingredient) ||
+            ingredient == null || !ingredient.TryGetComponent<IngredientReaction>(out _))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Ingredient not found");
+            return;
+        }
+
+        pan.TryApplyPanEject(packet, ingredient, this);
     }
 
     private void HandleEntityParentChanged(IReadOnlyList<EntityChangeParentPacket> packets)
@@ -100,6 +150,12 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         if (parentEntityId == -1) parentEntityId = 0;
         if (catchable.ParentEntityId == -1) catchable.ParentEntityId = 0;
+        // 배출 결과보다 늦게 도착한 과거 삽입 결과로 다시 보관하지 않는다.
+        if (containerEjections.TryGetValue(catchable.NetworkId, out long ejectParentId))
+        {
+            if (parentEntityId == ejectParentId) return;
+            if (parentEntityId != 0) containerEjections.Remove(catchable.NetworkId);
+        }
 
         long previousParentId = catchable.ParentEntityId;
         if (previousParentId == parentEntityId) return;
@@ -126,6 +182,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     public void HandleEntityPicked(CatchableObj catchable)
     {
         if (catchable == null) return;
+        containerEjections.Remove(catchable.NetworkId);
 
         PanInteraction.ForgetToss(catchable.NetworkId);
         detachedThrowParents.Remove(catchable.NetworkId);
@@ -151,9 +208,6 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         EntityThrowPacket packet = MemoryPackSerializer.Deserialize<EntityThrowPacket>(data.Span);
 
-        bool isTrackedToss = PanInteraction.TryResolveToss(packet.EntityId, out PanInteraction requestingPan);
-        if (isTrackedToss && !requestingPan.TryAcceptTossResponse()) return;
-
         if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
         {
             NetworkResponseWait.Error("Entity throw", packet.EntityId, "Target not found");
@@ -162,11 +216,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         }
 
         long previousParentId = catchable.ParentEntityId;
-        if (isTrackedToss)
-        {
-            requestingPan.HandleEntityThrown(catchable);
-        }
-        else if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
+        if (TryResolveParent(previousParentId, out IEntityParentReceiver receiver) &&
             receiver is IEntityThrowParentReceiver throwReceiver)
         {
             throwReceiver.HandleEntityThrown(catchable);
@@ -186,6 +236,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        containerEjections.Remove(entityId);
         PanInteraction.ForgetToss(entityId);
         detachedThrowParents.Remove(entityId);
         IngredientEgg.HandleDestroyedEntity(entityId);
@@ -196,6 +247,15 @@ public class ObjectNetworkRouter : MonoBehaviour
 
         catchable.IsRespawning = false;
 
+        // Destroyed food must leave its container before pooling resets its identity.
+        // Otherwise PlateInteraction retains a pooled food reference and a submission lock.
+        if (TryResolveParent(catchable.ParentEntityId, out IEntityParentReceiver parent))
+        {
+            if (parent is TrashCanInteraction trashCan) trashCan.HandleDestroyedObj(catchable);
+            parent.HandleEntityRemoved(catchable);
+        }
+        catchable.ParentEntityId = 0;
+
         catchableDics.Remove(entityId);
         ObjectPoolManager.Instance.activeObjDict.Remove(entityId);
         catchable.ReleaseCombinedVisual();
@@ -205,6 +265,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void HandleToolSpawn(ReadOnlyMemory<byte> data)
     {
+        if (StageReturnFlow.IsSettlementActive) return;
         ToolSpawnPacket packet = MemoryPackSerializer.Deserialize<ToolSpawnPacket>(data.Span)!;
 
         if (!Define.TryGetEntityCategory((Define.eToolId)packet.ToolId, out EntityCategory category))
@@ -213,7 +274,10 @@ public class ObjectNetworkRouter : MonoBehaviour
             return;
         }
         Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
-        Quaternion rot = Quaternion.identity;
+        var rotation = packet.Quaternion;
+        Quaternion rot = rotation.LengthSquared() > 0.000001f
+            ? new Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W).normalized
+            : Quaternion.identity;
 
         GameObject go = ObjectPoolManager.Instance.Pop(category.ToString(), pos, rot);
         if (go == null) return;
@@ -236,6 +300,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public void Remove(long networkId)
     {
+        containerEjections.Remove(networkId);
         PanInteraction.ForgetToss(networkId);
         detachedThrowParents.Remove(networkId);
         pendingParentChanges.Remove(networkId);
@@ -244,6 +309,28 @@ public class ObjectNetworkRouter : MonoBehaviour
     public bool TryGet(long networkId, out CatchableObj obj)
     {
         return catchableDics.TryGetValue(networkId, out obj);
+    }
+
+    public void BeginContainerEjection(CatchableObj obj, long parentId)
+    {
+        containerEjections[obj.NetworkId] = parentId;
+    }
+
+    public void DetachForContainerEjection(CatchableObj obj)
+    {
+        NotifyParent(obj.ParentEntityId, obj, false);
+        if (obj.Holder != null)
+        {
+            obj.Holder.Interact.TryReleaseHeld(obj);
+            obj.OnDrop();
+        }
+        obj.ParentEntityId = 0;
+    }
+
+    public void EndContainerEjection(long entityId, long parentId)
+    {
+        if (containerEjections.TryGetValue(entityId, out long currentParent) && currentParent == parentId)
+            containerEjections.Remove(entityId);
     }
 
     public bool TryApplyIngredientCombine(
@@ -346,6 +433,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void Unregister(long entityId)
     {
+        containerEjections.Remove(entityId);
         PanInteraction.ForgetToss(entityId);
         detachedThrowParents.Remove(entityId);
         pendingParentChanges.Remove(entityId);
