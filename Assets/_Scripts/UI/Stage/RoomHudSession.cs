@@ -56,7 +56,7 @@ public sealed class RoomHudSession : MonoBehaviour
         stages.StageStopped += OnStageStopped;
         stages.StageResultReceived += OnStageResult;
         stages.LobbyMoveReceived += OnLobbyMove;
-        StageManager.DoorOpened += OnDoorOpened;
+        DoorController.DoorOpened += OnDoorOpened;
         OnStageChanged();
     }
 
@@ -178,7 +178,7 @@ public sealed class RoomHudSession : MonoBehaviour
             stages.StageResultReceived -= OnStageResult;
             stages.LobbyMoveReceived -= OnLobbyMove;
         }
-        StageManager.DoorOpened -= OnDoorOpened;
+        DoorController.DoorOpened -= OnDoorOpened;
         if (server != null)
         {
             server.UnRegisterHandler(PacketId.S_RoomMoney);

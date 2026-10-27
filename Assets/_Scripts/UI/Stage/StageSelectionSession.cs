@@ -52,7 +52,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         instance = this;
     }
 
-    private void OnEnable() => StageManager.DoorOpened += OnDoorOpened;
+    private void OnEnable() => DoorController.DoorOpened += OnDoorOpened;
 
     private void Update()
     {
@@ -196,7 +196,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnDisable()
     {
-        StageManager.DoorOpened -= OnDoorOpened;
+        DoorController.DoorOpened -= OnDoorOpened;
         if (server != null)
         {
             server.UnRegisterHandler(PacketId.S_StageSet);

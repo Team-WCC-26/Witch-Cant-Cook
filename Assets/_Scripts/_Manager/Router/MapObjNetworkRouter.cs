@@ -38,13 +38,13 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
     private void OnEnable()
     {
-        StageManager.DoorOpened += OnDoorOpened;
+        DoorController.DoorOpened += OnDoorOpened;
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
     }
 
     private void OnDisable()
     {
-        StageManager.DoorOpened -= OnDoorOpened;
+        DoorController.DoorOpened -= OnDoorOpened;
 
         if (subscribeRoutine != null)
         {
