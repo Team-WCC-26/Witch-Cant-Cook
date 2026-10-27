@@ -45,6 +45,7 @@ public class Define
         JumpAssist = 70,
         Oven = 80,
         TrashCan = 90,
+        CookingSubmit = 100,
     }
 
     public static bool TryGetToolId(EntityCategory category, out eToolId toolId)

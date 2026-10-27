@@ -13,7 +13,6 @@ public class ObjectNetworkRouter : MonoBehaviour
     public Dictionary<long, CatchableObj> catchableDics = new();
     private readonly Dictionary<long, long> pendingParentChanges = new();
     private readonly Dictionary<long, IEntityThrowParentReceiver> detachedThrowParents = new();
-    private readonly Dictionary<long, int> dishEjectSeeds = new();
     private readonly Dictionary<long, long> containerEjections = new();
 
     [SerializeField] private MapObjNetworkRouter mapObjRouter;
@@ -29,7 +28,6 @@ public class ObjectNetworkRouter : MonoBehaviour
         catchableDics.Clear();
         pendingParentChanges.Clear();
         detachedThrowParents.Clear();
-        dishEjectSeeds.Clear();
         containerEjections.Clear();
         IngredientEgg.ResetPanTransfers();
     }
@@ -59,7 +57,6 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, HandleEntityThrow);
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
-        ServerManager.Instance.RegisterHandler(PacketId.S_DishEject, HandleDishEject);
         ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
         isSubscribed = true;
         subscribeRoutine = null;
@@ -69,7 +66,6 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         containerEjections.Clear();
         detachedThrowParents.Clear();
-        dishEjectSeeds.Clear();
         if (subscribeRoutine != null)
         {
             StopCoroutine(subscribeRoutine);
@@ -84,7 +80,6 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityThrow);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityDestroy);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolSpawn);
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_DishEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
         isSubscribed = false;
     }
@@ -93,16 +88,6 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         EntityDestroyPacket packet = MemoryPackSerializer.Deserialize<EntityDestroyPacket>(data.Span);
         RemoveAndRelease(packet.EntityId);
-    }
-
-    private void HandleDishEject(ReadOnlyMemory<byte> data)
-    {
-        DishEjectPacket packet = PacketSerializer.Deserialize<DishEjectPacket>(data);
-        if (dishEjectSeeds.TryGetValue(packet.DishEntityId, out int seed) && seed == packet.EjectSeed) return;
-        if (!catchableDics.TryGetValue(packet.DishEntityId, out CatchableObj plate) ||
-            plate == null || !plate.TryGetComponent<PlateInteraction>(out _)) return;
-        if (SubmitTriggerZone.PlayConfirmedPlateReturn(plate))
-            dishEjectSeeds[packet.DishEntityId] = packet.EjectSeed;
     }
 
     private void HandleEntityDestroyed(IReadOnlyList<EntityDestroyPacket> packets)
@@ -252,6 +237,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         if (TryResolveParent(catchable.ParentEntityId, out IEntityParentReceiver parent))
         {
             if (parent is TrashCanInteraction trashCan) trashCan.HandleDestroyedObj(catchable);
+            if (parent is SubmitTriggerZone station) station.HandleDestroyedObj(catchable);
             parent.HandleEntityRemoved(catchable);
         }
         catchable.ParentEntityId = 0;

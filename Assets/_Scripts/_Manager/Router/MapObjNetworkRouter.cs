@@ -60,6 +60,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_JumpPadEvent);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_TrashCanEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_CookingSubmitEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerExit);
         isSubscribed = false;
     }
@@ -75,6 +76,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
         ServerManager.Instance.RegisterHandler(PacketId.S_JumpPadEvent, OnJumpPadEvent);
         ServerManager.Instance.RegisterHandler(PacketId.S_TrashCanEject, OnTrashCanEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_CookingSubmitEject, OnCookingSubmitEjected);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerExit, OnToolPlayerExited);
         isSubscribed = true;
         subscribeRoutine = null;
@@ -277,6 +279,13 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         TrashCanEjectPacket packet = PacketSerializer.Deserialize<TrashCanEjectPacket>(data.Span);
         if (TryGetMapObject(packet.TrashCanEntityId, out TrashCanInteraction trashCan))
             trashCan.HandleEject(packet);
+    }
+
+    private void OnCookingSubmitEjected(ReadOnlyMemory<byte> data)
+    {
+        CookingSubmitEjectPacket packet = PacketSerializer.Deserialize<CookingSubmitEjectPacket>(data.Span);
+        if (TryGetMapObject(packet.CookingSubmitEntityId, out SubmitTriggerZone station))
+            station.HandleEject(packet);
     }
 
     private void OnToolPlayerExited(ReadOnlyMemory<byte> data)

@@ -52,6 +52,8 @@ public class Door : MonoBehaviour
 
     public void Open()
     {
+        // A local Tab test may have disabled the door before the server opens it.
+        gameObject.SetActive(true);
         isOpen = true;
     }
 

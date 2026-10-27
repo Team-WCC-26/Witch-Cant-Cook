@@ -7,7 +7,7 @@ using Server;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider))]
-public class SubmitTriggerZone : MonoBehaviour
+public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
 {
     public enum SubmissionSurface { Pedestal, FrontWall, Auto }
     public enum FrontFace { PositiveZ, NegativeZ, PositiveX, NegativeX, PositiveY, NegativeY }
@@ -17,7 +17,7 @@ public class SubmitTriggerZone : MonoBehaviour
     [SerializeField] private Bell submissionBell;
     private Bell subscribedBell;
     private bool usingGlobalBell;
-    [Header("Confirmed Plate Return")]
+    [Header("Server-confirmed Intake and Ejection")]
     [SerializeField] private Transform suctionPoint;
     [SerializeField] private Transform returnPoint;
     [SerializeField, Min(0.01f)] private float suctionDuration = 0.3f;
@@ -41,6 +41,23 @@ public class SubmitTriggerZone : MonoBehaviour
     [SerializeField, Min(0f)] private float rotationTolerance = 0.1f;
     [Tooltip("선택한 정면과 접촉점 사이 허용 거리(로컬 단위)")]
     [SerializeField, Min(0f)] private float frontFaceTolerance = 0.01f;
+    [SerializeField, Min(0.1f)] private float responseTimeout = 3f;
+    [SerializeField, Min(0f)] private float ejectInterval = 0.15f;
+    [SerializeField, Min(0f)] private float ejectRandomRangeX = 0.3f;
+    [SerializeField] private float ejectRandomRangeYMin = -0.05f;
+    [SerializeField] private float ejectRandomRangeYMax = 0.2f;
+    [SerializeField, Min(0f)] private float ejectRandomRangeZ = 0.3f;
+    private readonly Dictionary<long, SubmittedItem> trackedItems = new();
+    private readonly HashSet<long> queuedEjections = new();
+    private readonly Dictionary<long, int> ejectSeeds = new();
+    private readonly List<long> staleIds = new();
+    private ObjectNetworkRouter objectRouter;
+    private CookingSubmitEjector ejector;
+    private CookingSubmitEjector Ejector => ejector ??= new CookingSubmitEjector(this);
+    public override Define.eToolId ToolType => Define.eToolId.CookingSubmit;
+    public override EntityCategory AcceptedCategories => EntityCategory.Plate | EntityCategory.Ingredient;
+    internal float ResponseTimeout => responseTimeout;
+    internal float EjectDuration => ejectDuration;
     private BoxCollider zone;
     private SubmissionSurface ActiveSurface => surface == SubmissionSurface.Auto
         ? (zone.isTrigger ? SubmissionSurface.Pedestal : SubmissionSurface.FrontWall) : surface;
@@ -49,23 +66,18 @@ public class SubmitTriggerZone : MonoBehaviour
     private readonly HashSet<CatchableObj> touching = new();
     private readonly List<Collider> staleColliders = new();
     private readonly List<CatchableObj> staleItems = new();
-    // Local send order only. The server does not acknowledge acceptance yet.
+    // Preserve contact order, then send one Interact per station after its Insert requests.
     private static readonly List<SubmissionRequest> pending = new();
     private static bool sending;
     private static readonly List<SubmitTriggerZone> activeZones = new();
-    private static readonly Dictionary<long, SubmitTriggerZone> submittingZones = new();
     private static int requestGeneration;
 
-    // Server stop is the hard send cutoff. Keep sent dishes and their return animations alive.
+    // Stop new submissions while allowing server-confirmed returns to finish.
     public static void StopUnsentRequests()
     {
         requestGeneration++;
         foreach (SubmissionRequest request in pending)
-        {
-            if (!IsSamePlate(request.Item, request.EntityId)) continue;
-            request.Item.ReleaseSubmissionLock();
-            submittingZones.Remove(request.EntityId);
-        }
+            if (request.Owner != null) request.Owner.CancelUnsent(request.EntityId);
         pending.Clear();
     }
 
@@ -73,19 +85,25 @@ public class SubmitTriggerZone : MonoBehaviour
     {
         requestGeneration++;
         pending.Clear();
-        submittingZones.Clear();
         foreach (SubmitTriggerZone zone in activeZones)
-        {
-            if (zone == null) continue;
-            zone.StopAllCoroutines();
-            foreach (var pair in zone.samples)
-                if (pair.Key != null) pair.Key.OnPicked -= pair.Value.Reset;
-            zone.samples.Clear();
-            zone.overlaps.Clear();
-            zone.reportedBlocks.Clear();
-        }
+            if (zone != null) zone.ResetClientStage();
     }
 
+    private sealed class SubmittedItem
+    {
+        public CatchableObj Item;
+        public long Id;
+        public Vector3 OriginalPosition;
+        public Quaternion OriginalRotation;
+        public bool CanBePicked;
+        public bool Accepted;
+        public bool SuctionComplete;
+        public bool Returned;
+        public float Deadline;
+        public float ReleaseAfter;
+        public Coroutine Motion;
+        public readonly Dictionary<Collider, bool> Colliders = new();
+    }
     private sealed class RestSample
     {
         public Vector3 Position;
@@ -100,13 +118,15 @@ public class SubmitTriggerZone : MonoBehaviour
         public CatchableObj Item;
         public long EntityId;
         public double QualifiedAt;
+        public SubmitTriggerZone Owner;
+        public long ToolEntityId;
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetQueue()
     {
         pending.Clear(); sending = false;
         requestGeneration = 0;
-        activeZones.Clear(); submittingZones.Clear();
+        activeZones.Clear();
     }
     private void Awake() => zone = GetComponent<BoxCollider>();
     private void OnEnable()
@@ -128,27 +148,24 @@ public class SubmitTriggerZone : MonoBehaviour
     private void OnDisable()
     {
         activeZones.Remove(this);
-        StopAllCoroutines();
+        ResetClientStage();
         if (usingGlobalBell) Bell.OnBellRung -= OnBellRung;
         if (subscribedBell != null) subscribedBell.Rung -= OnBellRung;
         usingGlobalBell = false;
         subscribedBell = null;
-        foreach (var pair in samples)
-            if (pair.Key != null) pair.Key.OnPicked -= pair.Value.Reset;
-        samples.Clear();
-        overlaps.Clear();
-        reportedBlocks.Clear();
     }
-    private static CatchableObj GetPlate(Collider other)
+    private static CatchableObj GetSubmissionItem(Collider other)
     {
-        // Do not treat a food child collider as direct contact with its plate.
-        CatchableObj item = other.GetComponentInParent<CatchableObj>();
-        return item != null && item.TryGetComponent<PlateInteraction>(out _) ? item : null;
+        // Contact with food on a plate submits the outer plate, not its child ingredient.
+        CatchableObj item = null;
+        foreach (CatchableObj parent in other.GetComponentsInParent<CatchableObj>()) item = parent;
+        return item != null && (item.Category == EntityCategory.Ingredient ||
+            item.TryGetComponent<PlateInteraction>(out _)) ? item : null;
     }
     private void OnTriggerEnter(Collider other)
     {
         if (ActiveSurface != SubmissionSurface.Pedestal) return;
-        CatchableObj item = GetPlate(other);
+        CatchableObj item = GetSubmissionItem(other);
         if (item != null)
         {
             overlaps[other] = item;
@@ -168,7 +185,23 @@ public class SubmitTriggerZone : MonoBehaviour
         if (item != null) item.OnPicked -= sample.Reset;
         samples.Remove(item);
     }
-    private void FixedUpdate() => UpdatePedestalSamples();
+    private void FixedUpdate()
+    {
+        UpdatePedestalSamples();
+        staleIds.Clear();
+        foreach (var pair in trackedItems)
+        {
+            SubmittedItem tracked = pair.Value;
+            if (!IsSameItem(tracked.Item, pair.Key) ||
+                (!tracked.Accepted && Time.unscaledTime >= tracked.Deadline) ||
+                (tracked.Returned && Time.fixedTime >= tracked.ReleaseAfter && !OverlapsItem(tracked.Item)))
+                staleIds.Add(pair.Key);
+            else if (tracked.Accepted && !tracked.Returned)
+                foreach (Collider col in tracked.Colliders.Keys)
+                    if (col != null) col.enabled = false;
+        }
+        foreach (long id in staleIds) ForgetItem(id);
+    }
 
     private void UpdatePedestalSamples()
     {
@@ -197,7 +230,7 @@ public class SubmitTriggerZone : MonoBehaviour
                 item.OnPicked += sample.Reset;
             }
             if (!CheckEligibility(item, false) || item.Rb == null) { sample.Reset(); continue; }
-            CatchableObj food = item.GetComponent<PlateInteraction>().CurrentFood;
+            CatchableObj food = item.TryGetComponent(out PlateInteraction plate) ? plate.CurrentFood : null;
             bool still = item.Rb.linearVelocity.sqrMagnitude <= linearSpeedTolerance * linearSpeedTolerance &&
                 item.Rb.angularVelocity.sqrMagnitude <= angularSpeedTolerance * angularSpeedTolerance;
             if (sample.HasPose)
@@ -209,7 +242,7 @@ public class SubmitTriggerZone : MonoBehaviour
             sample.HasPose = true;
             if (!still) { sample.Since = double.NaN; continue; }
             if (double.IsNaN(sample.Since)) sample.Since = now;
-            // Being stationary makes this plate ready, but only ringing the bell submits it.
+            // Stationary plates and ingredients wait for the bell before submission.
         }
     }
 
@@ -223,10 +256,20 @@ public class SubmitTriggerZone : MonoBehaviour
         {
             if (double.IsNaN(pair.Value.Since) || now - pair.Value.Since < stationarySeconds ||
                 !CheckEligibility(pair.Key, false)) continue;
-            // The ringer can request every ready plate, including the teammate's plates.
-            // The existing server rejects already-destroyed dishes; no protocol change.
+            // One bell press inserts all ready entities, then interacts with this station.
             Enqueue(pair.Key, now, false);
             if (pair.Key.IsSubmissionPending) submitted++;
+        }
+        // A previous Insert may have succeeded even if its Interact send was interrupted.
+        RoomHudState state = RoomHudSession.Instance.State;
+        if (submitted == 0 && IsRegistered && state.IsStageRunning && state.RemainingSeconds(now) > 0)
+        {
+            foreach (var pair in trackedItems)
+            {
+                if (!pair.Value.Accepted || pair.Value.Returned || queuedEjections.Contains(pair.Key)) continue;
+                pending.Add(new SubmissionRequest { Owner = this, ToolEntityId = NetworkId, QualifiedAt = now });
+                break;
+            }
         }
         lastStatus = $"종 일괄 제출: {submitted}개 (정지 {stationarySeconds:0.##}초 이상)";
         if (logDiagnostics) Debug.Log($"[Submit Bell] {lastStatus}", this);
@@ -236,7 +279,7 @@ public class SubmitTriggerZone : MonoBehaviour
     private void CheckFrontContact(Collision collision)
     {
         if (ActiveSurface != SubmissionSurface.FrontWall || zone.isTrigger) return;
-        CatchableObj item = GetPlate(collision.collider);
+        CatchableObj item = GetSubmissionItem(collision.collider);
         if (!CheckEligibility(item)) return;
         Vector3 axis = FrontAxis;
         Vector3 worldAxis = transform.TransformDirection(axis).normalized;
@@ -281,16 +324,20 @@ public class SubmitTriggerZone : MonoBehaviour
         Gizmos.DrawWireSphere(origin + direction * 0.5f, 0.04f);
     }
 
-    private static string SubmissionBlock(CatchableObj item, bool requireLocalOwner = true)
+    private string SubmissionBlock(CatchableObj item, bool requireLocalOwner = true)
     {
-        if (item == null) return "접시 콜라이더가 아닙니다.";
+        if (item == null) return "제출할 그릇 또는 재료가 아닙니다.";
         if (!item.gameObject.activeInHierarchy) return "비활성 접시";
         if (item.IsSubmissionPending || item.IsSubmissionReturning) return "이미 제출 요청 또는 반환 중";
         if (item.IsHold || item.Holder != null) return "손에 든 접시";
-        if (requireLocalOwner && !item.IsLocalOwner) return "이 클라이언트의 소유가 아닌 접시";
+        if (requireLocalOwner && !item.IsLocalOwner &&
+            (!string.IsNullOrEmpty(item.LastHolderPlayerId) || Router == null || !Router.IsRegistrar))
+            return "이 클라이언트에서 요청할 수 없는 물체";
+        if (!IsRegistered || objectRouter == null) return "제출구 도구 등록 대기 중 (ToolId=100)";
+        if (trackedItems.ContainsKey(item.NetworkId)) return "이미 제출구에서 처리 중";
         if (item.NetworkId <= 0) return "서버 엔티티 ID 없음";
         if (item.ParentEntityId > 0) return $"다른 도구에 들어 있는 접시: Parent={item.ParentEntityId}";
-        if (!item.TryGetComponent(out PlateInteraction plate) || plate.IsEmpty) return "빈 접시 또는 음식 정보 없음";
+        // Empty plates and loose ingredients are valid intake targets; the server judges dishes.
         RoomHudState state = RoomHudSession.Instance.State;
         if (!state.IsStageRunning) return "스테이지 시작 알림 미수신 또는 이미 종료됨";
         return state.RemainingSeconds(Time.unscaledTimeAsDouble) <= 0 ? "스테이지 타이머 0초" : null;
@@ -311,19 +358,26 @@ public class SubmitTriggerZone : MonoBehaviour
     }
     private void Enqueue(CatchableObj item, double qualifiedAt, bool requireLocalOwner = true)
     {
-        if (ServerManager.Instance == null || SubmissionBlock(item, requireLocalOwner) != null || !item.TryBeginSubmission()) return;
-        submittingZones[item.NetworkId] = this;
-        pending.Add(new SubmissionRequest { Item = item, EntityId = item.NetworkId, QualifiedAt = qualifiedAt });
+        if (ServerManager.Instance == null || SubmissionBlock(item, requireLocalOwner) != null) return;
+        SubmittedItem tracked = Track(item);
+        if (!item.TryBeginSubmission()) { ForgetItem(item.NetworkId); return; }
+        pending.Add(new SubmissionRequest
+        {
+            Item = item, EntityId = item.NetworkId, QualifiedAt = qualifiedAt,
+            Owner = this, ToolEntityId = NetworkId
+        });
         Debug.Log($"[Submit Queued] EntityId={item.NetworkId}, conditionTime={qualifiedAt:F3}", item);
     }
     private void LateUpdate()
     {
         if (!sending && pending.Count > 0) SendPendingAsync().Forget();
     }
+
     private static async UniTask SendPendingAsync()
     {
         int generation = requestGeneration;
         sending = true;
+        var stations = new Dictionary<SubmitTriggerZone, long>();
         try
         {
             while (generation == requestGeneration && pending.Count > 0)
@@ -335,20 +389,46 @@ public class SubmitTriggerZone : MonoBehaviour
                 });
                 SubmissionRequest request = pending[0];
                 pending.RemoveAt(0);
-                CatchableObj item = request.Item;
-                if (item == null || item.NetworkId != request.EntityId || !item.IsSubmissionPending) continue;
+                SubmitTriggerZone owner = request.Owner;
+                if (owner == null || !owner.isActiveAndEnabled || owner.NetworkId != request.ToolEntityId) continue;
+                if (request.EntityId == 0)
+                {
+                    stations[owner] = request.ToolEntityId;
+                    continue;
+                }
+                if (!IsSameItem(request.Item, request.EntityId) || !request.Item.IsSubmissionPending) continue;
                 try
                 {
                     if (ServerManager.Instance == null) throw new InvalidOperationException("ServerManager missing.");
-                    DishOrderManager.ReportSubmission(item.GetComponent<PlateInteraction>(), request.EntityId);
-                    Debug.Log($"[Submit TX] C_ServeDish EntityId={request.EntityId}", item);
-                    await ServerManager.Instance.SendData(PacketSerializer.Serialize(new ServeDishPacket { EntityId = request.EntityId }));
-                    // Server removes the food and confirms return with S_DishEject.
+                    DishOrderManager.ReportSubmission(request.Item.GetComponent<PlateInteraction>(), request.EntityId);
+                    await ServerManager.Instance.SendData(PacketSerializer.Serialize(new EntityInsertPacket
+                    {
+                        SubjectEntityId = request.EntityId, TargetEntityId = request.ToolEntityId
+                    }));
+                    stations[owner] = request.ToolEntityId;
                 }
                 catch (Exception error)
                 {
-                    // Delivery may already have happened. Never retry an ambiguous submission.
-                    DishOrderManager.ReportSubmissionIssue("제출 전송을 확인할 수 없습니다. 중복 방지를 위해 자동 재전송하지 않습니다.");
+                    // An ambiguous send is never retried automatically.
+                    DishOrderManager.ReportSubmissionIssue("제출구 삽입 전송을 확인할 수 없습니다.");
+                    Debug.LogException(error);
+                }
+            }
+            foreach (var station in stations)
+            {
+                if (generation != requestGeneration) break;
+                if (station.Key == null || !station.Key.isActiveAndEnabled || station.Key.NetworkId != station.Value) continue;
+                try
+                {
+                    await ServerManager.Instance.SendData(PacketSerializer.Serialize(new EntityInteractPacket
+                    {
+                        TargetEntityId = station.Value
+                    }));
+                    if (station.Key.logDiagnostics) Debug.Log($"[Submit TX] C_EntityInteract ToolEntityId={station.Value}", station.Key);
+                }
+                catch (Exception error)
+                {
+                    DishOrderManager.ReportSubmissionIssue("제출 처리 전송을 확인할 수 없습니다.");
                     Debug.LogException(error);
                 }
             }
@@ -356,95 +436,225 @@ public class SubmitTriggerZone : MonoBehaviour
         finally { sending = false; }
     }
 
-    public static bool PlayConfirmedPlateReturn(CatchableObj plate)
+    public override void InitializeRouter(MapObjNetworkRouter router)
     {
-        if (plate == null || plate.IsSubmissionReturning) return false;
-        submittingZones.TryGetValue(plate.NetworkId, out SubmitTriggerZone owner);
-        submittingZones.Remove(plate.NetworkId);
-        // Remote clients did not necessarily send this submission. Resolve the nearby station.
-        if (owner == null || !owner.isActiveAndEnabled)
-        {
-            float closest = float.PositiveInfinity;
-            foreach (SubmitTriggerZone candidate in activeZones)
-            {
-                if (candidate == null || !candidate.isActiveAndEnabled) continue;
-                float distance = (candidate.zone.bounds.ClosestPoint(plate.transform.position) - plate.transform.position).sqrMagnitude;
-                if (distance >= closest) continue;
-                closest = distance;
-                owner = candidate;
-            }
-        }
-        if (owner == null) return false;
-        owner.StartCoroutine(owner.ReturnPlate(plate));
-        return true;
+        base.InitializeRouter(router);
+        objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
+        if (objectRouter == null) objectRouter = FindFirstObjectByType<ObjectNetworkRouter>();
     }
 
-    private IEnumerator ReturnPlate(CatchableObj item)
+    public void HandleEntityAdded(CatchableObj item)
     {
-        long id = item.NetworkId;
-        Vector3 originalPosition = item.transform.position;
-        Quaternion originalRotation = item.transform.rotation;
-        bool launched = false;
+        if (item == null) return;
+        if (trackedItems.TryGetValue(item.NetworkId, out SubmittedItem previous) && previous.Returned) ForgetItem(item.NetworkId);
+        SubmittedItem tracked = Track(item);
+        if (tracked.Accepted) return;
+        tracked.Accepted = true;
+        foreach (Collider col in item.GetComponentsInChildren<Collider>(true))
+        {
+            if (col.GetComponentInParent<CatchableObj>() != item) continue;
+            tracked.Colliders[col] = col.enabled;
+        }
         item.SetSubmissionReturning(true);
-        item.Holder?.Interact.TryReleaseHeld(item);
-        item.OnDrop();
         item.ChangePickState(false);
         item.SetPhysicsState(false);
-        try
-        {
-            Vector3 intake = suctionPoint != null ? suctionPoint.position : zone.bounds.center;
-            yield return MovePlate(item, id, intake, originalRotation, suctionDuration);
-            if (!IsSamePlate(item, id)) yield break;
-            // S_DishEject can arrive before the world snapshot that removes the food.
-            // Wait for server confirmation; never delete its food locally.
-            float deadline = Time.unscaledTime + 2f;
-            PlateInteraction plate = item.GetComponent<PlateInteraction>();
-            while (IsSamePlate(item, id) && !plate.IsEmpty && Time.unscaledTime < deadline) yield return null;
-            if (!IsSamePlate(item, id)) yield break;
-            if (!plate.IsEmpty)
-            {
-                Debug.LogWarning($"[Submit Return] 음식 삭제 확인 대기 초과: {id}", item);
-                yield break;
-            }
-            Vector3 exit = returnPoint != null ? returnPoint.position : originalPosition;
-            Quaternion rotation = returnPoint != null ? returnPoint.rotation : originalRotation;
-            // Ejection is a separate animation, after intake and food removal finish.
-            yield return MovePlate(item, id, exit, rotation, ejectDuration);
-            if (!IsSamePlate(item, id)) yield break;
-            item.SetPhysicsState(true);
-            Transform directionBasis = returnPoint != null ? returnPoint : transform;
-            if (item.Rb != null && ejectDirection.sqrMagnitude > 0f)
-                item.Rb.AddForce(directionBasis.TransformDirection(ejectDirection).normalized * ejectForce, ForceMode.Impulse);
-            launched = true;
-        }
-        finally
-        {
-            if (IsSamePlate(item, id))
-            {
-                if (!launched) item.transform.SetPositionAndRotation(originalPosition, originalRotation);
-                item.SetPhysicsState(true);
-                item.ChangePickState(true);
-                item.ReleaseSubmissionLock();
-                item.SetSubmissionReturning(false);
-            }
-        }
+        foreach (Collider col in tracked.Colliders.Keys)
+            if (col != null) col.enabled = false;
+        item.transform.SetParent(transform, true);
+        tracked.Motion = StartCoroutine(SuckItem(tracked));
     }
 
-    private static bool IsSamePlate(CatchableObj item, long id) =>
+    // The server can clear parents before sending its ejection packet.
+    public void HandleEntityRemoved(CatchableObj item) { }
+
+    public void HandleDestroyedObj(CatchableObj item)
+    {
+        if (item != null) ForgetItem(item.NetworkId);
+    }
+
+    public void HandleEject(CookingSubmitEjectPacket packet)
+    {
+        if (packet == null || packet.CookingSubmitEntityId != NetworkId || packet.EntityIds == null || !isActiveAndEnabled) return;
+        var targets = new List<long>(packet.EntityIds.Count);
+        bool hasTargets = false;
+        foreach (long id in packet.EntityIds)
+        {
+            // Keep an empty slot for duplicates so every client consumes the same random sequence.
+            if (id <= 0 || (ejectSeeds.TryGetValue(id, out int seed) && seed == packet.EjectSeed) || !queuedEjections.Add(id))
+            {
+                targets.Add(0);
+                continue;
+            }
+            ejectSeeds[id] = packet.EjectSeed;
+            targets.Add(id);
+            hasTargets = true;
+            PrepareReturn(id);
+        }
+        if (hasTargets) Ejector.Enqueue(targets, packet.EjectSeed, packet.EjectDelayMs);
+    }
+
+    internal CatchableObj FindItem(long id) =>
+        objectRouter != null && objectRouter.TryGet(id, out CatchableObj item) ? item : null;
+
+    internal bool PrepareReturn(long id)
+    {
+        CatchableObj item = FindItem(id);
+        if (!IsSameItem(item, id)) return false;
+        if (item.Holder != null || (item.ParentEntityId > 0 && item.ParentEntityId != NetworkId))
+            objectRouter.DetachForContainerEjection(item);
+        HandleEntityAdded(item);
+        objectRouter.BeginContainerEjection(item, NetworkId);
+        queuedEjections.Add(id);
+        return CanEject(id);
+    }
+
+    internal bool CanEject(long id) => trackedItems.TryGetValue(id, out SubmittedItem tracked) &&
+        IsSameItem(tracked.Item, id) && tracked.SuctionComplete && !tracked.Returned &&
+        (!tracked.Item.TryGetComponent(out PlateInteraction plate) || plate.IsEmpty);
+
+    internal void StartEjection(CatchableObj item, Vector3 direction)
+    {
+        if (item == null || !trackedItems.TryGetValue(item.NetworkId, out SubmittedItem tracked)) return;
+        tracked.Motion = StartCoroutine(EjectItem(tracked, direction));
+    }
+
+    internal void SkipReturn(long id)
+    {
+        if (id <= 0) return;
+        ForgetItem(id);
+        Debug.LogWarning($"[Submit Return] 배출 대상 또는 음식 제거 확인 대기 초과: {id}", this);
+    }
+
+    internal void ConfigureEjection(ObjEjector.Settings settings)
+    {
+        settings.ejectPoint = returnPoint;
+        settings.interval = ejectInterval;
+        settings.baseDirection = returnPoint != null
+            ? transform.InverseTransformDirection(returnPoint.TransformDirection(ejectDirection)) : ejectDirection;
+        settings.randomRangeX = ejectRandomRangeX;
+        settings.randomRangeYMin = ejectRandomRangeYMin;
+        settings.randomRangeYMax = ejectRandomRangeYMax;
+        settings.randomRangeZ = ejectRandomRangeZ;
+        settings.force = ejectForce;
+    }
+
+    private IEnumerator SuckItem(SubmittedItem tracked)
+    {
+        Vector3 intake = suctionPoint != null ? suctionPoint.position : zone.bounds.center;
+        yield return MoveItem(tracked.Item, tracked.Id, intake, tracked.OriginalRotation, suctionDuration);
+        if (IsSameItem(tracked.Item, tracked.Id)) tracked.SuctionComplete = true;
+        tracked.Motion = null;
+    }
+
+    private IEnumerator EjectItem(SubmittedItem tracked, Vector3 direction)
+    {
+        CatchableObj item = tracked.Item;
+        Vector3 exit = returnPoint != null ? returnPoint.position : tracked.OriginalPosition;
+        Quaternion rotation = returnPoint != null ? returnPoint.rotation : tracked.OriginalRotation;
+        yield return MoveItem(item, tracked.Id, exit, rotation, ejectDuration);
+        if (!IsSameItem(item, tracked.Id)) yield break;
+        objectRouter.DetachForContainerEjection(item);
+        RestoreItem(tracked);
+        if (item.Rb != null)
+        {
+            item.Rb.linearVelocity = Vector3.zero;
+            item.Rb.angularVelocity = Vector3.zero;
+            item.Rb.AddForce(direction * ejectForce, ForceMode.Impulse);
+        }
+        tracked.Returned = true;
+        tracked.ReleaseAfter = Time.fixedTime + Time.fixedDeltaTime;
+        tracked.Motion = null;
+        queuedEjections.Remove(tracked.Id);
+    }
+
+    private SubmittedItem Track(CatchableObj item)
+    {
+        if (!trackedItems.TryGetValue(item.NetworkId, out SubmittedItem tracked))
+        {
+            tracked = new SubmittedItem
+            {
+                Item = item, Id = item.NetworkId, OriginalPosition = item.transform.position,
+                OriginalRotation = item.transform.rotation, CanBePicked = item.CanBePicked,
+                Deadline = Time.unscaledTime + responseTimeout
+            };
+            trackedItems.Add(item.NetworkId, tracked);
+        }
+        return tracked;
+    }
+
+    private void CancelUnsent(long id)
+    {
+        if (trackedItems.TryGetValue(id, out SubmittedItem tracked) && !tracked.Accepted) ForgetItem(id);
+    }
+
+    private void ForgetItem(long id)
+    {
+        if (trackedItems.TryGetValue(id, out SubmittedItem tracked))
+        {
+            if (tracked.Motion != null) StopCoroutine(tracked.Motion);
+            if (!tracked.Returned && IsSameItem(tracked.Item, id)) RestoreItem(tracked);
+            trackedItems.Remove(id);
+        }
+        queuedEjections.Remove(id);
+        objectRouter?.EndContainerEjection(id, NetworkId);
+    }
+
+    private static void RestoreItem(SubmittedItem tracked)
+    {
+        CatchableObj item = tracked.Item;
+        if (tracked.Accepted)
+        {
+            item.transform.SetParent(null, true);
+            item.SetPhysicsState(true);
+            foreach (var col in tracked.Colliders)
+                if (col.Key != null) col.Key.enabled = col.Value;
+        }
+        item.ChangePickState(tracked.CanBePicked);
+        item.ReleaseSubmissionLock();
+        item.SetSubmissionReturning(false);
+    }
+
+    private bool OverlapsItem(CatchableObj item)
+    {
+        foreach (Collider col in item.GetComponentsInChildren<Collider>(true))
+        {
+            if (col.GetComponentInParent<CatchableObj>() != item || !col.gameObject.activeInHierarchy) continue;
+            if (Physics.ComputePenetration(zone, zone.transform.position, zone.transform.rotation,
+                col, col.transform.position, col.transform.rotation, out _, out _)) return true;
+        }
+        return false;
+    }
+
+    public void ResetClientStage()
+    {
+        pending.RemoveAll(request => request.Owner == this);
+        ejector?.Reset();
+        StopAllCoroutines();
+        foreach (long id in new List<long>(trackedItems.Keys)) ForgetItem(id);
+        queuedEjections.Clear();
+        ejectSeeds.Clear();
+        foreach (var pair in samples)
+            if (pair.Key != null) pair.Key.OnPicked -= pair.Value.Reset;
+        samples.Clear();
+        overlaps.Clear();
+        reportedBlocks.Clear();
+    }
+
+    private static bool IsSameItem(CatchableObj item, long id) =>
         item != null && item.gameObject.activeInHierarchy && item.NetworkId == id;
 
-    private static IEnumerator MovePlate(CatchableObj item, long id, Vector3 destination, Quaternion rotation, float duration)
+    private static IEnumerator MoveItem(CatchableObj item, long id, Vector3 destination, Quaternion rotation, float duration)
     {
         Vector3 start = item.transform.position;
         Quaternion startRotation = item.transform.rotation;
         float elapsed = 0f;
-        while (IsSamePlate(item, id) && elapsed < duration)
+        while (IsSameItem(item, id) && elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, duration));
             item.transform.SetPositionAndRotation(Vector3.Lerp(start, destination, t), Quaternion.Slerp(startRotation, rotation, t));
             yield return null;
         }
-        if (IsSamePlate(item, id)) item.transform.SetPositionAndRotation(destination, rotation);
+        if (IsSameItem(item, id)) item.transform.SetPositionAndRotation(destination, rotation);
     }
 }

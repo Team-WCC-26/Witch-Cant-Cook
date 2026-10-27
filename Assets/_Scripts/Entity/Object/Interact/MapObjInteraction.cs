@@ -15,6 +15,7 @@ public abstract class MapObjInteraction : MonoBehaviour, IInteractTarget
         Define.eToolId.PrepTable => EntityCategory.PrepTable,
         Define.eToolId.Oven => EntityCategory.Oven,
         Define.eToolId.TrashCan => EntityCategory.TrashCan,
+        Define.eToolId.CookingSubmit => EntityCategory.CookingSubmit,
         _ => EntityCategory.None
     };
     public virtual EntityCategory AcceptedCategories => acceptedCategories;
