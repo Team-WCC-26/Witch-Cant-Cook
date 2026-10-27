@@ -3,70 +3,81 @@ using System.Collections.Generic;
 using Protocol;
 using Server;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
-[MovedFrom(true, sourceNamespace: "", sourceAssembly: "Assembly-CSharp", sourceClassName: "TrashCan")]
-public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiver, IPunchReceiver, IClientStageResettable
+public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiver, IClientStageResettable
 {
-    [Serializable]
-    private sealed class EjectOverride
-    {
-        public CatchableObj target;
-        public EntityCategory categories;
-        public Vector3 direction = new(0f, 1f, 1f);
-        [Min(0f)] public float force = 5f;
-    }
+    #region Intake Settings
 
-    private sealed class TrackedObj
-    {
-        public CatchableObj obj;
-        public bool accepted;
-        public bool returned;
-        public bool canBePicked;
-        public float deadline;
-        public float releaseAfter;
-        public readonly Dictionary<Collider, bool> colliders = new();
-    }
-
-    [Header("Respawn Point")]
-    public Transform kitchenSpawnPoint;
+    [Header("Intake")]
     [SerializeField] private Collider intakeTrigger;
     [SerializeField, Min(0.1f)] private float responseTimeout = 3f;
+
+    #endregion
+
+    #region Ejection Settings
+
     [Header("Ejection")]
     [SerializeField] private Transform ejectPoint;
     [SerializeField, Min(0f)] private float ejectInterval = 0.15f;
+    [SerializeField, Min(0f)] private float ejectForce = 5f;
+    [SerializeField] private List<ToolEjectSettings> toolEjectSettings = new();
+
+    [Header("Ejection Direction")]
     [SerializeField] private Vector3 ejectBaseDirection = new(0f, 1f, 1f);
     [SerializeField, Min(0f)] private float ejectRandomRangeX = 0.3f;
     [SerializeField] private float ejectRandomRangeYMin = -0.05f;
     [SerializeField] private float ejectRandomRangeYMax = 0.2f;
     [SerializeField, Min(0f)] private float ejectRandomRangeZ = 0.3f;
-    [SerializeField, Min(0f)] private float ejectForce = 5f;
     [SerializeField, Min(0.1f)] private float ejectGizmoLength = 2f;
-    [SerializeField] private List<EjectOverride> ejectOverrides = new();
+
+    #endregion
+
+    #region Player Settings
+
+    [Header("Player Ejection")]
+    [SerializeField, Min(0f)] private float playerEjectForce = 8f;
+
+    #endregion
+
+    #region Object State
 
     private readonly Dictionary<long, TrackedObj> trackedObjects = new();
     private readonly HashSet<long> queuedIds = new();
+    private readonly List<long> removedIds = new();
+
+    #endregion
+
+    #region Player State
+
     private readonly Dictionary<string, PlayerBrain> insidePlayers = new();
     private readonly Dictionary<string, float> pendingPlayerEntries = new();
     private readonly Dictionary<string, float> pendingPlayerExits = new();
-    private readonly List<long> removedIds = new();
     private readonly List<string> exitedPlayers = new();
+    private readonly Dictionary<string, PlayerReturn> returningPlayers = new();
+
+    #endregion
+
+    #region Dependencies
+
     private ObjectNetworkRouter objectRouter;
     private TrashCanEjector ejector;
-    private float nextPressTime;
-
-    public override Define.eToolId ToolType => Define.eToolId.TrashCan;
-    public override EntityCategory AcceptedCategories => EntityCategory.All;
-    internal float ResponseTimeout => responseTimeout;
     private TrashCanEjector Ejector => ejector ??= new TrashCanEjector(this);
+
+    #endregion
 
     #region Unity Callbacks
 
     private void Awake()
     {
-        if (intakeTrigger == null)
-            foreach (Collider candidate in GetComponents<Collider>())
-                if (candidate.isTrigger) { intakeTrigger = candidate; break; }
+        if (intakeTrigger != null) return;
+
+        foreach (Collider candidate in GetComponents<Collider>())
+        {
+            if (!candidate.isTrigger) continue;
+
+            intakeTrigger = candidate;
+            break;
+        }
     }
 
     private void OnTriggerEnter(Collider other) => TryAccept(other);
@@ -78,10 +89,13 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         foreach (var entry in trackedObjects)
         {
             TrackedObj tracked = entry.Value;
-            // 내용물 제거 콜백이 도구의 보조 Trigger를 켜더라도 보관 중에는 접수를 막는다.
+            // Storage lock after content-removal callbacks
             if (tracked.accepted && !tracked.returned)
+            {
                 foreach (Collider col in tracked.colliders.Keys)
                     if (col != null) col.enabled = false;
+            }
+
             if (tracked.obj == null || tracked.obj.NetworkId != entry.Key)
                 removedIds.Add(entry.Key);
             else if (tracked.returned && Time.fixedTime >= tracked.releaseAfter && !Overlaps(tracked.obj))
@@ -97,6 +111,16 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         foreach (string playerId in exitedPlayers) RequestPlayerExit(playerId);
         ExpirePlayerRequests(pendingPlayerEntries);
         ExpirePlayerRequests(pendingPlayerExits);
+
+        exitedPlayers.Clear();
+        foreach (var entry in returningPlayers)
+        {
+            PlayerReturn returning = entry.Value;
+            if (returning.launched && Time.fixedTime >= returning.releaseAfter &&
+                (returning.player == null || !Overlaps(returning.player)))
+                exitedPlayers.Add(entry.Key);
+        }
+        foreach (string playerId in exitedPlayers) returningPlayers.Remove(playerId);
     }
 
     private void OnDisable() => ResetClientStage();
@@ -110,28 +134,24 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     #endregion
 
+    #region Public API
+
+    public override Define.eToolId ToolType => Define.eToolId.TrashCan;
+    public override EntityCategory AcceptedCategories => EntityCategory.None;
+
     public override void InitializeRouter(MapObjNetworkRouter router)
     {
         base.InitializeRouter(router);
         objectRouter = router != null ? router.GetComponent<ObjectNetworkRouter>() : null;
     }
 
-    public void OnPunched(PlayerBrain player) => PressButton(player);
-
-    public void PressButton(PlayerBrain player)
-    {
-        if (player == null || PlayerSpawnManager.Instance == null || !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
-        if (NetworkId == 0 || ServerManager.Instance == null || Time.unscaledTime < nextPressTime) return;
-        nextPressTime = Time.unscaledTime + 0.2f;
-        EntityInteractPacket packet = new() { TargetEntityId = NetworkId };
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-    }
-
     public void HandleEntityAdded(CatchableObj entity)
     {
         if (entity == null) return;
+
         TrackedObj tracked = Track(entity);
         if (tracked.accepted || tracked.returned) return;
+
         tracked.accepted = true;
         tracked.canBePicked = entity.CanBePicked;
         foreach (Collider col in entity.GetComponentsInChildren<Collider>(true))
@@ -146,7 +166,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         entity.transform.position = intakeTrigger != null ? intakeTrigger.bounds.center : transform.position;
     }
 
-    // 부모 해제는 배출 패킷보다 먼저 올 수 있다. 물리 복구는 배출기가 담당한다.
+    // Physics restoration deferred to ejection
     public void HandleEntityRemoved(CatchableObj entity) { }
 
     public void HandleDestroyedObj(CatchableObj entity)
@@ -167,11 +187,23 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
             ids.Add(id);
             PrepareReturn(id);
         }
-        if (ids.Count > 0) Ejector.Enqueue(ids, packet.EjectSeed, packet.EjectDelayMs);
+        List<string> playerIds = new();
+        foreach (string playerId in packet.PlayerIds)
+        {
+            if (returningPlayers.ContainsKey(playerId)) continue;
+            returningPlayers.Add(playerId, new PlayerReturn());
+            insidePlayers.Remove(playerId);
+            pendingPlayerEntries.Remove(playerId);
+            pendingPlayerExits.Remove(playerId);
+            playerIds.Add(playerId);
+        }
+        if (ids.Count > 0 || playerIds.Count > 0)
+            Ejector.Enqueue(ids, playerIds, packet.EjectSeed, packet.EjectDelayMs);
     }
 
     public void HandlePlayerEnter(ToolPlayerEnterPacket packet)
     {
+        if (returningPlayers.ContainsKey(packet.PlayerId)) return;
         pendingPlayerEntries.Remove(packet.PlayerId);
         if (PlayerSpawnManager.Instance != null && PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player))
             insidePlayers[packet.PlayerId] = player;
@@ -182,14 +214,6 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         insidePlayers.Remove(packet.PlayerId);
         pendingPlayerEntries.Remove(packet.PlayerId);
         pendingPlayerExits.Remove(packet.PlayerId);
-    }
-
-    public bool TryRespawnPlayer(string playerId)
-    {
-        if (!insidePlayers.ContainsKey(playerId) && !pendingPlayerEntries.ContainsKey(playerId)) return false;
-        PlayerSpawnManager.Instance.RespawnPlayer(playerId, kitchenSpawnPoint);
-        RequestPlayerExit(playerId);
-        return true;
     }
 
     public void ResetClientStage()
@@ -208,7 +232,35 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         insidePlayers.Clear();
         pendingPlayerEntries.Clear();
         pendingPlayerExits.Clear();
-        nextPressTime = 0f;
+        returningPlayers.Clear();
+    }
+
+    #endregion
+
+    #region Ejection
+
+    internal float ResponseTimeout => responseTimeout;
+    internal float PlayerEjectForce => playerEjectForce;
+
+    internal PlayerBrain FindPlayer(string playerId)
+    {
+        PlayerBrain player = null;
+        PlayerSpawnManager.Instance?.TryGetPlayer(playerId, out player);
+        return player;
+    }
+
+    internal void ReleasePlayer(PlayerBrain player)
+    {
+        if (!returningPlayers.TryGetValue(player.PlayerId, out PlayerReturn returning)) return;
+        returning.player = player;
+        returning.launched = true;
+        returning.releaseAfter = Time.fixedTime + Time.fixedDeltaTime;
+    }
+
+    internal void SkipPlayerReturn(string playerId)
+    {
+        returningPlayers.Remove(playerId);
+        Debug.LogError($"Trash player ejection target not found: {playerId}", this);
     }
 
     internal void ConfigureEjection(ObjEjector.Settings settings)
@@ -259,25 +311,47 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     {
         if (FindObj(id) is CatchableObj obj) ReleaseObj(obj);
         else ForgetObj(id);
+
         Debug.LogError($"쓰레기통 배출 결과를 확인할 수 없습니다. EntityId: {id}", this);
     }
 
-    internal Vector3 GetEjectDirection(CatchableObj obj) => FindOverride(obj)?.direction ?? ejectBaseDirection;
-    internal float GetEjectForce(CatchableObj obj) => FindOverride(obj)?.force ?? ejectForce;
+    internal Vector3 GetEjectDirection(CatchableObj obj) => FindToolEjectSettings(obj)?.direction ?? ejectBaseDirection;
+    internal float GetEjectForce(CatchableObj obj) => FindToolEjectSettings(obj)?.force ?? ejectForce;
+
+    private ToolEjectSettings FindToolEjectSettings(CatchableObj obj)
+    {
+        if (obj == null) return null;
+        foreach (ToolEjectSettings entry in toolEjectSettings)
+            if (entry != null && entry.target == obj) return entry;
+        foreach (ToolEjectSettings entry in toolEjectSettings)
+            if (entry != null && entry.target == null && (entry.categories & obj.Category) != 0) return entry;
+        return null;
+    }
+
+    #endregion
+
+    #region Object Storage
 
     private void TryAccept(Collider other)
     {
         if (NetworkId == 0 || objectRouter == null || ServerManager.Instance == null) return;
         CatchableObj contactedObj = other.GetComponentInParent<CatchableObj>();
         if (contactedObj != null && contactedObj.IsHold) return;
+
         PlayerBrain player = other.GetComponentInParent<PlayerBrain>();
-        if (player != null) { RequestPlayerEntry(player); return; }
-        // 내용물의 콜라이더가 먼저 닿아도 가장 바깥쪽 접시/팬을 접수한다.
+        if (player != null)
+        {
+            RequestPlayerEntry(player);
+            return;
+        }
+
+        // Outermost container, not its contents
         CatchableObj obj = null;
         foreach (CatchableObj parent in other.GetComponentsInParent<CatchableObj>()) obj = parent;
         if (obj == null || obj.NetworkId == 0 || obj.IsHold || trackedObjects.ContainsKey(obj.NetworkId)) return;
         if (obj.ParentEntityId != 0 && obj.ParentEntityId != -1) return;
         if (!obj.IsLocalOwner && !(string.IsNullOrEmpty(obj.LastHolderPlayerId) && Router != null && Router.IsRegistrar)) return;
+
         Track(obj);
         EntityInsertPacket packet = new() { SubjectEntityId = obj.NetworkId, TargetEntityId = NetworkId };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
@@ -327,7 +401,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         foreach (Collider col in target.GetComponentsInChildren<Collider>(true))
         {
             if (!col.gameObject.activeInHierarchy) continue;
-            // 집어서 Collider가 꺼져도 실제 형상으로 완전 이탈을 확인한다.
+            // Exit detection with disabled held colliders
             if (target is CatchableObj obj && col.GetComponentInParent<CatchableObj>() != obj) continue;
             if (target is PlayerBrain && col.GetComponentInParent<CatchableObj>() != null) continue;
             if (Physics.ComputePenetration(intakeTrigger, intakeTrigger.transform.position, intakeTrigger.transform.rotation,
@@ -336,9 +410,14 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         return false;
     }
 
+    #endregion
+
+    #region Player Tracking
+
     private void RequestPlayerEntry(PlayerBrain player)
     {
         if (PlayerSpawnManager.Instance == null || !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
+        if (returningPlayers.ContainsKey(player.PlayerId)) return;
         if (insidePlayers.ContainsKey(player.PlayerId) || pendingPlayerExits.ContainsKey(player.PlayerId) || !pendingPlayerEntries.TryAdd(player.PlayerId, Time.unscaledTime + responseTimeout)) return;
         insidePlayers[player.PlayerId] = player;
         ToolPlayerEnterPacket packet = new() { ToolEntityId = NetworkId, PlayerId = player.PlayerId };
@@ -364,13 +443,37 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
             insidePlayers.Remove(playerId);
         }
     }
-    private EjectOverride FindOverride(CatchableObj obj)
+
+    #endregion
+
+    #region Types
+
+    private sealed class PlayerReturn
     {
-        if (obj == null) return null;
-        foreach (EjectOverride entry in ejectOverrides)
-            if (entry != null && entry.target == obj) return entry;
-        foreach (EjectOverride entry in ejectOverrides)
-            if (entry != null && entry.target == null && (entry.categories & obj.Category) != 0) return entry;
-        return null;
+        public PlayerBrain player;
+        public bool launched;
+        public float releaseAfter;
     }
+
+    [Serializable]
+    private sealed class ToolEjectSettings
+    {
+        public CatchableObj target;
+        public EntityCategory categories;
+        public Vector3 direction = new(0f, 1f, 1f);
+        [Min(0f)] public float force = 5f;
+    }
+
+    private sealed class TrackedObj
+    {
+        public CatchableObj obj;
+        public bool accepted;
+        public bool returned;
+        public bool canBePicked;
+        public float deadline;
+        public float releaseAfter;
+        public readonly Dictionary<Collider, bool> colliders = new();
+    }
+
+    #endregion
 }

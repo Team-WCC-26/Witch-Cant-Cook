@@ -363,7 +363,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TrashCan
   eToolId: 90
   acceptedCategories: 0
-  kitchenSpawnPoint: {fileID: 0}
   intakeTrigger: {fileID: 5175544890850928740}
   responseTimeout: 3
   ejectPoint: {fileID: 1140693966845831477}
@@ -374,8 +373,9 @@ MonoBehaviour:
   ejectRandomRangeYMax: 0.2
   ejectRandomRangeZ: 0.3
   ejectForce: 5
+  playerEjectForce: 8
   ejectGizmoLength: 2
-  ejectOverrides: []
+  toolEjectSettings: []
 --- !u!65 &5175544890850928740
 BoxCollider:
   m_ObjectHideFlags: 0

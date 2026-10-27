@@ -41,7 +41,7 @@ public abstract class ObjEjector
         this.host = host;
     }
 
-    public void Reset()
+    public virtual void Reset()
     {
         if (coroutine != null && host != null)
             host.StopCoroutine(coroutine);
@@ -80,10 +80,24 @@ public abstract class ObjEjector
         catchable.Rb.AddForce(direction * (force ?? CurrentSettings.force), ForceMode.Impulse);
     }
 
-    protected abstract void OnRequestStarted(Request request);
+    protected void EjectPlayer(PlayerBrain player, float force, Vector3 direction)
+    {
+        // Owner physics; remote movement snapshots
+        if (player == null || PlayerSpawnManager.Instance == null ||
+            !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
+        if (player.Rb == null || player.Rb.isKinematic) return;
+
+        player.ActionController.Movement.BeginEjectionMovement();
+        player.Rb.position = EjectPos;
+        player.Rb.linearVelocity = Vector3.zero;
+        player.Rb.angularVelocity = Vector3.zero;
+        player.Rb.AddForce(direction * force, ForceMode.Impulse);
+    }
+
+    protected virtual void OnRequestStarted(Request request) { }
     protected abstract IEnumerable<Object> GetTargets(Request request);
     protected abstract void EjectTarget(Object target, Vector3 direction);
-    protected abstract void OnRequestCompleted();
+    protected virtual void OnRequestCompleted() { }
 
     protected virtual IEnumerator WaitBeforeSequence(Request request)
     {
