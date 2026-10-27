@@ -29,7 +29,6 @@ public class Player : Entity
             MakeDirty(DirtyMask.Ping);
         }
     }
-    public Room? Room { get; set; }
     public PlayerCombinedState State
     {
         get => _state;
@@ -171,6 +170,17 @@ public class Player : Entity
         if (damage <= 0) return;
 
         Hp -= damage;
+
+        // HP가 0이 되면 부활시킨다 (스폰 지점으로 복귀)
+        if (Hp == 0) Respawn();
+    }
+
+    // 즉사 처리: HP를 0으로 만들고 부활시킨다 (오븐 조리 완료 등)
+    public void Kill()
+    {
+        Hp = 0;
+
+        Respawn();
     }
 
     // 룸 퇴장: 펜싱 경로로 통일한다 (요청 시점의 Room을 캡처해 실행 시점 재참조를 막는다)
@@ -191,6 +201,12 @@ public class Player : Entity
         if (heldEntity != null)
         {
             heldEntity.Parent = null;
+        }
+
+        // 컨테이너 도구(솥/오븐/쓰레기통) 안에 있으면 멤버십부터 정리한다 (잔류 참조 방지)
+        if (Parent is ContainerTool container)
+        {
+            container.RemovePlayer(this);
         }
 
         Parent = null;

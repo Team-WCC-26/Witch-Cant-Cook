@@ -103,7 +103,10 @@ public class Room
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
         _doors[DoorId.Kitchen] = new(DoorId.Kitchen, 2, 3, _timerManager, HandleDoorOpened);
 
-        SetStage(1);
+        if (!SetStage(1))
+        {
+            throw new InvalidOperationException("Stage 1 데이터가 존재하지 않습니다.");
+        }
     }
 
     public void Start()
@@ -175,7 +178,13 @@ public class Room
     public bool IsEnable()
     {
         // 파괴된 방은 참가 대상에서 제외한다 (회수 경합에서 대기 중 참가 작업 방어)
-        return !_destroyed && _playerCnt >= 0 && _playerCnt < MaxPlayerCount;
+        // 스테이지 진행/정산 유예/확인 대기 중인 방은 신규 참가를 받지 않는다 (게임 시작 전에만 참가 가능)
+        return !_destroyed
+            && _stageTimer == null
+            && _settleTimer == null
+            && !_awaitingResultConfirm
+            && _playerCnt >= 0
+            && _playerCnt < MaxPlayerCount;
     }
 
     public void PushJob(Action job) => _jobQueue.Push(job);
@@ -213,15 +222,27 @@ public class Room
 
     public void MakeDirty(Entity entity)
     {
+        // 플레이어는 Tick에서 _players 순회로 직렬화하므로 엔티티 더티 집합에서 제외한다
+        if (entity is Player) return;
+
         _dirtyEntities.Add(entity);
     }
 
-    public void SetStage(int stage)
+    // 유효한 스테이지만 설정한다 (잘못된 번호는 거부하고 false 반환 — _stage 오염 방지)
+    public bool SetStage(int stage)
     {
+        var db = ServerContext.Instance.DataBase;
+
+        if (!db.IngredientGroups.ContainsKey(stage)) return false;
+        if (!db.RecipeGroups.ContainsKey(stage)) return false;
+        if (!db.Stages.ContainsKey(stage)) return false;
+
         _stage = stage;
 
         _ingredientSpawner.SetStage(stage);
         _dishManager.SetStage(stage);
+
+        return true;
     }
 
     public Ingredient GenerateIngredient(int id, out long entityId)
@@ -278,6 +299,10 @@ public class Room
                 tool = new TrashCan();
                 break;
 
+            case 100:
+                tool = new CookingSubmit();
+                break;
+
             default:
                 tool = null;
                 break;
@@ -330,7 +355,7 @@ public class Room
 
         // player.Room을 멤버십 등록 전에 설정한다: 참가 작업 실행 중 종료 이벤트가 룸을 읽는 경합에서
         // 멤버십 누락 판정(정리 누락/레코드 오만료)이 나오지 않게 한다
-        player.Room = this;
+        player.AttachRoom(this);
         _players.Add(player);
         _playerCnt++;
     }
@@ -344,7 +369,7 @@ public class Room
         // 등록되지 않은 플레이어의 퇴장은 무시한다 (playerCnt 언더플로 가드)
         if (!_players.Remove(player)) return;
 
-        player.Room = null;
+        player.AttachRoom(null!);
 
         if (player.Parent is CookingTool cookingTool)
         {
@@ -690,6 +715,12 @@ public class Room
         return true;
     }
 
+    // 제출구 등 여러 접시를 한 번에 처리하는 도구용 제출 위임
+    public void SubmitDish(int ingredientId)
+    {
+        _dishManager.SubmitDish(ingredientId);
+    }
+
     private void RegisterEntity(long id, Entity entity)
     {
         entity.InitEntityId(id);
@@ -854,7 +885,7 @@ public class Room
     }
 
     // 주방에 남은 엔티티 정리: 재료는 Destroy 동기화로 클라에서도 제거하고,
-    // 도구는 다음 스테이지에서 클라가 재등록하므로 동기화 없이 회수한다
+    // 도구는 다음 스테이지에서 클라가 재등록하므로 동기화 없이 내부 상태 초기화 후 회수한다
     private void ClearKitchenEntities()
     {
         List<Entity> entities = new(_entities.Values);
@@ -871,14 +902,22 @@ public class Room
                 continue;
             }
 
+            if (entity is Tool tool)
+            {
+                tool.Reset();
+            }
+
             entity.Parent = null;
             UnregisterEntity(entity.EntityId);
         }
     }
 
     // 룸 플레이어 핑 최대값 (ms) — 스테이지 종료 후 제출 유예 시간
+    // 클라 보고 핑이 비정상적으로 커도 유예가 무한정 길어지지 않게 상한으로 클램프한다
     private long GetMaxPingMs()
     {
+        const long SettleGraceMaxMs = 1000;
+
         long maxPing = 0;
 
         foreach (var player in _players)
@@ -891,6 +930,6 @@ public class Room
             }
         }
 
-        return maxPing;
+        return Math.Min(maxPing, SettleGraceMaxMs);
     }
 }

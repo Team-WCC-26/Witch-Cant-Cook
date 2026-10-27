@@ -90,7 +90,7 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
                 maxHp = MathF.Max(maxHp, player.Hp);
             }
 
-            long delayMs = (long)MathF.Ceiling(maxHp / Damage);
+            long delayMs = (long)MathF.Ceiling(maxHp / Damage * 1000);
 
             if (!_timerManager.ResetDelayMs(_cookTimer, delayMs))
             {
@@ -112,6 +112,20 @@ public abstract class CookingTool(IContainerStorage storage) : ContainerTool(sto
     public void SetCookEnable(bool enable)
     {
         _cookable = enable;
+    }
+
+    // 로비 복귀 등 도구를 초기 상태로 되돌린다 (ClearKitchenEntities에서 호출)
+    public override void Reset()
+    {
+        base.Reset();
+
+        if (_timerManager.CheckHandleValid(_cookTimer))
+        {
+            _timerManager.Cancel(_cookTimer);
+        }
+
+        _cookable = true;
+        _cookTimer = default;
     }
 
     // 조리 완료까지 남은 시간 (조리 중이 아니면 0) — 재접속 스냅샷 수집용

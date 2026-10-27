@@ -46,6 +46,14 @@ public class Oven() : CookingTool(new MultiSlotStorage()), IFixedTool
             ingredient.TryCook(_cookState);
         }
 
+        // 조리 완료 시 오븐 안의 플레이어는 사망 처리한다 (부활로 멤버십이 변하므로 복사본을 순회한다)
+        List<Player> insidePlayers = new(InsidePlayers);
+
+        foreach (var player in insidePlayers)
+        {
+            player.Kill();
+        }
+
         StopPlayerDamage(); // 조리가 끝나면 데미지 중단
     }
 }

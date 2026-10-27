@@ -38,8 +38,9 @@ public class Door
 
         if (!wasEnough && isEnough)
         {
+            // _openTime은 초 단위이므로 ms로 환산해 스케줄한다
             _openTimer = _timerManager.Schedule(
-                _openTime,
+                _openTime * 1000,
                 this,
                 OnOpened);
         }

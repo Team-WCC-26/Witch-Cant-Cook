@@ -56,6 +56,10 @@ public class EntityHandler : PacketHandlerBase
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity)) return;
 
+            // 물리적인 이탈(조리대 등 고정 도구에서 떨어짐)만 허용한다
+            // (플레이어가 쥔 것, 이동식 용기에 담긴 것은 임의로 떼어낼 수 없다)
+            if (entity.Parent is not IFixedTool) return;
+
             entity.Parent = null;
         });
     }

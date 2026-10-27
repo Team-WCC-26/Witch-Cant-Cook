@@ -102,6 +102,27 @@ public class JumpPad : Tool
         Room.BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
+    // 로비 복귀 등 도구를 초기 상태로 되돌린다 (ClearKitchenEntities에서 호출)
+    public override void Reset()
+    {
+        base.Reset();
+
+        if (_chargeTimer != null)
+        {
+            Room.TimerManager.Cancel(_chargeTimer.Value);
+            _chargeTimer = null;
+        }
+
+        if (_returnTimer != null)
+        {
+            Room.TimerManager.Cancel(_returnTimer.Value);
+            _returnTimer = null;
+        }
+
+        _state = JumpPadChargeState.Idle;
+        _riderCount = 0;
+    }
+
     // 재접속 스냅샷 수집용: 현재 장전 상태/탑승자/발사 회차/타이머 남은 시간을 조회한다
     public JumpPadSnapshot GetSnapshot()
     {

@@ -180,6 +180,9 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     // TrashCan
     S_TrashCanEject = 429,
 
+    // CookingSubmit
+    S_CookingSubmitEject = 431,
+
     // 기타 패킷 (00~)
     // ...
 }
