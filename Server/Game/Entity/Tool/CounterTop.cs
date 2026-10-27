@@ -38,8 +38,6 @@ public class CounterTop() : ContainerTool(new SingleSlotStorage()), IFixedTool
 
         if (!Insert(player.HoldingEntity)) return false;
 
-        player.HoldingEntity.Parent = this;
-
         return true;
     }
 

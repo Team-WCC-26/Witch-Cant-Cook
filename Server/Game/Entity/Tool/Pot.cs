@@ -93,6 +93,15 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         EjectAll();
     }
 
+    // 로비 복귀 등 도구를 초기 상태로 되돌린다 (ClearKitchenEntities에서 호출)
+    public override void Reset()
+    {
+        base.Reset();
+
+        CancelCook();
+        CancelAutoEject();
+    }
+
     private bool TryStartCook(Dish dish)
     {
         float maxHp = 0;

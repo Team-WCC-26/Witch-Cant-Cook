@@ -101,6 +101,8 @@ public class Shard
     public void StartProcess()
     {
         const int TickMs = 50;
+        // 한 루프에 소비할 최대 잡 수 (잡 실행 중 등록된 잡은 다음 루프로 넘어가 Tick 기아를 막는다)
+        const int MaxDrainPerLoop = 100;
 
         long lastTickTime = TimeUtil.NowMs();
         long nextTickTime = lastTickTime + TickMs;
@@ -109,7 +111,7 @@ public class Shard
         {
             int drainedCnt = 0;
 
-            while (_jobs.TryDequeue(out var job))
+            while (drainedCnt < MaxDrainPerLoop && _jobs.TryDequeue(out var job))
             {
                 drainedCnt++;
 
@@ -156,6 +158,9 @@ public class Shard
                 nextTickTime += TickMs;
                 now = TimeUtil.NowMs();
             }
+
+            // 남은 잡이 있으면 대기 없이 다음 루프로 (잡 소비와 Tick을 교차시킨다)
+            if (!_jobs.IsEmpty) continue;
 
             int waitTime = (int)Math.Max(0, nextTickTime - now);
 

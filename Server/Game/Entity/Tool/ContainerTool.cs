@@ -112,9 +112,21 @@ public abstract class ContainerTool(IContainerStorage storage) : Tool
     {
         _damageTimer = Room.TimerManager.Schedule(_damageIntervalMs, this, static t => t.DamageInsidePlayers());
 
-        foreach (var player in _insidePlayers)
+        // 데미지로 HP가 0이 되면 부활 처리되어 멤버십이 변경될 수 있으므로 복사본을 순회한다
+        List<Player> players = new(_insidePlayers);
+
+        foreach (var player in players)
         {
             player.ApplyDamage(Damage);
         }
+    }
+
+    // 로비 복귀 등 도구를 초기 상태로 되돌린다 (ClearKitchenEntities에서 호출)
+    public override void Reset()
+    {
+        base.Reset();
+
+        StopPlayerDamage();
+        _damageTimer = default;
     }
 }

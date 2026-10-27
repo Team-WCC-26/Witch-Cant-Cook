@@ -20,22 +20,18 @@ public class TrashCan() : ContainerTool(new MultiSlotStorage())
         List<Entity> ejectEntities = new(_storage);
         Clear();
 
-        if (ejectEntities.Count > 0)
-        {
-            BroadCastEject(ejectEntities);
-        }
+        List<Player> ejectPlayers = new(InsidePlayers);
+        ClearInsidePlayers();
 
-        List<Player> insidePlayers = new(InsidePlayers);
-
-        foreach (var insidePlayer in insidePlayers)
+        if (ejectEntities.Count > 0 || ejectPlayers.Count > 0)
         {
-            insidePlayer.Respawn();
+            BroadCastEject(ejectEntities, ejectPlayers);
         }
 
         return true;
     }
 
-    private void BroadCastEject(List<Entity> entities)
+    private void BroadCastEject(List<Entity> entities, List<Player> players)
     {
         TrashCanEjectPacket packet = new()
         {
@@ -43,6 +39,11 @@ public class TrashCan() : ContainerTool(new MultiSlotStorage())
             EjectSeed = (int)TimeUtil.NowMs(),
             EjectDelayMs = _ejectDelayMs
         };
+
+        foreach (var player in players)
+        {
+            packet.PlayerIds.Add(player.PlayerId);
+        }
 
         foreach (var entity in entities)
         {
