@@ -441,12 +441,13 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void FreezeIngredient(CatchableObj entity)
     {
         if (entity == null || frozenIngredients.ContainsKey(entity.NetworkId)) return;
+        bool scriptedMotion = entity.TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating;
         frozenIngredients[entity.NetworkId] = new FrozenIngredient
         {
             Entity = entity, CanBePicked = entity.CanBePicked,
             ColliderEnabled = entity.Col != null && entity.Col.enabled,
-            IsKinematic = entity.Rb != null && entity.Rb.isKinematic,
-            UseGravity = entity.Rb != null && entity.Rb.useGravity,
+            IsKinematic = entity.Rb != null && entity.Rb.isKinematic && !scriptedMotion,
+            UseGravity = entity.Rb != null && (entity.Rb.useGravity || scriptedMotion),
             Pos = entity.transform.position,
             Rot = entity.transform.rotation
         };

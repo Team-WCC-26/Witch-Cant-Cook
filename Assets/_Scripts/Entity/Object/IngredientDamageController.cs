@@ -20,11 +20,12 @@ public class IngredientDamageController : MonoBehaviour
     #region Unity Methods
     private void FixedUpdate()
     {
-        impactSpeed = catchable.Rb.linearVelocity.magnitude;
+        impactSpeed = catchable.LinearVelocity.magnitude;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        if (catchable.TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating) return;
         if (!canDamage) return;
         if (!collision.gameObject.CompareTag(playerTag)) return;
         if (stat == null) SetIngredinetStat();
@@ -36,6 +37,16 @@ public class IngredientDamageController : MonoBehaviour
         float healthBefore = brain.Health.CurHealth;
         brain.Health.TakeDamage(tempDmg);
         float healthAfter = brain.Health.CurHealth;
+    }
+
+    public void ApplyScriptedImpact(PlayerBrain brain, float speed)
+    {
+        if (!canDamage || brain == null) return;
+        if (stat == null) SetIngredinetStat();
+        if (stat == null) return;
+        if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;
+        impactSpeed = speed;
+        brain.Health.TakeDamage(CalculateDamage());
     }
 
     private void OnDisable()

@@ -139,10 +139,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitBounce
   rb: {fileID: 2194554968496521147}
-  pushMultiplier: 0.8
-  maxPushForce: 10
-  minBounceSpeed: 4
-  minSpeed: 5
+  pushMultiplier: 0.15
+  maxPushForce: 2
+  minBounceSpeed: 2
+  restitution: 0.9
+  tangentialRetention: 0.98
+  minimumReboundSpeed: 0.6
+  collisionRadius: 0
+  contactSkin: 0.005
+  pushCooldown: 0.12
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!114 &-8917129858923743591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -245,7 +253,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4455335733293047946}
-  m_Material: {fileID: 13400000, guid: 1c5abad2276269a4a810add552101750, type: 2}
+  m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0

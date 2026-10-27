@@ -52,6 +52,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public Collider Col => col;
     public Rigidbody Rb => rb;
+    public Vector3 LinearVelocity => TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating
+        ? bounce.Velocity : rb != null ? rb.linearVelocity : Vector3.zero;
     public bool CanBePicked => canBePicked && !IsSubmissionPending && !IsSubmissionReturning;
     public bool IsSubmissionPending { get; private set; }
     public bool IsSubmissionReturning { get; private set; }
@@ -227,12 +229,13 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         // Held objects follow the hand transform directly; interpolation would lag that pose.
         rb.interpolation = enablePhysics ? initialInterpolation : RigidbodyInterpolation.None;
 
-        if (!enablePhysics)
+        if (!enablePhysics && !rb.isKinematic)
         {
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
 
+        GetComponent<IngredientTraitBounce>()?.StopSimulation(false);
         rb.isKinematic = !enablePhysics;
         rb.useGravity = enablePhysics;
     }
@@ -271,6 +274,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
         rb.linearVelocity = ProtocolTypeConverter.ToUnityVector3(packet.Velocity);
         rb.angularVelocity = Vector3.zero;
+        GetComponent<IngredientTraitBounce>()?.BeginMotion(
+            ProtocolTypeConverter.ToUnityVector3(packet.Position), ProtocolTypeConverter.ToUnityVector3(packet.Velocity));
     }
 
     #region PrepInteraction
@@ -278,6 +283,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public void OnPlacedOnPrep(Action<CatchableObj> releaseCallback)
     {
+        GetComponent<IngredientTraitBounce>()?.StopSimulation(false);
         releaseFromPrep = releaseCallback;
 
         IsHold = false;
@@ -287,8 +293,11 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         if (col == null) return;
 
         col.enabled = true;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
+        if (!rb.isKinematic)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
         rb.isKinematic = true;
         rb.useGravity = false;
     }

@@ -231,7 +231,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
             }
             if (!CheckEligibility(item, false) || item.Rb == null) { sample.Reset(); continue; }
             CatchableObj food = item.TryGetComponent(out PlateInteraction plate) ? plate.CurrentFood : null;
-            bool still = item.Rb.linearVelocity.sqrMagnitude <= linearSpeedTolerance * linearSpeedTolerance &&
+            bool still = item.LinearVelocity.sqrMagnitude <= linearSpeedTolerance * linearSpeedTolerance &&
                 item.Rb.angularVelocity.sqrMagnitude <= angularSpeedTolerance * angularSpeedTolerance;
             if (sample.HasPose)
                 still &= (item.transform.position - sample.Position).sqrMagnitude <= positionTolerance * positionTolerance &&
