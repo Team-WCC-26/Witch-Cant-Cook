@@ -11,7 +11,9 @@ public class RecipeIngredientUI : MonoBehaviour
     [SerializeField] private Image[] methodImages = Array.Empty<Image>();
     [SerializeField] private TMP_Text[] methodLabels = Array.Empty<TMP_Text>();
     private int bindingVersion;
+    #region Unity Callbacks
     private void OnDisable() => bindingVersion++;
+    #endregion
 
     public void Configure(Image image, TMP_Text label, Image[] methods, TMP_Text[] labels)
     {
@@ -22,7 +24,7 @@ public class RecipeIngredientUI : MonoBehaviour
     {
         int version = ++bindingVersion;
         Func<bool> current = () => this != null && bindingVersion == version;
-        RecipeSpriteLookup.Assign(icon, data?.iconName, current);
+        SpriteCache.Assign(icon, data?.iconName, current);
         if (ingredientName != null) ingredientName.text = data == null ? "" : $"{data.name} ×{data.amount}";
         BindMethods(data?.conditionFlag ?? IngredientState.None, methodImages, methodLabels, current);
     }
@@ -42,7 +44,7 @@ public class RecipeIngredientUI : MonoBehaviour
                 labels[slot].gameObject.SetActive(true);
                 labels[slot].text = names[i];
             }
-            RecipeSpriteLookup.Assign(image, RecipeSpriteLookup.MethodAddress(methods[i]), stillCurrent,
+            SpriteCache.Assign(image, GetMethodIconAddress(methods[i]), stillCurrent,
                 slot < labels.Length ? labels[slot] : null);
             slot++;
         }
@@ -52,5 +54,15 @@ public class RecipeIngredientUI : MonoBehaviour
             if (i < labels.Length && labels[i] != null) labels[i].gameObject.SetActive(false);
         }
     }
+
+    private static string GetMethodIconAddress(IngredientState method) => method switch
+    {
+        IngredientState.Cut => "Cutted_Icon",
+        IngredientState.Grilled => "Pan_Icon",
+        IngredientState.Boiled => "Pot_Icon",
+        IngredientState.Roasted => "Oven_Icon",
+        _ => null
+    };
+
 }
 

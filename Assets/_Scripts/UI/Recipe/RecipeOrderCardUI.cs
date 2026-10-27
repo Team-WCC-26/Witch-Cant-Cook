@@ -35,7 +35,7 @@ public class RecipeOrderCardUI : MonoBehaviour
         BoundData = data;
         if (dishName != null)
             dishName.text = string.IsNullOrWhiteSpace(data?.name) ? $"Recipe #{order.RecipeId}" : data.name;
-        RecipeSpriteLookup.Assign(dishImage, data?.iconName, current);
+        SpriteCache.Assign(dishImage, data?.iconName, current);
         RecipeIngredientUI.BindMethods(data?.finalConditionFlag ?? IngredientState.None, finalMethodImages, finalMethodLabels, current);
         int count = data?.ingredients?.Count ?? 0;
         while (ingredientViews.Count < count && ingredientPrefab != null && ingredientRoot != null)

@@ -17,6 +17,7 @@ public class ResourceManager : Singleton<ResourceManager>
     private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
 
 
+    #region Unity Callbacks
     protected override void Awake()
     {
         base.Awake();
@@ -26,6 +27,9 @@ public class ResourceManager : Singleton<ResourceManager>
             return;
         }
     }
+
+    private void OnApplicationQuit() => SpriteCache.ReleaseAll();
+    #endregion
 
     public async UniTask Init()
     {
@@ -60,6 +64,11 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public T GetAsset<T>(string key) where T : UnityEngine.Object
     {
+        if (typeof(T) == typeof(Sprite))
+        {
+            SpriteCache.TryGet(key, out Sprite sprite);
+            return sprite as T;
+        }
         if (_assetCache.TryGetValue(key, out var asset))
         {
             return asset as T;
@@ -72,6 +81,12 @@ public class ResourceManager : Singleton<ResourceManager>
     public bool TryGetAsset<T>(string key, out T asset) where T : UnityEngine.Object
     {
         asset = null;
+        if (typeof(T) == typeof(Sprite))
+        {
+            bool found = SpriteCache.TryGet(key, out Sprite sprite);
+            asset = sprite as T;
+            return found;
+        }
         if (string.IsNullOrWhiteSpace(key)) return false;
         if (!_assetCache.TryGetValue(key, out UnityEngine.Object cachedAsset)) return false;
 
@@ -84,6 +99,7 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask<T> LoadAsync<T>(string key) where T : UnityEngine.Object
     {
+        if (typeof(T) == typeof(Sprite)) return await SpriteCache.LoadAsync(key) as T;
         // 이미 캐시에 있는 경우
         if (_assetCache.TryGetValue(key, out var cachedAsset))
         {
@@ -134,12 +150,14 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask<bool> LoadAllAddressablesAsync()
     {
-        List<UniTask> loadTasks = new();
+        List<UniTask> loadTasks = new() { SpriteCache.PreloadAsync().AsUniTask() };
 
         foreach (var locator in Addressables.ResourceLocators)
         {
             foreach (var key in locator.Keys)
             {
+                // Sprite loads belong to the typed shared cache.
+                if (locator.Locate(key, typeof(Sprite), out _)) continue;
                 string address = key.ToString();
 
                 // 이미 캐시에 있으면 스킵
@@ -179,6 +197,7 @@ public class ResourceManager : Singleton<ResourceManager>
     public void ReleaseAll()
     {
         IsPreloaded = false;
+        SpriteCache.ReleaseAll();
         foreach (var handle in _handleCache.Values)
         {
             Addressables.Release(handle);

@@ -252,7 +252,6 @@ public class DishOrderManager : MonoBehaviour
 
         foreach (RecipeScrollView view in views)
             if (view != null) view.Clear();
-        RecipeSpriteLookup.ReleaseAll();
         if (successCanvas != null) successCanvas.SetActive(false);
     }
 
