@@ -147,23 +147,10 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     public void HandleEntityAdded(CatchableObj entity)
     {
-        if (entity == null) return;
+        if (!StoreObj(entity)) return;
 
-        TrackedObj tracked = Track(entity);
-        if (tracked.accepted || tracked.returned) return;
-
-        tracked.accepted = true;
-        tracked.canBePicked = entity.CanBePicked;
-        foreach (Collider col in entity.GetComponentsInChildren<Collider>(true))
-        {
-            if (col.GetComponentInParent<CatchableObj>() != entity) continue;
-            tracked.colliders[col] = col.enabled;
-            col.enabled = false;
-        }
-        entity.ChangePickState(false);
-        entity.SetPhysicsState(false);
-        entity.transform.SetParent(transform, true);
-        entity.transform.position = intakeTrigger != null ? intakeTrigger.bounds.center : transform.position;
+        // One processing sender per confirmed object entry
+        if (Router != null && Router.IsRegistrar) RequestProcessing();
     }
 
     // Physics restoration deferred to ejection
@@ -206,7 +193,10 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         if (returningPlayers.ContainsKey(packet.PlayerId)) return;
         pendingPlayerEntries.Remove(packet.PlayerId);
         if (PlayerSpawnManager.Instance != null && PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player))
+        {
             insidePlayers[packet.PlayerId] = player;
+            if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId)) RequestProcessing();
+        }
     }
 
     public void HandlePlayerExit(ToolPlayerExitPacket packet)
@@ -287,7 +277,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         if (obj == null) return false;
         objectRouter.BeginContainerEjection(obj, NetworkId);
         if (obj.Holder != null) objectRouter.DetachForContainerEjection(obj);
-        HandleEntityAdded(obj);
+        StoreObj(obj);
         return IsEmpty(obj);
     }
 
@@ -330,7 +320,41 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     #endregion
 
+    #region Processing
+
+    private void RequestProcessing()
+    {
+        if (NetworkId == 0 || ServerManager.Instance == null) return;
+
+        EntityInteractPacket packet = new() { TargetEntityId = NetworkId };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    #endregion
+
     #region Object Storage
+
+    private bool StoreObj(CatchableObj entity)
+    {
+        if (entity == null) return false;
+
+        TrackedObj tracked = Track(entity);
+        if (tracked.accepted || tracked.returned) return false;
+
+        tracked.accepted = true;
+        tracked.canBePicked = entity.CanBePicked;
+        foreach (Collider col in entity.GetComponentsInChildren<Collider>(true))
+        {
+            if (col.GetComponentInParent<CatchableObj>() != entity) continue;
+            tracked.colliders[col] = col.enabled;
+            col.enabled = false;
+        }
+        entity.ChangePickState(false);
+        entity.SetPhysicsState(false);
+        entity.transform.SetParent(transform, true);
+        entity.transform.position = intakeTrigger != null ? intakeTrigger.bounds.center : transform.position;
+        return true;
+    }
 
     private void TryAccept(Collider other)
     {
