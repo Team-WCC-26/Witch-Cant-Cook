@@ -8,6 +8,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     private bool hasRemoteTransform = false;
     private float lastSnapshotTime;
     private float snapshotVerticalSpeed;
+    private Vector3 snapshotVelocity;
     private PlayerInteraction previousRemoteInteraction = PlayerInteraction.None;
 
     private float positionLerpSpeed = 15f;
@@ -21,6 +22,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         hasRemoteTransform = false;
         lastSnapshotTime = 0f;
         snapshotVerticalSpeed = 0f;
+        snapshotVelocity = Vector3.zero;
         VerticalSpeed = 0f;
         previousRemoteInteraction = PlayerInteraction.None;
         jumpArmed = false;
@@ -71,6 +73,15 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         {
             VerticalSpeed = 0f;
             IsGroundedForAnimation = brain.ActionController.IsGroundedNow;
+            return;
+        }
+
+        if (CurrentState.PhysicalMode == PlayerPhysicalMode.Ragdoll)
+        {
+            Vector3 velocity = Time.time - lastSnapshotTime <= 0.2f ? snapshotVelocity : Vector3.zero;
+            brain.ActionController.UpdateRemoteRagdoll(targetPosition, targetRotation, velocity);
+            VerticalSpeed = snapshotVerticalSpeed;
+            IsGroundedForAnimation = false;
             return;
         }
 
@@ -309,6 +320,8 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         float sampleInterval = now - lastSnapshotTime;
         if (hasRemoteTransform)
         {
+            snapshotVelocity = Vector3.ClampMagnitude(
+                (position - targetPosition) / Mathf.Max(sampleInterval, MinSnapshotInterval), 30f);
             snapshotVerticalSpeed = Mathf.Clamp(
                 (position.y - targetPosition.y) / Mathf.Max(sampleInterval, MinSnapshotInterval),
                 -MaxSnapshotVerticalSpeed, MaxSnapshotVerticalSpeed

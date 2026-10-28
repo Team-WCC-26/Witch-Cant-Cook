@@ -409,6 +409,7 @@ public class PotInteraction : MapObjInteraction,
     private PotEjector Ejector => ejector ??= new PotEjector(this);
 
     internal bool HasCompletedDish => pendingCookCompletePacket != null;
+    internal long CompletedDishId => pendingCookCompletePacket?.DishEntityId ?? 0;
     internal float PlayerEjectForce => playerEjectForce;
 
     // 직렬화 필드는 그대로 두어 기존 프리팹/씬의 설정을 유지한다.

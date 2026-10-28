@@ -164,7 +164,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         Quaternion facingRotation = brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
-        Vector3 position = brain.Rb != null ? brain.Rb.position : brain.transform.position;
+        Vector3 position = outgoingState.PhysicalMode == PlayerPhysicalMode.Ragdoll || brain.Rb == null
+            ? brain.transform.position : brain.Rb.position;
 
         // Reuse the existing special-action snapshot marker; no new wire format is required.
         bool endingRocket = Time.time < rocketEndSnapshotUntil;

@@ -11,6 +11,7 @@ public class PlayerActionController
     private readonly PlayerMovement movement;
 
     private PlayerPhysicalMode prevMode;
+    private bool awaitingRagdollState;
 
     public PlayerMovement Movement => movement;
     public bool CanRequestJump => movement.CanJump;
@@ -33,21 +34,56 @@ public class PlayerActionController
         prevMode = PlayerPhysicalMode.Default;
     }
 
+    // Launch the body before the next state update.
+    public void LaunchRagdoll(Vector3 pos, Vector3 impulse)
+    {
+        if (brain.StateResolver is not LocalPlayerStateResolver resolver) return;
+        resolver.EnterRagdoll();
+
+        brain.Rocket?.StopFlight();
+        brain.Interact.CancelPendingAttackImpact();
+        brain.Interact.ForceDropHeld();
+        ragdollController.Launch(pos, impulse);
+        prevMode = PlayerPhysicalMode.Ragdoll;
+        awaitingRagdollState = true;
+    }
+
+    // Follow the owner's pelvis while the limbs keep their local physics.
+    public void UpdateRemoteRagdoll(Vector3 pos, Quaternion rot, Vector3 velocity)
+    {
+        if (prevMode != PlayerPhysicalMode.Ragdoll)
+        {
+            brain.Interact.CancelPendingAttackImpact();
+            brain.Interact.ForceDropHeld();
+            ragdollController.Enter();
+            prevMode = PlayerPhysicalMode.Ragdoll;
+        }
+        ragdollController.UpdateRemoteTarget(pos, rot, velocity);
+    }
+
+    // Check recovery using the ragdoll body's own physics.
+    public bool TickRagdollRecovery(bool paused, float deltaTime)
+    {
+        return ragdollController.TickRecovery(paused, deltaTime);
+    }
+
     public void UpdateTick(PlayerCombinedState state)
     {
+        if (state.PhysicalMode == PlayerPhysicalMode.Ragdoll) awaitingRagdollState = false;
+        ragdollController.SyncRoot();
         brain.Rocket?.UpdateFlightState(state);
         if (!movement.IsEjectionActive) isLaunchJumpActive = false;
         UpdateActionState();
         movement.UpdateGroundState();
 
         // Update default locomotion and airborne animation parameters.
-        if (state.PhysicalMode == PlayerPhysicalMode.Default && !(brain.Rocket != null && brain.Rocket.IsFlying))
+        if (!awaitingRagdollState && state.PhysicalMode == PlayerPhysicalMode.Default && !(brain.Rocket != null && brain.Rocket.IsFlying))
         {
             animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         }
 
         // Apply physical mode changes once per transition.
-        if (state.PhysicalMode != prevMode)
+        if (state.PhysicalMode != prevMode && !awaitingRagdollState)
         {
             switch (state.PhysicalMode)
             {
@@ -72,6 +108,7 @@ public class PlayerActionController
 
     public void FixedTick(PlayerCombinedState state)
     {
+        ragdollController.FixedTick();
         if (brain.Rocket != null && brain.Rocket.FixedTick(state)) return;
         movement.UpdateEjectionMovement(state.PhysicalMode == PlayerPhysicalMode.Default);
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
