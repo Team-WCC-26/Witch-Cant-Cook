@@ -1,8 +1,9 @@
 using System;
 using System.IO;
-using UnityEditor;
 using UnityEngine;
-using static UnityEditor.LightingExplorerTableColumn;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public static class JsonResourceIO
 {
