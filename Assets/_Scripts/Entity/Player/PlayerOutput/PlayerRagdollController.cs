@@ -8,6 +8,8 @@ public class PlayerRagdollController
     private readonly IReadOnlyList<BodyPart> bodyParts;
 
     private const float MaxEnterAngularVelocity = 3f;
+    private const float LaunchAngularSpeed = 1.5f;
+    private const float LaunchLimbAngularSpeed = 0.6f;
     private const float RemoteFollowSpeed = 10f;
     private const float RemoteMaxCorrectionSpeed = 8f;
     private const float RecoveryGroundDistance = 0.12f;
@@ -130,6 +132,10 @@ public class PlayerRagdollController
         Enter();
 
         Vector3 velocity = impulse / Mathf.Max(0.01f, brain.Rb.mass);
+        Vector3 launchDirection = Vector3.ProjectOnPlane(impulse, Vector3.up).normalized;
+        if (launchDirection.sqrMagnitude < 0.0001f)
+            launchDirection = brain.transform.forward;
+        Vector3 tumbleAxis = Vector3.Cross(Vector3.up, launchDirection).normalized;
         for (int index = 0; index < bodyParts.Count; index++)
         {
             BodyPart part = bodyParts[index];
@@ -139,6 +145,8 @@ public class PlayerRagdollController
             part.Rb.linearVelocity = Vector3.zero;
             part.Rb.AddForce(velocity, ForceMode.VelocityChange);
             part.Rb.angularVelocity = Vector3.zero;
+            if (impulse.sqrMagnitude > 0.0001f)
+                part.Rb.AddTorque(GetLaunchAngularVelocity(part.Type, tumbleAxis), ForceMode.VelocityChange);
         }
         isLaunched = pelvisBody != null;
         Physics.SyncTransforms();
@@ -280,6 +288,26 @@ public class PlayerRagdollController
         }
 
         Physics.SyncTransforms();
+    }
+
+    private static Vector3 GetLaunchAngularVelocity(BodyPartType type, Vector3 tumbleAxis)
+    {
+        Vector3 angularVelocity = tumbleAxis * LaunchAngularSpeed;
+        // Small opposing limb bends break the standing pose without continuous forcing.
+        switch (type)
+        {
+            case BodyPartType.UpperArmLeft:
+            case BodyPartType.UpperArmRight:
+                angularVelocity += tumbleAxis * LaunchLimbAngularSpeed;
+                break;
+            case BodyPartType.ForearmLeft:
+            case BodyPartType.ForearmRight:
+            case BodyPartType.LowerLegLeft:
+            case BodyPartType.LowerLegRight:
+                angularVelocity -= tumbleAxis * LaunchLimbAngularSpeed;
+                break;
+        }
+        return angularVelocity;
     }
 
     private void FollowRemotePelvis()
