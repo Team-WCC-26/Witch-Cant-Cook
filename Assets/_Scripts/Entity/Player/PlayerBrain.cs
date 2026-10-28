@@ -98,6 +98,9 @@ public sealed class PlayerBrain : MonoBehaviour
 
     #region Properties
     public PlayerActionController ActionController => actionController;
+    public Vector3 PhysicsPos => actionController != null ? actionController.PhysicsPos
+        : Rb != null ? Rb.position : transform.position;
+    public Vector3 VisualPos => actionController != null ? actionController.VisualPos : transform.position;
     public PlayerInteract Interact => interact;
     public PlayerThrowTracker ThrowTrajectory { get; private set; }
     public PlayerStateResolver StateResolver => stateResolver;
@@ -159,6 +162,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private void LateUpdate()
     {
         if (isInitialized) interact.UpdateThrowPreparation();
+        if (isInitialized) actionController.TraceRagdoll("LateUpdate");
     }
 
     private void OnDisable()
@@ -172,6 +176,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
         stateResolver.FixedTick();
         actionController.FixedTick(stateResolver.CurrentState);
+        actionController.TraceRagdoll("FixedEnd");
     }
 
     private void OnDestroy()

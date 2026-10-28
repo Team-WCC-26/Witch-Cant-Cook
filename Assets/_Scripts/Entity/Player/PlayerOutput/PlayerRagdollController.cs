@@ -29,6 +29,23 @@ public class PlayerRagdollController
     private Vector3 ragdollRootLocalPos;
     private Quaternion ragdollRootLocalRot;
     private readonly float[] dampingBeforeLaunch;
+    private bool rootWasKinematic;
+    private bool rootUsedGravity;
+    private bool rootColliderEnabled;
+    private Quaternion remoteRootRot;
+    private float rootColliderBottomOffset;
+
+    public bool IsActive => isRagdoll;
+    public Vector3 PhysicsPos => isRagdoll && pelvisBody != null
+        ? pelvisBody.position - pelvisOffset : brain.Rb.position;
+    public Vector3 VisualPos => isRagdoll && pelvisBody != null
+        ? pelvisBody.transform.position - pelvisOffset : brain.transform.position;
+
+    // Temporary diagnostics; remove after the launch regression is identified.
+    private System.Text.StringBuilder traceBuffer;
+    private float traceUntil;
+    private float traceFlushTime;
+    private int traceCount;
 
     public PlayerRagdollController(PlayerBrain brain, PlayerAnimController animController)
     {
@@ -70,13 +87,23 @@ public class PlayerRagdollController
         animController.ForceIdle();
 
         brain.Animator.enabled = false;
-        brain.Col.isTrigger = true;
+        rootColliderEnabled = brain.Col.enabled;
+        rootColliderBottomOffset = brain.Col.bounds.min.y - brain.transform.position.y;
+        brain.Col.enabled = false;
+        remoteRootRot = brain.transform.rotation;
 
         if (brain.Rb != null)
         {
+            rootWasKinematic = brain.Rb.isKinematic;
+            rootUsedGravity = brain.Rb.useGravity;
             brain.Rb.useGravity = false;
-            brain.Rb.linearVelocity = Vector3.zero;
-            brain.Rb.angularVelocity = Vector3.zero;
+            if (!brain.Rb.isKinematic)
+            {
+                brain.Rb.linearVelocity = Vector3.zero;
+                brain.Rb.angularVelocity = Vector3.zero;
+            }
+            brain.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            brain.Rb.isKinematic = true;
         }
 
         SetRagdollPhysicsActive(true);
@@ -84,6 +111,14 @@ public class PlayerRagdollController
 
         Physics.SyncTransforms();
         if (pelvisBody != null) pelvisOffset = pelvisBody.position - brain.transform.position;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        FlushTrace();
+        traceBuffer = new System.Text.StringBuilder(32768);
+        traceUntil = Time.realtimeSinceStartup + 5f;
+        traceFlushTime = Time.realtimeSinceStartup + 0.25f;
+        traceCount = 0;
+#endif
+        Trace("Enter");
     }
 
     // Apply the same launch speed to every body part.
@@ -101,17 +136,20 @@ public class PlayerRagdollController
             if (part.Rb == null) continue;
             dampingBeforeLaunch[index] = part.Rb.linearDamping;
             part.Rb.linearDamping = brain.Rb.linearDamping * 0.5f;
-            part.Rb.linearVelocity = velocity;
+            part.Rb.linearVelocity = Vector3.zero;
+            part.Rb.AddForce(velocity, ForceMode.VelocityChange);
             part.Rb.angularVelocity = Vector3.zero;
         }
         isLaunched = pelvisBody != null;
         Physics.SyncTransforms();
+        Trace("Launch", pos, velocity);
     }
 
     // Apply remote tracking or the local launch gravity.
     public void FixedTick()
     {
         if (!isRagdoll || pelvisBody == null) return;
+        Trace("FixedBegin");
         if (brain.StateResolver is RemotePlayerStateResolver)
         {
             FollowRemotePelvis();
@@ -127,19 +165,11 @@ public class PlayerRagdollController
         }
     }
 
-    // Keep the local player root at the simulated pelvis.
-    public void SyncRoot()
-    {
-        if (!isRagdoll || pelvisBody == null) return;
-        if (brain.StateResolver is not LocalPlayerStateResolver) return;
-        MoveRoot(pelvisBody.position - pelvisOffset, brain.transform.rotation);
-    }
-
-    // Move only the reference root; correct the pelvis through physics.
+    // Preserve the root-space snapshot contract without moving the hierarchy.
     public void UpdateRemoteTarget(Vector3 pos, Quaternion rot, Vector3 velocity)
     {
         if (!isRagdoll || pelvisBody == null) return;
-        MoveRoot(pos, rot);
+        remoteRootRot = rot;
         remotePelvisPos = pos + pelvisOffset;
         remoteVelocity = velocity;
         hasRemoteTarget = true;
@@ -158,6 +188,46 @@ public class PlayerRagdollController
         return recoveryStableTime >= RecoverySettleDuration + brain.RagdollStunDuration;
     }
 
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    public void Trace(string phase, Vector3? target = null, Vector3? velocity = null)
+    {
+        if (traceBuffer == null) return;
+        if (Time.realtimeSinceStartup > traceUntil || traceCount >= 2400)
+        {
+            FlushTrace();
+            traceBuffer = null;
+            return;
+        }
+
+        traceCount++;
+        traceBuffer.Append($"[RagdollTrace] player={brain.PlayerId} instance={brain.GetInstanceID()} " +
+            $"role={(brain.StateResolver is LocalPlayerStateResolver ? "Local" : "Remote")} " +
+            $"phase={phase} frame={Time.frameCount} real={Time.realtimeSinceStartup:F4} " +
+            $"utc={System.DateTime.UtcNow:O} time={Time.time:F4} fixed={Time.fixedTime:F4} " +
+            $"dt={Time.deltaTime:F4} focus={Application.isFocused} mode={brain.StateResolver.CurrentState.PhysicalMode} " +
+            $"root={brain.transform.position.ToString("F4")} " +
+            $"anim={brain.Animator.transform.position.ToString("F4")} animEnabled={brain.Animator.enabled}");
+        if (brain.Rb != null)
+            traceBuffer.Append($" rootRb={brain.Rb.position.ToString("F4")} " +
+                $"rootVel={brain.Rb.linearVelocity.ToString("F4")} " +
+                $"rootKinematic={brain.Rb.isKinematic} rootInterpolation={brain.Rb.interpolation}");
+        if (target.HasValue) traceBuffer.Append($" target={target.Value.ToString("F4")}");
+        if (velocity.HasValue) traceBuffer.Append($" suppliedVelocity={velocity.Value.ToString("F4")}");
+        foreach (BodyPart part in bodyParts)
+        {
+            if (part == null || part.Rb == null ||
+                (part.Type != BodyPartType.Pelvis && part.Type != BodyPartType.Spine &&
+                 part.Type != BodyPartType.Head)) continue;
+            traceBuffer.Append($" {part.Type}.rb={part.Rb.position.ToString("F4")} " +
+                $"{part.Type}.transform={part.Rb.transform.position.ToString("F4")} " +
+                $"{part.Type}.vel={part.Rb.linearVelocity.ToString("F4")} " +
+                $"{part.Type}.kinematic={part.Rb.isKinematic}");
+        }
+        traceBuffer.AppendLine();
+        if (Time.realtimeSinceStartup >= traceFlushTime) FlushTrace();
+    }
+
     public void Recover()
     {
         if (!isRagdoll)
@@ -165,6 +235,16 @@ public class PlayerRagdollController
             return;
         }
 
+        Trace("RecoverBegin");
+        FlushTrace();
+        Vector3 recoveryPos = PhysicsPos;
+        // Keep the standing collider above the supporting floor.
+        if (pelvisBody != null && Physics.Raycast(pelvisBody.position + Vector3.up * RecoveryGroundDistance,
+            Vector3.down, out RaycastHit groundHit, 3f, brain.GroundLayerMask.value & recoveryGroundMask,
+            QueryTriggerInteraction.Ignore) && groundHit.normal.y >= 0.5f)
+        {
+            recoveryPos.y = groundHit.point.y - rootColliderBottomOffset + 0.02f;
+        }
         if (isLaunched)
         {
             for (int index = 0; index < bodyParts.Count; index++)
@@ -185,13 +265,18 @@ public class PlayerRagdollController
 
         SetRagdollPhysicsActive(false);
 
+        brain.Rb.position = recoveryPos;
+        if (brain.StateResolver is RemotePlayerStateResolver) brain.Rb.rotation = remoteRootRot;
         brain.Animator.transform.SetLocalPositionAndRotation(ragdollRootLocalPos, ragdollRootLocalRot);
         brain.Animator.enabled = true;
-        brain.Col.isTrigger = false;
+        brain.Col.enabled = rootColliderEnabled;
 
         if (brain.Rb != null)
         {
-            brain.Rb.useGravity = true;
+            brain.Rb.isKinematic = rootWasKinematic;
+            brain.Rb.collisionDetectionMode = rootWasKinematic
+                ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+            brain.Rb.useGravity = rootUsedGravity;
         }
 
         Physics.SyncTransforms();
@@ -203,6 +288,7 @@ public class PlayerRagdollController
         Vector3 correction = Vector3.ClampMagnitude(
             (remotePelvisPos - pelvisBody.position) * RemoteFollowSpeed, RemoteMaxCorrectionSpeed);
         Vector3 velocityChange = remoteVelocity + correction - pelvisBody.linearVelocity;
+        Trace("RemoteCorrection", remotePelvisPos, velocityChange);
         foreach (BodyPart part in bodyParts)
         {
             if (part.Rb == null || part.Rb.isKinematic) continue;
@@ -243,14 +329,12 @@ public class PlayerRagdollController
         return true;
     }
 
-    private void MoveRoot(Vector3 pos, Quaternion rot)
+    private void FlushTrace()
     {
-        // Move the player root without teleporting simulated bones.
-        Transform ragdollRoot = brain.Animator.transform;
-        Vector3 bodyPos = ragdollRoot.position;
-        Quaternion bodyRot = ragdollRoot.rotation;
-        brain.transform.SetPositionAndRotation(pos, rot);
-        ragdollRoot.SetPositionAndRotation(bodyPos, bodyRot);
+        if (traceBuffer == null || traceBuffer.Length == 0) return;
+        Debug.Log(traceBuffer.ToString(), brain);
+        traceBuffer.Clear();
+        traceFlushTime = Time.realtimeSinceStartup + 0.25f;
     }
 
     private void SetRagdollPhysicsActive(bool active)
@@ -302,7 +386,7 @@ public class PlayerRagdollController
 
     private void ResetRootVelocity()
     {
-        if (brain.Rb == null)
+        if (brain.Rb == null || brain.Rb.isKinematic)
         {
             return;
         }

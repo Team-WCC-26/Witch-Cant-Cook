@@ -85,6 +85,9 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
             return;
         }
 
+        // Let recovery stop body physics before ordinary root interpolation resumes.
+        if (brain.ActionController.IsRagdollActive) return;
+
         Vector3 previousPosition = brain.transform.position;
         Vector3 nextPosition = Vector3.Lerp(
             previousPosition,
@@ -278,6 +281,8 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
                 bodyRotation = Quaternion.LookRotation(horizontal, Vector3.up);
         }
         SetRemoteTarget(DataConverter.NumericsToUnity(packet.Position), bodyRotation);
+        brain.ActionController.TraceRagdoll("ReceiveMovement:" + CurrentState.PhysicalMode,
+            DataConverter.NumericsToUnity(packet.Position), snapshotVelocity);
         brain.Rocket?.ApplyRemoteFlight(rocketFlight, direction, DataConverter.NumericsToUnity(packet.Position));
     }
 

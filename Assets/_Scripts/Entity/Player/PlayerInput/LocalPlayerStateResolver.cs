@@ -164,8 +164,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         Quaternion facingRotation = brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
-        Vector3 position = outgoingState.PhysicalMode == PlayerPhysicalMode.Ragdoll || brain.Rb == null
-            ? brain.transform.position : brain.Rb.position;
+        Vector3 position = brain.PhysicsPos;
 
         // Reuse the existing special-action snapshot marker; no new wire format is required.
         bool endingRocket = Time.time < rocketEndSnapshotUntil;
@@ -187,6 +186,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(outgoingState)
         };
 
+        brain.ActionController.TraceRagdoll("SendMovement:" + outgoingState.PhysicalMode, position);
         return ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 

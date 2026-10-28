@@ -16,6 +16,9 @@ public class PlayerActionController
     public PlayerMovement Movement => movement;
     public bool CanRequestJump => movement.CanJump;
     public bool IsGroundedNow => movement.IsGroundedNow;
+    public bool IsRagdollActive => ragdollController.IsActive;
+    public Vector3 PhysicsPos => ragdollController.PhysicsPos;
+    public Vector3 VisualPos => ragdollController.VisualPos;
 
     private bool canAction = true;
     private float actionTime;
@@ -67,10 +70,16 @@ public class PlayerActionController
         return ragdollController.TickRecovery(paused, deltaTime);
     }
 
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    public void TraceRagdoll(string phase, Vector3? pos = null, Vector3? velocity = null)
+    {
+        ragdollController.Trace(phase, pos, velocity);
+    }
+
     public void UpdateTick(PlayerCombinedState state)
     {
         if (state.PhysicalMode == PlayerPhysicalMode.Ragdoll) awaitingRagdollState = false;
-        ragdollController.SyncRoot();
         brain.Rocket?.UpdateFlightState(state);
         if (!movement.IsEjectionActive) isLaunchJumpActive = false;
         UpdateActionState();
@@ -109,6 +118,7 @@ public class PlayerActionController
     public void FixedTick(PlayerCombinedState state)
     {
         ragdollController.FixedTick();
+        if (ragdollController.IsActive) return;
         if (brain.Rocket != null && brain.Rocket.FixedTick(state)) return;
         movement.UpdateEjectionMovement(state.PhysicalMode == PlayerPhysicalMode.Default);
         if (state.PhysicalMode == PlayerPhysicalMode.Default)
@@ -127,7 +137,7 @@ public class PlayerActionController
             ApplyJump(state);
             movement.ApplyFallGravity();
         }
-        else
+        else if (!ragdollController.IsActive)
         {
             movement.Stop();
         }
