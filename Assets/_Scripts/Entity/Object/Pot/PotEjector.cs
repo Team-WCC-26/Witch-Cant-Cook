@@ -52,6 +52,10 @@ public sealed class PotEjector : ObjEjector
     protected override IEnumerable<Object> GetTargets(Request request)
     {
         PotEjectPacket packet = ((PotRequest)request).packet;
+        long completedDishId = pot.CompletedDishId;
+        if (completedDishId != 0 && packet.EntityIds.Contains(completedDishId))
+            yield return pot.FindEjectObj(completedDishId);
+
         foreach (string playerId in packet.PlayerIds)
         {
             PlayerBrain player = null;
@@ -60,7 +64,10 @@ public sealed class PotEjector : ObjEjector
         }
 
         foreach (long entityId in packet.EntityIds)
+        {
+            if (completedDishId != 0 && entityId == completedDishId) continue;
             yield return pot.FindEjectObj(entityId);
+        }
     }
 
     protected override IEnumerator WaitBeforeSequence(Request request)
@@ -78,7 +85,7 @@ public sealed class PotEjector : ObjEjector
         if (target is PlayerBrain player)
         {
             pot.PreparePlayerEjection(player);
-            EjectPlayer(player, pot.PlayerEjectForce, direction);
+            player.ActionController.LaunchRagdoll(EjectPos, direction * pot.PlayerEjectForce);
         }
         else if (target is CatchableObj catchable)
         {

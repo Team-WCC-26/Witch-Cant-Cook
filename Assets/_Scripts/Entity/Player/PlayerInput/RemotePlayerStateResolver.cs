@@ -8,12 +8,14 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     private bool hasRemoteTransform = false;
     private float lastSnapshotTime;
     private float snapshotVerticalSpeed;
+    private Vector3 snapshotVelocity;
     private PlayerInteraction previousRemoteInteraction = PlayerInteraction.None;
 
     private float positionLerpSpeed = 15f;
     private float rotationLerpSpeed = 15f;
 
     public float VerticalSpeed { get; private set; }
+    // Reset remote tracking for a stage transition.
     public void ResetForStageReturn(Pose pose)
     {
         targetPosition = pose.position;
@@ -21,6 +23,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         hasRemoteTransform = false;
         lastSnapshotTime = 0f;
         snapshotVerticalSpeed = 0f;
+        snapshotVelocity = Vector3.zero;
         VerticalSpeed = 0f;
         previousRemoteInteraction = PlayerInteraction.None;
         jumpArmed = false;
@@ -50,6 +53,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     private float lastDescendingClearance = float.PositiveInfinity;
     private float lastDescendingSpeed;
 
+    // Initialize remote snapshot tracking.
     public RemotePlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         targetPosition = brain.transform.position;
@@ -57,6 +61,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
 
         if (brain.Rb != null)
         {
+            brain.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             brain.Rb.isKinematic = true;
             brain.Rb.useGravity = false;
             brain.Rb.linearVelocity = Vector3.zero;
@@ -64,6 +69,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         }
     }
 
+    // Follow received movement with the active physical mode.
     public override void UpdateTick()
     {
         if (!hasRemoteTransform)
@@ -72,6 +78,18 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
             IsGroundedForAnimation = brain.ActionController.IsGroundedNow;
             return;
         }
+
+        if (CurrentState.PhysicalMode == PlayerPhysicalMode.Ragdoll)
+        {
+            Vector3 velocity = Time.time - lastSnapshotTime <= 0.2f ? snapshotVelocity : Vector3.zero;
+            brain.ActionController.UpdateRemoteRagdoll(targetPosition, targetRotation, velocity);
+            VerticalSpeed = snapshotVerticalSpeed;
+            IsGroundedForAnimation = false;
+            return;
+        }
+
+        // Let recovery stop body physics before ordinary root interpolation resumes.
+        if (brain.ActionController.IsRagdollActive) return;
 
         Vector3 previousPosition = brain.transform.position;
         Vector3 nextPosition = Vector3.Lerp(
@@ -242,10 +260,12 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         );
     }
 
+    // Keep remote fixed-step state updates separate from snapshots.
     public override void FixedTick()
     {
     }
 
+    // Apply a received player movement snapshot.
     public override void ApplyRemotePacket(PlayerMovementPacket packet)
     {
         if (packet == null) return;
@@ -269,6 +289,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         brain.Rocket?.ApplyRemoteFlight(rocketFlight, direction, DataConverter.NumericsToUnity(packet.Position));
     }
 
+    // Apply state and trigger new remote actions.
     public void ApplyRemoteState(PlayerCombinedState remoteState)
     {
         SetCurrentState(remoteState);
@@ -284,6 +305,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         previousRemoteInteraction = remoteState.Interaction;
     }
 
+    // Update the remote position and rotation target.
     public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Vector3 rotation)
     {
         SetRemoteTarget(
@@ -292,11 +314,13 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         );
     }
 
+    // Update the remote position and rotation target.
     public void ApplyRemoteTransform(System.Numerics.Vector3 position, System.Numerics.Quaternion rotation)
     {
         SetRemoteTarget(DataConverter.NumericsToUnity(position), DataConverter.NumericsToUnity(rotation));
     }
 
+    // Update the remote position and rotation target.
     public void ApplyRemoteTransform(Vector3 position, Vector3 eulerAngles)
     {
         SetRemoteTarget(position, Quaternion.Euler(eulerAngles));
@@ -308,6 +332,8 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
         float sampleInterval = now - lastSnapshotTime;
         if (hasRemoteTransform)
         {
+            snapshotVelocity = Vector3.ClampMagnitude(
+                (position - targetPosition) / Mathf.Max(sampleInterval, MinSnapshotInterval), 30f);
             snapshotVerticalSpeed = Mathf.Clamp(
                 (position.y - targetPosition.y) / Mathf.Max(sampleInterval, MinSnapshotInterval),
                 -MaxSnapshotVerticalSpeed, MaxSnapshotVerticalSpeed
@@ -322,6 +348,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     }
 
 
+    // Set ordinary remote interpolation speeds.
     public void SetLerpSpeed(float positionSpeed, float rotationSpeed)
     {
         positionLerpSpeed = positionSpeed;

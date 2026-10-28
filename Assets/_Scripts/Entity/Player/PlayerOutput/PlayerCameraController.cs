@@ -32,6 +32,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     private Quaternion throwPointLocalRotation = Quaternion.identity;
 
     private bool canControlCursor = false;
+    private Vector3 yawRootLocalPos;
 
     #region Unity Callbacks
     private void Awake()
@@ -71,6 +72,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         }
         else
         {
+            yawRootLocalPos = yawRoot.localPosition;
             yawRoot.localRotation = Quaternion.identity;
         }
 
@@ -140,6 +142,8 @@ public sealed class PlayerCameraController : MonoBehaviour
 
         Quaternion yawRotation = YawRotation;
 
+        // Follow the displayed body without moving its physics ancestors.
+        yawRoot.position = brain.VisualPos + brain.transform.TransformVector(yawRootLocalPos);
         yawRoot.rotation = yawRotation;
         pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
 

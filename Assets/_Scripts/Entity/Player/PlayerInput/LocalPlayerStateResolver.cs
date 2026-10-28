@@ -17,12 +17,14 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     private float rocketEndSnapshotUntil;
     private Vector3 rocketEndPosition;
     private Quaternion rocketEndRotation;
+    // Initialize local input and physical state resolution.
     public LocalPlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         inputFSM = new PlayerInputFSM(brain);
         physicalFSM = new PlayerPhysicalFSM(brain);
     }
 
+    // Resolve local input into the current player state.
     public override void UpdateTick()
     {
         inputFSM.UpdateTick();
@@ -59,6 +61,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         ));
     }
 
+    // Advance physical state and send movement snapshots.
     public override void FixedTick()
     {
         physicalFSM.FixedTick();
@@ -102,16 +105,19 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         _ = SendMovementPacket();
     }
 
+    // Request the local ragdoll state.
     public void EnterRagdoll()
     {
         physicalFSM.EnterRagdoll();
     }
 
+    // Pause or resume ragdoll recovery.
     public void SetRagdollRecoveryPaused(bool paused)
     {
         physicalFSM.SetRecoveryPaused(paused);
     }
 
+    // Send the current or final rocket movement snapshot.
     public void SendRocketSnapshot(bool ended)
     {
         // Keep the terminal pose for two send intervals so batching preserves short flights.
@@ -126,6 +132,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         _ = SendMovementPacket();
     }
 
+    // Send the pan ejection snapshot.
     public UniTask SendPanEject()
     {
         return SendMovementPacket(true);
@@ -161,10 +168,11 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             );
         }
 
-        Quaternion facingRotation = brain.CameraController != null
+        Quaternion facingRotation = brain.ActionController.IsRagdollActive
+            ? brain.ActionController.PhysicsRot : brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
-        Vector3 position = brain.Rb != null ? brain.Rb.position : brain.transform.position;
+        Vector3 position = brain.PhysicsPos;
 
         // Reuse the existing special-action snapshot marker; no new wire format is required.
         bool endingRocket = Time.time < rocketEndSnapshotUntil;

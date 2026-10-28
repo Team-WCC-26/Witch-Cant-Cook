@@ -96,7 +96,11 @@ public class IngredientTraitFly : IngredientTrait
         if (isFlying && rb != null)
         {
             CatchableObj catchable = GetComponent<CatchableObj>();
-            if (catchable == null || !catchable.IsHold) rb.isKinematic = false;
+            if (catchable == null || !catchable.IsHold)
+            {
+                rb.isKinematic = false;
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            }
         }
         isFlying = false;
         wanderTimer.Stop();

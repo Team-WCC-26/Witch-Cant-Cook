@@ -96,6 +96,7 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         rb.isKinematic = true;
         rb.useGravity = false;
         rb.position = position;
@@ -136,6 +137,7 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
                  !source.IsSubmissionPending && !source.IsSubmissionReturning)
         {
             rb.isKinematic = false;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.useGravity = originalGravity;
             rb.linearVelocity = velocity;
             rb.angularVelocity = Vector3.zero;
