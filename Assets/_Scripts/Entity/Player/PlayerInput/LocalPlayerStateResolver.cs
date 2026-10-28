@@ -168,7 +168,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             );
         }
 
-        Quaternion facingRotation = brain.CameraController != null
+        Quaternion facingRotation = brain.ActionController.IsRagdollActive
+            ? brain.ActionController.PhysicsRot : brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
         Vector3 position = brain.PhysicsPos;

@@ -18,6 +18,7 @@ public class PlayerActionController
     public bool IsGroundedNow => movement.IsGroundedNow;
     public bool IsRagdollActive => ragdollController.IsActive;
     public bool IsRagdollLaunchPending => ragdollController.IsLaunchPending;
+    public Quaternion PhysicsRot => ragdollController.PhysicsRot;
     public Vector3 PhysicsPos => ragdollController.PhysicsPos;
     public Vector3 VisualPos => ragdollController.VisualPos;
 
