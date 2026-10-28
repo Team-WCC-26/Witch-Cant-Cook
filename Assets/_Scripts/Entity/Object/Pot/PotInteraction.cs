@@ -79,14 +79,12 @@ public class PotInteraction : MapObjInteraction,
     private readonly List<PlayerBrain> trappedPlayers = new();
     private readonly HashSet<string> pendingPlayerEntries = new(); // Awaiting server response
     private bool playerEnteredDuringEjection;
-    private const int EjectionClearSteps = 3;
+    private const float EjectionClearance = 0.05f;
     private sealed class PlayerEjectionCollision
     {
         public PlayerBrain player;
         public Collider[] potColliders;
         public readonly List<(Collider body, Collider pot)> ignoredPairs = new();
-        public int clearSteps;
-        public bool enteredRagdoll;
     }
     private readonly List<PlayerEjectionCollision> playerEjectionCollisions = new();
 
@@ -111,18 +109,9 @@ public class PotInteraction : MapObjInteraction,
             PlayerEjectionCollision collision = playerEjectionCollisions[index];
             PlayerBrain player = collision.player;
             bool inactive = player == null || !player.isActiveAndEnabled;
-            bool isRagdoll = !inactive && player.ActionController.IsRagdollActive;
-            collision.enteredRagdoll |= isRagdoll;
-            bool recovered = collision.enteredRagdoll && !isRagdoll;
-            if (!inactive && !recovered)
+            if (!inactive)
             {
-                if (player.ActionController.IsRagdollLaunchPending)
-                {
-                    collision.clearSteps = 0;
-                    continue;
-                }
-                collision.clearSteps = IsPlayerClearOfPot(collision) ? collision.clearSteps + 1 : 0;
-                if (collision.clearSteps < EjectionClearSteps) continue;
+                if (player.ActionController.IsRagdollLaunchPending || !IsPlayerClearOfPot(collision)) continue;
             }
             RestorePlayerEjectionCollisions(collision);
             playerEjectionCollisions.RemoveAt(index);
@@ -608,6 +597,10 @@ public class PotInteraction : MapObjInteraction,
         if (player == null || PlayerSpawnManager.Instance == null) return;
         if (!PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
         if (trappedPlayers.Contains(player)) return;
+        foreach (PlayerEjectionCollision collision in playerEjectionCollisions)
+        {
+            if (collision.player == player) return;
+        }
         if (!pendingPlayerEntries.Add(player.PlayerId)) return;
         if (NetworkId == 0 || ServerManager.Instance == null)
         {
@@ -657,14 +650,13 @@ public class PotInteraction : MapObjInteraction,
         foreach (PlayerEjectionCollision existing in playerEjectionCollisions)
         {
             if (existing.player != player) continue;
-            existing.clearSteps = 0;
             return;
         }
 
         List<Collider> potColliders = new();
         foreach (Collider potCollider in GetComponentsInChildren<Collider>())
         {
-            if (!potCollider.enabled || potCollider.isTrigger ||
+            if (!potCollider.enabled ||
                 potCollider.GetComponentInParent<PotInteraction>() != this ||
                 potCollider.GetComponentInParent<CatchableObj>() != null ||
                 potCollider.GetComponentInParent<PlayerBrain>() != null) continue;
@@ -673,20 +665,21 @@ public class PotInteraction : MapObjInteraction,
         PlayerEjectionCollision collision = new()
         {
             player = player,
-            potColliders = potColliders.ToArray(),
-            enteredRagdoll = player.ActionController.IsRagdollActive
+            potColliders = potColliders.ToArray()
         };
         foreach (BodyPart part in player.BodyParts)
         {
             if (part == null || part.Col == null || part.Col.isTrigger) continue;
             foreach (Collider potCollider in collision.potColliders)
             {
+                // Entry triggers stay active; suppress requests until the player clears them.
+                if (potCollider.isTrigger) continue;
                 if (Physics.GetIgnoreCollision(part.Col, potCollider)) continue;
                 Physics.IgnoreCollision(part.Col, potCollider, true);
                 collision.ignoredPairs.Add((part.Col, potCollider));
             }
         }
-        if (collision.ignoredPairs.Count > 0) playerEjectionCollisions.Add(collision);
+        playerEjectionCollisions.Add(collision);
     }
 
     private static bool IsPlayerClearOfPot(PlayerEjectionCollision collision)
@@ -701,21 +694,21 @@ public class PotInteraction : MapObjInteraction,
             hasPotBounds = true;
         }
         if (!hasPotBounds) return true;
+        // Require the entire collider to leave the pot envelope, including its hollow interior.
+        potBounds.Expand(EjectionClearance * 2f);
+        if (!IsPlayerColliderClearOfPot(collision.player.Col, potBounds)) return false;
         foreach (BodyPart part in collision.player.BodyParts)
         {
             Collider bodyCollider = part != null ? part.Col : null;
-            if (bodyCollider == null || !bodyCollider.enabled || !bodyCollider.gameObject.activeInHierarchy) continue;
-            // The hollow interior must not count as having exited the pot.
-            if (potBounds.Contains(bodyCollider.bounds.center)) return false;
-            foreach (Collider potCollider in collision.potColliders)
-            {
-                if (potCollider == null || !potCollider.enabled || !potCollider.gameObject.activeInHierarchy) continue;
-                if (Physics.ComputePenetration(bodyCollider, bodyCollider.transform.position,
-                    bodyCollider.transform.rotation, potCollider, potCollider.transform.position,
-                    potCollider.transform.rotation, out _, out _)) return false;
-            }
+            if (!IsPlayerColliderClearOfPot(bodyCollider, potBounds)) return false;
         }
         return true;
+    }
+
+    private static bool IsPlayerColliderClearOfPot(Collider bodyCollider, Bounds potBounds)
+    {
+        if (bodyCollider == null || !bodyCollider.enabled || !bodyCollider.gameObject.activeInHierarchy) return true;
+        return !potBounds.Intersects(bodyCollider.bounds);
     }
 
     private static void RestorePlayerEjectionCollisions(PlayerEjectionCollision collision)
@@ -725,6 +718,7 @@ public class PotInteraction : MapObjInteraction,
             if (pair.body != null && pair.pot != null)
                 Physics.IgnoreCollision(pair.body, pair.pot, false);
         }
+        collision.ignoredPairs.Clear();
     }
 
     // 플레이어 부모 컴포넌트 탐색
