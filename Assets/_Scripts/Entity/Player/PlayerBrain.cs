@@ -98,6 +98,9 @@ public sealed class PlayerBrain : MonoBehaviour
 
     #region Properties
     public PlayerActionController ActionController => actionController;
+    public Vector3 PhysicsPos => actionController != null ? actionController.PhysicsPos
+        : Rb != null ? Rb.position : transform.position;
+    public Vector3 VisualPos => actionController != null ? actionController.VisualPos : transform.position;
     public PlayerInteract Interact => interact;
     public PlayerThrowTracker ThrowTrajectory { get; private set; }
     public PlayerStateResolver StateResolver => stateResolver;
@@ -123,6 +126,10 @@ public sealed class PlayerBrain : MonoBehaviour
 
     private void Awake()
     {
+        if (Rb != null)
+            Rb.collisionDetectionMode = Rb.isKinematic
+                ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+
         if (Glow != null)
             Glow.enabled = false;
 
@@ -185,6 +192,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     #endregion
 
+    // Initialize player identity and state resolution.
     public void Initialize(string id)
     {
         Rocket?.StopFlight();
@@ -210,6 +218,7 @@ public sealed class PlayerBrain : MonoBehaviour
         isInitialized = true;
     }
 
+    // Bind the local camera and its tracking targets.
     public void BindCamera(Camera cam, CinemachineCamera virtualCam)
     {
         playerCamera = cam;

@@ -54,6 +54,7 @@ public class IngredientTraitArea : MonoBehaviour
             !landingCollider.transform.IsChildOf(transform) || landingCollider.attachedRigidbody != rb)
         {
             Debug.LogError("IngredientTraitArea requires a child Landing Collider sharing the root Rigidbody.", this);
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             rb.isKinematic = true;
             rb.useGravity = false;
             enabled = false;
@@ -68,6 +69,7 @@ public class IngredientTraitArea : MonoBehaviour
         landingCollider.excludeLayers = ~groundLayer.value;
         landingCollider.enabled = true;
         rb.isKinematic = false;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.useGravity = true;
         rb.constraints |= RigidbodyConstraints.FreezeRotation;
         rb.linearVelocity = Vector3.zero;
@@ -89,6 +91,7 @@ public class IngredientTraitArea : MonoBehaviour
         if (TryGetComponent(out Rigidbody r))
         {
             r.isKinematic = false;
+            r.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             r.useGravity = true;
             r.constraints = RigidbodyConstraints.FreezeRotation;
         }
@@ -178,6 +181,7 @@ public class IngredientTraitArea : MonoBehaviour
             landed = true;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             rb.isKinematic = true;
             rb.useGravity = false;
             landingCollider.enabled = false;

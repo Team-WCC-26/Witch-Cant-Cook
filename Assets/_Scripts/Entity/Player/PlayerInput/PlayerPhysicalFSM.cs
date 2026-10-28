@@ -4,7 +4,6 @@ public class PlayerPhysicalFSM
 {
     private readonly PlayerBrain brain;
 
-    private float modeStartTime = 0f;
     private bool isRecoveryPaused;
 
     public PlayerPhysicalMode CurrentMode { get; private set; }
@@ -13,7 +12,6 @@ public class PlayerPhysicalFSM
     {
         this.brain = brain;
         CurrentMode = PlayerPhysicalMode.Default;
-        modeStartTime = Time.time;
     }
 
     public void FixedTick()
@@ -24,7 +22,7 @@ public class PlayerPhysicalFSM
                 break;
 
             case PlayerPhysicalMode.Ragdoll:
-                if (!isRecoveryPaused && Time.time >= modeStartTime + brain.RagdollStunDuration)
+                if (brain.ActionController.TickRagdollRecovery(isRecoveryPaused, Time.fixedDeltaTime))
                 {
                     SetMode(PlayerPhysicalMode.Default);
                     brain.Health.Reset();
@@ -47,13 +45,10 @@ public class PlayerPhysicalFSM
     {
         if (isRecoveryPaused == paused) return;
         isRecoveryPaused = paused;
-        if (!paused && CurrentMode == PlayerPhysicalMode.Ragdoll)
-            modeStartTime = Time.time;
     }
 
     private void SetMode(PlayerPhysicalMode mode)
     {
         CurrentMode = mode;
-        modeStartTime = Time.time;
     }
 }

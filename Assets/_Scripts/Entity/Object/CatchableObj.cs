@@ -109,7 +109,11 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     {
         initialCanBePicked = canBePicked;
         if (rb != null)
+        {
             initialInterpolation = rb.interpolation;
+            rb.collisionDetectionMode = rb.isKinematic
+                ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+        }
 
         if (col == null || col.isTrigger)
         {
@@ -236,7 +240,9 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         }
 
         GetComponent<IngredientTraitBounce>()?.StopSimulation(false);
+        if (!enablePhysics) rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         rb.isKinematic = !enablePhysics;
+        if (enablePhysics) rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.useGravity = enablePhysics;
     }
 
@@ -298,6 +304,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         rb.isKinematic = true;
         rb.useGravity = false;
     }

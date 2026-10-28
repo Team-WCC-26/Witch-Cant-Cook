@@ -524,7 +524,9 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         if (entity.Col != null) entity.Col.enabled = frozen.ColliderEnabled;
         if (entity.Rb != null)
         {
+            if (frozen.IsKinematic) entity.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             entity.Rb.isKinematic = frozen.IsKinematic;
+            if (!frozen.IsKinematic) entity.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             entity.Rb.useGravity = frozen.UseGravity;
         }
     }
@@ -544,6 +546,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             entity.transform.SetPositionAndRotation(frozen.Pos, frozen.Rot);
             if (!physicsTick || entity.Rb == null) continue;
             // 자체 이동 트레잇의 MovePosition도 조리 중에는 고정 위치로 덮어쓴다.
+            entity.Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             entity.Rb.isKinematic = true;
             entity.Rb.MovePosition(frozen.Pos);
             entity.Rb.MoveRotation(frozen.Rot);
