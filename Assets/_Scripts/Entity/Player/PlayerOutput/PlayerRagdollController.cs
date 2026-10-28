@@ -8,8 +8,7 @@ public class PlayerRagdollController
     private readonly IReadOnlyList<BodyPart> bodyParts;
 
     private const float MaxEnterAngularVelocity = 3f;
-    private const float LaunchAngularSpeed = 1.5f;
-    private const float LaunchLimbAngularSpeed = 0.6f;
+    private const float LaunchCollapseDuration = 0.16f;
     private const float RemoteFollowSpeed = 10f;
     private const float RemoteMaxCorrectionSpeed = 8f;
     private const float RecoveryGroundDistance = 0.12f;
@@ -36,19 +35,19 @@ public class PlayerRagdollController
     private bool rootColliderEnabled;
     private Quaternion remoteRootRot;
     private float rootColliderBottomOffset;
+    private bool isLaunchPending;
+    private float launchCollapseTime;
+    private Vector3 pendingLaunchPos;
+    private Vector3 pendingLaunchImpulse;
 
     public bool IsActive => isRagdoll;
+    public bool IsLaunchPending => isLaunchPending;
     public Vector3 PhysicsPos => isRagdoll && pelvisBody != null
         ? pelvisBody.position - pelvisOffset : brain.Rb.position;
     public Vector3 VisualPos => isRagdoll && pelvisBody != null
         ? pelvisBody.transform.position - pelvisOffset : brain.transform.position;
 
-    // Temporary diagnostics; remove after the launch regression is identified.
-    private System.Text.StringBuilder traceBuffer;
-    private float traceUntil;
-    private float traceFlushTime;
-    private int traceCount;
-
+    // Initialize body physics and recovery references.
     public PlayerRagdollController(PlayerBrain brain, PlayerAnimController animController)
     {
         this.brain = brain;
@@ -65,6 +64,7 @@ public class PlayerRagdollController
         SetRagdollPhysicsActive(false);
     }
 
+    // Enable body physics and suspend root movement.
     public void Enter()
     {
         if (isRagdoll)
@@ -113,54 +113,33 @@ public class PlayerRagdollController
 
         Physics.SyncTransforms();
         if (pelvisBody != null) pelvisOffset = pelvisBody.position - brain.transform.position;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        FlushTrace();
-        traceBuffer = new System.Text.StringBuilder(32768);
-        traceUntil = Time.realtimeSinceStartup + 5f;
-        traceFlushTime = Time.realtimeSinceStartup + 0.25f;
-        traceCount = 0;
-#endif
-        Trace("Enter");
     }
 
-    // Apply the same launch speed to every body part.
+    // Let the body collapse before applying the launch impulse.
     public void Launch(Vector3 pos, Vector3 impulse)
     {
-        if (isRagdoll) Recover();
-        brain.transform.position = pos;
-        Physics.SyncTransforms();
+        if (isLaunchPending || isLaunched) return;
         Enter();
-
-        Vector3 velocity = impulse / Mathf.Max(0.01f, brain.Rb.mass);
-        Vector3 launchDirection = Vector3.ProjectOnPlane(impulse, Vector3.up).normalized;
-        if (launchDirection.sqrMagnitude < 0.0001f)
-            launchDirection = brain.transform.forward;
-        Vector3 tumbleAxis = Vector3.Cross(Vector3.up, launchDirection).normalized;
-        for (int index = 0; index < bodyParts.Count; index++)
-        {
-            BodyPart part = bodyParts[index];
-            if (part.Rb == null) continue;
-            dampingBeforeLaunch[index] = part.Rb.linearDamping;
-            part.Rb.linearDamping = brain.Rb.linearDamping * 0.5f;
-            part.Rb.linearVelocity = Vector3.zero;
-            part.Rb.AddForce(velocity, ForceMode.VelocityChange);
-            part.Rb.angularVelocity = Vector3.zero;
-            if (impulse.sqrMagnitude > 0.0001f)
-                part.Rb.AddTorque(GetLaunchAngularVelocity(part.Type, tumbleAxis), ForceMode.VelocityChange);
-        }
-        isLaunched = pelvisBody != null;
-        Physics.SyncTransforms();
-        Trace("Launch", pos, velocity);
+        pendingLaunchPos = pos;
+        pendingLaunchImpulse = impulse;
+        launchCollapseTime = 0f;
+        isLaunchPending = pelvisBody != null;
     }
 
     // Apply remote tracking or the local launch gravity.
     public void FixedTick()
     {
         if (!isRagdoll || pelvisBody == null) return;
-        Trace("FixedBegin");
         if (brain.StateResolver is RemotePlayerStateResolver)
         {
             FollowRemotePelvis();
+            return;
+        }
+        if (isLaunchPending)
+        {
+            launchCollapseTime += Time.fixedDeltaTime;
+            if (launchCollapseTime < LaunchCollapseDuration) return;
+            ApplyLaunchImpulse();
             return;
         }
         if (!isLaunched || pelvisBody.linearVelocity.y >= 0f) return;
@@ -186,7 +165,7 @@ public class PlayerRagdollController
     // Restart recovery whenever the main body loses support or moves too fast.
     public bool TickRecovery(bool paused, float deltaTime)
     {
-        if (!isRagdoll || paused || !IsStableForRecovery())
+        if (!isRagdoll || isLaunchPending || paused || !IsStableForRecovery())
         {
             recoveryStableTime = 0f;
             return false;
@@ -196,55 +175,13 @@ public class PlayerRagdollController
         return recoveryStableTime >= RecoverySettleDuration + brain.RagdollStunDuration;
     }
 
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-    public void Trace(string phase, Vector3? target = null, Vector3? velocity = null)
-    {
-        if (traceBuffer == null) return;
-        if (Time.realtimeSinceStartup > traceUntil || traceCount >= 2400)
-        {
-            FlushTrace();
-            traceBuffer = null;
-            return;
-        }
-
-        traceCount++;
-        traceBuffer.Append($"[RagdollTrace] player={brain.PlayerId} instance={brain.GetInstanceID()} " +
-            $"role={(brain.StateResolver is LocalPlayerStateResolver ? "Local" : "Remote")} " +
-            $"phase={phase} frame={Time.frameCount} real={Time.realtimeSinceStartup:F4} " +
-            $"utc={System.DateTime.UtcNow:O} time={Time.time:F4} fixed={Time.fixedTime:F4} " +
-            $"dt={Time.deltaTime:F4} focus={Application.isFocused} mode={brain.StateResolver.CurrentState.PhysicalMode} " +
-            $"root={brain.transform.position.ToString("F4")} " +
-            $"anim={brain.Animator.transform.position.ToString("F4")} animEnabled={brain.Animator.enabled}");
-        if (brain.Rb != null)
-            traceBuffer.Append($" rootRb={brain.Rb.position.ToString("F4")} " +
-                $"rootVel={brain.Rb.linearVelocity.ToString("F4")} " +
-                $"rootKinematic={brain.Rb.isKinematic} rootInterpolation={brain.Rb.interpolation}");
-        if (target.HasValue) traceBuffer.Append($" target={target.Value.ToString("F4")}");
-        if (velocity.HasValue) traceBuffer.Append($" suppliedVelocity={velocity.Value.ToString("F4")}");
-        foreach (BodyPart part in bodyParts)
-        {
-            if (part == null || part.Rb == null ||
-                (part.Type != BodyPartType.Pelvis && part.Type != BodyPartType.Spine &&
-                 part.Type != BodyPartType.Head)) continue;
-            traceBuffer.Append($" {part.Type}.rb={part.Rb.position.ToString("F4")} " +
-                $"{part.Type}.transform={part.Rb.transform.position.ToString("F4")} " +
-                $"{part.Type}.vel={part.Rb.linearVelocity.ToString("F4")} " +
-                $"{part.Type}.kinematic={part.Rb.isKinematic}");
-        }
-        traceBuffer.AppendLine();
-        if (Time.realtimeSinceStartup >= traceFlushTime) FlushTrace();
-    }
-
+    // Restore root physics at the body's recovery position.
     public void Recover()
     {
         if (!isRagdoll)
         {
             return;
         }
-
-        Trace("RecoverBegin");
-        FlushTrace();
         Vector3 recoveryPos = PhysicsPos;
         // Keep the standing collider above the supporting floor.
         if (pelvisBody != null && Physics.Raycast(pelvisBody.position + Vector3.up * RecoveryGroundDistance,
@@ -265,6 +202,7 @@ public class PlayerRagdollController
         isRagdoll = false;
         recoveryStableTime = 0f;
         isLaunched = false;
+        isLaunchPending = false;
         pelvisBody = null;
         hasRemoteTarget = false;
 
@@ -290,24 +228,22 @@ public class PlayerRagdollController
         Physics.SyncTransforms();
     }
 
-    private static Vector3 GetLaunchAngularVelocity(BodyPartType type, Vector3 tumbleAxis)
+    private void ApplyLaunchImpulse()
     {
-        Vector3 angularVelocity = tumbleAxis * LaunchAngularSpeed;
-        // Small opposing limb bends break the standing pose without continuous forcing.
-        switch (type)
+        Vector3 offset = pendingLaunchPos - PhysicsPos;
+        Vector3 velocity = pendingLaunchImpulse / Mathf.Max(0.01f, brain.Rb.mass);
+        for (int index = 0; index < bodyParts.Count; index++)
         {
-            case BodyPartType.UpperArmLeft:
-            case BodyPartType.UpperArmRight:
-                angularVelocity += tumbleAxis * LaunchLimbAngularSpeed;
-                break;
-            case BodyPartType.ForearmLeft:
-            case BodyPartType.ForearmRight:
-            case BodyPartType.LowerLegLeft:
-            case BodyPartType.LowerLegRight:
-                angularVelocity -= tumbleAxis * LaunchLimbAngularSpeed;
-                break;
+            BodyPart part = bodyParts[index];
+            if (part == null || part.Rb == null) continue;
+            dampingBeforeLaunch[index] = part.Rb.linearDamping;
+            part.Rb.linearDamping = brain.Rb.linearDamping * 0.5f;
+            // One-time ejection placement; retain the collapsed pose and angular velocity.
+            part.Rb.position += offset;
+            part.Rb.AddForce(velocity, ForceMode.VelocityChange);
         }
-        return angularVelocity;
+        isLaunchPending = false;
+        isLaunched = true;
     }
 
     private void FollowRemotePelvis()
@@ -316,7 +252,6 @@ public class PlayerRagdollController
         Vector3 correction = Vector3.ClampMagnitude(
             (remotePelvisPos - pelvisBody.position) * RemoteFollowSpeed, RemoteMaxCorrectionSpeed);
         Vector3 velocityChange = remoteVelocity + correction - pelvisBody.linearVelocity;
-        Trace("RemoteCorrection", remotePelvisPos, velocityChange);
         foreach (BodyPart part in bodyParts)
         {
             if (part.Rb == null || part.Rb.isKinematic) continue;
@@ -355,14 +290,6 @@ public class PlayerRagdollController
                 return false;
         }
         return true;
-    }
-
-    private void FlushTrace()
-    {
-        if (traceBuffer == null || traceBuffer.Length == 0) return;
-        Debug.Log(traceBuffer.ToString(), brain);
-        traceBuffer.Clear();
-        traceFlushTime = Time.realtimeSinceStartup + 0.25f;
     }
 
     private void SetRagdollPhysicsActive(bool active)

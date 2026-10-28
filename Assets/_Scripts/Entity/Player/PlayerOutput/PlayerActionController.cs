@@ -17,6 +17,7 @@ public class PlayerActionController
     public bool CanRequestJump => movement.CanJump;
     public bool IsGroundedNow => movement.IsGroundedNow;
     public bool IsRagdollActive => ragdollController.IsActive;
+    public bool IsRagdollLaunchPending => ragdollController.IsLaunchPending;
     public Vector3 PhysicsPos => ragdollController.PhysicsPos;
     public Vector3 VisualPos => ragdollController.VisualPos;
 
@@ -27,6 +28,7 @@ public class PlayerActionController
     private EntityCategory pendingPrimaryCategory;
 
 
+    // Initialize movement, animation, and ragdoll controllers.
     public PlayerActionController(PlayerBrain brain)
     {
         this.brain = brain;
@@ -37,7 +39,7 @@ public class PlayerActionController
         prevMode = PlayerPhysicalMode.Default;
     }
 
-    // Launch the body before the next state update.
+    // Enter ragdoll and queue a launch after the initial collapse.
     public void LaunchRagdoll(Vector3 pos, Vector3 impulse)
     {
         if (brain.StateResolver is not LocalPlayerStateResolver resolver) return;
@@ -70,13 +72,7 @@ public class PlayerActionController
         return ragdollController.TickRecovery(paused, deltaTime);
     }
 
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-    public void TraceRagdoll(string phase, Vector3? pos = null, Vector3? velocity = null)
-    {
-        ragdollController.Trace(phase, pos, velocity);
-    }
-
+    // Update actions and apply physical state transitions.
     public void UpdateTick(PlayerCombinedState state)
     {
         if (state.PhysicalMode == PlayerPhysicalMode.Ragdoll) awaitingRagdollState = false;
@@ -115,6 +111,7 @@ public class PlayerActionController
         }
     }
 
+    // Advance the active physical movement controller.
     public void FixedTick(PlayerCombinedState state)
     {
         ragdollController.FixedTick();
@@ -137,13 +134,14 @@ public class PlayerActionController
             ApplyJump(state);
             movement.ApplyFallGravity();
         }
-        else if (!ragdollController.IsActive)
+        else
         {
             movement.Stop();
         }
     }
 
     #region Action
+    // Play a punch when the action cooldown allows it.
     public bool PunchAction()
     {
         if (!canAction) return false;
@@ -154,6 +152,7 @@ public class PlayerActionController
         return true;
     }
 
+    // Play the held-item primary action when available.
     public bool TryEquipAction()
     {
         if (!canAction) return false;
@@ -172,6 +171,7 @@ public class PlayerActionController
         pendingPrimaryCategory = category;
     }
 
+    // Consume the pending action for the movement snapshot.
     public bool ConsumePrimaryAction(out EntityCategory category)
     {
         category = pendingPrimaryCategory;
@@ -180,6 +180,7 @@ public class PlayerActionController
         return pending;
     }
 
+    // Play a received primary action.
     public void PlayRemotePrimaryAction(PlayerCombinedState state)
     {
         if (state.PhysicalMode != PlayerPhysicalMode.Default) return;
@@ -190,6 +191,7 @@ public class PlayerActionController
             RemotePunchPlayed?.Invoke(brain);
     }
 
+    // Play the remote jump start animation.
     public void PlayRemoteJumpStart()
     {
         if (brain.StateResolver is not RemotePlayerStateResolver) return;
@@ -215,6 +217,7 @@ public class PlayerActionController
         actionTime = 0;
     }
 
+    // Cancel the active action and reset its cooldown.
     public void CancelAction()
     {
         brain.Interact.CancelPendingAttackImpact();
@@ -233,6 +236,7 @@ public class PlayerActionController
         animController.PlayJumpAnim();
     }
 
+    // Play the ordinary ejection jump animation.
     public void PlayLaunchJumpStart()
     {
         isLaunchJumpActive = true;

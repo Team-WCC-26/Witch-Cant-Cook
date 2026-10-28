@@ -162,7 +162,6 @@ public sealed class PlayerBrain : MonoBehaviour
     private void LateUpdate()
     {
         if (isInitialized) interact.UpdateThrowPreparation();
-        if (isInitialized) actionController.TraceRagdoll("LateUpdate");
     }
 
     private void OnDisable()
@@ -176,7 +175,6 @@ public sealed class PlayerBrain : MonoBehaviour
 
         stateResolver.FixedTick();
         actionController.FixedTick(stateResolver.CurrentState);
-        actionController.TraceRagdoll("FixedEnd");
     }
 
     private void OnDestroy()
@@ -194,6 +192,7 @@ public sealed class PlayerBrain : MonoBehaviour
 
     #endregion
 
+    // Initialize player identity and state resolution.
     public void Initialize(string id)
     {
         Rocket?.StopFlight();
@@ -219,6 +218,7 @@ public sealed class PlayerBrain : MonoBehaviour
         isInitialized = true;
     }
 
+    // Bind the local camera and its tracking targets.
     public void BindCamera(Camera cam, CinemachineCamera virtualCam)
     {
         playerCamera = cam;
