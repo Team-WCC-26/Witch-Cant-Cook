@@ -112,7 +112,11 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
             transform.localScale = recipe.transform.localScale;
             transform.SetPositionAndRotation(recipe.transform.position, recipe.transform.rotation);
         }
-        Refresh();
+        // Scene instances can start inactive, so OnEnable has not initialized their sessions yet.
+        // Keep the controller active; Refresh only toggles the child canvases.
+        if (!enabled) enabled = true;
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        if (isActiveAndEnabled) Refresh();
     }
 
     private void OnEnable()
@@ -332,3 +336,4 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
 
     private static string Format(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
 }
+
