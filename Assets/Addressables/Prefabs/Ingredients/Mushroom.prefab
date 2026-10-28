@@ -139,14 +139,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitBounce
   rb: {fileID: 2194554968496521147}
-  pushMultiplier: 0.15
-  maxPushForce: 2
-  minBounceSpeed: 2
   restitution: 0.9
   tangentialRetention: 0.98
   minimumReboundSpeed: 0.6
   collisionRadius: 0
   contactSkin: 0.005
+  pushMultiplier: 0.15
+  maxPushForce: 2
+  minBounceSpeed: 2
   pushCooldown: 0.12
   collisionMask:
     serializedVersion: 2
@@ -202,6 +202,7 @@ MonoBehaviour:
   catchable: {fileID: -8917129858923743591}
   meshFilter: {fileID: 1267769218412329706}
   targetRenderer: {fileID: 2133647802544071194}
+  meshCollider: {fileID: 0}
   gaugeUI: {fileID: 7403671119703709407}
   wobbleAngle: 12
   wobbleDuration: 0.35
@@ -218,6 +219,22 @@ MonoBehaviour:
     mesh: {fileID: 2624874180674271982, guid: a6ccbcc89a646f944916d88b27ec54f5, type: 3}
     materials:
     - {fileID: -5620918211782827528, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
+  - action: 2
+    mesh: {fileID: 7682724294687611154, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
+  - action: 3
+    mesh: {fileID: 2624874180674271982, guid: a6ccbcc89a646f944916d88b27ec54f5, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
+  - action: 8
+    mesh: {fileID: 7682724294687611154, guid: c1d9247836ff96e4195098fb988dcf9f, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
+  - action: 9
+    mesh: {fileID: 2624874180674271982, guid: a6ccbcc89a646f944916d88b27ec54f5, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
 --- !u!114 &8241985720436198501
 MonoBehaviour:
   m_ObjectHideFlags: 0

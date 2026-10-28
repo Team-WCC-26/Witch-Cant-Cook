@@ -135,8 +135,12 @@ MonoBehaviour:
   catchable: {fileID: 6990697630831688900}
   meshFilter: {fileID: 6689091070764907194}
   targetRenderer: {fileID: 7976665912504690234}
-  cutParticle: {fileID: 1766117342703822864}
+  meshCollider: {fileID: 0}
   gaugeUI: {fileID: 7519362936080867326}
+  wobbleAngle: 12
+  wobbleDuration: 0.35
+  panPlacement: {fileID: 0}
+  platePlacement: {fileID: 0}
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
   actionVisuals:
@@ -148,14 +152,22 @@ MonoBehaviour:
     mesh: {fileID: -1906858854181764153, guid: 9ba4a249574d33642b0a44063cc517dd, type: 3}
     materials:
     - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
-  - action: 8
+  - action: 2
     mesh: {fileID: -4265218631000980587, guid: ed0cc25c90fc9bf4f9367cd33a38efd5, type: 3}
     materials:
     - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
-  - action: 9
+  - action: 3
     mesh: {fileID: -1906858854181764153, guid: 9ba4a249574d33642b0a44063cc517dd, type: 3}
     materials:
     - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
+  - action: 8
+    mesh: {fileID: -4265218631000980587, guid: ed0cc25c90fc9bf4f9367cd33a38efd5, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
+  - action: 9
+    mesh: {fileID: -1906858854181764153, guid: 9ba4a249574d33642b0a44063cc517dd, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
 --- !u!65 &1776075547789556096
 BoxCollider:
   m_ObjectHideFlags: 0

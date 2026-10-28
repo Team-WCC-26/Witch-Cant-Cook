@@ -30,7 +30,12 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
         pendingPanId = 0;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other) => TryInsertPan(other);
+
+    // 처음부터 화구 위에 생성된 팬은 OnTriggerEnter가 등록 전에 지나갈 수 있습니다.
+    private void OnTriggerStay(Collider other) => TryInsertPan(other);
+
+    private void TryInsertPan(Collider other)
     {
         //validate stove
         if (!IsRegistered) return;
@@ -47,8 +52,10 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
 
         // 들고 있는 상태의 팬은 충돌로 배치하지 않음
         if (panCatchable.IsHold) return;
-        // 이 클라이언트가 마지막으로 놓거나 던진 팬만 서버에 삽입 요청
-        if (!panCatchable.IsLocalOwner) return;
+        // 기본 스폰 팬에는 아직 소유자가 없으므로 등록 담당 클라이언트가 처리합니다.
+        bool ownsUnclaimedPan = string.IsNullOrEmpty(panCatchable.LastHolderPlayerId)
+            && Router != null && Router.IsRegistrar;
+        if (!panCatchable.IsLocalOwner && !ownsUnclaimedPan) return;
 
         pendingPanId = panCatchable.NetworkId;
         RequestInsert(panCatchable);

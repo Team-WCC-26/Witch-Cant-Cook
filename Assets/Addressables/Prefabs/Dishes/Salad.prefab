@@ -45,7 +45,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4025078505919267616}
-  m_Mesh: {fileID: -6138934213963632976, guid: 354f61b2ad1780d46babcc7da665c47a, type: 3}
+  m_Mesh: {fileID: -6138934213963632976, guid: 4316408544aefa6458cbe4055adc465b, type: 3}
 --- !u!23 &1228255895677693326
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -156,10 +156,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
-  catchable: {fileID: -4338353643924303968, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
-  meshFilter: {fileID: 607475093237782668, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
-  targetRenderer: {fileID: 611589939573153053, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
-  gaugeUI: {fileID: 4079155461303983743, guid: 22ee17050fed3994db21c4382fef7042, type: 3}
+  catchable: {fileID: 7986996094354742120}
+  meshFilter: {fileID: 1723352684861275196}
+  targetRenderer: {fileID: 1228255895677693326}
+  meshCollider: {fileID: 0}
+  gaugeUI: {fileID: 0}
   wobbleAngle: 12
   wobbleDuration: 0.35
   panPlacement: {fileID: 0}
