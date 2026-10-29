@@ -91,13 +91,13 @@ public sealed class RoomHudSession : MonoBehaviour
     public void NotifyLobbyReturned()
     {
         stages.NotifyLobbyReturned();
-        Lobby.BeginLobby(Time.unscaledTimeAsDouble);
+        Lobby.BeginLobby();
         Changed?.Invoke();
     }
 
     public void SetRoomInfo(string code, string localPlayerId, string otherPlayerId)
     {
-        Lobby.Enter(code, localPlayerId, otherPlayerId, Time.unscaledTimeAsDouble);
+        Lobby.Enter(code, localPlayerId, otherPlayerId);
         if (State.IsStageRunning) Lobby.BeginStage();
         Changed?.Invoke();
     }
@@ -106,15 +106,13 @@ public sealed class RoomHudSession : MonoBehaviour
     public void OnPlayerLeft(string id) { if (Lobby.RemovePlayer(id)) Changed?.Invoke(); }
     // Remote voice SDK callbacks should call this with the associated protocol player ID.
     public void SetPlayerSpeaking(string id, bool speaking) { if (Lobby.SetSpeaking(id, speaking)) Changed?.Invoke(); }
-    public void SetLobbyDuration(float seconds) { if (Lobby.DurationSeconds == seconds) return; Lobby.SetDuration(seconds); Changed?.Invoke(); }
-    public void SetLobbyRemainingSeconds(float seconds) { Lobby.SetRemainingSeconds(seconds, Time.unscaledTimeAsDouble); Changed?.Invoke(); }
 
     private void OnDoorOpened(DoorId doorId)
     {
         if (doorId != DoorId.Lobby || !Lobby.IsInRoom || State.IsStageRunning) return;
         // Door animation alone no longer authorizes the post-stage lobby transition.
         if (State.HasActiveStage || State.LatestSettlement != null) return;
-        Lobby.BeginLobby(Time.unscaledTimeAsDouble);
+        Lobby.BeginLobby();
         Changed?.Invoke();
     }
 

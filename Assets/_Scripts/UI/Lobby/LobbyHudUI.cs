@@ -6,7 +6,6 @@ using UnityEngine.UI;
 
 public sealed class LobbyHudUI : UIBase
 {
-    [SerializeField] private TMP_Text remainingTimeText;
     [SerializeField] private TMP_Text roomCodeText;
     [SerializeField] private TMP_Text moneyText;
     [SerializeField] private Button codeVisibilityButton;
@@ -15,17 +14,13 @@ public sealed class LobbyHudUI : UIBase
     [SerializeField] private Image[] voiceIcons = System.Array.Empty<Image>();
     [SerializeField] private Sprite speakingIcon;
     [SerializeField] private Sprite idleIcon;
-    [Header("Lobby Countdown")]
-    [SerializeField, Min(0f)] private float durationSeconds = 30f;
     private RoomHudSession session;
     private bool showCode = true;
-    private int displayedSeconds = -1;
 
     private void OnEnable()
     {
         session = RoomHudSession.Instance;
         session.Changed += Refresh;
-        session.SetLobbyDuration(durationSeconds);
         if (codeVisibilityButton != null) codeVisibilityButton.onClick.AddListener(ToggleCode);
         Refresh();
     }
@@ -40,10 +35,6 @@ public sealed class LobbyHudUI : UIBase
     private void Update()
     {
         if (session == null) return;
-        int seconds = session.Lobby.RemainingSeconds(Time.unscaledTimeAsDouble);
-        if (remainingTimeText != null && displayedSeconds != seconds)
-            remainingTimeText.text = RoomHudState.FormatTime(seconds);
-        displayedSeconds = seconds;
         if (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame)
         {
             var selected = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
@@ -70,6 +61,5 @@ public sealed class LobbyHudUI : UIBase
             if (i < voiceIcons.Length && voiceIcons[i] != null)
                 voiceIcons[i].sprite = occupied && lobby.IsSpeaking(lobby.Players[i]) ? speakingIcon : idleIcon;
         }
-        displayedSeconds = -1;
     }
 }
