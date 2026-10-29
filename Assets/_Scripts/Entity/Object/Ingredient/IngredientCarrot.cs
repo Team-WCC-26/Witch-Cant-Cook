@@ -46,7 +46,8 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
     public CarrotRocketSettings Settings => rocketSettings;
     public Quaternion FlightRotationOffset => Quaternion.Euler(flightEulerAngles);
     public bool CanRocket => IsTraitAvailable && reaction != null &&
-                             !reaction.IsActionCompleted(IngredientAction.Cut);
+                             !reaction.IsActionCompleted(IngredientAction.Cut | IngredientAction.Cook);
+    public event Action<bool> FlightStateChanged;
 
     private void Awake()
     {
@@ -81,7 +82,7 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
         else if (holder.Rocket != null)
             holder.Rocket.TryStartFlight(this);
 
-        // Uncut carrots consume failed/repeated launches instead of accidentally being thrown.
+        // Rocket-ready carrots consume failed/repeated launches instead of accidentally being thrown.
         return true;
     }
 
