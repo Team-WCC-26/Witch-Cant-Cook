@@ -58,6 +58,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
         ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -81,7 +82,34 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityDestroy);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolSpawn);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientDistanceRequest);
         isSubscribed = false;
+    }
+
+    private void HandleIngredientDistanceRequest(ReadOnlyMemory<byte> data)
+    {
+        IngredientDistanceRequestPacket request = PacketSerializer.Deserialize<IngredientDistanceRequestPacket>(data.Span);
+        PlayerSpawnManager spawnManager = PlayerSpawnManager.Instance;
+        float distance = float.MaxValue;
+        if (spawnManager != null && !string.IsNullOrEmpty(spawnManager.MyID) &&
+            spawnManager.TryGetPlayer(spawnManager.MyID, out PlayerBrain player) && player != null &&
+            catchableDics.TryGetValue(request.EntityId, out CatchableObj ingredient) && ingredient != null &&
+            ingredient.gameObject.activeInHierarchy)
+        {
+            distance = Vector3.Distance(player.PhysicsPos, ingredient.transform.position);
+        }
+        else
+        {
+            // Reply even if an entity has disappeared; the server excludes this measurement.
+            Debug.LogWarning($"Ingredient distance unavailable. EntityId: {request.EntityId}");
+        }
+
+        IngredientDistanceResponsePacket response = new()
+        {
+            EntityId = request.EntityId,
+            Distance = distance
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(response));
     }
 
     private void HandleEntityDestroy(ReadOnlyMemory<byte> data)
