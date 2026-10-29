@@ -23,6 +23,7 @@ public sealed class StageSettlementCamera : MonoBehaviour
     private Camera previousGameplayCamera;
     private bool previousGameplayEnabled;
     private bool showingSettlement;
+    private GameObject hiddenPointer;
 
     // Multiplayer Play Mode can start another client from an older scene snapshot.
     // Every client's visible settlement board must have its own dedicated camera.
@@ -92,6 +93,9 @@ public sealed class StageSettlementCamera : MonoBehaviour
         if (frameScrollOnEntry) FrameScroll();
         previousGameplayCamera = source;
         previousGameplayEnabled = source.enabled;
+        // Find only an active pointer so an already hidden one stays hidden on return.
+        hiddenPointer = GameObject.Find("Pointer");
+        if (hiddenPointer != null) hiddenPointer.SetActive(false);
         source.enabled = false;
         settlementCamera.enabled = true;
         showingSettlement = true;
@@ -134,6 +138,8 @@ public sealed class StageSettlementCamera : MonoBehaviour
         if (settlementCamera != null) settlementCamera.enabled = false;
         if (showingSettlement && previousGameplayCamera != null)
             previousGameplayCamera.enabled = previousGameplayEnabled;
+        if (hiddenPointer != null) hiddenPointer.SetActive(true);
+        hiddenPointer = null;
         previousGameplayCamera = null;
         showingSettlement = false;
     }
