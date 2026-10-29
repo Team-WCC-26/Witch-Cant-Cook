@@ -72,9 +72,11 @@ public class PlayerMovement
     public float FrictionMultiplier { get; set; } = 1f;
 
     private float lastGroundedTime = float.NegativeInfinity;
+    private float bedBounceJumpBlockedUntil;
     public bool CanJump =>
-        IsGroundedNow ||
-        Time.time - lastGroundedTime <= brain.CoyoteTime;
+        Time.time >= bedBounceJumpBlockedUntil &&
+        !IsOnBed() &&
+        (IsGroundedNow || Time.time - lastGroundedTime <= brain.CoyoteTime);
 
     public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower, float acceleration, float deceleration)
     {
@@ -141,6 +143,26 @@ public class PlayerMovement
     }
 
     #region Jump
+    public void TryBounceOnBed(Collision collision)
+    {
+        if (Time.time < bedBounceJumpBlockedUntil || !IsBed(collision.collider)) return;
+
+        for (int contactIndex = 0; contactIndex < collision.contactCount; contactIndex++)
+        {
+            ContactPoint contact = collision.GetContact(contactIndex);
+            if (contact.normal.y < 0.5f) continue;
+
+            // Replace the material rebound with a stable launch speed.
+            Vector3 velocity = rb.linearVelocity;
+            velocity.y = brain.BedBounceSpeed;
+            rb.linearVelocity = velocity;
+            lastGroundedTime = float.NegativeInfinity;
+            bedBounceJumpBlockedUntil = Time.time + Mathf.Max(0.1f, brain.CoyoteTime);
+            SoundManager.GetOrCreate().Play(brain.BedBounceSound, contact.point);
+            return;
+        }
+    }
+
     public void Jump()
     {
         if (!CanJump) return;
@@ -162,8 +184,25 @@ public class PlayerMovement
         );
     }
 
+    private bool IsOnBed()
+    {
+        return TryGetGround(out RaycastHit hit) && IsBed(hit.collider);
+    }
+
+    private static bool IsBed(Collider surface)
+    {
+        return surface != null && surface.sharedMaterial != null &&
+            surface.sharedMaterial.name == "BedBounce";
+    }
+
     private bool IsGrounded()
     {
+        return TryGetGround(out _);
+    }
+
+    private bool TryGetGround(out RaycastHit hit)
+    {
+        hit = default;
         if (brain.Col == null) return false;
 
         Bounds bounds = brain.Col.bounds;
@@ -183,7 +222,7 @@ public class PlayerMovement
             bounds.center,
             radius,
             Vector3.down,
-            out _,
+            out hit,
             distance,
             brain.GroundLayerMask,
             QueryTriggerInteraction.Ignore
