@@ -35,7 +35,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0, y: 0.2355, z: 0}
-  m_LocalScale: {x: 40, y: 40, z: 40}
+  m_LocalScale: {x: 8, y: 8, z: 8}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 2660599283783357843}
@@ -223,9 +223,12 @@ MonoBehaviour:
   catchable: {fileID: -3950667264815616381}
   meshFilter: {fileID: 4147073424668844755}
   targetRenderer: {fileID: 2191469642156447257}
+  meshCollider: {fileID: 0}
   gaugeUI: {fileID: 1504064107145506792}
   wobbleAngle: 12
   wobbleDuration: 0.35
+  panPlacement: {fileID: 0}
+  platePlacement: {fileID: 0}
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
   actionVisuals:
@@ -237,6 +240,22 @@ MonoBehaviour:
     mesh: {fileID: -6380304942738169725, guid: ce5249ff6750bd640ba0074fb28bc8b9, type: 3}
     materials:
     - {fileID: 2100000, guid: 3c21980cf5207a1499a18c02f1025ae2, type: 2}
+  - action: 2
+    mesh: {fileID: 4729104733280329583, guid: a4846db259b7a3542b672699321eb7d7, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
+  - action: 3
+    mesh: {fileID: -6380304942738169725, guid: ce5249ff6750bd640ba0074fb28bc8b9, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 8d9b9152f3c8f2540a14c70f2d4e7c3f, type: 2}
+  - action: 8
+    mesh: {fileID: 4729104733280329583, guid: a4846db259b7a3542b672699321eb7d7, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
+  - action: 9
+    mesh: {fileID: -6380304942738169725, guid: ce5249ff6750bd640ba0074fb28bc8b9, type: 3}
+    materials:
+    - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
 --- !u!114 &-9116075058137338827
 MonoBehaviour:
   m_ObjectHideFlags: 0

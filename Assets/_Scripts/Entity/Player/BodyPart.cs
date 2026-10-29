@@ -54,12 +54,15 @@ public class BodyPart : MonoBehaviour
         }
 
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        // Clear dynamic motion before switching to animation-driven physics.
+        if (!rb.isKinematic)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
         rb.isKinematic = true;
         rb.useGravity = false;
         rb.detectCollisions = true;
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
 
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 

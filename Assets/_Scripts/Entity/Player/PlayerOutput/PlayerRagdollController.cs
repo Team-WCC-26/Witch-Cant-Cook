@@ -346,7 +346,7 @@ public class PlayerRagdollController
     {
         foreach (var part in bodyParts)
         {
-            if (part.Rb == null)
+            if (part.Rb == null || part.Rb.isKinematic)
             {
                 continue;
             }
@@ -362,7 +362,7 @@ public class PlayerRagdollController
     {
         foreach (var part in bodyParts)
         {
-            if (part.Rb == null)
+            if (part.Rb == null || part.Rb.isKinematic)
             {
                 continue;
             }

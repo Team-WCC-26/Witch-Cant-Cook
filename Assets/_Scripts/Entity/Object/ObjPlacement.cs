@@ -118,7 +118,10 @@ public sealed class ObjPlacement : IDisposable
         target.transform.SetPositionAndRotation(placedPosition, placedRotation);
         target.Rb.position = placedPosition;
         target.Rb.rotation = placedRotation;
-        target.Rb.linearVelocity = Vector3.zero;
-        target.Rb.angularVelocity = Vector3.zero;
+        if (!target.Rb.isKinematic)
+        {
+            target.Rb.linearVelocity = Vector3.zero;
+            target.Rb.angularVelocity = Vector3.zero;
+        }
     }
 }

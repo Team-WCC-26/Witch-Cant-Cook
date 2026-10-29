@@ -12,6 +12,26 @@ public class ResourceManager : Singleton<ResourceManager>
     private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
     private readonly Dictionary<string, Task<UnityEngine.Object>> pendingLoads = new();
     public bool IsPreloaded { get; private set; }
+    public string LoadingError { get; private set; }
+    public bool HasLoadingFailed => !string.IsNullOrEmpty(LoadingError);
+    private Task initializationTask;
+    private string loadingPhase = "Waiting to initialize";
+    public string LoadingStatus
+    {
+        get
+        {
+            string pending = "";
+            int shown = 0;
+            foreach (string key in pendingLoads.Keys)
+            {
+                if (shown++ == 2) break;
+                string displayKey = key.Length > 70 ? key.Substring(0, 70) + "..." : key;
+                pending += (pending.Length == 0 ? "" : ", ") + displayKey;
+            }
+            return $"{loadingPhase} | Cached {_assetCache.Count}, pending {pendingLoads.Count}" +
+                (pending.Length == 0 ? "" : $" | Waiting: {pending}");
+        }
+    }
 
     // 로드된 에셋을 관리하는 캐시 딕셔너리
     private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
@@ -21,7 +41,7 @@ public class ResourceManager : Singleton<ResourceManager>
     protected override void Awake()
     {
         base.Awake();
-        if (IsInitialized)
+        if (Instance != this)
         {
             Debug.LogWarning("[ResourceManager] Duplicate instance initialization was prevented.");
             return;
@@ -33,8 +53,26 @@ public class ResourceManager : Singleton<ResourceManager>
 
     public async UniTask Init()
     {
-        await InitializeAsync();
-        await PreloadAssetsAsync();
+        if (IsPreloaded) return;
+        if (initializationTask == null || initializationTask.IsFaulted || initializationTask.IsCanceled)
+            initializationTask = InitializeResourcesAsync();
+        await initializationTask;
+    }
+
+    private async Task InitializeResourcesAsync()
+    {
+        LoadingError = null;
+        try
+        {
+            await InitializeAsync();
+            await PreloadAssetsAsync();
+        }
+        catch (Exception error)
+        {
+            LoadingError = error.GetBaseException().Message;
+            loadingPhase = $"FAILED: {LoadingError}";
+            throw;
+        }
     }
 
     /// <summary>
@@ -42,6 +80,7 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask InitializeAsync()
     {
+        loadingPhase = "Initializing Addressables";
         var initHandle = Addressables.InitializeAsync();
 
         await initHandle.ToUniTask();
@@ -150,26 +189,29 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask<bool> LoadAllAddressablesAsync()
     {
+        loadingPhase = "Preloading Addressables / sprites";
         List<UniTask> loadTasks = new() { SpriteCache.PreloadAsync().AsUniTask() };
-
+        var addresses = new HashSet<string>(StringComparer.Ordinal);
         foreach (var locator in Addressables.ResourceLocators)
         {
             foreach (var key in locator.Keys)
             {
-                // Sprite loads belong to the typed shared cache.
-                if (locator.Locate(key, typeof(Sprite), out _)) continue;
-                string address = key.ToString();
-
-                // 이미 캐시에 있으면 스킵
-                if (_assetCache.ContainsKey(address))
-                    continue;
-
-                loadTasks.Add(LoadAsync<UnityEngine.Object>(address));
+                if (!locator.Locate(key, typeof(UnityEngine.Object), out var locations)) continue;
+                foreach (var location in locations)
+                {
+                    // Build catalogs contain bundle/scene keys too; preload actual assets only.
+                    if (!typeof(UnityEngine.Object).IsAssignableFrom(location.ResourceType) ||
+                        typeof(Sprite).IsAssignableFrom(location.ResourceType)) continue;
+                    string address = location.PrimaryKey;
+                    if (!addresses.Add(address) || _assetCache.ContainsKey(address)) continue;
+                    loadTasks.Add(PreloadAssetAsync(address));
+                }
             }
         }
 
         await UniTask.WhenAll(loadTasks);
         IsPreloaded = true;
+        loadingPhase = "Complete";
         return true;
     }
 
@@ -177,6 +219,12 @@ public class ResourceManager : Singleton<ResourceManager>
     /// <summary>
     /// 개별 에셋 해제
     /// </summary>
+    private async UniTask PreloadAssetAsync(string address)
+    {
+        if (await LoadAsync<UnityEngine.Object>(address) == null)
+            throw new InvalidOperationException($"Addressable asset failed to load: {address}");
+    }
+
     public void Release(string key)
     {
         // 핸들 확인
@@ -197,6 +245,9 @@ public class ResourceManager : Singleton<ResourceManager>
     public void ReleaseAll()
     {
         IsPreloaded = false;
+        initializationTask = null;
+        LoadingError = null;
+        loadingPhase = "Waiting to initialize";
         SpriteCache.ReleaseAll();
         foreach (var handle in _handleCache.Values)
         {

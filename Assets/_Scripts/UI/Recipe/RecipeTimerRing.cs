@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // A radial ring drawn directly by the Canvas; no timer sprite/material asset is needed.
+[RequireComponent(typeof(CanvasRenderer))]
 public class RecipeTimerRing : MaskableGraphic
 {
     [SerializeField, Range(0f, 1f)] private float fillAmount = 1f;
