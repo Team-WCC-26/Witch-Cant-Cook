@@ -24792,7 +24792,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 290807957}
+    m_TransformParent: {fileID: 1801856150}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 8c8b65efa8c5eef4982ec32d8f876e2f, type: 3}
       propertyPath: m_LocalScale.x
@@ -24808,15 +24808,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8c8b65efa8c5eef4982ec32d8f876e2f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.009999594
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8c8b65efa8c5eef4982ec32d8f876e2f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.72
+      value: -1.4261189
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8c8b65efa8c5eef4982ec32d8f876e2f, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.060269993
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8c8b65efa8c5eef4982ec32d8f876e2f, type: 3}
       propertyPath: m_LocalRotation.w
@@ -53799,6 +53799,61 @@ MonoBehaviour:
   - {fileID: 689440926}
   - {fileID: 551700742}
   cornerRadius: 0.12
+--- !u!1 &1801856149
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1801856150}
+  - component: {fileID: 1801856151}
+  m_Layer: 0
+  m_Name: IntakeVisual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1801856150
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1801856149}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.009999594, y: 4.146119, z: 0.060269993}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 882746989}
+  m_Father: {fileID: 290807957}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &1801856151
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1801856149}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 114ae70076c6b7242b09d9364588fa16, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage:
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1802168019
 GameObject:
   m_ObjectHideFlags: 0
@@ -64339,11 +64394,9 @@ MonoBehaviour:
   eToolId: 0
   acceptedCategories: 0
   surface: 0
-  submissionBell: {fileID: 0}
   suctionPoint: {fileID: 0}
   returnPoint: {fileID: 0}
   suctionDuration: 0.3
-  ejectDuration: 0.2
   ejectDirection: {x: 0, y: 1, z: 1}
   ejectForce: 3
   frontFace: 2
@@ -64591,6 +64644,10 @@ PrefabInstance:
       propertyPath: kitchenSpawnPoint
       value: 
       objectReference: {fileID: 179071243}
+    - target: {fileID: 3773627646033803124, guid: 70b979dd27bf6374ca503dbdfb7bf7d4, type: 3}
+      propertyPath: intakeVisualAnimator
+      value:
+      objectReference: {fileID: 1801856151}
     - target: {fileID: 4415992808860509451, guid: 70b979dd27bf6374ca503dbdfb7bf7d4, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -64632,10 +64689,10 @@ PrefabInstance:
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 2066682179598234678, guid: 70b979dd27bf6374ca503dbdfb7bf7d4, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 882746989}
+      addedObject: {fileID: 1347589700}
     - targetCorrespondingSourceObject: {fileID: 2066682179598234678, guid: 70b979dd27bf6374ca503dbdfb7bf7d4, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1347589700}
+      addedObject: {fileID: 1801856150}
     - targetCorrespondingSourceObject: {fileID: 3577755893093752412, guid: 70b979dd27bf6374ca503dbdfb7bf7d4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1645589693}
@@ -64661,11 +64718,9 @@ MonoBehaviour:
   eToolId: 0
   acceptedCategories: 0
   surface: 1
-  submissionBell: {fileID: 0}
   suctionPoint: {fileID: 0}
   returnPoint: {fileID: 0}
   suctionDuration: 0.3
-  ejectDuration: 0.2
   ejectDirection: {x: 0, y: 1, z: 1}
   ejectForce: 3
   frontFace: 2
