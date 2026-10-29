@@ -24,9 +24,22 @@ public sealed class SoundEmitter : MonoBehaviour
 {
     [SerializeField] private SoundSO sound;
     [SerializeField] private bool followTarget = true;
+    [SerializeField] private bool playOnEnable;
     private SoundHandle current;
+    private bool hasStarted;
 
     #region Unity Callbacks
+    private void OnEnable()
+    {
+        if (hasStarted && playOnEnable) Play();
+    }
+
+    private void Start()
+    {
+        hasStarted = true;
+        if (playOnEnable) Play();
+    }
+
     private void OnDisable() => Stop();
     #endregion
 
