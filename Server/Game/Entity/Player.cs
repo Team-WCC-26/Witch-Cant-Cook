@@ -277,7 +277,7 @@ public class Player : Entity
         Send(sendBuffer);
     }
 
-    // 재접속 바인딩 시 배치를 초기화한다 (이전 세션의 미전송 잔량 제거, 샤드 작업 안에서 호출)
+    // 재접속 바인딩/퇴장 시 배치를 초기화한다 (미전송 증분 잔량을 제거, 샤드 작업 안에서 호출)
     public void ResetBatches()
     {
         lock (_batchLock)

@@ -79,6 +79,9 @@ public class Room
     private IngredientSpawner _ingredientSpawner;
     private DishManager _dishManager;
 
+    // 룸 고정 퇴장 트리거 (룸 수명 엔티티: 스테이지별 생성/정리 대상에서 제외되고 Init에서 1회 등록한다)
+    private LeaveRoomTrigger? _leaveRoomTrigger;
+
     public Room(string id, string name, string password)
     {
         Id = id;
@@ -98,6 +101,12 @@ public class Room
         _money = 0;
         _pendingMoney = 0;
         _nextEntityId = 0;
+
+        // 퇴장 트리거를 룸 수명 엔티티로 등록한다 (엔티티 Id 초기화 직후 생성)
+        LeaveRoomTrigger trigger = new();
+        RegisterEntity(GenerateEntityId(), trigger);
+        _leaveRoomTrigger = trigger;
+
         _doors.Clear();
 
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
@@ -111,6 +120,8 @@ public class Room
 
     public void Start()
     {
+        ResetLeaveRoomTrigger();
+
         if (_stageTimer != null)
         {
             _timerManager.Cancel(_stageTimer.Value);
@@ -137,6 +148,7 @@ public class Room
     {
         _dishManager.Stop();
         _ingredientSpawner.Stop();
+        ResetLeaveRoomTrigger();
         _timerManager.Clear();
         _stageTimer = null;
         _settleTimer = null;
@@ -174,6 +186,9 @@ public class Room
 
         _tick++;
     }
+
+    // 스테이지 진행 중 여부 (정산 유예/확인 대기는 진행 중이 아닌 것으로 본다)
+    public bool IsStageRunning => _stageTimer != null;
 
     public bool IsEnable()
     {
@@ -457,7 +472,8 @@ public class Room
             EntitySnapshot entitySnapshot = new()
             {
                 EntityId = entity.EntityId,
-                Kind = (entity is Ingredient) ? SnapshotEntityKind.Ingredient : SnapshotEntityKind.Tool,
+                Kind = (entity is LeaveRoomTrigger) ? SnapshotEntityKind.FixedObject
+                    : (entity is Ingredient) ? SnapshotEntityKind.Ingredient : SnapshotEntityKind.Tool,
                 ParentEntityId = (entity.Parent == null) ? -1 : entity.Parent.EntityId,
                 ParentPlayerId = (entity.Parent as Player)?.PlayerId
             };
@@ -502,6 +518,10 @@ public class Room
 
                 case JumpPad jumpPad:
                     entitySnapshot.JumpPad = jumpPad.GetSnapshot();
+                    break;
+
+                case LeaveRoomTrigger leaveRoomTrigger:
+                    entitySnapshot.LeaveRoomTrigger = leaveRoomTrigger.GetSnapshot();
                     break;
             }
 
@@ -569,6 +589,14 @@ public class Room
         if (entity is not IInteractable interactable) return false;
 
         return interactable.Interact(player);
+    }
+
+    // 퇴장 트리거의 현재 상태를 한 명에게 전송한다 (참가 성공 응답에 사용)
+    public void SendLeaveRoomTriggerState(Player player)
+    {
+        if (_leaveRoomTrigger == null) return;
+
+        player.Send(PacketSerializer.Serialize(_leaveRoomTrigger.CreateStatePacket(null), true));
     }
 
     public bool InsertEntity(long targetId, long subjectId)
@@ -799,6 +827,7 @@ public class Room
         // 새 주문 선택과 재료 스폰만 중지한다 (진행 중 주문의 제출은 유예 기간 동안 계속 받는다)
         _dishManager.StopSelect();
         _ingredientSpawner.Stop();
+        ResetLeaveRoomTrigger();
         _timerManager.Clear();
         _stageTimer = null;
 
@@ -884,6 +913,17 @@ public class Room
         ClearKitchenEntities();
     }
 
+    // 퇴장 트리거를 대기 상태로 되돌린다 (스테이지 시작/종료/룸 정지에서 호출)
+    // 타이머 Clear로 복귀 타이머가 일괄 취소되기 전에 호출해 dangling Active가 남지 않게 한다
+    // 상태가 바뀌었을 때만 초기 상태를 브로드캐스트한다
+    private void ResetLeaveRoomTrigger()
+    {
+        if (_leaveRoomTrigger == null) return;
+        if (!_leaveRoomTrigger.Reset()) return;
+
+        BroadCast(PacketSerializer.Serialize(_leaveRoomTrigger.CreateStatePacket(null), true));
+    }
+
     // 주방에 남은 엔티티 정리: 재료는 Destroy 동기화로 클라에서도 제거하고,
     // 도구는 다음 스테이지에서 클라가 재등록하므로 동기화 없이 내부 상태 초기화 후 회수한다
     private void ClearKitchenEntities()
@@ -892,6 +932,9 @@ public class Room
 
         foreach (var entity in entities)
         {
+            // 퇴장 트리거는 룸 수명 엔티티로 정리 대상에서 제외한다
+            if (entity is LeaveRoomTrigger) continue;
+
             if (entity is Ingredient ingredient)
             {
                 if (!ingredient.IsDestroyed)

@@ -13,7 +13,8 @@ public class EntityHandler : PacketHandlerBase
         session.Player.PushGameplayJob(session, room =>
         {
             if (!room.Entities.TryGetValue(packet.EntityId, out var entity) || entity.IsDestroyed) return;
-            if (entity is Tool) return;
+            // 도구와 고정 오브젝트(퇴장 트리거 등)는 클라 임의 파괴 대상이 아니다
+            if (entity is Tool || entity is IFixedTool) return;
             if (entity.Parent is Player holder && holder != session.Player) return;
 
             entity.Destroy();

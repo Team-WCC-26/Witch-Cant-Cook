@@ -195,6 +195,8 @@ public class RoomHandler : PacketHandlerBase
         };
 
         player.Send(PacketSerializer.Serialize(roomMoneyPacket, true));
+
+        targetRoom.SendLeaveRoomTriggerState(player);
     }
 
     private static void JoinFail(Session session, bool isRoomNull = true)
