@@ -105,6 +105,7 @@ public abstract class ObjEjector
     }
 
     protected virtual float PlayEjectVisual() => 0f;
+    protected virtual float EjectionLaunchDelay => 0f;
 
     protected virtual IEnumerator WaitForTargets(Request request) => null;
 
@@ -130,14 +131,18 @@ public abstract class ObjEjector
             for (int index = 0; index < targets.Count; index++)
             {
                 float visualDuration = PlayEjectVisual();
+                float launchDelay = Mathf.Clamp(EjectionLaunchDelay, 0f, visualDuration);
+                if (launchDelay > 0f)
+                    yield return new WaitForSeconds(launchDelay);
                 // 제거·중복 대상도 같은 난수를 소비해 다음 대상의 방향을 유지한다.
                 Object target = targets[index];
                 Vector3 direction = GetDirection(target);
                 if (target != null && ejectedTargets.Add(target))
                     EjectTarget(target, direction);
 
+                float remainingVisual = Mathf.Max(0f, visualDuration - launchDelay);
                 float delay = index + 1 < targets.Count
-                    ? Mathf.Max(CurrentSettings.interval, visualDuration) : visualDuration;
+                    ? Mathf.Max(CurrentSettings.interval, remainingVisual) : remainingVisual;
                 if (delay > 0f)
                     yield return new WaitForSeconds(delay);
                 else

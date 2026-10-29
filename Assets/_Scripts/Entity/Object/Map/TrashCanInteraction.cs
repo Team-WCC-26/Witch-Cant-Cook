@@ -12,21 +12,6 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     [SerializeField] private Collider intakeTrigger;
     [SerializeField, Min(0.1f)] private float responseTimeout = 3f;
 
-    [Header("삼키기 연출")]
-    [SerializeField] private Animator intakeVisualAnimator;
-    [SerializeField, Min(0.1f), Tooltip("삼키기 애니메이션 재생 속도. 1은 기본 약 0.6초입니다.")]
-    private float intakeAnimationSpeed = 1f;
-    private static readonly int SwallowHash = Animator.StringToHash("Swallow");
-    private static readonly int IdleHash = Animator.StringToHash("Idle");
-
-    private void PlayIntakeVisual()
-    {
-        if (intakeVisualAnimator == null || !intakeVisualAnimator.isActiveAndEnabled ||
-            intakeVisualAnimator.runtimeAnimatorController == null) return;
-        intakeVisualAnimator.speed = intakeAnimationSpeed;
-        intakeVisualAnimator.Play(SwallowHash, 0, 0f);
-    }
-
     #endregion
 
     #region Ejection Settings
@@ -80,6 +65,8 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     #region Dependencies
 
+    [SerializeField] private TrashCanAnimationController animationController;
+
     private ObjectNetworkRouter objectRouter;
     private TrashCanEjector ejector;
     private TrashCanEjector Ejector => ejector ??= new TrashCanEjector(this);
@@ -90,6 +77,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     private void Awake()
     {
+        if (animationController == null) animationController = GetComponent<TrashCanAnimationController>();
         if (intakeTrigger != null) return;
 
         foreach (Collider candidate in GetComponents<Collider>())
@@ -219,7 +207,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         if (returningPlayers.ContainsKey(packet.PlayerId)) return;
         bool alreadyInside = insidePlayers.ContainsKey(packet.PlayerId) && !pendingPlayerEntries.ContainsKey(packet.PlayerId);
         pendingPlayerEntries.Remove(packet.PlayerId);
-        if (!alreadyInside) PlayIntakeVisual();
+        if (!alreadyInside) animationController?.PlayIntake();
         if (PlayerSpawnManager.Instance != null && PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player))
         {
             insidePlayers[packet.PlayerId] = player;
@@ -236,12 +224,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     public void ResetClientStage()
     {
-        if (intakeVisualAnimator != null && intakeVisualAnimator.isActiveAndEnabled &&
-            intakeVisualAnimator.runtimeAnimatorController != null)
-        {
-            intakeVisualAnimator.Play(IdleHash, 0, 0f);
-            intakeVisualAnimator.Update(0f);
-        }
+        animationController?.ResetVisual();
         if (localCameraController != null) localCameraController.SetTrashCanView(this, 0f);
         localCameraController = null;
         ejector?.Reset();
@@ -266,6 +249,8 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     #region Ejection
 
     internal float ResponseTimeout => responseTimeout;
+    internal float PlayEjectionVisual() => animationController != null ? animationController.PlayEjection() : 0f;
+    internal float EjectionLaunchDelay => animationController != null ? animationController.EjectionLaunchDelay : 0f;
     internal float PlayerEjectForce => playerEjectForce;
 
     internal PlayerBrain FindPlayer(string playerId)
@@ -378,7 +363,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         if (tracked.accepted || tracked.returned) return false;
 
         tracked.accepted = true;
-        PlayIntakeVisual();
+        animationController?.PlayIntake();
         tracked.canBePicked = entity.CanBePicked;
         foreach (Collider col in entity.GetComponentsInChildren<Collider>(true))
         {

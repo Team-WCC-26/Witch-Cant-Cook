@@ -189,12 +189,15 @@ public class DishOrderManager : MonoBehaviour
             return null;
         }
 
+        if (!dataManager.GetIngredient().TryGet(recipe.id, out Ingredient dishIngredient))
+            Debug.LogWarning($"Recipe {recipe.id} references missing dish Ingredient {recipe.id}.", this);
+
         RecipeCardData card = new()
         {
             recipeId = recipe.id,
             name = recipe.name,
             timeLimit = recipe.timeLimit,
-            iconName = recipe.IconName
+            iconName = dishIngredient?.IconName
         };
 
         if (ingredientIndex == null)

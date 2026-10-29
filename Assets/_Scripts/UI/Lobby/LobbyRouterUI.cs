@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System;
 using System.Collections.Generic;
 using UI.Slot;
@@ -19,25 +19,35 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
     [Header("Sub UIs")]
     [SerializeField] private Button _refreshButton;
     [SerializeField] private PasswordInput _passwordInput;
+    [SerializeField] private GameObject _emptyState;
+    private ServerManager registeredServer;
 
     private PacketId _getRoomID => PacketId.S_GetRoom;
     private PacketId _joinRoomID => PacketId.S_JoinRoom;
-    private float _lastRefreshTime = 0;
+    private float _lastRefreshTime = float.NegativeInfinity;
 
     private void OnEnable()
     {
-        ServerManager.Instance.RegisterHandler(_getRoomID, InitLobby);
-        ServerManager.Instance.RegisterHandler(_joinRoomID, JoinRoom);
+        registeredServer = ServerManager.Instance;
+        if (registeredServer != null)
+        {
+            registeredServer.RegisterHandler(_getRoomID, InitLobby);
+            registeredServer.RegisterHandler(_joinRoomID, JoinRoom);
+        }
         _refreshButton.onClick.AddListener(RefreshLobby);
-        //_passwordInput.OnButtonClicked += SendJoinRoomPacket;
+        if (_passwordInput != null) _passwordInput.OnButtonClicked += SendJoinRoomPacket;
     }
 
     private void OnDisable()
     {
-        ServerManager.Instance.UnRegisterHandler(_getRoomID);
-        ServerManager.Instance.UnRegisterHandler(_joinRoomID);
+        if (registeredServer != null)
+        {
+            registeredServer.UnRegisterHandler(_getRoomID);
+            registeredServer.UnRegisterHandler(_joinRoomID);
+        }
+        registeredServer = null;
         _refreshButton.onClick.RemoveListener(RefreshLobby);
-        //_passwordInput.OnButtonClicked -= SendJoinRoomPacket;
+        if (_passwordInput != null) _passwordInput.OnButtonClicked -= SendJoinRoomPacket;
     }
 
     public void RefreshLobby()
@@ -69,6 +79,24 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
         }
 
         SetData(slotDatas);
+    }
+
+    public override void SetData(IEnumerable<LobbySlotData> datas)
+    {
+        var rooms = new List<LobbySlotData>(datas);
+        while (_slots.Count > rooms.Count)
+        {
+            int last = _slots.Count - 1;
+            LobbySlot slot = _slots[last];
+            _slots.RemoveAt(last);
+            slot.gameObject.SetActive(false);
+            Destroy(slot.gameObject);
+        }
+        while (_slots.Count < rooms.Count) CreateSlot();
+        for (int i = 0; i < rooms.Count; i++) _slots[i].Init(rooms[i]);
+        _dataContainer.SetData(rooms);
+        _pointedSlot = null;
+        if (_emptyState != null) _emptyState.SetActive(rooms.Count == 0);
     }
 
     private void SendJoinRoomPacket(string id, string password = "")
@@ -117,11 +145,13 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
     public override void OnDoubleClick()
     {
         int index = GetPointedSlotIndex();
+        if (index < 0 || index >= _dataContainer.Datas.Count) return;
         var roomData = _dataContainer.Datas[index];
 
         if (roomData.RoomData.BIsPrivate)
         {
-
+            if (_passwordInput != null)
+                _passwordInput.InitInfo(roomData.Name, roomData.RoomData.Id);
         }
         else
         {

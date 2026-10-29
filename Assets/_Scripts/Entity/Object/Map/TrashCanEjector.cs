@@ -103,6 +103,9 @@ public sealed class TrashCanEjector : ObjEjector
         return trashCan.GetEjectDirection(target as CatchableObj);
     }
 
+    protected override float PlayEjectVisual() => trashCan.PlayEjectionVisual();
+    protected override float EjectionLaunchDelay => trashCan.EjectionLaunchDelay;
+
     protected override void EjectTarget(Object target, Vector3 direction)
     {
         if (target is PlayerBrain player)
