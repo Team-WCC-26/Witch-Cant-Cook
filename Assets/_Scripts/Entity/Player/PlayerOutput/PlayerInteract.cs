@@ -358,9 +358,7 @@ public class PlayerInteract
 
         brain.ActionController.CancelAction();
         target.OnPick(brain);
-        Transform holdParent = target.IsEquipment
-            ? brain.EquipPoint
-            : brain.ItemPoint;
+        Transform holdParent = target.ResolveHoldParent(brain);
 
         target.transform.SetParent(holdParent, false);
         LocalTransformData holdTransform = target.HoldTransform;

@@ -24,6 +24,14 @@ public struct LocalTransformData
     }
 }
 
+public enum HeldAttachmentPoint
+{
+    [InspectorName("자동 (기존 방식)")] Automatic = 0,
+    [InspectorName("공통 위치 (ItemPoint)")] ItemPoint = 1,
+    [InspectorName("오른손")] RightHand = 2,
+    [InspectorName("왼손")] LeftHand = 3
+}
+
 public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 {
     [SerializeField] private long networkId;
@@ -46,6 +54,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     [Tooltip("Interactable 여부")]
     [SerializeField] private EntityCategory acceptedCategories = EntityCategory.None;
     [SerializeField] private bool canBePicked = true;
+    [Tooltip("잡았을 때 따라갈 위치. Hold Transform은 선택한 위치를 기준으로 적용됩니다.")]
+    [SerializeField] private HeldAttachmentPoint holdAttachment = HeldAttachmentPoint.Automatic;
     [SerializeField] private LocalTransformData holdTransform = LocalTransformData.Identity;
     [SerializeField] private float throwForce = 0;
 
@@ -74,6 +84,29 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         Category == EntityCategory.Ingredient && acceptedCategories == EntityCategory.None
             ? GetDefaultIngredientAcceptedCategories()
             : acceptedCategories;
+    public HeldAttachmentPoint HoldAttachment => holdAttachment;
+
+    public Transform ResolveHoldParent(PlayerBrain holder)
+    {
+        if (holder == null) return null;
+        if (holdAttachment == HeldAttachmentPoint.Automatic)
+            return IsEquipment ? holder.EquipPoint : holder.ItemPoint;
+        if (holdAttachment == HeldAttachmentPoint.ItemPoint)
+            return holder.ItemPoint;
+
+        Animator animator = holder.Animator;
+        if (animator != null && animator.isHuman)
+        {
+            HumanBodyBones bone = holdAttachment == HeldAttachmentPoint.LeftHand
+                ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
+            Transform hand = animator.GetBoneTransform(bone);
+            if (hand != null) return hand;
+        }
+
+        return holdAttachment == HeldAttachmentPoint.RightHand && holder.EquipPoint != null
+            ? holder.EquipPoint : holder.ItemPoint;
+    }
+
     public LocalTransformData HoldTransform => holdTransform;
     public float ThrowForce => throwForce;
     public bool IsEquipment { get; private set; }

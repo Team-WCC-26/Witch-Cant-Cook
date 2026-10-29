@@ -9,6 +9,7 @@ public class PlayerAnimController
     private readonly int toIdleHash = Animator.StringToHash("ToIdle");
 
     private readonly int heldCategoryHash = Animator.StringToHash("HeldCategory");
+    private readonly int holdingCarrotHash = Animator.StringToHash("IsHoldingCarrot");
     private readonly int primaryActionHash = Animator.StringToHash("Primary Action");
     private readonly int jumpHash = Animator.StringToHash("Jump");
     
@@ -40,6 +41,9 @@ public class PlayerAnimController
     public void UpdateTick(PlayerCombinedState state, bool isGrounded, bool isFalling)
     {
         animator.SetInteger(heldCategoryHash, (int)state.HeldEntityCategory);
+        CatchableObj held = brain.Interact?.HeldObj;
+        animator.SetBool(holdingCarrotHash, held != null &&
+            held.Category == EntityCategory.Ingredient && held.GetComponent<IngredientCarrot>() != null);
         animator.SetBool(groundedHash, isGrounded);
         animator.SetBool(fallingHash, isFalling);
 

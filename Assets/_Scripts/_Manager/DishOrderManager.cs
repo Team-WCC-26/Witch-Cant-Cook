@@ -213,10 +213,8 @@ public class DishOrderManager : MonoBehaviour
 
             card.ingredients.Add(new RecipeIngredientDisplayData
             {
-                name = ingredient != null ? ingredient.name : $"Ingredient #{row.ingID}",
                 iconName = ingredient != null ? ingredient.IconName : null,
-                conditionFlag = (IngredientState)row.conditionFlag,
-                amount = row.amount
+                conditionFlag = (IngredientState)row.conditionFlag
             });
 
         }

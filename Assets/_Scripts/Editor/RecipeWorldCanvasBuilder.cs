@@ -68,9 +68,8 @@ public static class RecipeWorldCanvasBuilder
         size.preferredHeight = 156;
         RecipeIngredientUI view = rect.gameObject.AddComponent<RecipeIngredientUI>();
         Image image = Picture("Ingredient", rect, 30, 0, 96, 96);
-        TMP_Text name = Text("Name", rect, 0, 96, 156, 24, "재료", 18);
-        BuildMethods(rect, 0, 122, 36, out Image[] methods, out TMP_Text[] labels);
-        view.Configure(image, name, methods, labels);
+        BuildMethods(rect, 0, 100, 36, out Image[] methods, out TMP_Text[] labels);
+        view.Configure(image, methods, labels);
         return view;
     }
 

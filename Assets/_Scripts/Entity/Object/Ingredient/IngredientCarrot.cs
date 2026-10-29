@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 [Serializable]
 public class CarrotRocketSettings
@@ -26,18 +27,26 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
     [Header("Rocket")]
     [SerializeField] private CarrotRocketSettings rocketSettings = new();
 
+    [Header("Flight Presentation")]
+    [SerializeField] private Vector3 flightEulerAngles = Vector3.zero;
+
     [Header("Optional Flight Effects")]
     [Tooltip("추후 당근 뒤쪽에 배치한 불꽃/연기 파티클을 연결한다.")]
     [SerializeField] private ParticleSystem propulsionParticles;
     [SerializeField] private AudioSource propulsionAudio;
+
+    [Header("Flight Events")]
+    [SerializeField] private UnityEvent onFlightStarted = new();
+    [SerializeField] private UnityEvent onFlightStopped = new();
 
     private PlayerRocketController pilot;
     private bool presentingFlight;
 
     public CatchableObj Catchable => catchable;
     public CarrotRocketSettings Settings => rocketSettings;
+    public Quaternion FlightRotationOffset => Quaternion.Euler(flightEulerAngles);
     public bool CanRocket => IsTraitAvailable && reaction != null &&
-                             !reaction.IsActionCompleted(IngredientAction.Cut);
+                             !reaction.IsActionCompleted(IngredientAction.Cut | IngredientAction.Cook);
     public event Action<bool> FlightStateChanged;
 
     private void Awake()
@@ -73,7 +82,7 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
         else if (holder.Rocket != null)
             holder.Rocket.TryStartFlight(this);
 
-        // Uncut carrots consume failed/repeated launches instead of accidentally being thrown.
+        // Rocket-ready carrots consume failed/repeated launches instead of accidentally being thrown.
         return true;
     }
 
@@ -114,7 +123,8 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
 
         if (presentingFlight == flying) return;
         presentingFlight = flying;
-        FlightStateChanged?.Invoke(flying);
+        if (flying) onFlightStarted.Invoke();
+        else onFlightStopped.Invoke();
     }
 
     private void OnDropped() => StopRocket();

@@ -49,6 +49,8 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: Header("Jump")]
     [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
     [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;
+    [field: SerializeField, Min(0.1f)] public float BedBounceSpeed { get; private set; } = 7f;
+    [field: SerializeField] public SoundSO BedBounceSound { get; private set; }
     [field: SerializeField, Min(1f)] public float FallMultiplier { get; private set; } = 2.5f;
     [field: SerializeField, Min(0f)] public float CoyoteTime { get; private set; } = 0.1f;
     [field: SerializeField, Min(0f)] public float JumpRepeatDelay { get; private set; } = 0.2f;
@@ -177,6 +179,16 @@ public sealed class PlayerBrain : MonoBehaviour
         actionController.FixedTick(stateResolver.CurrentState);
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        TryBounceOnBed(collision);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        TryBounceOnBed(collision);
+    }
+
     private void OnDestroy()
     {
         ThrowTrajectory?.Dispose();
@@ -197,6 +209,7 @@ public sealed class PlayerBrain : MonoBehaviour
     {
         Rocket?.StopFlight();
         PlayerId = id;
+        PlayerAppearanceCatalog.Apply(this, id);
 
         if (Health != null)
         {
@@ -227,6 +240,15 @@ public sealed class PlayerBrain : MonoBehaviour
         virtualCamera = virtualCam;
         virtualCamera.Target.TrackingTarget = CameraFollowTarget;
         virtualCamera.Target.LookAtTarget = CameraLookAtTarget;
+    }
+
+    private void TryBounceOnBed(Collision collision)
+    {
+        if (!isInitialized || stateResolver is not LocalPlayerStateResolver) return;
+        if (stateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default ||
+            actionController.IsRagdollActive || Rocket.IsFlying) return;
+
+        actionController.Movement.TryBounceOnBed(collision);
     }
 
     private void EnsureInteractionCasts()

@@ -232,7 +232,7 @@ public class PlayerActionController
     // Applies one-shot jump requests after horizontal movement is resolved.
     private void ApplyJump(PlayerCombinedState state)
     {
-        if (!state.JumpRequested) return;
+        if (!state.JumpRequested || !movement.CanJump) return;
         movement.Jump();
         animController.PlayJumpAnim();
     }
