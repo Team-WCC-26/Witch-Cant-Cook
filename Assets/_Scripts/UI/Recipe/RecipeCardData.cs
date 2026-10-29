@@ -7,10 +7,8 @@ using UnityEngine;
 public class RecipeIngredientDisplayData
 {
     public string iconName;
-    public string name;
     public Sprite sprite;
     public IngredientState conditionFlag;
-    public int amount = 1;
 }
 
 // UI input contract populated from the Recipe sheet, with optional local artwork.

@@ -7,11 +7,9 @@ using Protocol;
 public class RecipeIngredientUI : MonoBehaviour
 {
     [SerializeField] private Image icon;
-    [SerializeField] private TMP_Text ingredientName;
     [SerializeField] private Image[] methodImages = Array.Empty<Image>();
     [SerializeField] private TMP_Text[] methodLabels = Array.Empty<TMP_Text>();
     [Header("Font Sizes")]
-    [SerializeField, Min(1f)] private float ingredientFontSize = 22f;
     [SerializeField, Min(1f)] private float methodFontSize = 16f;
     private int bindingVersion;
     #region Unity Callbacks
@@ -19,33 +17,15 @@ public class RecipeIngredientUI : MonoBehaviour
     private void OnDisable() => bindingVersion++;
     #endregion
 
-    public void Configure(Image image, TMP_Text label, Image[] methods, TMP_Text[] labels)
+    public void Configure(Image image, Image[] methods, TMP_Text[] labels)
     {
-        icon = image; ingredientName = label; methodImages = methods; methodLabels = labels;
+        icon = image; methodImages = methods; methodLabels = labels;
         ApplyTypography();
     }
 
     private void ApplyTypography()
     {
-        SetReadableFont(ingredientName, ingredientFontSize, 18f, 30f);
         foreach (TMP_Text label in methodLabels) SetReadableFont(label, methodFontSize, 12f, 34f);
-        // Give the larger name its own line above the method icons.
-        foreach (Image image in methodImages)
-            if (image != null) MoveMethodBelowName(image.rectTransform);
-        foreach (TMP_Text label in methodLabels)
-            if (label != null) MoveMethodBelowName(label.rectTransform);
-        if (transform is RectTransform rect)
-            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(rect.rect.height, 164f));
-        LayoutElement layout = GetComponent<LayoutElement>();
-        if (layout != null) layout.preferredHeight = Mathf.Max(layout.preferredHeight, 164f);
-    }
-
-    private void MoveMethodBelowName(RectTransform rect)
-    {
-        if (rect.parent != transform) return;
-        Vector2 position = rect.anchoredPosition;
-        position.y = Mathf.Min(position.y, -130f);
-        rect.anchoredPosition = position;
     }
 
     public static void SetReadableFont(TMP_Text text, float preferred, float minimum, float height)
@@ -67,7 +47,6 @@ public class RecipeIngredientUI : MonoBehaviour
         int version = ++bindingVersion;
         Func<bool> current = () => this != null && bindingVersion == version;
         SpriteCache.Assign(icon, data?.iconName, current);
-        if (ingredientName != null) ingredientName.text = data == null ? "" : $"{data.name} ×{data.amount}";
         BindMethods(data?.conditionFlag ?? IngredientState.None, methodImages, methodLabels, current);
     }
 
