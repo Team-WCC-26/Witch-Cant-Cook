@@ -23,6 +23,8 @@ public class PlayerHandler : PacketHandlerBase
             {
                 ingredient.Parent = null;
 
+                pan.CancelCook(); // 재료가 배출되었으므로 진행 중인 조리를 중지한다
+
                 PanEjectPacket ejectPacket = new()
                 {
                     PanEntityId = pan.EntityId,
