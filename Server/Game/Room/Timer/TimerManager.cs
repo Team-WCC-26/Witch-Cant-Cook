@@ -11,7 +11,8 @@ public sealed class TimerManager
     public TimerHandle Schedule<T>(
         long delayMs,
         T state,
-        Action<T> callback)
+        Action<T> callback,
+        bool paused = false)
     {
         long now = TimeUtil.NowMs();
 
@@ -25,7 +26,16 @@ public sealed class TimerManager
         };
 
         _timers.Add(timer.Id, timer);
-        _queue.Enqueue(timer, timer.EndTime);
+
+        if (paused)
+        {
+            timer.RemainingTime = delayMs;
+            timer.Paused = true;
+        }
+        else
+        {
+            _queue.Enqueue(timer, timer.EndTime);
+        }
 
         return new TimerHandle(timer.Id);
     }

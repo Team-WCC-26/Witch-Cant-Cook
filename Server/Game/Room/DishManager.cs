@@ -17,9 +17,9 @@ internal class DishManager
     private int _totalWeight;
 
     private int _goal = 0;
-    private int _successCount = 0;
 
     private Dictionary<int, Queue<TimerHandle>> _timeLimitHandleDict = new();
+    private int _orderCnt = 0;
     private TimerHandle _spawnDelayHandle;
     private bool _running = false;
 
@@ -34,7 +34,7 @@ internal class DishManager
         if (_running) return;
 
         _running = true;
-        _successCount = 0;
+
         OnSelectTimer();
     }
 
@@ -49,6 +49,8 @@ internal class DishManager
                 _timerManager.Cancel(handle);
             }
         }
+
+        _orderCnt = 0;
 
         _timerManager.Cancel(_spawnDelayHandle);
     }
@@ -65,7 +67,7 @@ internal class DishManager
     {
         if (!_running) return;
 
-        _spawnDelayHandle = _timerManager.Schedule(delayMs, this, static dm => dm.OnSelectTimer());
+        _spawnDelayHandle = _timerManager.Schedule(delayMs, this, static dm => dm.OnSelectTimer(), _orderCnt >= 3);
     }
 
     public void SetStage(int stage)
@@ -103,7 +105,7 @@ internal class DishManager
 
     public bool IsStageSuccess()
     {
-        return _successCount >= _goal;
+        return _room.PendingMoney >= _goal;
     }
 
     // 현재 진행 중인 주문 목록 (레시피 ID와 남은 시한) — 재접속 스냅샷 수집용
@@ -136,10 +138,13 @@ internal class DishManager
         if (_timeLimitHandleDict.TryGetValue(recipeId, out var handles) && handles.TryDequeue(out var handle))
         {
             _timerManager.Cancel(handle);
+            
+            if (_orderCnt-- == 3)
+            {
+                _timerManager.Resume(_spawnDelayHandle);
+            }
 
             BroadCastDishState(recipeId, DishState.Success);
-
-            _successCount++;
 
             _room.AddPendingMoney(_dishses[recipeId].Money);
         }
@@ -163,6 +168,7 @@ internal class DishManager
         }
 
         queue.Enqueue(_timerManager.Schedule(dishData.TimeLimit * 1000, recipeId, OnDishFaild));
+        _orderCnt++;
 
         BroadCastDishState(recipeId, DishState.Order);
 
