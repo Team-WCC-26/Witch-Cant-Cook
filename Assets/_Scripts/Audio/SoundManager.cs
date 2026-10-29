@@ -16,10 +16,21 @@ public sealed class SoundManager : MonoBehaviour
         public AudioSource Source;
         public Transform FollowTarget;
         public bool HasFollowTarget;
+        public bool IsBgm;
         public int Id;
     }
 
     #region Unity Callbacks
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetInstance() => instance = null;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void StartGlobalBgm()
+    {
+        SoundSO sound = Resources.Load<SoundSO>("GlobalBgm");
+        if (sound != null) GetOrCreate().PlayBgm(sound);
+    }
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -87,6 +98,8 @@ public sealed class SoundManager : MonoBehaviour
         {
             voice.Source.spatialBlend = 0f;
             voice.Source.loop = true;
+            voice.Source.ignoreListenerPause = true;
+            voice.IsBgm = true;
         }
     }
 
@@ -141,8 +154,14 @@ public sealed class SoundManager : MonoBehaviour
         voice.Source.clip = null;
         voice.FollowTarget = null;
         voice.HasFollowTarget = false;
+        voice.IsBgm = false;
+        voice.Source.ignoreListenerPause = false;
         voice.Id = 0;
     }
 
-    private void OnActiveSceneChanged(Scene previous, Scene next) => StopAll();
+    private void OnActiveSceneChanged(Scene previous, Scene next)
+    {
+        foreach (Voice voice in voices)
+            if (!voice.IsBgm) Release(voice);
+    }
 }
