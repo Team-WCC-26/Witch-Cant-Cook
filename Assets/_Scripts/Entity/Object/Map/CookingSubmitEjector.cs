@@ -8,7 +8,6 @@ public sealed class CookingSubmitEjector : ObjEjector
     private sealed class SubmitRequest : Request
     {
         public List<long> ids;
-        public float ejectAt;
     }
 
     private readonly SubmitTriggerZone station;
@@ -24,12 +23,11 @@ public sealed class CookingSubmitEjector : ObjEjector
         this.station = station;
     }
 
-    public void Enqueue(List<long> ids, int seed, long delayMs)
+    public void Enqueue(List<long> ids, int seed)
     {
         base.Enqueue(new SubmitRequest
         {
-            ids = new List<long>(ids), seed = seed,
-            ejectAt = Time.unscaledTime + Mathf.Max(0f, delayMs / 1000f)
+            ids = new List<long>(ids), seed = seed
         });
     }
 
@@ -38,15 +36,15 @@ public sealed class CookingSubmitEjector : ObjEjector
     protected override IEnumerator WaitForTargets(Request request)
     {
         var submission = (SubmitRequest)request;
-        // Start suction immediately; the server's delay is measured independently of timeScale.
-        float ejectAt = submission.ejectAt;
-        float deadline = Mathf.Max(ejectAt, Time.unscaledTime + station.ResponseTimeout);
+        // The server already authorized the return. Only wait for suction and food removal,
+        // without the legacy fixed delay carried by the packet.
+        float deadline = Time.unscaledTime + station.ResponseTimeout;
         while (true)
         {
             bool ready = true;
             foreach (long id in submission.ids)
                 if (id > 0) ready &= station.PrepareReturn(id);
-            if (Time.unscaledTime >= ejectAt && (ready || Time.unscaledTime >= deadline)) yield break;
+            if (ready || Time.unscaledTime >= deadline) yield break;
             yield return null;
         }
     }
@@ -64,8 +62,6 @@ public sealed class CookingSubmitEjector : ObjEjector
             else { station.SkipReturn(id); yield return null; }
         }
     }
-
-    protected override float PlayEjectVisual() => station.EjectDuration;
 
     protected override void EjectTarget(Object target, Vector3 direction)
     {

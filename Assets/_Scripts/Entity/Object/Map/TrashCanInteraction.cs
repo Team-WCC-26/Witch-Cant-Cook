@@ -37,6 +37,12 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     [Header("Player Ejection")]
     [SerializeField, Min(0f)] private float playerEjectForce = 8f;
 
+    [Header("Player Camera")]
+    [SerializeField, Min(0f)] private float cameraDistanceOffset = 4f;
+    [SerializeField, Range(0f, 89f)] private float cameraPitch = 65f;
+    private PlayerCameraController localCameraController;
+    private readonly List<Collider> overlapColliders = new();
+
     #endregion
 
     #region Object State
@@ -85,6 +91,7 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     private void FixedUpdate()
     {
+        UpdateLocalCameraView();
         removedIds.Clear();
         foreach (var entry in trackedObjects)
         {
@@ -137,6 +144,10 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     #region Public API
 
     public override Define.eToolId ToolType => Define.eToolId.TrashCan;
+    public Vector3 CameraTargetPos => intakeTrigger != null
+        ? intakeTrigger.bounds.center + Vector3.up * intakeTrigger.bounds.extents.y
+        : transform.position;
+    public float CameraPitch => cameraPitch;
     public override EntityCategory AcceptedCategories => EntityCategory.None;
 
     public override void InitializeRouter(MapObjNetworkRouter router)
@@ -208,6 +219,8 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
 
     public void ResetClientStage()
     {
+        if (localCameraController != null) localCameraController.SetTrashCanView(this, 0f);
+        localCameraController = null;
         ejector?.Reset();
         foreach (var entry in trackedObjects)
         {
@@ -422,12 +435,14 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     private bool Overlaps(Component target)
     {
         if (intakeTrigger == null || target == null) return false;
-        foreach (Collider col in target.GetComponentsInChildren<Collider>(true))
+        target.GetComponentsInChildren(true, overlapColliders);
+        foreach (Collider col in overlapColliders)
         {
             if (!col.gameObject.activeInHierarchy) continue;
             // Exit detection with disabled held colliders
             if (target is CatchableObj obj && col.GetComponentInParent<CatchableObj>() != obj) continue;
             if (target is PlayerBrain && col.GetComponentInParent<CatchableObj>() != null) continue;
+            if (col.enabled && !intakeTrigger.bounds.Intersects(col.bounds)) continue;
             if (Physics.ComputePenetration(intakeTrigger, intakeTrigger.transform.position, intakeTrigger.transform.rotation,
                 col, col.transform.position, col.transform.rotation, out _, out _)) return true;
         }
@@ -437,6 +452,22 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     #endregion
 
     #region Player Tracking
+
+    private void UpdateLocalCameraView()
+    {
+        PlayerSpawnManager spawnManager = PlayerSpawnManager.Instance;
+        PlayerCameraController controller = null;
+        if (spawnManager != null && !string.IsNullOrEmpty(spawnManager.MyID)
+            && spawnManager.TryGetPlayer(spawnManager.MyID, out PlayerBrain player)
+            && player != null && Overlaps(player))
+            controller = player.CameraController;
+
+        if (localCameraController != null && localCameraController != controller)
+            localCameraController.SetTrashCanView(this, 0f);
+        localCameraController = controller;
+        if (localCameraController != null)
+            localCameraController.SetTrashCanView(this, cameraDistanceOffset);
+    }
 
     private void RequestPlayerEntry(PlayerBrain player)
     {

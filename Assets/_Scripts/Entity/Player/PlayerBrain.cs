@@ -251,6 +251,7 @@ public sealed class PlayerBrain : MonoBehaviour
         if (CameraInteractionCast != null)
             CameraInteractionCast.Origin = cam != null ? cam.transform : transform;
         virtualCamera = virtualCam;
+        CameraController?.BindCamera(virtualCam);
         virtualCamera.Target.TrackingTarget = CameraFollowTarget;
         virtualCamera.Target.LookAtTarget = CameraLookAtTarget;
     }

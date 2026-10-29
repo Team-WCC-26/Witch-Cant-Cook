@@ -13,16 +13,11 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     public enum FrontFace { PositiveZ, NegativeZ, PositiveX, NegativeX, PositiveY, NegativeY }
     [Tooltip("Auto: 트리거는 받침대, 일반 콜라이더는 정면 벽으로 사용합니다.")]
     [SerializeField] private SubmissionSurface surface = SubmissionSurface.Auto;
-    [Tooltip("이 받침대의 종. 비워 두면 기존 공통 Bell 이벤트를 사용합니다.")]
-    [SerializeField] private Bell submissionBell;
-    private Bell subscribedBell;
-    private bool usingGlobalBell;
     [Header("Server-confirmed Intake and Ejection")]
     [SerializeField] private Transform suctionPoint;
     [SerializeField] private Transform returnPoint;
     [SerializeField, Min(0.01f)] private float suctionDuration = 0.3f;
-    [SerializeField, Min(0.01f)] private float ejectDuration = 0.2f;
-    [Tooltip("Return Point 기준 로컬 방향. 비어 있으면 제출 영역 기준입니다.")]
+    [Tooltip("Return Point 기준 로컬 방향. 비어 있는 정면 벽은 Front Face를 +Z(전방)로 사용합니다.")]
     [SerializeField] private Vector3 ejectDirection = new(0f, 1f, 1f);
     [SerializeField, Min(0f)] private float ejectForce = 3f;
     [Tooltip("플레이어 쪽을 향한 BoxCollider 면을 선택하세요. 오브젝트의 로컬 축 기준입니다.")]
@@ -48,6 +43,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     [SerializeField] private float ejectRandomRangeYMax = 0.2f;
     [SerializeField, Min(0f)] private float ejectRandomRangeZ = 0.3f;
     private readonly Dictionary<long, SubmittedItem> trackedItems = new();
+    private readonly Dictionary<long, ReturnedPlateBlock> returnedPlateBlocks = new();
     private readonly HashSet<long> queuedEjections = new();
     private readonly Dictionary<long, int> ejectSeeds = new();
     private readonly List<long> staleIds = new();
@@ -57,7 +53,6 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     public override Define.eToolId ToolType => Define.eToolId.CookingSubmit;
     public override EntityCategory AcceptedCategories => EntityCategory.Plate | EntityCategory.Ingredient;
     internal float ResponseTimeout => responseTimeout;
-    internal float EjectDuration => ejectDuration;
     private BoxCollider zone;
     private SubmissionSurface ActiveSurface => surface == SubmissionSurface.Auto
         ? (zone.isTrigger ? SubmissionSurface.Pedestal : SubmissionSurface.FrontWall) : surface;
@@ -93,16 +88,17 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     {
         public CatchableObj Item;
         public long Id;
-        public Vector3 OriginalPosition;
         public Quaternion OriginalRotation;
         public bool CanBePicked;
         public bool Accepted;
         public bool SuctionComplete;
+        public bool Ejecting;
         public bool Returned;
         public float Deadline;
         public float ReleaseAfter;
         public Coroutine Motion;
         public readonly Dictionary<Collider, bool> Colliders = new();
+        public readonly List<(Collider item, Collider station)> IgnoredCollisions = new();
     }
     private sealed class RestSample
     {
@@ -112,6 +108,11 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         public double Since = double.NaN;
         public bool HasPose;
         public void Reset() { Since = double.NaN; HasPose = false; }
+    }
+    private sealed class ReturnedPlateBlock
+    {
+        public CatchableObj Item;
+        public Action Clear;
     }
     private struct SubmissionRequest
     {
@@ -135,13 +136,6 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         if (!activeZones.Contains(this)) activeZones.Add(this);
         if (surface != SubmissionSurface.Auto)
             zone.isTrigger = surface == SubmissionSurface.Pedestal;
-        if (ActiveSurface == SubmissionSurface.Pedestal)
-        {
-            subscribedBell = submissionBell;
-            usingGlobalBell = subscribedBell == null;
-            if (usingGlobalBell) Bell.OnBellRung += OnBellRung;
-            else subscribedBell.Rung += OnBellRung;
-        }
         lastStatus = $"대기: {ActiveSurface}, 정면={frontFace}, IsTrigger={zone.isTrigger}";
         if (logDiagnostics) Debug.Log($"[Submit Ready] {name}: {lastStatus}", this);
     }
@@ -149,10 +143,6 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     {
         activeZones.Remove(this);
         ResetClientStage();
-        if (usingGlobalBell) Bell.OnBellRung -= OnBellRung;
-        if (subscribedBell != null) subscribedBell.Rung -= OnBellRung;
-        usingGlobalBell = false;
-        subscribedBell = null;
     }
     private static CatchableObj GetSubmissionItem(Collider other)
     {
@@ -187,6 +177,10 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     }
     private void FixedUpdate()
     {
+        staleIds.Clear();
+        foreach (var pair in returnedPlateBlocks)
+            if (!IsSameItem(pair.Value.Item, pair.Key)) staleIds.Add(pair.Key);
+        foreach (long id in staleIds) ClearReturnedPlateBlock(id);
         UpdatePedestalSamples();
         staleIds.Clear();
         foreach (var pair in trackedItems)
@@ -194,7 +188,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
             SubmittedItem tracked = pair.Value;
             if (!IsSameItem(tracked.Item, pair.Key) ||
                 (!tracked.Accepted && Time.unscaledTime >= tracked.Deadline) ||
-                (tracked.Returned && Time.fixedTime >= tracked.ReleaseAfter && !OverlapsItem(tracked.Item)))
+                (tracked.Returned && Time.fixedTime >= tracked.ReleaseAfter && !OverlapsEjectionGeometry(tracked)))
                 staleIds.Add(pair.Key);
             else if (tracked.Accepted && !tracked.Returned)
                 foreach (Collider col in tracked.Colliders.Keys)
@@ -330,6 +324,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         if (!item.gameObject.activeInHierarchy) return "비활성 접시";
         if (item.IsSubmissionPending || item.IsSubmissionReturning) return "이미 제출 요청 또는 반환 중";
         if (item.IsHold || item.Holder != null) return "손에 든 접시";
+        if (returnedPlateBlocks.ContainsKey(item.NetworkId)) return "배출한 접시: 플레이어가 다시 집을 때까지 재흡입 금지";
         if (requireLocalOwner && !item.IsLocalOwner &&
             (!string.IsNullOrEmpty(item.LastHolderPlayerId) || Router == null || !Router.IsRegistrar))
             return "이 클라이언트에서 요청할 수 없는 물체";
@@ -490,7 +485,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
             hasTargets = true;
             PrepareReturn(id);
         }
-        if (hasTargets) Ejector.Enqueue(targets, packet.EjectSeed, packet.EjectDelayMs);
+        if (hasTargets) Ejector.Enqueue(targets, packet.EjectSeed);
     }
 
     internal CatchableObj FindItem(long id) =>
@@ -509,13 +504,17 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
     }
 
     internal bool CanEject(long id) => trackedItems.TryGetValue(id, out SubmittedItem tracked) &&
-        IsSameItem(tracked.Item, id) && tracked.SuctionComplete && !tracked.Returned &&
+        IsSameItem(tracked.Item, id) && tracked.SuctionComplete && !tracked.Ejecting && !tracked.Returned &&
         (!tracked.Item.TryGetComponent(out PlateInteraction plate) || plate.IsEmpty);
 
     internal void StartEjection(CatchableObj item, Vector3 direction)
     {
-        if (item == null || !trackedItems.TryGetValue(item.NetworkId, out SubmittedItem tracked)) return;
-        tracked.Motion = StartCoroutine(EjectItem(tracked, direction));
+        if (item == null || !CanEject(item.NetworkId) ||
+            !trackedItems.TryGetValue(item.NetworkId, out SubmittedItem tracked)) return;
+        tracked.Ejecting = true;
+        if (tracked.Motion != null) StopCoroutine(tracked.Motion);
+        tracked.Motion = null;
+        EjectItem(tracked, direction);
     }
 
     internal void SkipReturn(long id)
@@ -530,7 +529,10 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         settings.ejectPoint = returnPoint;
         settings.interval = ejectInterval;
         settings.baseDirection = returnPoint != null
-            ? transform.InverseTransformDirection(returnPoint.TransformDirection(ejectDirection)) : ejectDirection;
+            ? transform.InverseTransformDirection(returnPoint.TransformDirection(ejectDirection))
+            : ActiveSurface == SubmissionSurface.FrontWall
+                ? Quaternion.LookRotation(FrontAxis, Mathf.Abs(FrontAxis.y) > 0.9f ? Vector3.forward : Vector3.up) * ejectDirection
+                : ejectDirection;
         settings.randomRangeX = ejectRandomRangeX;
         settings.randomRangeYMin = ejectRandomRangeYMin;
         settings.randomRangeYMax = ejectRandomRangeYMax;
@@ -546,15 +548,18 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         tracked.Motion = null;
     }
 
-    private IEnumerator EjectItem(SubmittedItem tracked, Vector3 direction)
+    private void EjectItem(SubmittedItem tracked, Vector3 direction)
     {
         CatchableObj item = tracked.Item;
-        Vector3 exit = returnPoint != null ? returnPoint.position : tracked.OriginalPosition;
-        Quaternion rotation = returnPoint != null ? returnPoint.rotation : tracked.OriginalRotation;
-        yield return MoveItem(item, tracked.Id, exit, rotation, ejectDuration);
-        if (!IsSameItem(item, tracked.Id)) yield break;
+        if (!IsSameItem(item, tracked.Id)) return;
+        // With no authored outlet, keep the exact final suction pose. Moving the plate
+        // in front of the wall here causes a visible jump before the actual launch.
+        if (returnPoint != null) SetItemPose(item, returnPoint.position, returnPoint.rotation);
         objectRouter.DetachForContainerEjection(item);
+        // Register before restoring colliders and pickup so no new contact can resubmit it.
+        BlockReturnedPlate(item);
         RestoreItem(tracked);
+        IgnoreEjectionCollisions(tracked);
         if (item.Rb != null)
         {
             item.Rb.linearVelocity = Vector3.zero;
@@ -567,13 +572,80 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         queuedEjections.Remove(tracked.Id);
     }
 
+    private void IgnoreEjectionCollisions(SubmittedItem tracked)
+    {
+        Transform stationRoot = transform.parent != null ? transform.parent : transform;
+        Collider[] stationColliders = stationRoot.GetComponentsInChildren<Collider>();
+        foreach (var entry in tracked.Colliders)
+        {
+            Collider itemCollider = entry.Key;
+            if (!entry.Value || itemCollider == null || !itemCollider.enabled || itemCollider.isTrigger) continue;
+            foreach (Collider stationCollider in stationColliders)
+            {
+                if (!stationCollider.enabled || stationCollider.isTrigger ||
+                    stationCollider.GetComponentInParent<CatchableObj>() != null ||
+                    stationCollider.GetComponentInParent<PlayerBrain>() != null ||
+                    Physics.GetIgnoreCollision(itemCollider, stationCollider)) continue;
+                Physics.IgnoreCollision(itemCollider, stationCollider, true);
+                tracked.IgnoredCollisions.Add((itemCollider, stationCollider));
+            }
+        }
+    }
+
+    private bool OverlapsEjectionGeometry(SubmittedItem tracked)
+    {
+        if (tracked.IgnoredCollisions.Count == 0) return OverlapsItem(tracked.Item);
+        foreach (var pair in tracked.IgnoredCollisions)
+        {
+            if (pair.item == null || pair.station == null || !pair.item.enabled || !pair.station.enabled ||
+                !pair.item.gameObject.activeInHierarchy || !pair.station.gameObject.activeInHierarchy) continue;
+            Bounds bounds = pair.item.bounds;
+            bounds.Expand(0.04f);
+            if (bounds.Intersects(pair.station.bounds)) return true;
+        }
+        return false;
+    }
+
+    private static void RestoreEjectionCollisions(SubmittedItem tracked)
+    {
+        foreach (var pair in tracked.IgnoredCollisions)
+            if (pair.item != null && pair.station != null) Physics.IgnoreCollision(pair.item, pair.station, false);
+        tracked.IgnoredCollisions.Clear();
+    }
+
+    private void BlockReturnedPlate(CatchableObj item)
+    {
+        if (!item.TryGetComponent<PlateInteraction>(out _)) return;
+        long id = item.NetworkId;
+        if (returnedPlateBlocks.ContainsKey(id)) return;
+        var block = new ReturnedPlateBlock { Item = item, Clear = () => ClearReturnedPlateBlock(id) };
+        returnedPlateBlocks.Add(id, block);
+        item.OnPicked += block.Clear;
+        item.OnDespawned += block.Clear;
+    }
+
+    private void ClearReturnedPlateBlock(long id)
+    {
+        if (!returnedPlateBlocks.TryGetValue(id, out ReturnedPlateBlock block)) return;
+        returnedPlateBlocks.Remove(id);
+        if (block.Item != null)
+        {
+            block.Item.OnPicked -= block.Clear;
+            block.Item.OnDespawned -= block.Clear;
+        }
+        // Pickup may happen before the plate has left this station's collider.
+        if (trackedItems.TryGetValue(id, out SubmittedItem tracked) &&
+            tracked.Returned && tracked.Item == block.Item) ForgetItem(id);
+        reportedBlocks.Remove(id);
+    }
+
     private SubmittedItem Track(CatchableObj item)
     {
         if (!trackedItems.TryGetValue(item.NetworkId, out SubmittedItem tracked))
         {
             tracked = new SubmittedItem
             {
-                Item = item, Id = item.NetworkId, OriginalPosition = item.transform.position,
+                Item = item, Id = item.NetworkId,
                 OriginalRotation = item.transform.rotation, CanBePicked = item.CanBePicked,
                 Deadline = Time.unscaledTime + responseTimeout
             };
@@ -592,6 +664,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         if (trackedItems.TryGetValue(id, out SubmittedItem tracked))
         {
             if (tracked.Motion != null) StopCoroutine(tracked.Motion);
+            RestoreEjectionCollisions(tracked);
             if (!tracked.Returned && IsSameItem(tracked.Item, id)) RestoreItem(tracked);
             trackedItems.Remove(id);
         }
@@ -605,7 +678,11 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         if (tracked.Accepted)
         {
             item.transform.SetParent(null, true);
+            Vector3 position = item.transform.position;
+            Quaternion rotation = item.transform.rotation;
             item.SetPhysicsState(true);
+            // Seed the dynamic body at the exact final animation pose before applying force.
+            SetItemPose(item, position, rotation);
             foreach (var col in tracked.Colliders)
                 if (col.Key != null) col.Key.enabled = col.Value;
         }
@@ -631,6 +708,7 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         ejector?.Reset();
         StopAllCoroutines();
         foreach (long id in new List<long>(trackedItems.Keys)) ForgetItem(id);
+        foreach (long id in new List<long>(returnedPlateBlocks.Keys)) ClearReturnedPlateBlock(id);
         queuedEjections.Clear();
         ejectSeeds.Clear();
         foreach (var pair in samples)
@@ -652,9 +730,20 @@ public class SubmitTriggerZone : MapObjInteraction, IEntityParentReceiver
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, duration));
-            item.transform.SetPositionAndRotation(Vector3.Lerp(start, destination, t), Quaternion.Slerp(startRotation, rotation, t));
+            SetItemPose(item, Vector3.Lerp(start, destination, t), Quaternion.Slerp(startRotation, rotation, t));
             yield return null;
         }
-        if (IsSameItem(item, id)) item.transform.SetPositionAndRotation(destination, rotation);
+        if (IsSameItem(item, id)) SetItemPose(item, destination, rotation);
+    }
+
+    private static void SetItemPose(CatchableObj item, Vector3 position, Quaternion rotation)
+    {
+        // Transform-only animation can leave PhysX/interpolation at a previous pose.
+        if (item.Rb != null)
+        {
+            item.Rb.position = position;
+            item.Rb.rotation = rotation;
+        }
+        item.transform.SetPositionAndRotation(position, rotation);
     }
 }
