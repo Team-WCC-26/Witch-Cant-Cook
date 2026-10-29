@@ -134,6 +134,20 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public void ApplyPlatePlacement(Transform slot)
     {
         ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+
+        // Keep the prefab's size in world space, independent of the plate's scale.
+        // Measure each rotated axis so placement rotation and scaled ancestors are included.
+        Quaternion rotation = transform.localRotation;
+        Vector3 inheritedScale = new(
+            slot.TransformVector(rotation * Vector3.right).magnitude,
+            slot.TransformVector(rotation * Vector3.up).magnitude,
+            slot.TransformVector(rotation * Vector3.forward).magnitude);
+
+        const float MinAxisScale = 0.000001f;
+        transform.localScale = new Vector3(
+            inheritedScale.x > MinAxisScale ? originalScale.x / inheritedScale.x : 0f,
+            inheritedScale.y > MinAxisScale ? originalScale.y / inheritedScale.y : 0f,
+            inheritedScale.z > MinAxisScale ? originalScale.z / inheritedScale.z : 0f);
     }
 
     public void RestoreOriginalScale()

@@ -48,7 +48,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2055630435769749224}
-  m_Mesh: {fileID: 4789206286548881375, guid: 68ee6dac8367afd478b84df55c48597b, type: 3}
+  m_Mesh: {fileID: 4789206286548881375, guid: 5000f03962f194c4597b3f7de71a11ed, type: 3}
 --- !u!23 &542662371783880509
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -74,7 +74,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 78bd210f9d9c0184a85628001932032c, type: 2}
+  - {fileID: -5620918211782827528, guid: 5000f03962f194c4597b3f7de71a11ed, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -264,9 +264,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1714957016058418258}
     m_Modifications:
+    - target: {fileID: 1726791132226555275, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_PresetInfoIsWorld
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_Name
       value: GuageUI
+      objectReference: {fileID: 0}
+    - target: {fileID: 5625411912442178209, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7671558560243445453, guid: c9c469a32bd00a64bb28e813adc20a98, type: 3}
       propertyPath: m_Pivot.x
