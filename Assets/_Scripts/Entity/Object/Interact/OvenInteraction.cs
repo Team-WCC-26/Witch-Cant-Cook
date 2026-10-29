@@ -51,16 +51,11 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     #region Runtime State
 
     private const float PlayerDmgInterval = 1f;
-    private enum OvenState { Idle, Waiting, Cooking, EmptyPerformance, Opening }
+    private enum OvenState { Idle, Waiting, Cooking, Opening }
 
-    // Waiting은 서버 응답 대기, EmptyPerformance는 서버 조리 없이 진행하는 로컬 동작이다.
     private OvenState state;
     private float responseDeadline;
     private float cookingDeadline;
-    private bool hasQueuedStart;
-    private bool queuedSendsRequest;
-    private bool queuedHasRoastableIngredients;
-    private float queuedStartTime = float.PositiveInfinity;
     // 무한대이면 아직 문이 완전히 닫히지 않아 유지 시간 계산 전이다.
     private float minOpenTime = float.PositiveInfinity;
 
@@ -98,25 +93,19 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     {
         RefreshOperatingLights();
         if (btnRelay != null) btnRelay.CollisionEntered += HandleButtonCollision;
-        PlayerActionController.RemotePunchPlayed += HandleRemotePunch;
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
     }
 
     private void Update()
     {
         RemoveUnavailableIngredients();
-        UpdateQueuedStart();
         UpdatePlayerDamage();
         UpdateMinimumClosedTime();
         if (state == OvenState.Waiting && Time.unscaledTime >= responseDeadline)
         {
-            // 서버 응답이 없으면 최소 닫힘 시간을 지키는 로컬 동작으로 마무리한다.
-            SetState(OvenState.EmptyPerformance);
-            nextPlayerDmgTime = Time.time + PlayerDmgInterval;
+            CancelPendingStart();
         }
         else if (state == OvenState.Cooking && Time.time >= cookingDeadline && CanOpenDoor())
-            FinishCooking();
-        else if (state == OvenState.EmptyPerformance && CanOpenDoor())
             FinishCooking();
         else if (state == OvenState.Opening
             && (doorController == null || !doorController.IsMoving) && !IsButtonMoving())
@@ -141,7 +130,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void OnDisable()
     {
         if (btnRelay != null) btnRelay.CollisionEntered -= HandleButtonCollision;
-        PlayerActionController.RemotePunchPlayed -= HandleRemotePunch;
         if (subscribeRoutine != null) StopCoroutine(subscribeRoutine);
         subscribeRoutine = null;
         if (subscribedServer != null)
@@ -197,7 +185,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         if (entity == null || !entity.TryGetComponent(out IngredientReaction reaction)) return;
         currentIngredients[entity.NetworkId] = reaction;
         if (state == OvenState.Idle) BeginPendingLock();
-        if (state == OvenState.Waiting || state == OvenState.Cooking)
+        if (state == OvenState.Cooking)
             FreezeIngredient(entity);
         if (state == OvenState.Cooking)
             reaction.GaugeUI?.StartFill(Mathf.Max(0f, cookingDeadline - Time.time));
@@ -212,13 +200,13 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     public void HandleCookStart(CookStartPacket packet)
     {
         if (doorController == null) return;
-        bool alreadyPressed = state == OvenState.Waiting || state == OvenState.EmptyPerformance;
+        bool alreadyCooking = state == OvenState.Cooking;
         requestVersion++;
         if (state != OvenState.Cooking)
             nextPlayerDmgTime = Time.time + PlayerDmgInterval;
         SetState(OvenState.Cooking);
         cookingDeadline = Time.time + Mathf.Max(0f, packet.CookingTimeMs / 1000f);
-        if (!alreadyPressed) PlayButtonMotion();
+        if (!alreadyCooking) PlayButtonMotion();
         EnsureDoorClosed();
         foreach (IngredientReaction reaction in currentIngredients.Values)
         {
@@ -254,35 +242,18 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         BeginButtonPress(Router != null && Router.IsRegistrar);
     }
 
-    private void HandleRemotePunch(PlayerBrain player)
-    {
-        if (IsLocked || mainBtn == null || player == null) return;
-        Transform facing = player.FacingRoot != null ? player.FacingRoot : player.transform;
-        Vector3 offset = mainBtn.position - facing.position;
-        if (offset.sqrMagnitude > player.InteractDistance * player.InteractDistance) return;
-        if (Vector3.Dot(facing.forward, offset.normalized) < 0.5f) return;
-        // 문 연출은 각 클라에서 실행하고 요청은 행동한 클라만 전송한다.
-        BeginButtonPress(false);
-    }
-
     private void BeginButtonPress(bool sendsRequest)
     {
-        if (IsLocked || IsButtonMoving()) return;
+        if (!sendsRequest || IsLocked || IsButtonMoving()) return;
         if (mainBtn == null || innerTrigger == null || doorController == null)
         {
             Debug.LogError("Assign MainBtn, InnerTrigger and OvenDoorController.", this);
             return;
         }
-        bool hasRoastableIngredients = CaptureContents();
+        if (!IsRegistered || ServerManager.Instance == null) return;
+        CaptureContents();
         BeginPendingLock();
-        hasQueuedStart = true;
-        queuedSendsRequest = sendsRequest;
-        queuedHasRoastableIngredients = hasRoastableIngredients;
-        queuedStartTime = float.PositiveInfinity;
-        // 문 닫힘과 가동 지연 중에는 서버 응답 제한시간을 계산하지 않는다.
-        responseDeadline = float.PositiveInfinity;
-        foreach (CatchableObj entity in capturedIngredients.Values)
-            FreezeIngredient(entity);
+        SendStartRequests(requestVersion).Forget();
     }
 
     private void PlayButtonMotion()
@@ -305,33 +276,17 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         SetState(OvenState.Waiting);
         responseDeadline = Time.unscaledTime + startResponseTimeout;
         requestVersion++;
-        PlayButtonMotion();
-        EnsureDoorClosed();
     }
 
-    private void UpdateQueuedStart()
+    private void CancelPendingStart()
     {
-        if (!hasQueuedStart || state != OvenState.Waiting || doorController == null ||
-            !doorController.IsClosed || doorController.IsMoving) return;
-
-        if (float.IsPositiveInfinity(queuedStartTime))
-        {
-            queuedStartTime = Time.time + startDelayAfterClose;
-            minOpenTime = queuedStartTime + emptyOvenWaitDuration;
-        }
-        if (Time.time < queuedStartTime) return;
-
-        hasQueuedStart = false;
-        if (!queuedHasRoastableIngredients)
-        {
-            nextPlayerDmgTime = Time.time + PlayerDmgInterval;
-            SetState(OvenState.EmptyPerformance);
-            return;
-        }
-
-        responseDeadline = Time.unscaledTime + startResponseTimeout;
-        if (!queuedSendsRequest || !IsRegistered || ServerManager.Instance == null) return;
-        SendStartRequests(requestVersion).Forget();
+        requestVersion++;
+        HideAllGauges();
+        RestoreIngredients();
+        ReleasePlayerRecovery();
+        capturedIngredients.Clear();
+        capturedPlayers.Clear();
+        SetState(OvenState.Idle);
     }
 
     private void EnsureDoorClosed()
@@ -343,13 +298,12 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void UpdateMinimumClosedTime()
     {
-        if (state != OvenState.Waiting && state != OvenState.Cooking && state != OvenState.EmptyPerformance)
-            return;
+        if (state != OvenState.Cooking) return;
         if (!float.IsPositiveInfinity(minOpenTime) || doorController == null || !doorController.IsClosed || doorController.IsMoving)
             return;
 
         // 완전히 닫힌 시점부터 최소 유지 시간을 계산한다.
-        minOpenTime = Time.time + emptyOvenWaitDuration;
+        minOpenTime = Time.time + startDelayAfterClose + emptyOvenWaitDuration;
     }
 
     private bool CanOpenDoor()
@@ -386,18 +340,12 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void SetState(OvenState nextState)
     {
         state = nextState;
-        if (nextState != OvenState.Waiting)
-        {
-            hasQueuedStart = false;
-            queuedStartTime = float.PositiveInfinity;
-        }
         RefreshOperatingLights();
     }
 
     private void RefreshOperatingLights()
     {
-        bool isOperating = isActiveAndEnabled &&
-            (state == OvenState.Cooking || state == OvenState.EmptyPerformance);
+        bool isOperating = isActiveAndEnabled && state == OvenState.Cooking;
         if (operatingLights == null) return;
         foreach (Light operatingLight in operatingLights)
             if (operatingLight != null) operatingLight.enabled = isOperating;
@@ -443,8 +391,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             Debug.LogException(exception, this);
             if (isActiveAndEnabled && version == requestVersion)
             {
-                SetState(OvenState.EmptyPerformance);
-                nextPlayerDmgTime = Time.time + PlayerDmgInterval;
+                CancelPendingStart();
             }
         }
     }
@@ -458,10 +405,8 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #region Ingredient Storage and Physics
 
-    // 버튼을 누른 순간 내부 대상을 수집하고 조리 가능한 재료 유무를 반환한다.
-    private bool CaptureContents()
+    private void CaptureContents()
     {
-        bool hasRoastableIngredients = false;
         capturedIngredients.Clear();
         capturedPlayers.Clear();
         Physics.SyncTransforms();
@@ -484,18 +429,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             if (entity.transform.parent != null
                 && entity.transform.parent.GetComponentInParent<CatchableObj>() != null) continue;
             capturedIngredients[entity.NetworkId] = entity;
-            if (CanRoast(entity)) hasRoastableIngredients = true;
         }
-
-        return hasRoastableIngredients;
-    }
-
-    private static bool CanRoast(CatchableObj entity)
-    {
-        if (entity.Data is Ingredient data && (data.conditionFlag & (int)IngredientAction.Cook) != 0)
-            return false;
-        return !entity.TryGetComponent(out IngredientReaction reaction)
-            || !reaction.IsActionCompleted(IngredientAction.Cook);
     }
 
     private void FreezeIngredient(CatchableObj entity)
@@ -597,7 +531,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     // 가열 중 자기 플레이어에게만 틱 피해와 회복 보류를 적용한다.
     private void UpdatePlayerDamage()
     {
-        bool isHeating = state == OvenState.Cooking || state == OvenState.EmptyPerformance;
+        bool isHeating = state == OvenState.Cooking;
         if (!isHeating) return;
 
         bool inside = TryGetLocalPlayerInside(out PlayerBrain player);
