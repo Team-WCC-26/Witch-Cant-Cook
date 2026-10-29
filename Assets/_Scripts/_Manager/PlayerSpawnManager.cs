@@ -15,6 +15,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     [Header("Spawn")]
     [SerializeField] private PlayerBrain playerPrefab = null;
     [SerializeField] private Transform spawnRoot = null;
+    [SerializeField] private Transform playerRespawnPoint = null;
 
     [Header("Camera")]
     [SerializeField] private Camera mainCamera = null;
@@ -185,10 +186,23 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         if (!players.TryGetValue(playerId, out PlayerBrain player))
             return false;
 
-        Transform point = spawnPoint != null ? spawnPoint : spawnRoot;
+        if (playerRespawnPoint == null && spawnRoot != null)
+            playerRespawnPoint = spawnRoot.parent != null
+                ? spawnRoot.parent.Find("SP_PlayerRespawn") : null;
+        bool isStageRunning = RoomHudSession.Instance.State.IsStageRunning;
+        Transform point = spawnPoint != null ? spawnPoint
+            : isStageRunning && playerRespawnPoint != null ? playerRespawnPoint : spawnRoot;
         if (point == null) return false;
 
+        Vector3 previousTargetPos = player.CameraFollowTarget != null
+            ? player.CameraFollowTarget.position : player.transform.position;
         player.Rocket?.StopFlight();
+        foreach (PotInteraction pot in FindObjectsByType<PotInteraction>(FindObjectsSortMode.None))
+            pot.ResetRespawnedPlayer(player);
+        player.ActionController.ResetForRespawn();
+        if (player.StateResolver is LocalPlayerStateResolver local)
+            local.ResetForRespawn();
+        player.Health.IsDmgBlocked = false;
         player.Health.Reset();
         if (player.StateResolver is RemotePlayerStateResolver remote)
             remote.ResetForStageReturn(new Pose(point.position, point.rotation));
@@ -226,6 +240,19 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
             pose.body.angularVelocity = Vector3.zero;
         }
 
+        Physics.SyncTransforms();
+        if (IsMine(playerId))
+        {
+            player.CameraController?.ResetForRespawn(point.rotation);
+            BindCamera(player);
+            if (virtualCamera != null)
+            {
+                if (player.CameraFollowTarget != null)
+                    virtualCamera.OnTargetObjectWarped(player.CameraFollowTarget,
+                        player.CameraFollowTarget.position - previousTargetPos);
+                virtualCamera.PreviousStateIsValid = false;
+            }
+        }
         return true;
     }
 

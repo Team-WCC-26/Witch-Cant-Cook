@@ -803,6 +803,19 @@ public class PotInteraction : MapObjInteraction,
         }
     }
 
+    public void ResetRespawnedPlayer(PlayerBrain player)
+    {
+        bool wasTrapped = trappedPlayers.Remove(player);
+        pendingPlayerEntries.Remove(player.PlayerId);
+        if (!wasTrapped) return;
+        PlayerGlow.SetActive(player, false);
+        if (PlayerSpawnManager.Instance != null && PlayerSpawnManager.Instance.IsMine(player.PlayerId))
+        {
+            RestorePlayerInput();
+            RestorePlayerCamera();
+        }
+    }
+
     private void RestorePlayerInput()
     {
         if (trappedLocalInput != null)

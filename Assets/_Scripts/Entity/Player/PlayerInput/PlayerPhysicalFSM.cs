@@ -41,6 +41,12 @@ public class PlayerPhysicalFSM
         SetMode(PlayerPhysicalMode.Ragdoll);
     }
 
+    public void ResetForRespawn()
+    {
+        isRecoveryPaused = false;
+        SetMode(PlayerPhysicalMode.Default);
+    }
+
     public void SetRecoveryPaused(bool paused)
     {
         if (isRecoveryPaused == paused) return;

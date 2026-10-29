@@ -105,6 +105,17 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         _ = SendMovementPacket();
     }
 
+    public void ResetForRespawn()
+    {
+        physicalFSM.ResetForRespawn();
+        pendingJumpRequested = false;
+        isJumpLocked = false;
+        hasJumpLockStarted = false;
+        nextJumpAllowedTime = 0f;
+        rocketEndSnapshotUntil = 0f;
+        SetCurrentState(new PlayerCombinedState(PlayerPhysicalMode.Default));
+    }
+
     // Request the local ragdoll state.
     public void EnterRagdoll()
     {

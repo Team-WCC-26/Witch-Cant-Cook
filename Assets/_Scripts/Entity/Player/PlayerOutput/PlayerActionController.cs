@@ -40,6 +40,15 @@ public class PlayerActionController
         prevMode = PlayerPhysicalMode.Default;
     }
 
+    public void ResetForRespawn()
+    {
+        ragdollController.Recover();
+        prevMode = PlayerPhysicalMode.Default;
+        awaitingRagdollState = false;
+        pendingPrimaryAction = false;
+        isLaunchJumpActive = false;
+    }
+
     // Enter ragdoll and queue a launch after the initial collapse.
     public void LaunchRagdoll(Vector3 pos, Vector3 impulse)
     {

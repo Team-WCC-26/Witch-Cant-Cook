@@ -197,6 +197,16 @@ public sealed class PlayerCameraController : MonoBehaviour
         ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
     }
 
+    public void ResetForRespawn(Quaternion rot)
+    {
+        yawDeg = NormalizeAngle(rot.eulerAngles.y);
+        pitchDeg = 0f;
+        if (yawRoot != null)
+            yawRoot.SetPositionAndRotation(brain.VisualPos + brain.transform.TransformVector(yawRootLocalPos), YawRotation);
+        if (pitchRoot != null) pitchRoot.localRotation = Quaternion.identity;
+        if (canControlCursor) ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
+    }
+
     private static float NormalizeAngle(float euler)
     {
         float value = euler;
