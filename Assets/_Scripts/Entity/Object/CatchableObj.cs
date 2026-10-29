@@ -136,6 +136,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public event Action OnPicked;
     public event Action OnDropped;
+    public event Action OnDespawned;
     public event Action<Vector3> Thrown;
 
     private void Awake()
@@ -173,6 +174,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     private void OnDestroy()
     {
+        OnDespawned?.Invoke();
         if (Category == EntityCategory.Ingredient) return;
         if (ObjectPoolManager.Instance == null) return;
 
@@ -191,6 +193,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public void ResetForPool()
     {
+        OnDespawned?.Invoke();
         if (ObjectPoolManager.Instance != null &&
             ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) &&
             registered == gameObject)
