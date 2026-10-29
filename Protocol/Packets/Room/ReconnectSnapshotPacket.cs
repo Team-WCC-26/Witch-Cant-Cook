@@ -27,6 +27,7 @@ public enum SnapshotEntityKind : byte
     Tool = 0,
     Ingredient = 1,
     Player = 2,
+    FixedObject = 3, // 룸 고정 오브젝트 (도구가 아니고 클라에서 위치를 알고 있는 것)
 }
 
 /// <summary>
@@ -86,6 +87,7 @@ public partial class EntitySnapshot
     public long CookRemainingMs { get; set; }   // 조리 중인 도구의 조리 남은 시간 (아니면 0)
     public IngredientEffectSnapshot? Effect { get; set; } // 특수재료 현재 효과 상태
     public JumpPadSnapshot? JumpPad { get; set; }         // 점프대 현재 상태
+    public LeaveRoomTriggerSnapshot? LeaveRoomTrigger { get; set; } // 퇴장 트리거 현재 상태
 }
 
 /// <summary>
@@ -99,6 +101,16 @@ public partial class JumpPadSnapshot
     public int FireRound { get; set; }          // 발사 회차 (JumpPadEventPacket.FireRound와 동일 기준)
     public long ChargeRemainingMs { get; set; } // 장전 타이머 남은 시간 (장전 중이 아니면 0)
     public long ReturnRemainingMs { get; set; } // 복귀 타이머 남은 시간 (복귀 중이 아니면 0)
+}
+
+/// <summary>
+/// 스냅샷 퇴장 트리거 상태 (공유 상태와 Idle 복귀 타이머 남은 시간)
+/// </summary>
+[MemoryPackable]
+public partial class LeaveRoomTriggerSnapshot
+{
+    public LeaveRoomTriggerState State { get; set; }
+    public long RevertRemainingMs { get; set; } // Idle 복귀 타이머 남은 시간 (Active가 아니면 0)
 }
 
 /// <summary>
