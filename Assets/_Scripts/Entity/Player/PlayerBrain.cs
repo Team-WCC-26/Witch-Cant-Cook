@@ -209,6 +209,7 @@ public sealed class PlayerBrain : MonoBehaviour
     {
         Rocket?.StopFlight();
         PlayerId = id;
+        PlayerAppearanceCatalog.Apply(this, id);
 
         if (Health != null)
         {
