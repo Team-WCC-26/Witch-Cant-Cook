@@ -191,9 +191,10 @@ MonoBehaviour:
   category: 2
   acceptedCategories: 0
   canBePicked: 0
+  holdAttachment: 2
   holdTransform:
-    localPosition: {x: 0, y: 0, z: 0}
-    localEulerAngles: {x: 0, y: 0, z: 0}
+    localPosition: {x: 0.015570173, y: 0.27149075, z: 0.0885839}
+    localEulerAngles: {x: 303.5137, y: 237.38611, z: 289.39914}
   throwForce: 0
 --- !u!114 &-6970320582916979086
 MonoBehaviour:
@@ -210,6 +211,7 @@ MonoBehaviour:
   catchable: {fileID: -6279900839674582772}
   meshFilter: {fileID: 7551843068437865251}
   targetRenderer: {fileID: 7708652270875949583}
+  meshCollider: {fileID: 0}
   gaugeUI: {fileID: 3226679126005577504}
   wobbleAngle: 12
   wobbleDuration: 0.35

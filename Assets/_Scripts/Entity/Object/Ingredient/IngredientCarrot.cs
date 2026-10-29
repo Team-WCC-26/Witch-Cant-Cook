@@ -26,6 +26,9 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
     [Header("Rocket")]
     [SerializeField] private CarrotRocketSettings rocketSettings = new();
 
+    [Header("Flight Presentation")]
+    [SerializeField] private Vector3 flightEulerAngles = Vector3.zero;
+
     [Header("Optional Flight Effects")]
     [Tooltip("추후 당근 뒤쪽에 배치한 불꽃/연기 파티클을 연결한다.")]
     [SerializeField] private ParticleSystem propulsionParticles;
@@ -36,6 +39,7 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
 
     public CatchableObj Catchable => catchable;
     public CarrotRocketSettings Settings => rocketSettings;
+    public Quaternion FlightRotationOffset => Quaternion.Euler(flightEulerAngles);
     public bool CanRocket => IsTraitAvailable && reaction != null &&
                              !reaction.IsActionCompleted(IngredientAction.Cut);
     public event Action<bool> FlightStateChanged;

@@ -90,7 +90,7 @@ public sealed class PlayerRocketController : MonoBehaviour
         IgnoreNearbyIngredients();
         LiftForLaunch();
         carrot.transform.rotation = Quaternion.LookRotation(flightDirection, Vector3.up) *
-                                    Quaternion.Euler(carrot.Catchable.HoldTransform.LocalEulerAngles);
+                                    carrot.FlightRotationOffset;
         Physics.SyncTransforms();
         brain.Rb.linearVelocity = flightDirection * Mathf.Max(0.1f, carrot.Settings.rocketSpeed);
         (brain.StateResolver as LocalPlayerStateResolver)?.SendRocketSnapshot(false);
@@ -263,7 +263,7 @@ public sealed class PlayerRocketController : MonoBehaviour
     {
         if (!IsFlying || carrot == null || flightDirection.sqrMagnitude < 0.001f) return;
         carrot.transform.rotation = Quaternion.LookRotation(flightDirection, Vector3.up) *
-                                    Quaternion.Euler(carrot.Catchable.HoldTransform.LocalEulerAngles);
+                                    carrot.FlightRotationOffset;
     }
 
     private void OnDisable() => StopFlight();
@@ -446,7 +446,7 @@ public sealed class PlayerRocketController : MonoBehaviour
         if (carrot.Catchable.Col is BoxCollider box)
         {
             Quaternion rotation = Quaternion.LookRotation(flightDirection, Vector3.up) *
-                                  Quaternion.Euler(carrot.Catchable.HoldTransform.LocalEulerAngles);
+                                  carrot.FlightRotationOffset;
             Vector3 scale = box.transform.lossyScale;
             scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
             Vector3 halfSize = Vector3.Scale(box.size, scale) * 0.5f + Vector3.one * CollisionSkin;
