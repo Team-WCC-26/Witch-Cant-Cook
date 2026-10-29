@@ -77,6 +77,10 @@ public class IngredientSquid : IngredientTrait
 
     private void TrySpray(System.Action sprayAction)
     {
+        // Networked hits come exclusively from the server's target list.
+        if (Server.ServerManager.Instance != null && Server.ServerManager.Instance.IsConnected)
+            return;
+
         Debug.Log($"[Squid] TrySpray called, canSpray={canSpray}");
         if (!IsTraitAvailable || !canSpray)
             return;
