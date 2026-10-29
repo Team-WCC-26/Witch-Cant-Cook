@@ -20,6 +20,29 @@ public static class SpriteCache
     private static readonly Dictionary<string, SpriteEntry> entries = new(StringComparer.Ordinal);
     private static Task preloadTask;
     private static int cacheVersion;
+    public static string LoadingStatus
+    {
+        get
+        {
+            int completed = 0;
+            int failed = 0;
+            string pending = null;
+            foreach (var pair in entries)
+            {
+                if (pair.Value.loadCompletion.Task.IsCompleted)
+                {
+                    completed++;
+                    if (pair.Value.isReleased) failed++;
+                }
+                else if (pending == null) pending = pair.Key;
+            }
+            string phase = preloadTask == null ? "Not started" :
+                preloadTask.IsCompleted ? "Complete" : "Preloading";
+            if (pending != null && pending.Length > 70) pending = pending.Substring(0, 70) + "...";
+            return $"{phase} | Finished {completed}/{entries.Count}, failed {failed}" +
+                (pending == null ? "" : $" | Waiting: {pending}");
+        }
+    }
 
     #region Unity Callbacks
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

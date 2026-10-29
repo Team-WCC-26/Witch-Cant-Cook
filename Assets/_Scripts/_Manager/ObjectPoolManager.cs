@@ -86,7 +86,7 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         GameObject go = Pop(key, parent);
         if (go != null)
         {
-            if (go.TryGetComponent(out Rigidbody rb))
+            if (go.TryGetComponent(out Rigidbody rb) && !rb.isKinematic)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
@@ -213,9 +213,9 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         if (go.TryGetComponent(out Rigidbody rb))
         {
+            rb.isKinematic = false;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = false;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.useGravity = true;
             rb.Sleep();

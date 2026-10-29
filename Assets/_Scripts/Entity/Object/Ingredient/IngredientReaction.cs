@@ -345,11 +345,19 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void ApplyColliderMesh(Mesh mesh)
     {
-        if (meshCollider == null) return;
+        if (meshCollider == null || mesh == null) return;
         bool needsConvex = meshCollider.attachedRigidbody != null;
         if (meshCollider.sharedMesh == mesh && (!needsConvex || meshCollider.convex)) return;
-        // Rebuild the collision shape as well as the visible mesh. Keep it valid when thrown.
-        meshCollider.sharedMesh = null;
+
+        // Runtime cooking needs CPU mesh data. Never discard a working collider for
+        // an unreadable action mesh, which would leave the ingredient falling through the map.
+        if (!mesh.isReadable)
+        {
+            Debug.LogWarning($"[IngredientReaction] Cannot rebuild collider for '{mesh.name}': enable Read/Write on its model import settings. Keeping the previous collision mesh.", this);
+            return;
+        }
+
+        // Assigning a different sharedMesh rebuilds it; clearing it first is unnecessary.
         if (needsConvex) meshCollider.convex = true;
         meshCollider.sharedMesh = mesh;
     }

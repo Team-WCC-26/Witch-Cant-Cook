@@ -9,12 +9,21 @@ public class GameManager : Singleton<GameManager>
     protected override void Awake()
     {
         base.Awake();
+        if (Instance != this) return;
         InitBaseManagers();
     }
 
     private async void Start()
     {
-        await ResourceManager.Instance.Init();
+        if (Instance != this) return;
+        try
+        {
+            await ResourceManager.Instance.Init();
+        }
+        catch (System.Exception error)
+        {
+            Debug.LogError($"[GameManager] Resource initialization failed: {error.Message}");
+        }
     }
     #endregion
 
@@ -27,7 +36,9 @@ public class GameManager : Singleton<GameManager>
 
     public void InitManager<T>() where T : Singleton<T>
     {
-        if (Singleton<T>.IsInitialized) return;
+        // Scene components can exist before Awake has set their singleton instance.
+        // Reuse them so a configured DataManager/GSpreadReader is never replaced.
+        if (FindFirstObjectByType<T>() != null) return;
 
         GameObject mngObj = new(typeof(T).Name);
         //mngObj.transform.SetParent(transform, false);

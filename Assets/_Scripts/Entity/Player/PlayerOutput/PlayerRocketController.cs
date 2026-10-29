@@ -164,9 +164,13 @@ public sealed class PlayerRocketController : MonoBehaviour
         {
             brain.Rb.useGravity = savedGravity;
             brain.Rb.linearDamping = savedDamping;
-            brain.Rb.collisionDetectionMode = savedCollisionMode;
-            brain.Rb.linearVelocity = Vector3.zero;
-            brain.Rb.angularVelocity = Vector3.zero;
+            brain.Rb.collisionDetectionMode = brain.Rb.isKinematic
+                ? CollisionDetectionMode.ContinuousSpeculative : savedCollisionMode;
+            if (!brain.Rb.isKinematic)
+            {
+                brain.Rb.linearVelocity = Vector3.zero;
+                brain.Rb.angularVelocity = Vector3.zero;
+            }
             brain.ActionController.Movement.UpdateForcedMovementSpeed();
         }
 
