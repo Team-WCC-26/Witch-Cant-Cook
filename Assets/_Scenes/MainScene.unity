@@ -19563,6 +19563,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4089847840494037143, guid: bc4f2ec28bc655342a82271089a13d3f, type: 3}
   m_PrefabInstance: {fileID: 1761030468}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &656354803 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1014956814800977476, guid: bc4f2ec28bc655342a82271089a13d3f, type: 3}
+  m_PrefabInstance: {fileID: 1761030468}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 196ba576c0d87584fb47dd8f12bfb56e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Door
 --- !u!1 &657541503
 GameObject:
   m_ObjectHideFlags: 0
@@ -34584,6 +34595,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1169060562}
   m_CullTransparentMesh: 1
+--- !u!114 &1171881726 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1014956814800977476, guid: bc4f2ec28bc655342a82271089a13d3f, type: 3}
+  m_PrefabInstance: {fileID: 1741315320}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 196ba576c0d87584fb47dd8f12bfb56e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Door
 --- !u!1 &1175322461
 GameObject:
   m_ObjectHideFlags: 0
@@ -60895,8 +60917,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
   isDestroyOnLoad: 1
-  lobbyDoor: {fileID: 0}
-  kitchenDoor: {fileID: 0}
+  lobbyDoor: {fileID: 1171881726}
+  kitchenDoor: {fileID: 656354803}
   config: {fileID: 11400000, guid: 43162fe9b35490444b9779eebd9ffc73, type: 2}
 --- !u!1 &2081124414
 GameObject:

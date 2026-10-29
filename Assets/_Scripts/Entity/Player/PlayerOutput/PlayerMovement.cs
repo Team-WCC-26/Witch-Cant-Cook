@@ -17,6 +17,7 @@ public class PlayerMovement
     #endregion
 
     private Rigidbody rb => brain.Rb;
+    private bool CanApplyPhysics => rb != null && !rb.isKinematic;
 
     private float forcedMovementUntil;
     private float ejectionStartedAt;
@@ -72,9 +73,8 @@ public class PlayerMovement
     public float FrictionMultiplier { get; set; } = 1f;
 
     private float lastGroundedTime = float.NegativeInfinity;
-    public bool CanJump =>
-        IsGroundedNow ||
-        Time.time - lastGroundedTime <= brain.CoyoteTime;
+    public bool CanJump => CanApplyPhysics &&
+        (IsGroundedNow || Time.time - lastGroundedTime <= brain.CoyoteTime);
 
     public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower, float acceleration, float deceleration)
     {
@@ -88,6 +88,12 @@ public class PlayerMovement
 
     public void Move(Vector2 moveInput, bool isRun)
     {
+        // Remote players and ragdoll roots are driven by transforms, not velocity.
+        if (!CanApplyPhysics)
+        {
+            CurrentSpeed = 0f;
+            return;
+        }
         Quaternion moveRotation =
             brain.CameraController != null
             && brain.CameraController.isActiveAndEnabled
@@ -130,6 +136,8 @@ public class PlayerMovement
 
     public void Stop()
     {
+        CurrentSpeed = 0f;
+        if (!CanApplyPhysics) return;
         rb.linearVelocity = new Vector3(
             0f,
             rb.linearVelocity.y,
@@ -154,7 +162,7 @@ public class PlayerMovement
 
     public void ApplyFallGravity()
     {
-        if (rb.linearVelocity.y >= 0f) return;
+        if (!CanApplyPhysics || rb.linearVelocity.y >= 0f) return;
 
         rb.AddForce(
             Physics.gravity * (brain.FallMultiplier - 1f),

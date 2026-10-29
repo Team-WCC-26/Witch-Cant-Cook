@@ -22,6 +22,8 @@ public class GSpreadReader : Singleton<GSpreadReader>
     [SerializeField] private List<SheetInfo> sheets = new List<SheetInfo>();
     [SerializeField] private float timeoutSeconds = 30f;
 
+    public string LoadingStatus { get; private set; } = "Waiting to initialize";
+
     private Task<bool> initTask;
 
     [NonSerialized] public bool isInit = false;
@@ -86,6 +88,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
         if (success)
         {
             isInit = true;
+            LoadingStatus = "Google Sheets complete";
         }
 
         return success;
@@ -105,6 +108,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
         if (string.IsNullOrEmpty(url))
         {
+            LoadingStatus = "FAILED: Google Sheets URL is not set";
             Debug.LogError("[GSpread] URL is not set.");
             OnLoadFailed?.Invoke("URL이 설정되지 않았습니다.");
             return false;
@@ -128,6 +132,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
         }
 
         isInit = true;
+        LoadingStatus = "Google Sheets complete";
 
         OnLoadProgress?.Invoke(1f, "완료");
         OnLoadComplete?.Invoke();
@@ -137,6 +142,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
     private async Task<bool> LoadSheet(SheetInfo sheet)
     {
+        LoadingStatus = $"Google Sheets: {sheet.className} (gid {sheet.sheetId}, timeout {timeoutSeconds:0}s)";
         string baseUrl = url.Trim(); // url 끝 개행/공백 방어
         string requestUrl = $"{baseUrl}export?format=tsv&gid={sheet.sheetId}";
 
@@ -149,6 +155,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
 
             if (req.result != UnityWebRequest.Result.Success)
             {
+                LoadingStatus = $"FAILED: {sheet.className} - {req.error}";
                 Debug.LogError($"[GSpread] Network error: {req.error}");
                 return false;
             }
@@ -156,6 +163,7 @@ public class GSpreadReader : Singleton<GSpreadReader>
             string response = req.downloadHandler.text;
             if (string.IsNullOrEmpty(response))
             {
+                LoadingStatus = $"FAILED: {sheet.className} returned an empty response";
                 Debug.LogError($"[GSpread] Empty response for {sheet.className}");
                 return false;
             }
