@@ -37,13 +37,9 @@ public class IngredientSquid : IngredientTrait
 
     protected override void StartTrait()
     {
-        Debug.Log($"[Squid] OnEnable called Start");
-
         canSpray = true;
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
-        Debug.Log($"[Squid] OnEnable called End");
-
     }
 
     protected override void StopTrait()
@@ -53,8 +49,6 @@ public class IngredientSquid : IngredientTrait
 
         holdTimer.Stop();
         cooldownTimer.Stop();
-
-        //PushIngredientToPool(catchable);
 
     }
 

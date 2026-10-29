@@ -14,6 +14,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     private bool selectionSyncNeeded;
     private int pendingRequestedStage;
     private bool stageEndPending;
+    private bool hasLeftRoom;
 
     public static StageSelectionSession Instance
     {
@@ -78,6 +79,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     // Door state comes from StageManager.DoorOpened, so neither handler is replaced.
     public void OnRoomJoined(bool hasOtherPlayers = false)
     {
+        hasLeftRoom = false;
         SelectedStageId = 1;
         IsStageRunning = false;
         HasStageSelection = !hasOtherPlayers;
@@ -85,6 +87,19 @@ public sealed class StageSelectionSession : MonoBehaviour
         pendingRequestedStage = 0;
         stageEndPending = false;
         RoomHudSession.Instance.OnRoomJoined();
+        Changed?.Invoke();
+    }
+
+    public void OnRoomLeft()
+    {
+        hasLeftRoom = true;
+        SelectedStageId = 1;
+        IsStageRunning = false;
+        HasStageSelection = false;
+        selectionSyncNeeded = false;
+        pendingRequestedStage = 0;
+        stageEndPending = false;
+        RoomHudSession.Instance.OnRoomLeft();
         Changed?.Invoke();
     }
 
@@ -134,6 +149,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageSet(ReadOnlyMemory<byte> bytes)
     {
+        if (hasLeftRoom) return;
         SelectedStageId = PacketSerializer.Deserialize<StageSetPacket>(bytes).StageNum;
         HasStageSelection = true;
         if (pendingRequestedStage == SelectedStageId) pendingRequestedStage = 0;
@@ -143,6 +159,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageStart(ReadOnlyMemory<byte> bytes)
     {
+        if (hasLeftRoom) return;
         if (stageEndPending) return;
         SelectedStageId = PacketSerializer.Deserialize<StageStartPacket>(bytes).StageNum;
         HasStageSelection = true;
@@ -155,6 +172,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageStop(ReadOnlyMemory<byte> bytes)
     {
+        if (hasLeftRoom) return;
         StageStopPacket packet = PacketSerializer.Deserialize<StageStopPacket>(bytes);
         if (stageEndPending || !IsStageRunning) return;
         stageEndPending = true;
@@ -166,6 +184,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnStageResult(ReadOnlyMemory<byte> bytes)
     {
+        if (hasLeftRoom) return;
         StageResultPacket packet = PacketSerializer.Deserialize<StageResultPacket>(bytes);
         if (!stageEndPending && !IsStageRunning) return;
         stageEndPending = true;
@@ -176,6 +195,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnLobbyMove(ReadOnlyMemory<byte> bytes)
     {
+        if (hasLeftRoom) return;
         PacketSerializer.Deserialize<LobbyMovePacket>(bytes);
         if (stageEndPending) LobbyMoveReceived?.Invoke();
     }
@@ -188,6 +208,7 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     private void OnDoorOpened(DoorId doorId)
     {
+        if (hasLeftRoom) return;
         if (doorId != DoorId.Kitchen || stageEndPending) return;
         IsStageRunning = true;
         selectionSyncNeeded = false;

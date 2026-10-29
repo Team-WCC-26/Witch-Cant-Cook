@@ -64,6 +64,7 @@ public sealed class StageReturnFlow : MonoBehaviour
         room.SettlementRecorded += OnSettlement;
         room.Changed += OnRoomChanged;
         room.RoomJoined += ResetRoom;
+        room.RoomLeft += ResetRoom;
         room.StageTimeEnded += OnTimeEnded;
         room.LobbyMoveReceived += OnLobbyMove;
         OnRoomChanged();
@@ -75,6 +76,7 @@ public sealed class StageReturnFlow : MonoBehaviour
             room.SettlementRecorded -= OnSettlement;
             room.Changed -= OnRoomChanged;
             room.RoomJoined -= ResetRoom;
+            room.RoomLeft -= ResetRoom;
             room.StageTimeEnded -= OnTimeEnded;
             room.LobbyMoveReceived -= OnLobbyMove;
         }

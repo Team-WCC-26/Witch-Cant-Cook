@@ -150,6 +150,17 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         }
     }
 
+    public void ReturnRoomObjects()
+    {
+        // Active room entities are also parented below the persistent pool root.
+        if (_poolRoot != null)
+        {
+            foreach (CatchableObj item in _poolRoot.GetComponentsInChildren<CatchableObj>(true))
+                if (item != null && item.gameObject.activeInHierarchy) Push(item.gameObject);
+        }
+        activeObjDict.Clear();
+    }
+
     private GameObject CreateNewInstance(string key)
     {
         using var scope = CreateMarker.Auto();

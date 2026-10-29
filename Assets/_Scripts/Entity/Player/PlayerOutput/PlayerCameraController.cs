@@ -46,6 +46,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     private Quaternion throwPointLocalRotation = Quaternion.identity;
 
     private bool canControlCursor = false;
+    private bool cursorReleased;
     private Vector3 yawRootLocalPos;
 
     #region Unity Callbacks
@@ -107,7 +108,7 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
 
-        ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
+        RefreshCursor();
     }
 
     private void OnDisable()
@@ -129,17 +130,13 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
         bool cursorChanged = false;
-        if (canControlCursor && lockCursor && Application.isFocused && !input.IsInputBlocked)
+        if (canControlCursor && lockCursor && Application.isFocused && !StageReturnFlow.IsInputBlocked)
         {
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && (keyboard.leftAltKey.wasPressedThisFrame || keyboard.rightAltKey.wasPressedThisFrame))
             {
-                ApplyCursor(false);
-                cursorChanged = true;
-            }
-            else if (Cursor.lockState != CursorLockMode.Locked
-                && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                ApplyCursor(true);
+                cursorReleased = !cursorReleased;
+                RefreshCursor();
                 cursorChanged = true;
             }
         }
@@ -190,7 +187,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     {
         if (canControlCursor)
         {
-            ApplyCursor(focus && lockCursor && !StageReturnFlow.IsInputBlocked);
+            RefreshCursor(focus);
         }
     }
     #endregion
@@ -228,7 +225,7 @@ public sealed class PlayerCameraController : MonoBehaviour
 
         canControlCursor = true;
         enabled = true;
-        ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
+        RefreshCursor();
     }
 
     public void ResetForRespawn(Quaternion rot)
@@ -239,7 +236,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         if (yawRoot != null)
             yawRoot.SetPositionAndRotation(brain.VisualPos + brain.transform.TransformVector(yawRootLocalPos), YawRotation);
         if (pitchRoot != null) pitchRoot.localRotation = Quaternion.identity;
-        if (canControlCursor) ApplyCursor(lockCursor && !StageReturnFlow.IsInputBlocked);
+        if (canControlCursor) RefreshCursor();
     }
 
     private void UpdateCameraView()
@@ -294,6 +291,11 @@ public sealed class PlayerCameraController : MonoBehaviour
         }
 
         return value;
+    }
+
+    private void RefreshCursor(bool focused = true)
+    {
+        ApplyCursor(focused && lockCursor && !cursorReleased && !StageReturnFlow.IsInputBlocked);
     }
 
     private static void ApplyCursor(bool locked)

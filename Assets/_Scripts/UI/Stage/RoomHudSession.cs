@@ -19,6 +19,7 @@ public sealed class RoomHudSession : MonoBehaviour
     public bool LastPendingMoneyStageRunning { get; private set; }
     public event Action Changed;
     public event Action RoomJoined;
+    public event Action RoomLeft;
     public event Action StageTimeEnded;
     public event Action LobbyMoveReceived;
     public event Action<StageSettlementData> SettlementRecorded;
@@ -76,6 +77,20 @@ public sealed class RoomHudSession : MonoBehaviour
 
     public void OnRoomJoined()
     {
+        ResetRoom();
+        RoomJoined?.Invoke();
+        OnStageChanged();
+    }
+
+    public void OnRoomLeft()
+    {
+        ResetRoom();
+        RoomLeft?.Invoke();
+        Changed?.Invoke();
+    }
+
+    private void ResetRoom()
+    {
         State.ResetRoom();
         PendingMoneyPacketCount = 0;
         LastReceivedPendingMoney = null;
@@ -84,8 +99,6 @@ public sealed class RoomHudSession : MonoBehaviour
         LastPendingMoneyReceivedAt = 0;
         LastPendingMoneyStageRunning = false;
         Lobby.Reset();
-        RoomJoined?.Invoke();
-        OnStageChanged();
     }
 
     public void NotifyLobbyReturned()

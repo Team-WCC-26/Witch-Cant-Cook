@@ -118,7 +118,14 @@ namespace Server
 
         public void ExitRoom()
         {
+            ExitRoomAsync().Forget();
+        }
 
+        public async UniTask ExitRoomAsync()
+        {
+            if (IsConnected)
+                await SendData(PacketSerializer.Serialize(new LeaveRoomPacket()));
+            IsEnterRoom = false;
         }
     }
 }

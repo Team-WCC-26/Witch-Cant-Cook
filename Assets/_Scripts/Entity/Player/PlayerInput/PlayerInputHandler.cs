@@ -17,7 +17,7 @@ public class PlayerInputHandler : MonoBehaviour
     public event Action<KeyInput> InputPerformed;
 
     private bool inputBlocked;
-    public bool IsInputBlocked { get => inputBlocked || StageReturnFlow.IsInputBlocked; set => inputBlocked = value; }
+    public bool IsInputBlocked { get => inputBlocked || StageReturnFlow.IsInputBlocked || LobbyHudUI.IsInputBlocked; set => inputBlocked = value; }
     public bool IsMovementBlocked { get; set; }
     private Vector2 rawMoveDir;
     private Vector2 rawLookDelta;
