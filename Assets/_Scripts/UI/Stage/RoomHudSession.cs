@@ -117,6 +117,11 @@ public sealed class RoomHudSession : MonoBehaviour
 
     public void OnPlayerEntered(string id) { if (Lobby.AddPlayer(id)) Changed?.Invoke(); }
     public void OnPlayerLeft(string id) { if (Lobby.RemovePlayer(id)) Changed?.Invoke(); }
+    public void SetDoorPlatePresence(DoorId door, string playerId, bool present)
+    {
+        if (door != DoorId.Kitchen) return;
+        if (Lobby.SetPlayerOnDoorPlate(playerId, present, Time.unscaledTimeAsDouble)) Changed?.Invoke();
+    }
     // Remote voice SDK callbacks should call this with the associated protocol player ID.
     public void SetPlayerSpeaking(string id, bool speaking) { if (Lobby.SetSpeaking(id, speaking)) Changed?.Invoke(); }
 

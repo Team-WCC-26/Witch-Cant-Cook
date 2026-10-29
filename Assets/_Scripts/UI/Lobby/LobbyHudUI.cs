@@ -18,6 +18,8 @@ public sealed class LobbyHudUI : UIBase
     [SerializeField] private Image[] voiceIcons = System.Array.Empty<Image>();
     [SerializeField] private Sprite speakingIcon;
     [SerializeField] private Sprite idleIcon;
+    [Header("Door countdown")]
+    [SerializeField] private TMP_Text doorCountdownText;
     [Header("Return to title (lobby only)")]
     [SerializeField] private GameObject returnConfirmation;
     [SerializeField] private TMP_Text returnConfirmationText;
@@ -51,11 +53,13 @@ public sealed class LobbyHudUI : UIBase
         if (confirmReturnButton != null) confirmReturnButton.onClick.RemoveListener(ConfirmReturn);
         if (cancelReturnButton != null) cancelReturnButton.onClick.RemoveListener(CancelReturn);
         CloseReturnConfirmation();
+        if (doorCountdownText != null) doorCountdownText.gameObject.SetActive(false);
         session = null;
     }
 
     private void Update()
     {
+        RefreshDoorCountdown();
         Keyboard keyboard = Keyboard.current;
         if (session == null || keyboard == null) return;
         if (modalOwner == this)
@@ -78,6 +82,15 @@ public sealed class LobbyHudUI : UIBase
     }
 
     private void ToggleCode() { showCode = !showCode; Refresh(); }
+
+    private void RefreshDoorCountdown()
+    {
+        if (doorCountdownText == null) return;
+        int remaining = session != null ? session.Lobby.GetDoorCountdown(Time.unscaledTimeAsDouble) : 0;
+        bool visible = remaining > 0;
+        if (doorCountdownText.gameObject.activeSelf != visible) doorCountdownText.gameObject.SetActive(visible);
+        if (visible) doorCountdownText.SetText("{0}", remaining);
+    }
 
     private static void ConfigureReturnButton(Button button, string label)
     {
@@ -151,6 +164,7 @@ public sealed class LobbyHudUI : UIBase
     private void Refresh()
     {
         if (session == null) return;
+        RefreshDoorCountdown();
         LobbyHudState lobby = session.Lobby;
         if (roomCodeText != null) roomCodeText.text = showCode ? lobby.RoomCode : "******";
         if (moneyText != null) moneyText.text = "보유 황금 콩 - " +
