@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 [Serializable]
 public class CarrotRocketSettings
@@ -31,6 +32,10 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
     [SerializeField] private ParticleSystem propulsionParticles;
     [SerializeField] private AudioSource propulsionAudio;
 
+    [Header("Flight Events")]
+    [SerializeField] private UnityEvent onFlightStarted = new();
+    [SerializeField] private UnityEvent onFlightStopped = new();
+
     private PlayerRocketController pilot;
     private bool presentingFlight;
 
@@ -38,7 +43,6 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
     public CarrotRocketSettings Settings => rocketSettings;
     public bool CanRocket => IsTraitAvailable && reaction != null &&
                              !reaction.IsActionCompleted(IngredientAction.Cut);
-    public event Action<bool> FlightStateChanged;
 
     private void Awake()
     {
@@ -114,7 +118,8 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
 
         if (presentingFlight == flying) return;
         presentingFlight = flying;
-        FlightStateChanged?.Invoke(flying);
+        if (flying) onFlightStarted.Invoke();
+        else onFlightStopped.Invoke();
     }
 
     private void OnDropped() => StopRocket();
