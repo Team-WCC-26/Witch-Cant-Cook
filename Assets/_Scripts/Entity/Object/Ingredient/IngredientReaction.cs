@@ -82,6 +82,17 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     [Header("Action Visuals")]
     [SerializeField] private IngredientActionVisual[] actionVisuals;
 
+    [Header("Grill Overlay")]
+    [SerializeField] private Color grillColor = new Color(55f / 255f, 22f / 255f, 6f / 255f, 1f);
+    [SerializeField] private Vector3 grillEuler = new Vector3(0f, 0f, 25f);
+    [SerializeField, Min(1f)] private float grillStripeCount = 5f;
+    [SerializeField, Range(0.01f, 0.9f)] private float grillStripeWidth = 0.34f;
+    [SerializeField, Range(0f, 1f)] private float grillStripeOffset;
+    private MeshFilter grillMeshFilter;
+    private MeshRenderer grillRenderer;
+    private Material grillMaterial;
+    private bool grillPreview;
+
     #region Unity Callbacks
 
     private void Awake()
@@ -94,6 +105,18 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private void OnDisable()
     {
         StopHitWobble();
+        grillPreview = false;
+        if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);
+    }
+
+    private void LateUpdate()
+    {
+        UpdateGrillOverlay();
+    }
+
+    private void OnDestroy()
+    {
+        ReleaseGrillOverlay();
     }
 
     #endregion
@@ -127,6 +150,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         InitializeGauge();
         lastAction = IngredientAction.None;
         completedActions = IngredientAction.None;
+        grillPreview = false;
+        if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);
         lastCutProcess = 0f;
         wobbleDirection = 1f;
 
@@ -294,6 +319,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             PlayCutParticle();
         }
         ApplyVisual(completedActions);
+        UpdateGrillOverlay();
         if (newlyCompleted != IngredientAction.None)
             OnActionCompleted?.Invoke(newlyCompleted);
     }
@@ -371,6 +397,84 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         targetRenderer.sharedMaterials = materials;
     }
     #endregion
+
+    private void UpdateGrillOverlay()
+    {
+        bool visible = isActiveAndEnabled && (grillPreview || IsActionCompleted(IngredientAction.Grill));
+        if (!visible)
+        {
+            if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);
+            return;
+        }
+
+        if (meshFilter == null) meshFilter = GetComponentInChildren<MeshFilter>();
+        if (targetRenderer == null && meshFilter != null) targetRenderer = meshFilter.GetComponent<Renderer>();
+        bool wobbling = wobblePivot != null && wobblePivot.gameObject.activeSelf;
+        MeshFilter sourceFilter = wobbling ? wobbleMeshFilter : meshFilter;
+        Renderer sourceRenderer = wobbling ? wobbleMeshRenderer : targetRenderer;
+        if (sourceFilter == null || sourceFilter.sharedMesh == null || sourceRenderer == null) return;
+
+        if (grillMaterial == null)
+        {
+            Shader shader = Resources.Load<Shader>("VFX/IngredientGrillOverlay");
+            if (shader == null) return;
+            grillMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+        }
+        if (grillRenderer == null)
+        {
+            GameObject overlay = new GameObject("GrillOverlay") { hideFlags = HideFlags.HideAndDontSave };
+            grillMeshFilter = overlay.AddComponent<MeshFilter>();
+            grillRenderer = overlay.AddComponent<MeshRenderer>();
+            grillRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            grillRenderer.receiveShadows = false;
+            grillRenderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+            grillRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        }
+
+        Transform overlayTransform = grillRenderer.transform;
+        if (overlayTransform.parent != sourceFilter.transform)
+            overlayTransform.SetParent(sourceFilter.transform, false);
+        overlayTransform.localPosition = Vector3.zero;
+        overlayTransform.localRotation = Quaternion.identity;
+        overlayTransform.localScale = Vector3.one;
+        grillRenderer.gameObject.layer = sourceRenderer.gameObject.layer;
+        grillRenderer.renderingLayerMask = sourceRenderer.renderingLayerMask;
+        grillRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
+        grillRenderer.sortingOrder = sourceRenderer.sortingOrder;
+        Mesh mesh = sourceFilter.sharedMesh;
+        if (grillMeshFilter.sharedMesh != mesh)
+        {
+            grillMeshFilter.sharedMesh = mesh;
+            Material[] materials = new Material[mesh.subMeshCount];
+            for (int index = 0; index < materials.Length; index++) materials[index] = grillMaterial;
+            grillRenderer.sharedMaterials = materials;
+        }
+
+        // Normalize by one uniform size to preserve continuity across all surface faces.
+        Bounds bounds = mesh.bounds;
+        float size = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+        grillMaterial.SetColor("_StripeColor", grillColor);
+        grillMaterial.SetVector("_StripeDirection", Quaternion.Euler(grillEuler) * Vector3.right);
+        grillMaterial.SetVector("_BoundsCenter", bounds.center);
+        grillMaterial.SetFloat("_StripeScale", Mathf.Max(1f, grillStripeCount) / Mathf.Max(size, 0.0001f));
+        grillMaterial.SetFloat("_StripeWidth", grillStripeWidth);
+        grillMaterial.SetFloat("_StripeOffset", grillStripeOffset);
+        grillRenderer.gameObject.SetActive(sourceRenderer.enabled && sourceRenderer.gameObject.activeInHierarchy);
+    }
+
+    private void ReleaseGrillOverlay()
+    {
+        if (grillRenderer != null)
+        {
+            if (Application.isPlaying) Destroy(grillRenderer.gameObject);
+            else DestroyImmediate(grillRenderer.gameObject);
+        }
+        if (grillMaterial != null)
+        {
+            if (Application.isPlaying) Destroy(grillMaterial);
+            else DestroyImmediate(grillMaterial);
+        }
+    }
 
     #region helper methods
     private void InitializeGauge()
@@ -479,5 +583,18 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         if (targetRenderer != null)
             targetRenderer.enabled = true;
     }
+    #endregion
+
+    #region Editor
+#if UNITY_EDITOR
+    public bool GrillPreview => grillPreview;
+
+    public void SetGrillPreview(bool preview)
+    {
+        grillPreview = preview;
+        if (preview) UpdateGrillOverlay();
+        else ReleaseGrillOverlay();
+    }
+#endif
     #endregion
 }
