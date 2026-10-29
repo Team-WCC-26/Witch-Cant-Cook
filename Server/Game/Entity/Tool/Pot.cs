@@ -42,12 +42,7 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
 
         if (entity is Ingredient) return true;
 
-        if (entity is Dish dish && dish.First == null)
-        {
-            TryStartCook(dish);
-
-            return true;
-        }
+        if (entity is Dish dish && dish.First == null && TryStartCook(dish)) return true;
 
         PendAutoEject(entity);
 
