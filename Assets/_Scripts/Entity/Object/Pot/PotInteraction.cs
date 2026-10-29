@@ -4,6 +4,7 @@ using Protocol;
 using Server;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum PotState
 {
@@ -28,6 +29,11 @@ public class PotInteraction : MapObjInteraction,
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
     [SerializeField] private Animator cookingVisualAnimator;
+    [SerializeField] private GameObject ingredientIcons;
+    [SerializeField] private Image[] ingredientSlots;
+    [SerializeField] private GameObject potIcon;
+    private const int MaxIngredientIcons = 4;
+    private int iconVersion;
 
     [Header("솥 시점")]
     [SerializeField] private CinemachineCamera potCamera;
@@ -199,6 +205,8 @@ public class PotInteraction : MapObjInteraction,
         state = PotState.Idle;
         lastCookCompleteEffectDishId = 0;
 
+        ClearIngredientIcons();
+
         // Object storage
         pendingObjects.Clear();
         storedObjects.Clear();
@@ -219,7 +227,7 @@ public class PotInteraction : MapObjInteraction,
         // Ejection
         ejector?.Reset();
 
-        gaugeUI?.Hide();
+        HideCookingUI();
         cookingVisualActive = false;
         visualOverrideUntilTime = 0f;
         visualOverrideStateHash = 0;
@@ -301,7 +309,10 @@ public class PotInteraction : MapObjInteraction,
         if (recipeObjects.Count == 0) return;
 
         ChangeState(PotState.Cooking);
-        gaugeUI?.StartFill(duration);
+        ClearIngredientIcons();
+        SetGaugePartsActive(true);
+        if (potIcon != null) potIcon.SetActive(true);
+        gaugeUI?.StartFill(duration, HideCookingUI);
     }
 
     // 강제 배출 패킷 전송
@@ -333,6 +344,7 @@ public class PotInteraction : MapObjInteraction,
     {
         CatchableObj[] consumedObjects = recipeObjects.ToArray();
         recipeObjects.Clear();
+        RefreshIngredientIcons();
 
         foreach (CatchableObj catchable in consumedObjects)
         {
@@ -342,6 +354,69 @@ public class PotInteraction : MapObjInteraction,
             storedObjects.Remove(catchable);
             postEjectObjects.Remove(catchable);
         }
+    }
+
+    #endregion
+
+    #region Ingredient UI
+
+    private void ClearIngredientIcons()
+    {
+        iconVersion++;
+        if (ingredientIcons == null) return;
+        ingredientIcons.SetActive(false);
+        foreach (Transform child in ingredientIcons.GetComponentsInChildren<Transform>(true))
+        {
+            if (child != ingredientIcons.transform) child.gameObject.SetActive(false);
+        }
+        if (ingredientSlots == null) return;
+        foreach (Image slot in ingredientSlots)
+        {
+            if (slot == null) continue;
+            slot.sprite = null;
+            slot.enabled = false;
+        }
+    }
+
+    private void RefreshIngredientIcons()
+    {
+        ClearIngredientIcons();
+        if (state != PotState.Cooking) HideCookingUI();
+        if (!isActiveAndEnabled || state != PotState.Idle || recipeObjects.Count == 0 ||
+            ingredientIcons == null || ingredientSlots == null) return;
+
+        HideCookingUI();
+        SetGaugePartsActive(false);
+        // The existing gauge canvas also owns the ingredient row.
+        if (gaugeUI != null) gaugeUI.gameObject.SetActive(true);
+        ingredientIcons.SetActive(true);
+        int version = iconVersion;
+        int count = Mathf.Min(recipeObjects.Count, Mathf.Min(MaxIngredientIcons, ingredientSlots.Length));
+        for (int index = 0; index < count; index++)
+        {
+            CatchableObj ingredient = recipeObjects[index];
+            Image slot = ingredientSlots[index];
+            if (slot == null || ingredient == null) continue;
+            slot.gameObject.SetActive(true);
+            string address = (ingredient.Data as Ingredient)?.IconName;
+            SpriteCache.Assign(slot, address, () => this != null && isActiveAndEnabled &&
+                iconVersion == version && state == PotState.Idle);
+        }
+    }
+
+    private void HideCookingUI()
+    {
+        if (potIcon != null) potIcon.SetActive(false);
+        gaugeUI?.Hide();
+    }
+
+    private void SetGaugePartsActive(bool active)
+    {
+        if (gaugeUI == null) return;
+        Transform background = gaugeUI.transform.Find("BG");
+        Transform fill = gaugeUI.transform.Find("Fill");
+        if (background != null) background.gameObject.SetActive(active);
+        if (fill != null) fill.gameObject.SetActive(active);
     }
 
     #endregion
@@ -378,6 +453,7 @@ public class PotInteraction : MapObjInteraction,
         if (!TryStoreObject(catchable, parentRecipe)) return;
 
         recipeObjects.Add(catchable);
+        RefreshIngredientIcons();
     }
 
     // 조리 시작 그릇 보관
@@ -463,7 +539,7 @@ public class PotInteraction : MapObjInteraction,
     internal void BeginEjection()
     {
         pendingCookingDuration = null;
-        gaugeUI?.Hide();
+        HideCookingUI();
         ChangeState(PotState.Ejecting);
     }
 
@@ -523,6 +599,7 @@ public class PotInteraction : MapObjInteraction,
 
         if (cookingBowl == catchable)
             cookingBowl = null;
+        RefreshIngredientIcons();
     }
 
     // 현재 배출 완료 및 신규 진입 보존
@@ -737,6 +814,7 @@ public class PotInteraction : MapObjInteraction,
     {
         if (state == nextState) return;
         state = nextState;
+        RefreshIngredientIcons();
     }
 
     #endregion
@@ -855,7 +933,7 @@ public class PotInteraction : MapObjInteraction,
         if (packet == null) return;
 
         pendingCookCompletePacket = packet;
-        gaugeUI?.Hide();
+        HideCookingUI();
         RemoveConsumedObj();
         PlayCookCompleteEffect(packet.DishEntityId);
     }
