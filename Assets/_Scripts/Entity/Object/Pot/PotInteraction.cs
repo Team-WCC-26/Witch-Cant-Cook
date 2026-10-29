@@ -158,6 +158,9 @@ public class PotInteraction : MapObjInteraction,
 
         CatchableObj catchable = other.GetComponentInParent<CatchableObj>();
         if (catchable == null) return;
+        // A spawn/flight collision (including a stun) must not count as a player placing a fish.
+        if (catchable.TryGetComponent(out IngredientNalchi nalchi) && nalchi.IsAutonomous) return;
+        if (catchable.TryGetComponent(out IngredientTraitFly flight) && flight.IsFlying) return;
         if (storedObjects.Contains(catchable) || !pendingObjects.Add(catchable)) return;
 
         RequestObjEntry(catchable);

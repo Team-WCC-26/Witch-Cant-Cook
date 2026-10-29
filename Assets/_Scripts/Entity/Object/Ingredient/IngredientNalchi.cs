@@ -24,6 +24,8 @@ public class IngredientNalchi : IngredientTrait
     private readonly IngredientTraitTimer stunTimer = new();
 
     private bool isStunned;
+    // Spawned/wandering fish, including one stunned during flight, require a player pickup before pot intake.
+    public bool IsAutonomous { get; private set; }
 
     private void Awake()
     {
@@ -43,6 +45,7 @@ public class IngredientNalchi : IngredientTrait
         catchable.OnDropped += OnDropped;
 
         isStunned = false;
+        IsAutonomous = true;
         flyTrait.StopFlying();
         BeginFlyDelay();
     }
@@ -55,6 +58,7 @@ public class IngredientNalchi : IngredientTrait
         flyDelayTimer.Stop();
         stunTimer.Stop();
         flyTrait.StopFlying();
+        IsAutonomous = false;
     }
 
     private void Update()
@@ -85,13 +89,12 @@ public class IngredientNalchi : IngredientTrait
 
     private void BeginFly()
     {
-        if (!IsTraitAvailable || isStunned)
+        if (!IsTraitAvailable || isStunned || catchable.IsHold)
             return;
 
-        // 비행 중에는 스크립트가 직접 위치를 옮기므로, 물리 힘의 영향을 받지 않게 kinematic으로 전환.
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-        rb.isKinematic = true;
+        // The flight trait owns its physics and releases conveyor movement when takeoff succeeds.
         flyTrait.StartFlying();
+        if (flyTrait.IsFlying) IsAutonomous = true;
     }
     #endregion
 
@@ -122,6 +125,7 @@ public class IngredientNalchi : IngredientTrait
     #region Catchable
     private void OnPicked()
     {
+        IsAutonomous = false;
         // 들고 있는 동안에는 비행/대기/기절 상태가 전부 의미 없으므로 모두 정지시킨다.
         flyDelayTimer.Stop();
         stunTimer.Stop();
@@ -132,6 +136,7 @@ public class IngredientNalchi : IngredientTrait
 
     private void OnDropped()
     {
+        IsAutonomous = false;
         // 손에서 놓으면 물리(중력)가 적용되도록 kinematic을 해제한다.
         // 이걸 안 해주면 CatchableObj가 들고 있는 동안 켜둔 kinematic이 그대로 남아
         // 놓은 자리에 그대로 박제된 것처럼 보인다.

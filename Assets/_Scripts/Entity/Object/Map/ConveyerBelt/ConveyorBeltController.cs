@@ -86,6 +86,8 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
     {
         if (ConveyorBeltRegistry.IsOwnedByAnyBelt(serverItemId)) return; // 다른 벨트가 이미 담당 중이면 무시
 
+        if (itemObject.TryGetComponent(out IngredientTraitFly flight) && flight.IsFlying) return;
+
         itemObject.TryGetComponent(out CatchableObj catchable);
 
         Vector3 currentPos = itemTransform.position;
