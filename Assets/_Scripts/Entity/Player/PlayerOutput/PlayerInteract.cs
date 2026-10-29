@@ -433,8 +433,19 @@ public class PlayerInteract
 
     private Vector3 GetThrowDirection(Transform origin)
     {
-        Quaternion angleOffset = Quaternion.AngleAxis(-brain.ThrowAngle, origin.right);
-        return (angleOffset * origin.forward).normalized;
+        float pitchAngle = brain.ThrowAngle;
+        if (brain.UseDownwardThrowCompensation)
+        {
+            float lookDownAngle = Mathf.Asin(Mathf.Clamp(-origin.forward.y, -1f, 1f)) * Mathf.Rad2Deg;
+            float startAngle = Mathf.Max(0f, brain.DownwardThrowStartAngle);
+            float fullAngle = Mathf.Max(startAngle + 0.01f, brain.DownwardThrowFullAngle);
+            float correction = Mathf.InverseLerp(startAngle, fullAngle, lookDownAngle);
+            pitchAngle = Mathf.Lerp(pitchAngle, brain.DownwardThrowFinalAngle, correction);
+        }
+
+        Quaternion pitchOffset = Quaternion.AngleAxis(-pitchAngle, origin.right);
+        Quaternion yawOffset = Quaternion.AngleAxis(brain.ThrowYawAngle, Vector3.up);
+        return (yawOffset * pitchOffset * origin.forward).normalized;
     }
 
     private float GetThrowForce()

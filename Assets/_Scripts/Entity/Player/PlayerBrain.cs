@@ -74,9 +74,22 @@ public sealed class PlayerBrain : MonoBehaviour
 
     [field: Header("Throw")]
     [field: SerializeField] public float ThrowForce { get; private set; } = 8.0f;
-    [field: SerializeField] public float ThrowAngle { get; private set; } = 0.0f;
+    [field: SerializeField, Tooltip("위아래 투척 각도(도). 양수는 위쪽, 음수는 아래쪽입니다.")]
+    public float ThrowAngle { get; private set; } = 0.0f;
+    [field: SerializeField, Range(-180f, 180f), Tooltip("좌우 투척 각도(도). 양수는 오른쪽, 음수는 왼쪽입니다. 0이면 기존 방향을 유지합니다.")]
+    public float ThrowYawAngle { get; private set; } = 0.0f;
     [field: SerializeField, Min(0.1f)] public float ThrowMaxDistance { get; private set; } = 15f;
     [field: SerializeField] public Material ThrowTrajectoryMaterial { get; private set; }
+
+    [field: Header("Downward Throw Compensation")]
+    [field: SerializeField, Tooltip("아래를 볼수록 기본 상승 보정 각도를 줄입니다.")]
+    public bool UseDownwardThrowCompensation { get; private set; } = true;
+    [field: SerializeField, Range(0f, 89f), Tooltip("하향 보정을 시작하는 시선 각도(도). 0은 수평입니다.")]
+    public float DownwardThrowStartAngle { get; private set; } = 0f;
+    [field: SerializeField, Range(0f, 89f), Tooltip("하향 보정이 완전히 적용되는 시선 각도(도). 시작 각도보다 크게 설정하세요.")]
+    public float DownwardThrowFullAngle { get; private set; } = 45f;
+    [field: SerializeField, Range(-90f, 90f), Tooltip("보정 완료 시 시선에 더할 각도(도). 0은 시선 방향, 음수는 더 가파른 아래 방향입니다.")]
+    public float DownwardThrowFinalAngle { get; private set; } = 0f;
 
     [field: Header("Health")]
     [field: SerializeField, Min(0f)] public float MaxHealth { get; private set; } = 100f;
