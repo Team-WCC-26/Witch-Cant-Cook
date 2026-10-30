@@ -62,8 +62,13 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private readonly Dictionary<long, CatchableObj> capturedIngredients = new();
     private readonly Dictionary<long, FrozenIngredient> frozenIngredients = new();
     private readonly List<long> removedIngredients = new(); // 순회 중 삭제를 피하기 위한 임시 목록.
-    private readonly HashSet<PlayerBrain> capturedPlayers = new(); // 서버 입장 요청에만 사용한다.
-
+    private ColliderRelay innerRelay;
+    private PlayerBrain localPlayerInside;
+    private string localPlayerId;
+    private long enteredToolId;
+    private bool localPlayerEntrySent;
+    private UniTaskCompletionSource playerEntryConfirmation;
+    private const float PlayerEntryResponseTimeout = 2f;
     private LocalPlayerStateResolver recoveryPausedResolver;
 
     private int requestVersion; // 이전 비동기 요청이 새 동작에 개입하지 못하게 하는 번호.
@@ -86,6 +91,13 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     {
         RefreshOperatingLights();
         if (btnRelay != null) btnRelay.CollisionEntered += HandleButtonCollision;
+        innerRelay = innerTrigger != null ? innerTrigger.GetComponent<ColliderRelay>() : null;
+        if (innerRelay != null)
+        {
+            innerRelay.TriggerEntered += HandlePlayerEnter;
+            innerRelay.TriggerStayed += HandlePlayerEnter;
+            innerRelay.TriggerExited += HandlePlayerExit;
+        }
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
     }
 
@@ -106,12 +118,12 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             ReleasePlayerRecovery();
             SetState(OvenState.Idle);
             capturedIngredients.Clear();
-            capturedPlayers.Clear();
         }
     }
 
     private void FixedUpdate()
     {
+        UpdateLocalPlayerPresence();
         HoldIngredients(true);
     }
 
@@ -123,6 +135,13 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void OnDisable()
     {
         if (btnRelay != null) btnRelay.CollisionEntered -= HandleButtonCollision;
+        if (innerRelay != null)
+        {
+            innerRelay.TriggerEntered -= HandlePlayerEnter;
+            innerRelay.TriggerStayed -= HandlePlayerEnter;
+            innerRelay.TriggerExited -= HandlePlayerExit;
+        }
+        ClearLocalPlayer(true);
         if (subscribeRoutine != null) StopCoroutine(subscribeRoutine);
         subscribeRoutine = null;
         if (subscribedServer != null)
@@ -137,7 +156,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         ReleasePlayerRecovery();
         currentIngredients.Clear();
         capturedIngredients.Clear();
-        capturedPlayers.Clear();
         SetState(OvenState.Idle);
     }
 
@@ -145,8 +163,15 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #region Public API
 
+    public void HandlePlayerEntryConfirmed(ToolPlayerEnterPacket packet)
+    {
+        if (packet.ToolEntityId != enteredToolId || packet.PlayerId != localPlayerId) return;
+        playerEntryConfirmation?.TrySetResult();
+    }
+
     public void ResetClientStage()
     {
+        ClearLocalPlayer(false);
         requestVersion++;
         btnTween?.Kill();
         btnTween = null;
@@ -156,7 +181,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         ReleasePlayerRecovery();
         currentIngredients.Clear();
         capturedIngredients.Clear();
-        capturedPlayers.Clear();
         removedIngredients.Clear();
         responseDeadline = 0f;
         cookingDeadline = 0f;
@@ -275,7 +299,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         RestoreIngredients();
         ReleasePlayerRecovery();
         capturedIngredients.Clear();
-        capturedPlayers.Clear();
         SetState(OvenState.Idle);
     }
 
@@ -364,14 +387,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
                 EntityInsertPacket insert = new() { SubjectEntityId = entity.NetworkId, TargetEntityId = NetworkId };
                 await ServerManager.Instance.SendData(PacketSerializer.Serialize(insert));
             }
-            // TODO: 서버는 발신자만 등록한다. 다른 내부 플레이어 지정 등록은 서버 반영 후 연결.
-            foreach (PlayerBrain player in new List<PlayerBrain>(capturedPlayers))
-            {
-                if (!isActiveAndEnabled || version != requestVersion) return;
-                if (player == null || !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) continue;
-                ToolPlayerEnterPacket enter = new() { ToolEntityId = NetworkId, PlayerId = player.PlayerId };
-                await ServerManager.Instance.SendData(PacketSerializer.Serialize(enter));
-            }
             if (!isActiveAndEnabled || version != requestVersion) return;
             EntityInteractPacket start = new() { TargetEntityId = NetworkId };
             await ServerManager.Instance.SendData(PacketSerializer.Serialize(start));
@@ -398,7 +413,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void CaptureContents()
     {
         capturedIngredients.Clear();
-        capturedPlayers.Clear();
         Physics.SyncTransforms();
         Vector3 scale = innerTrigger.transform.lossyScale;
         scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
@@ -408,12 +422,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         foreach (Collider other in contents)
         {
             if (other.transform.IsChildOf(transform)) continue;
-            PlayerBrain player = other.GetComponentInParent<PlayerBrain>();
-            if (player != null)
-            {
-                capturedPlayers.Add(player);
-                continue;
-            }
+            if (other.GetComponentInParent<PlayerBrain>() != null) continue;
             CatchableObj entity = other.GetComponentInParent<CatchableObj>();
             if (entity == null || entity.Category != EntityCategory.Ingredient || entity.NetworkId == 0) continue;
             if (entity.transform.parent != null
@@ -518,6 +527,115 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #region Player Recovery
 
+    private bool TryGetLocalPlayerBody(Collider other, out PlayerBrain player)
+    {
+        player = other != null ? other.GetComponent<PlayerBrain>() : null;
+        return player != null && other == player.Col && PlayerSpawnManager.Instance != null &&
+            PlayerSpawnManager.Instance.IsMine(player.PlayerId);
+    }
+
+    private void HandlePlayerEnter(Collider other)
+    {
+        if (!TryGetLocalPlayerBody(other, out PlayerBrain player)) return;
+        if (localPlayerInside != null) return;
+        localPlayerInside = player;
+        localPlayerId = player.PlayerId;
+        TrySendPlayerEntry();
+    }
+
+    private void HandlePlayerExit(Collider other)
+    {
+        if (!TryGetLocalPlayerBody(other, out PlayerBrain player) || localPlayerInside != player) return;
+        if (TryGetLocalPlayerInside(out _)) return;
+        ClearLocalPlayer(true);
+    }
+
+    private void UpdateLocalPlayerPresence()
+    {
+        if (string.IsNullOrEmpty(localPlayerId)) return;
+        if (localPlayerInside == null || !TryGetLocalPlayerInside(out _))
+        {
+            ClearLocalPlayer(true);
+            return;
+        }
+        TrySendPlayerEntry();
+    }
+
+    private void TrySendPlayerEntry()
+    {
+        if (localPlayerEntrySent || localPlayerInside == null || NetworkId == 0 ||
+            ServerManager.Instance == null || StageReturnFlow.IsInputBlocked) return;
+        localPlayerEntrySent = true;
+        enteredToolId = NetworkId;
+        ToolPlayerEnterPacket packet = new() { ToolEntityId = enteredToolId, PlayerId = localPlayerId };
+        playerEntryConfirmation = new UniTaskCompletionSource();
+        SendPlayerEntryWithRetry(packet, playerEntryConfirmation).Forget();
+    }
+
+    private void ClearLocalPlayer(bool sendsExit)
+    {
+        playerEntryConfirmation?.TrySetResult();
+        playerEntryConfirmation = null;
+        bool send = sendsExit && localPlayerEntrySent && ServerManager.Instance != null;
+        long toolId = enteredToolId;
+        string playerId = localPlayerId;
+        localPlayerInside = null;
+        localPlayerId = null;
+        enteredToolId = 0;
+        localPlayerEntrySent = false;
+        if (!send) return;
+        ToolPlayerExitPacket packet = new() { ToolEntityId = toolId, PlayerId = playerId };
+        SendPlayerPresence(PacketSerializer.Serialize(packet)).Forget();
+    }
+
+    private async UniTask SendPlayerEntryWithRetry(ToolPlayerEnterPacket packet, UniTaskCompletionSource confirmation)
+    {
+        var cancellationToken = this.GetCancellationTokenOnDestroy();
+        byte[] data = PacketSerializer.Serialize(packet);
+        string failure = "No server entry confirmation";
+        try
+        {
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                if (confirmation.Task.Status != UniTaskStatus.Pending) return;
+                try
+                {
+                    if (ServerManager.Instance == null)
+                        throw new System.InvalidOperationException("ServerManager is unavailable");
+                    await ServerManager.Instance.SendData(data);
+                    failure = "No server entry confirmation";
+                    float deadline = Time.realtimeSinceStartup + PlayerEntryResponseTimeout;
+                    while (confirmation.Task.Status == UniTaskStatus.Pending && Time.realtimeSinceStartup < deadline)
+                        await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+                }
+                catch (System.OperationCanceledException)
+                {
+                    return;
+                }
+                catch (System.Exception exception)
+                {
+                    failure = exception.Message;
+                }
+                if (confirmation.Task.Status != UniTaskStatus.Pending) return;
+            }
+            Debug.LogError($"[Oven] Player entry could not be confirmed after two attempts. ToolId={packet.ToolEntityId}, PlayerId={packet.PlayerId}, Reason={failure}", this);
+        }
+        finally
+        {
+            if (playerEntryConfirmation == confirmation) playerEntryConfirmation = null;
+        }
+    }
+    private async UniTask SendPlayerPresence(byte[] packet)
+    {
+        try
+        {
+            await ServerManager.Instance.SendData(packet);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception, this);
+        }
+    }
     private void UpdatePlayerRecovery()
     {
         bool isHeating = state == OvenState.Cooking;
@@ -528,7 +646,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             PausePlayerRecovery(player);
         else
             ReleasePlayerRecovery();
-
     }
 
     private bool TryGetLocalPlayerInside(out PlayerBrain player)
@@ -540,7 +657,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             player.Health == null || player.Col == null || !player.gameObject.activeInHierarchy)
             return false;
 
-        // 래그돌 중 트리거로 바뀐 루트 콜라이더도 내부 판정에 포함한다.
         return Physics.ComputePenetration(
             innerTrigger, innerTrigger.transform.position, innerTrigger.transform.rotation,
             player.Col, player.Col.transform.position, player.Col.transform.rotation,

@@ -237,6 +237,11 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private void OnPotPlayerEntered(ReadOnlyMemory<byte> data)
     {
         ToolPlayerEnterPacket packet = MemoryPackSerializer.Deserialize<ToolPlayerEnterPacket>(data.Span);
+        if (TryGetMapObject(packet.ToolEntityId, out OvenInteraction oven))
+        {
+            oven.HandlePlayerEntryConfirmed(packet);
+            return;
+        }
         if (TryGetMapObject(packet.ToolEntityId, out TrashCanInteraction trashCan))
         {
             trashCan.HandlePlayerEnter(packet);
