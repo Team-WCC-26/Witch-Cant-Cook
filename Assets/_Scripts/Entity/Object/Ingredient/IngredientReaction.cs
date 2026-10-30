@@ -141,6 +141,15 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public void ApplyPlatePlacement(Transform slot)
     {
         ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+        RefreshPlateScale(slot);
+    }
+
+    // A stored plate inherits the pot's scale until it is ejected. Recalculate after
+    // any change to the plate's ancestry or scale, without changing placement offsets.
+    public void RefreshPlateScale(Transform slot)
+    {
+        if (slot == null || transform.parent != slot) return;
+        CacheOriginalScale();
 
         // Keep the prefab's size in world space, independent of the plate's scale.
         // Measure each rotated axis so placement rotation and scaled ancestors are included.
@@ -151,10 +160,12 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             slot.TransformVector(rotation * Vector3.forward).magnitude);
 
         const float MinAxisScale = 0.000001f;
-        transform.localScale = new Vector3(
+        Vector3 desiredScale = new Vector3(
             inheritedScale.x > MinAxisScale ? originalScale.x / inheritedScale.x : 0f,
             inheritedScale.y > MinAxisScale ? originalScale.y / inheritedScale.y : 0f,
             inheritedScale.z > MinAxisScale ? originalScale.z / inheritedScale.z : 0f);
+        if ((transform.localScale - desiredScale).sqrMagnitude > 0.000000000001f)
+            transform.localScale = desiredScale;
     }
 
     public void RestoreOriginalScale()
