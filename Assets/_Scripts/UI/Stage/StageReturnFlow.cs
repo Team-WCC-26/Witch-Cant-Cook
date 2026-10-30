@@ -45,9 +45,6 @@ public sealed class StageReturnFlow : MonoBehaviour
     private RoomHudSession room;
     private Coroutine returning;
     private bool wasRunning;
-    private bool cursorCaptured;
-    private bool previousCursorVisible;
-    private CursorLockMode previousCursorLock;
     private bool lobbyMovePending;
     private string lastSpawnIssue;
 
@@ -84,7 +81,6 @@ public sealed class StageReturnFlow : MonoBehaviour
         returning = null;
         lobbyMovePending = false;
         State.Reset();
-        RestoreCursor();
     }
     private void OnDestroy() { if (instance == this) instance = null; }
     private void ResetRoom()
@@ -98,7 +94,6 @@ public sealed class StageReturnFlow : MonoBehaviour
         IsConfirming = false;
         lastSpawnIssue = null;
         State.Reset();
-        RestoreCursor();
         PauseOrderPresentation(false);
         Changed?.Invoke();
     }
@@ -115,7 +110,6 @@ public sealed class StageReturnFlow : MonoBehaviour
             IsConfirming = false;
             State.StartStage();
             confirmedPlayers.Clear();
-            RestoreCursor();
             PauseOrderPresentation(false);
             Changed?.Invoke();
         }
@@ -129,14 +123,6 @@ public sealed class StageReturnFlow : MonoBehaviour
         ConfirmationIssue = null;
         IsConfirming = false;
         Debug.Log("[Stage Return] S_StageResult 수신. 결산 확인 버튼을 기다립니다.", this);
-        if (!cursorCaptured)
-        {
-            previousCursorLock = Cursor.lockState;
-            previousCursorVisible = Cursor.visible;
-            cursorCaptured = true;
-        }
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
         PauseOrderPresentation(true);
         // Final totals are authoritative. Plate return animations may finish independently.
         StopPlayerActions();
@@ -326,7 +312,6 @@ public sealed class StageReturnFlow : MonoBehaviour
                 }
             }
             room.NotifyLobbyReturned();
-            RestoreCursor();
             State.CompleteReturn();
             completed = true;
             returning = null;
@@ -371,11 +356,4 @@ public sealed class StageReturnFlow : MonoBehaviour
                 router.ResetStageRegistration();
     }
 
-    private void RestoreCursor()
-    {
-        if (!cursorCaptured) return;
-        Cursor.lockState = previousCursorLock;
-        Cursor.visible = previousCursorVisible;
-        cursorCaptured = false;
-    }
 }

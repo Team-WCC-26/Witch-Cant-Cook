@@ -16,7 +16,6 @@ public class PlayerInputHandler : MonoBehaviour
     //InputSystem key input event sender
     public event Action<KeyInput> InputPerformed;
 
-    private PlayerBrain brain;
     private bool inputBlocked;
     public bool IsInputBlocked { get => inputBlocked || StageReturnFlow.IsInputBlocked || LobbyHudUI.IsInputBlocked; set => inputBlocked = value; }
     public bool IsMovementBlocked { get; set; }
@@ -111,9 +110,7 @@ public class PlayerInputHandler : MonoBehaviour
 
     private bool IsPointerInputBlocked()
     {
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return true;
-        if (brain == null) brain = GetComponentInParent<PlayerBrain>();
-        return brain != null && brain.CameraController != null && brain.CameraController.IsPointerInputBlocked;
+        return !CursorController.IsPointerInputAllowed;
     }
     #region Jump Input
     // Sends one-shot jump input from the Input System.

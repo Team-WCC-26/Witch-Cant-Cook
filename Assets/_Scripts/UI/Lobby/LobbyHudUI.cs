@@ -148,8 +148,6 @@ public sealed class LobbyHudUI : UIBase
             await SceneManager.LoadSceneAsync(titleScene);
             // Pooled objects survive scene changes; discard the previous room's live objects.
             if (ObjectPoolManager.Instance != null) ObjectPoolManager.Instance.ReturnRoomObjects();
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
         }
         catch (System.Exception exception)
         {
