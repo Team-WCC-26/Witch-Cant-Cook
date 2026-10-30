@@ -39,6 +39,8 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
     private double simulationTime;
     private bool running;
     private bool originalGravity;
+    private bool waitingForEjectionCollision;
+    private PotInteraction ejectionPot;
     private readonly RaycastHit[] hitBuffer = new RaycastHit[64];
     private readonly Dictionary<Rigidbody, double> lastPushTimes = new();
     private readonly List<(Collider self, Collider other)> ignoredPairs = new();
@@ -50,6 +52,8 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
     private bool Available => source != null && !source.IsHold && source.ParentEntityId <= 0 &&
         !source.IsSubmissionPending && !source.IsSubmissionReturning &&
         (reaction == null || !reaction.IsActionCompleted(IngredientAction.Cut));
+
+    #region Unity Callbacks
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetCache()
@@ -71,13 +75,49 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
 
     private void OnEnable() => RemoveBounceMaterial();
     private void OnDisable() => StopSimulation();
+
+    private void FixedUpdate()
+    {
+        if (!Available) { if (running) StopSimulation(false); return; }
+        if (waitingForEjectionCollision) return;
+        if (StageReturnFlow.IsInputBlocked) return;
+        if (source.NetworkId > 0 && ConveyorBeltRegistry.IsOwnedByAnyBelt(source.NetworkId)) return;
+        if (!running)
+        {
+            if (rb.isKinematic || shape == null || !shape.enabled) return;
+            BeginMotion(rb.position, rb.linearVelocity);
+        }
+        SuppressNativePushes();
+        accumulator += Time.fixedDeltaTime;
+        while (accumulator + 0.0000001d >= Step)
+        {
+            SimulateStep();
+            accumulator -= Step;
+        }
+        rb.MovePosition(position);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!waitingForEjectionCollision || !isActiveAndEnabled || !Available) return;
+        if (collision.collider.GetComponentInParent<PotInteraction>() == ejectionPot) return;
+
+        // Resume next fixed step with the velocity resolved by native physics.
+        waitingForEjectionCollision = false;
+        ejectionPot = null;
+    }
+
+    #endregion
+
     public void ResetForPool() => StopSimulation(false);
 
-    private void RemoveBounceMaterial()
+    public void WaitForEjectionCollision(PotInteraction pot)
     {
-        if (ownColliders == null) return;
-        foreach (Collider collider in ownColliders)
-            if (collider != null && collider.attachedRigidbody == rb) collider.sharedMaterial = null;
+        StopSimulation();
+        if (!isActiveAndEnabled || !Available || rb == null || rb.isKinematic) return;
+
+        ejectionPot = pot;
+        waitingForEjectionCollision = true;
     }
 
     public void BeginMotion(Vector3 launchPosition, Vector3 launchVelocity)
@@ -104,6 +144,13 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
         SuppressNativePushes();
     }
 
+    private void RemoveBounceMaterial()
+    {
+        if (ownColliders == null) return;
+        foreach (Collider collider in ownColliders)
+            if (collider != null && collider.attachedRigidbody == rb) collider.sharedMaterial = null;
+    }
+
     private void CalculateShape()
     {
         Vector3 extents;
@@ -128,6 +175,8 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
 
     public void StopSimulation(bool restorePhysics = true)
     {
+        waitingForEjectionCollision = false;
+        ejectionPot = null;
         foreach (var pair in ignoredPairs)
             if (pair.self != null && pair.other != null) Physics.IgnoreCollision(pair.self, pair.other, false);
         ignoredPairs.Clear();
@@ -144,26 +193,6 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
         }
         running = false;
         accumulator = simulationTime = 0d;
-    }
-
-    private void FixedUpdate()
-    {
-        if (!Available) { if (running) StopSimulation(false); return; }
-        if (StageReturnFlow.IsInputBlocked) return;
-        if (source.NetworkId > 0 && ConveyorBeltRegistry.IsOwnedByAnyBelt(source.NetworkId)) return;
-        if (!running)
-        {
-            if (rb.isKinematic || shape == null || !shape.enabled) return;
-            BeginMotion(rb.position, rb.linearVelocity);
-        }
-        SuppressNativePushes();
-        accumulator += Time.fixedDeltaTime;
-        while (accumulator + 0.0000001d >= Step)
-        {
-            SimulateStep();
-            accumulator -= Step;
-        }
-        rb.MovePosition(position);
     }
 
     private void SuppressNativePushes()

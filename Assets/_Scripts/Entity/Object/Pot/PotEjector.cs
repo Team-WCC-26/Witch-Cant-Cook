@@ -92,6 +92,7 @@ public sealed class PotEjector : ObjEjector
             float force = pot.GetObjEjectForce(catchable);
             pot.PrepareObjEjection(catchable);
             EjectObj(catchable, direction, force);
+            catchable.GetComponent<IngredientTraitBounce>()?.WaitForEjectionCollision(pot);
         }
     }
 
