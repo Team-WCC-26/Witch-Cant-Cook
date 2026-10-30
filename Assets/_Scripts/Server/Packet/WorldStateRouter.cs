@@ -12,6 +12,7 @@ namespace Server
         public event Action<IReadOnlyList<EntityChangeParentPacket>> OnEntityParentChanged;
         public event Action<IReadOnlyList<EntityDestroyPacket>> OnEntityDestroyed;
         public event Action<IReadOnlyList<PlayerMovementPacket>> OnPlayerMoved;
+        public event Action<IReadOnlyList<PlayerHpPacket>> OnPlayerHealthChanged;
         public event Action<IReadOnlyList<CookCompletePacket>> OnCookCompleted;
         public event Action<IReadOnlyList<CookProcessPacket>> OnCookProcessChanged;
 
@@ -36,6 +37,7 @@ namespace Server
             OnEntityParentChanged?.Invoke(packet.ParentChangedEntities);
             OnEntityDestroyed?.Invoke(packet.DestroyedEntities);
             OnPlayerMoved?.Invoke(packet.Players);
+            OnPlayerHealthChanged?.Invoke(packet.PlayerHps);
             OnCookCompleted?.Invoke(packet.CookCompleteIngredients);
             OnCookProcessChanged?.Invoke(packet.CookProcessIngredients);
         }

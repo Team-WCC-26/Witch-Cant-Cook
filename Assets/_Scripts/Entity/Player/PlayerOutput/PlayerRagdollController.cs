@@ -80,6 +80,7 @@ public class PlayerRagdollController
         }
 
         isRagdoll = true;
+        brain.Health?.SetRagdollActive(true);
         recoveryStableTime = 0f;
         ragdollRootLocalPos = brain.Animator.transform.localPosition;
         ragdollRootLocalRot = brain.Animator.transform.localRotation;
@@ -207,6 +208,7 @@ public class PlayerRagdollController
         }
 
         isRagdoll = false;
+        brain.Health?.SetRagdollActive(false);
         recoveryStableTime = 0f;
         isLaunched = false;
         isLaunchPending = false;

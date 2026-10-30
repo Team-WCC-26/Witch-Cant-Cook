@@ -18,6 +18,7 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     // Reset remote tracking for a stage transition.
     public void ResetForStageReturn(Pose pose)
     {
+        brain.Health.SetRagdollActive(false);
         targetPosition = pose.position;
         targetRotation = pose.rotation;
         hasRemoteTransform = false;
@@ -296,6 +297,10 @@ public sealed class RemotePlayerStateResolver : PlayerStateResolver
     public void ApplyRemoteState(PlayerCombinedState remoteState)
     {
         SetCurrentState(remoteState);
+        if (remoteState.PhysicalMode == PlayerPhysicalMode.Ragdoll)
+            brain.Health.SetRagdollActive(true);
+        else if (!brain.ActionController.IsRagdollActive)
+            brain.Health.SetRagdollActive(false);
 
         // Repeated snapshots must not restart the same action every frame.
         bool isPrimary = remoteState.Interaction == PlayerInteraction.DefaultPrimary

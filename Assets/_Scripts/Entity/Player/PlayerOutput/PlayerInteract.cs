@@ -271,7 +271,6 @@ public class PlayerInteract
         playerHit.PlayHit(brain.transform.position);
 
         PlayerBrain target = playerHit.GetComponent<PlayerBrain>();
-        // Only the victim's client changes HP, matching ingredient and rocket damage.
         if (target != null && target != brain &&
             target.StateResolver is LocalPlayerStateResolver)
             target.Health?.TakeDamage(brain.PunchDamage);

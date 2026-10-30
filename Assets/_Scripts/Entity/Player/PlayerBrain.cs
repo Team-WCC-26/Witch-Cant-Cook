@@ -160,8 +160,7 @@ public sealed class PlayerBrain : MonoBehaviour
     {
         if (!isInitialized) return;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        // Temporary ragdoll test: remove this block and PlayerHealthData.DebugDepleteHealth together.
+#if UNITY_EDITOR
         if (stateResolver is LocalPlayerStateResolver &&
             UnityEngine.InputSystem.Keyboard.current != null &&
             UnityEngine.InputSystem.Keyboard.current.pKey.wasPressedThisFrame)
@@ -208,7 +207,7 @@ public sealed class PlayerBrain : MonoBehaviour
         ThrowTrajectory?.Dispose();
         if (Health != null)
         {
-            Health.HealthChanged -= OnHealthChanged;
+            Health.DamageRequested -= SendDamage;
         }
 
         if (PlayerSpawnManager.Instance == null) return;
@@ -227,13 +226,13 @@ public sealed class PlayerBrain : MonoBehaviour
 
         if (Health != null)
         {
-            Health.HealthChanged -= OnHealthChanged;
+            Health.DamageRequested -= SendDamage;
         }
 
-        Health = new PlayerHealthData(MaxHealth, DamageCooldown);
-        Health.HealthChanged += OnHealthChanged;
-
         bool isMine = PlayerSpawnManager.Instance.IsMine(PlayerId);
+        Health = new PlayerHealthData(MaxHealth, DamageCooldown, isMine);
+        Health.DamageRequested += SendDamage;
+
         SetLocalControlActive(isMine);
 
         stateResolver = isMine
@@ -316,18 +315,11 @@ public sealed class PlayerBrain : MonoBehaviour
 
     }
 
-    private void OnHealthChanged(PlayerHealthData health)
+    private void SendDamage(int dmg)
     {
-        if (!health.IsRagdoll)
-        {
-            return;
-        }
-
-        Rocket?.StopFlight();
-
-        if (stateResolver is LocalPlayerStateResolver localStateResolver)
-        {
-            localStateResolver.EnterRagdoll();
-        }
+        if (stateResolver is not LocalPlayerStateResolver || Server.ServerManager.Instance == null) return;
+        var packet = new Protocol.PlayerDamagePacket { PlayerId = PlayerId, Damage = dmg };
+        _ = Server.ServerManager.Instance.SendData(Protocol.PacketSerializer.Serialize(packet));
     }
+
 }

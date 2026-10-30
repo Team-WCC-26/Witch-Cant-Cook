@@ -203,7 +203,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         if (player.StateResolver is LocalPlayerStateResolver local)
             local.ResetForRespawn();
         player.Health.IsDmgBlocked = false;
-        player.Health.Reset();
         if (player.StateResolver is RemotePlayerStateResolver remote)
             remote.ResetForStageReturn(new Pose(point.position, point.rotation));
         player.ActionController.Movement.UpdateEjectionMovement(false);
@@ -259,7 +258,9 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     private void MemberRespawned(ReadOnlyMemory<byte> data)
     {
         PlayerRespawnPacket packet = PacketSerializer.Deserialize<PlayerRespawnPacket>(data.Span);
-        RespawnPlayer(packet.PlayerID);
+        if (!players.TryGetValue(packet.PlayerID, out PlayerBrain player) || player.Health == null) return;
+        if (player.StateResolver is LocalPlayerStateResolver local) local.EnterRagdoll();
+        player.Health.RestoreFromServerRespawn();
     }
 
     private void ReceiveSquidInk(ReadOnlyMemory<byte> data)

@@ -30,6 +30,8 @@ public sealed class PlayerHitFeedback : MonoBehaviour
     public bool IsFlashing => flashing;
     public float OverlayAlpha => overlay != null ? overlay.alpha : 0f;
 
+    #region Unity Callbacks
+
     private void Awake()
     {
         brain = GetComponent<PlayerBrain>();
@@ -45,6 +47,19 @@ public sealed class PlayerHitFeedback : MonoBehaviour
         else TickVisual(Time.unscaledDeltaTime);
     }
 
+    private void OnDisable()
+    {
+        if (health != null)
+        {
+            health.HealthChanged -= OnHealthChanged;
+            health.DeathConfirmed -= OnDeathConfirmed;
+        }
+        health = null;
+        ClearScreen();
+    }
+
+    #endregion
+
     private void TryBindHealth()
     {
         if (brain == null) brain = GetComponent<PlayerBrain>();
@@ -54,12 +69,20 @@ public sealed class PlayerHitFeedback : MonoBehaviour
 
     public void BindHealth(PlayerHealthData source, bool isLocalPlayer)
     {
-        if (health != null) health.HealthChanged -= OnHealthChanged;
+        if (health != null)
+        {
+            health.HealthChanged -= OnHealthChanged;
+            health.DeathConfirmed -= OnDeathConfirmed;
+        }
         health = source;
         localPlayer = isLocalPlayer;
         previousHealth = source != null ? source.CurHealth : 0f;
         ClearScreen();
-        if (health != null) health.HealthChanged += OnHealthChanged;
+        if (health != null)
+        {
+            health.HealthChanged += OnHealthChanged;
+            health.DeathConfirmed += OnDeathConfirmed;
+        }
     }
 
     private void OnHealthChanged(PlayerHealthData data)
@@ -72,6 +95,17 @@ public sealed class PlayerHitFeedback : MonoBehaviour
             if (data.NormalizedHealth >= 1f) ClearScreen();
             return;
         }
+        if (next <= 0f) return;
+        PlayDamageFeedback();
+    }
+
+    private void OnDeathConfirmed()
+    {
+        PlayDamageFeedback();
+    }
+
+    private void PlayDamageFeedback()
+    {
         if (wobble == null) wobble = GetComponent<PlayerHitWobble>();
         wobble?.PlayDamage();
         PlayHitParticles();
@@ -138,10 +172,5 @@ public sealed class PlayerHitFeedback : MonoBehaviour
         if (overlayCanvas != null) overlayCanvas.enabled = false;
     }
 
-    private void OnDisable()
-    {
-        if (health != null) health.HealthChanged -= OnHealthChanged;
-        health = null;
-        ClearScreen();
-    }
+
 }

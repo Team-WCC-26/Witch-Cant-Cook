@@ -25,7 +25,6 @@ public class PlayerPhysicalFSM
                 if (brain.ActionController.TickRagdollRecovery(isRecoveryPaused, Time.fixedDeltaTime))
                 {
                     SetMode(PlayerPhysicalMode.Default);
-                    brain.Health.Reset();
                 }
                 break;
         }
@@ -38,12 +37,14 @@ public class PlayerPhysicalFSM
             return;
         }
 
+        brain.Health.SetRagdollActive(true);
         SetMode(PlayerPhysicalMode.Ragdoll);
     }
 
     public void ResetForRespawn()
     {
         isRecoveryPaused = false;
+        brain.Health.SetRagdollActive(false);
         SetMode(PlayerPhysicalMode.Default);
     }
 

@@ -299,7 +299,10 @@ public sealed class StageReturnFlow : MonoBehaviour
                 if (player == null) continue;
                 player.Rocket?.StopFlight();
                 player.ActionController?.CancelAction();
-                player.Health?.Reset();
+                player.ActionController?.ResetForRespawn();
+                if (player.StateResolver is LocalPlayerStateResolver local)
+                    local.ResetForRespawn();
+                if (player.Health != null) player.Health.IsDmgBlocked = false;
                 CatchableObj held = player.Interact?.HeldObj;
                 if (held != null)
                 {

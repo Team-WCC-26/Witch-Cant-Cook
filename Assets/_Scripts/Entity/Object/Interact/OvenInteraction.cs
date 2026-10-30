@@ -42,15 +42,10 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     [SerializeField, Min(0f), InspectorName("최소 닫힘 유지 시간")]
     private float emptyOvenWaitDuration = 3f;
 
-    [Header("내부 플레이어 피해")]
-    [FormerlySerializedAs("playerDamagePerTick")]
-    [SerializeField, Min(0f)] private float playerDmgPerTick = 10f;
-
     #endregion
 
     #region Runtime State
 
-    private const float PlayerDmgInterval = 1f;
     private enum OvenState { Idle, Waiting, Cooking, Opening }
 
     private OvenState state;
@@ -69,8 +64,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private readonly List<long> removedIngredients = new(); // 순회 중 삭제를 피하기 위한 임시 목록.
     private readonly HashSet<PlayerBrain> capturedPlayers = new(); // 서버 입장 요청에만 사용한다.
 
-    // 피해와 회복 보류는 각 클라의 자기 플레이어에게만 적용한다.
-    private float nextPlayerDmgTime;
     private LocalPlayerStateResolver recoveryPausedResolver;
 
     private int requestVersion; // 이전 비동기 요청이 새 동작에 개입하지 못하게 하는 번호.
@@ -99,7 +92,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void Update()
     {
         RemoveUnavailableIngredients();
-        UpdatePlayerDamage();
+        UpdatePlayerRecovery();
         UpdateMinimumClosedTime();
         if (state == OvenState.Waiting && Time.unscaledTime >= responseDeadline)
         {
@@ -168,7 +161,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         responseDeadline = 0f;
         cookingDeadline = 0f;
         minOpenTime = float.PositiveInfinity;
-        nextPlayerDmgTime = 0f;
         SetState(OvenState.Idle);
         if (doorController != null) doorController.OpenDoor();
     }
@@ -202,8 +194,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         if (doorController == null) return;
         bool alreadyCooking = state == OvenState.Cooking;
         requestVersion++;
-        if (state != OvenState.Cooking)
-            nextPlayerDmgTime = Time.time + PlayerDmgInterval;
         SetState(OvenState.Cooking);
         cookingDeadline = Time.time + Mathf.Max(0f, packet.CookingTimeMs / 1000f);
         if (!alreadyCooking) PlayButtonMotion();
@@ -526,10 +516,9 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #endregion
 
-    #region Player Damage and Recovery
+    #region Player Recovery
 
-    // 가열 중 자기 플레이어에게만 틱 피해와 회복 보류를 적용한다.
-    private void UpdatePlayerDamage()
+    private void UpdatePlayerRecovery()
     {
         bool isHeating = state == OvenState.Cooking;
         if (!isHeating) return;
@@ -540,9 +529,6 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         else
             ReleasePlayerRecovery();
 
-        if (Time.time < nextPlayerDmgTime) return;
-        nextPlayerDmgTime = Time.time + PlayerDmgInterval;
-        if (inside) player.Health.TakeDamage(playerDmgPerTick);
     }
 
     private bool TryGetLocalPlayerInside(out PlayerBrain player)

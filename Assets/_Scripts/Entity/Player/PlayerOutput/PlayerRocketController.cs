@@ -474,7 +474,6 @@ public sealed class PlayerRocketController : MonoBehaviour
     {
         if (victim == brain || victim.StateResolver is RemotePlayerStateResolver || carrot == null) return;
         if (!hitPlayers.Add(victim.GetInstanceID())) return;
-        // The victim's own client owns health and its non-kinematic player Rigidbody.
         victim.Rocket?.ReceiveImpact(brain.transform.position, flightDirection,
             Mathf.Max(0f, carrot.Settings.rocketImpactForce), carrot.GetImpactDamage());
     }

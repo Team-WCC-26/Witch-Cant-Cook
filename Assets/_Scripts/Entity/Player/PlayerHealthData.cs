@@ -6,45 +6,57 @@ public sealed class PlayerHealthData
     public float CurHealth { get; private set; }
     public float MaxHealth { get; }
     public bool IsDmgBlocked { get; set; }
-    public bool IsRagdoll => CurHealth <= 0f;
+    public bool IsRagdoll { get; private set; }
     public float NormalizedHealth => MaxHealth <= 0f ? 0f : CurHealth / MaxHealth;
 
     public event Action<PlayerHealthData> HealthChanged;
+    public event Action<int> DamageRequested;
+    public event Action DeathConfirmed;
 
+    private readonly bool isLocalPlayer;
     private readonly float damageCooldown;
     private float nextDamageTime;
 
-    public PlayerHealthData(float maxHealth, float damageCooldown)
+    public PlayerHealthData(float maxHealth, float damageCooldown, bool isLocalPlayer)
     {
         MaxHealth = Math.Max(0f, maxHealth);
+        this.isLocalPlayer = isLocalPlayer;
         this.damageCooldown = Math.Max(0f, damageCooldown);
-        Reset();
+        CurHealth = MaxHealth;
     }
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f || IsDmgBlocked || IsRagdoll || Time.time < nextDamageTime) return;
+        if (!isLocalPlayer || float.IsNaN(amount) || float.IsInfinity(amount) ||
+            amount <= 0f || IsDmgBlocked || IsRagdoll || Time.time < nextDamageTime) return;
 
-        SetHealth(CurHealth - amount);
+        int dmg = Mathf.RoundToInt(Mathf.Min(amount, MaxHealth));
+        if (dmg <= 0) return;
         nextDamageTime = Time.time + damageCooldown;
+        DamageRequested?.Invoke(dmg);
     }
 
     public void InstantDeath()
     {
-        if (IsDmgBlocked) return;
-        SetHealth(0f);
+        if (!isLocalPlayer || IsDmgBlocked || IsRagdoll) return;
+        DamageRequested?.Invoke(Mathf.CeilToInt(MaxHealth));
     }
 
-    public void Heal(float amount)
+    public void ApplyServerHealth(int health)
     {
-        if (amount <= 0f || IsRagdoll) return;
-        SetHealth(CurHealth + amount);
+        SetHealth(health);
     }
 
-    public void Reset()
+    public void RestoreFromServerRespawn()
     {
         nextDamageTime = 0f;
         SetHealth(MaxHealth);
+        DeathConfirmed?.Invoke();
+    }
+
+    public void SetRagdollActive(bool active)
+    {
+        IsRagdoll = active;
     }
 
     private void SetHealth(float health)
@@ -56,13 +68,11 @@ public sealed class PlayerHealthData
         HealthChanged?.Invoke(this);
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    #region Temporary Ragdoll Test
-    // Remove together with the temporary P key block in PlayerBrain.Update.
+#if UNITY_EDITOR
+    #region Editor
     public void DebugDepleteHealth()
     {
-        if (IsDmgBlocked) return;
-        SetHealth(0f);
+        InstantDeath();
     }
     #endregion
 #endif
