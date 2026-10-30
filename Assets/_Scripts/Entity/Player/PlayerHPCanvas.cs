@@ -1,3 +1,4 @@
+// Temporarily disabled: hidden HP UI still polls health and interpolates invisible damage trails.
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,10 +16,19 @@ public class PlayerHPCanvas : MonoBehaviour
     private float previousFill, trailStart, holdRemaining, trailElapsed;
     public float TrailFill => hpDamageTrail != null ? hpDamageTrail.fillAmount : previousFill;
 
+    #region Unity Callbacks
+
+    private void OnEnable()
+    {
+        if (hpBackground != null) hpBackground.SetActive(false);
+        if (hpForeground != null) hpForeground.enabled = false;
+        if (hpDamageTrail != null) hpDamageTrail.enabled = false;
+    }
+
     private void Update()
     {
-        BindHealthIfNeeded();
-        TickFeedback(Time.unscaledDeltaTime);
+        // BindHealthIfNeeded();
+        // TickFeedback(Time.unscaledDeltaTime);
     }
 
     private void OnDisable()
@@ -27,6 +37,8 @@ public class PlayerHPCanvas : MonoBehaviour
         health = null;
         holdRemaining = 0f;
     }
+
+    #endregion
 
     private void BindHealthIfNeeded()
     {
@@ -48,8 +60,8 @@ public class PlayerHPCanvas : MonoBehaviour
         trailStart = previousFill;
         if (hpForeground != null) hpForeground.fillAmount = previousFill;
         if (hpDamageTrail != null) hpDamageTrail.fillAmount = previousFill;
-        if (hpBackground != null) hpBackground.SetActive(previousFill < 1f);
-        health.HealthChanged += Refresh;
+        if (hpBackground != null) hpBackground.SetActive(false);
+        // health.HealthChanged += Refresh;
     }
 
     private void Refresh(PlayerHealthData data)
@@ -72,7 +84,7 @@ public class PlayerHPCanvas : MonoBehaviour
         }
         previousFill = next;
         if (hpForeground != null) hpForeground.fillAmount = next;
-        if (hpBackground != null) hpBackground.SetActive(next < 1f);
+        if (hpBackground != null) hpBackground.SetActive(false);
     }
 
     public void TickFeedback(float deltaTime)
