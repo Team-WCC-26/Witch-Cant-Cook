@@ -59,6 +59,8 @@ public sealed class LobbyHudUI : UIBase
 
     private void Update()
     {
+        if (modalOwner == this && (returnConfirmation == null || !returnConfirmation.activeInHierarchy))
+            CloseReturnConfirmation();
         RefreshDoorCountdown();
         Keyboard keyboard = Keyboard.current;
         if (session == null || keyboard == null) return;

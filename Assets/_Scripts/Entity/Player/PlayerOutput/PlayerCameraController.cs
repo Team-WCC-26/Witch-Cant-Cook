@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public sealed class PlayerCameraController : MonoBehaviour
 {
@@ -46,7 +45,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     private Quaternion throwPointLocalRotation = Quaternion.identity;
 
     private bool canControlCursor = false;
-    private bool cursorReleased;
+    private int suppressLookThroughFrame;
     private Vector3 yawRootLocalPos;
 
     #region Unity Callbacks
@@ -108,7 +107,7 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
 
-        RefreshCursor();
+        RefreshCursor(Application.isFocused);
     }
 
     private void OnDisable()
@@ -129,19 +128,10 @@ public sealed class PlayerCameraController : MonoBehaviour
         {
             return;
         }
-        bool cursorChanged = false;
-        if (canControlCursor && lockCursor && Application.isFocused && !StageReturnFlow.IsInputBlocked)
-        {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && (keyboard.leftAltKey.wasPressedThisFrame || keyboard.rightAltKey.wasPressedThisFrame))
-            {
-                cursorReleased = !cursorReleased;
-                RefreshCursor();
-                cursorChanged = true;
-            }
-        }
-
-        Vector2 look = !cursorChanged && Cursor.lockState == CursorLockMode.Locked
+        RefreshCursor(Application.isFocused);
+        Vector2 look = Application.isFocused && Time.frameCount > suppressLookThroughFrame
+            && !LobbyHudUI.IsInputBlocked && !StageReturnFlow.IsInputBlocked
+            && Cursor.lockState == CursorLockMode.Locked
             && !Cursor.visible ? input.RawLookDelta : Vector2.zero;
 
         if (look.sqrMagnitude >= 0.000001f)
@@ -183,8 +173,15 @@ public sealed class PlayerCameraController : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        if (canControlCursor) RefreshCursor(Application.isFocused);
+    }
+
     private void OnApplicationFocus(bool focus)
     {
+        // Discard focus and cursor-warp deltas before resuming camera input.
+        suppressLookThroughFrame = Time.frameCount + 1;
         if (canControlCursor)
         {
             RefreshCursor(focus);
@@ -225,7 +222,7 @@ public sealed class PlayerCameraController : MonoBehaviour
 
         canControlCursor = true;
         enabled = true;
-        RefreshCursor();
+        RefreshCursor(Application.isFocused);
     }
 
     public void ResetForRespawn(Quaternion rot)
@@ -236,7 +233,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         if (yawRoot != null)
             yawRoot.SetPositionAndRotation(brain.VisualPos + brain.transform.TransformVector(yawRootLocalPos), YawRotation);
         if (pitchRoot != null) pitchRoot.localRotation = Quaternion.identity;
-        if (canControlCursor) RefreshCursor();
+        if (canControlCursor) RefreshCursor(Application.isFocused);
     }
 
     private void UpdateCameraView()
@@ -293,9 +290,20 @@ public sealed class PlayerCameraController : MonoBehaviour
         return value;
     }
 
-    private void RefreshCursor(bool focused = true)
+    private void RefreshCursor(bool focused)
     {
-        ApplyCursor(focused && lockCursor && !cursorReleased && !StageReturnFlow.IsInputBlocked);
+        if (!canControlCursor) return;
+#if UNITY_EDITOR
+        focused = focused && IsEditorGameViewFocused();
+#endif
+        bool locked = focused && lockCursor && !StageReturnFlow.IsInputBlocked && !LobbyHudUI.IsInputBlocked;
+#if UNITY_EDITOR
+        if (locked) AllowEditorCursorCapture();
+#endif
+        if (Cursor.lockState == (locked ? CursorLockMode.Locked : CursorLockMode.None)
+            && Cursor.visible == !locked) return;
+        suppressLookThroughFrame = Time.frameCount + 1;
+        ApplyCursor(locked);
     }
 
     private static void ApplyCursor(bool locked)
@@ -303,4 +311,33 @@ public sealed class PlayerCameraController : MonoBehaviour
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !locked;
     }
+
+#if UNITY_EDITOR
+    #region Editor
+    private static readonly System.Type editorGameViewType = typeof(UnityEditor.EditorWindow).Assembly.GetType("UnityEditor.GameView");
+    private static readonly System.Reflection.MethodInfo allowEditorCursorCapture = editorGameViewType?.GetMethod(
+        "AllowCursorLockAndHide", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+    private static UnityEditor.EditorWindow cursorGameView;
+    private static System.Action<bool> setEditorCursorCapture;
+
+    private static bool IsEditorGameViewFocused()
+    {
+        UnityEditor.EditorWindow focusedWindow = UnityEditor.EditorWindow.focusedWindow;
+        return focusedWindow != null && focusedWindow.GetType() == editorGameViewType && !UnityEditor.EditorApplication.isPaused;
+    }
+
+    private static void AllowEditorCursorCapture()
+    {
+        UnityEditor.EditorWindow focusedWindow = UnityEditor.EditorWindow.focusedWindow;
+        if (focusedWindow != cursorGameView || setEditorCursorCapture == null)
+        {
+            cursorGameView = focusedWindow;
+            setEditorCursorCapture = allowEditorCursorCapture == null ? null :
+                (System.Action<bool>)System.Delegate.CreateDelegate(typeof(System.Action<bool>), focusedWindow, allowEditorCursorCapture);
+        }
+        // GameView disables capture on Escape/focus loss independently of Cursor state.
+        setEditorCursorCapture?.Invoke(true);
+    }
+    #endregion
+#endif
 }
