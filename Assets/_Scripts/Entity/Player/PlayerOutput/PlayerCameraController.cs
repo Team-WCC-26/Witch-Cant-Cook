@@ -49,8 +49,10 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private bool canControlCursor = false;
     private bool cursorReleased;
+    private bool wasCursorFocused;
+    private bool wasUIInputBlocked;
     private readonly List<RaycastResult> pointerHits = new();
-    public bool IsPointerInputBlocked => cursorReleased || Cursor.visible ||
+    public bool IsPointerInputBlocked => !IsCursorFocused() || cursorReleased || Cursor.visible ||
         Cursor.lockState != CursorLockMode.Locked || Time.frameCount <= suppressLookThroughFrame;
     private int suppressLookThroughFrame;
     private Vector3 yawRootLocalPos;
@@ -109,6 +111,9 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void OnEnable()
     {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.update += OnEditorUpdate;
+#endif
         if (!canControlCursor)
         {
             return;
@@ -119,6 +124,9 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void OnDisable()
     {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.update -= OnEditorUpdate;
+#endif
         ResetCameraView();
         if (!canControlCursor)
         {
@@ -137,7 +145,7 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
         RefreshCursor(Application.isFocused);
-        Vector2 look = Application.isFocused && Time.frameCount > suppressLookThroughFrame
+        Vector2 look = IsCursorFocused() && Time.frameCount > suppressLookThroughFrame
             && !LobbyHudUI.IsInputBlocked && !StageReturnFlow.IsInputBlocked
             && Cursor.lockState == CursorLockMode.Locked
             && !Cursor.visible ? input.RawLookDelta : Vector2.zero;
@@ -195,6 +203,12 @@ public sealed class PlayerCameraController : MonoBehaviour
             RefreshCursor(focus);
         }
     }
+#if UNITY_EDITOR
+    private void OnEditorUpdate()
+    {
+        if (canControlCursor) RefreshCursor(Application.isFocused);
+    }
+#endif
     #endregion
 
     public void BindCamera(CinemachineCamera virtualCamera)
@@ -300,7 +314,7 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void HandleCursorInput()
     {
-        if (!canControlCursor || !Application.isFocused) return;
+        if (!canControlCursor || !IsCursorFocused()) return;
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             cursorReleased = true;
@@ -309,7 +323,6 @@ public sealed class PlayerCameraController : MonoBehaviour
         }
         if (LobbyHudUI.IsInputBlocked || StageReturnFlow.IsInputBlocked)
         {
-            cursorReleased = true;
             return;
         }
         if (!cursorReleased || Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
@@ -333,10 +346,15 @@ public sealed class PlayerCameraController : MonoBehaviour
     private void RefreshCursor(bool focused)
     {
         if (!canControlCursor) return;
-#if UNITY_EDITOR
-        focused = focused && IsEditorGameViewFocused();
-#endif
-        bool locked = focused && lockCursor && !cursorReleased && !StageReturnFlow.IsInputBlocked && !LobbyHudUI.IsInputBlocked;
+        focused = focused && IsCursorFocused();
+        bool uiInputBlocked = StageReturnFlow.IsInputBlocked || LobbyHudUI.IsInputBlocked;
+        if ((focused && !wasCursorFocused) || (!uiInputBlocked && wasUIInputBlocked))
+            cursorReleased = false;
+        if (focused != wasCursorFocused)
+            suppressLookThroughFrame = Time.frameCount + 1;
+        wasCursorFocused = focused;
+        wasUIInputBlocked = uiInputBlocked;
+        bool locked = focused && lockCursor && !cursorReleased && !uiInputBlocked;
 #if UNITY_EDITOR
         if (locked) AllowEditorCursorCapture();
 #endif
@@ -350,6 +368,15 @@ public sealed class PlayerCameraController : MonoBehaviour
     {
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !locked;
+    }
+
+    private static bool IsCursorFocused()
+    {
+#if UNITY_EDITOR
+        return Application.isFocused && UnityEditorInternal.InternalEditorUtility.isApplicationActive && IsEditorGameViewFocused();
+#else
+        return Application.isFocused;
+#endif
     }
 
 #if UNITY_EDITOR
