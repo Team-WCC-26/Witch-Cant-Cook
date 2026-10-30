@@ -91,12 +91,6 @@ public class PlayerMovement
 
     public void Move(Vector2 moveInput, bool isRun)
     {
-        // Remote players and ragdoll roots are driven by transforms, not velocity.
-        if (!CanApplyPhysics)
-        {
-            CurrentSpeed = 0f;
-            return;
-        }
         Quaternion moveRotation =
             brain.CameraController != null
             && brain.CameraController.isActiveAndEnabled
@@ -115,8 +109,6 @@ public class PlayerMovement
         float speed = (isRun ? moveSpeed * runMultiplier : moveSpeed) * SpeedMultiplier;
         Vector3 targetVelocity = moveDir * speed;
 
-        Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-
         // 목표 속도가 현재보다 커지는 "가속" 상황은 항상 즉각 반응하게 두고(입력이 먹통처럼 느껴지지 않게),
         // 목표 속도가 현재보다 작아지는 "감속/정지" 상황에서만 FrictionMultiplier를 적용해
         // 관성이 남아 미끄러지는 느낌을 낸다. (빙판: 밀 때는 평소처럼, 멈추거나 방향을 바꿀 때만 미끄러짐)
@@ -125,6 +117,12 @@ public class PlayerMovement
         float currentSpeed = CurrentSpeed;
         float velocityDelta = targetSpeed > currentSpeed ? acceleration : deceleration * FrictionMultiplier;
         float newSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, velocityDelta * Time.fixedDeltaTime);
+        CurrentSpeed = newSpeed;
+
+        // Remote animation uses movement speed without driving the kinematic body.
+        if (!CanApplyPhysics) return;
+
+        Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         Vector3 velocityDirection = hasMoveInput ? moveDir.normalized : currentHorizontal.normalized;
         Vector3 newHorizontal = velocityDirection * newSpeed;
         rb.linearVelocity = new Vector3(
@@ -133,8 +131,6 @@ public class PlayerMovement
             newHorizontal.z
         );
         rb.angularVelocity = Vector3.zero;
-
-        CurrentSpeed = newSpeed;
     }
 
     public void Stop()
