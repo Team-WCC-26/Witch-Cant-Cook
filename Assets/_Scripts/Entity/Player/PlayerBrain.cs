@@ -61,6 +61,7 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField] public bool DebugGroundCheck { get; private set; } = false;
 
     [field: Header("Action")]
+    [field: SerializeField, Min(0f), InspectorName("주먹 피해량")] public float PunchDamage { get; private set; } = 10f;
     [field: SerializeField, Min(0f)] public float RecoveryDelay { get; private set; } = 0.1f;
 
     [field: Header("Interaction")]

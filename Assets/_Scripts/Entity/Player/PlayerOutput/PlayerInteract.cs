@@ -208,6 +208,15 @@ public class PlayerInteract
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
+    // Arm one impact for each remote punch animation; duplicate animation events are ignored.
+    public void QueueRemotePunchImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        pendingAttackImpact = PendingAttackImpact.Punch;
+        pendingKnife = null;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
     public void QueueKnifeImpact()
     {
         pendingAttackImpact = PendingAttackImpact.Knife;
@@ -228,7 +237,7 @@ public class PlayerInteract
 
         if (TryFindPunchedPlayer(BuildInteractRay(), GetInteractRadius(), GetInteractDistance()) is PlayerHitWobble playerHit)
         {
-            playerHit.PlayHit(brain.transform.position);
+            ApplyPlayerPunch(playerHit);
             return;
         }
 
@@ -239,7 +248,13 @@ public class PlayerInteract
 
     public void OnRemotePunchImpact()
     {
-        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        if (brain.StateResolver is not RemotePlayerStateResolver ||
+            pendingAttackImpact != PendingAttackImpact.Punch) return;
+        bool valid = Time.time <= pendingImpactDeadline &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default &&
+            !StageReturnFlow.IsInputBlocked;
+        CancelPendingAttackImpact();
+        if (!valid) return;
 
         Transform facing = brain.FacingRoot != null ? brain.FacingRoot : brain.transform;
         Vector3 origin = brain.Col != null ? brain.Col.bounds.center : facing.position + Vector3.up;
@@ -247,7 +262,19 @@ public class PlayerInteract
             new Ray(origin, facing.forward),
             GetInteractRadius() + RemotePunchRadiusBonus,
             GetInteractDistance() + RemotePunchDistanceBonus);
-        playerHit?.PlayHit(brain.transform.position);
+        ApplyPlayerPunch(playerHit);
+    }
+
+    private void ApplyPlayerPunch(PlayerHitWobble playerHit)
+    {
+        if (playerHit == null) return;
+        playerHit.PlayHit(brain.transform.position);
+
+        PlayerBrain target = playerHit.GetComponent<PlayerBrain>();
+        // Only the victim's client changes HP, matching ingredient and rocket damage.
+        if (target != null && target != brain &&
+            target.StateResolver is LocalPlayerStateResolver)
+            target.Health?.TakeDamage(brain.PunchDamage);
     }
 
     private PlayerHitWobble TryFindPunchedPlayer(Ray ray, float radius, float distance)

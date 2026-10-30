@@ -195,6 +195,9 @@ public class PlayerActionController
     {
         if (state.PhysicalMode != PlayerPhysicalMode.Default) return;
 
+        if (state.HeldEntityCategory == EntityCategory.Player)
+            brain.Interact.QueueRemotePunchImpact();
+
         animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         animController.PlayPrimaryAction();
         if (state.HeldEntityCategory == EntityCategory.Player)
