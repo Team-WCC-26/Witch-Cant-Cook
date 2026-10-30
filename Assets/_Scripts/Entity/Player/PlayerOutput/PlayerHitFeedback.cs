@@ -5,6 +5,12 @@ using UnityEngine.UI;
 [RequireComponent(typeof(PlayerBrain))]
 public sealed class PlayerHitFeedback : MonoBehaviour
 {
+    [Header("피격 이펙트")]
+    [InspectorName("이펙트 프리팹"), SerializeField] private ParticleSystem hitEffectPrefab;
+    [InspectorName("생성 기준"), SerializeField] private Transform hitEffectAnchor;
+    [InspectorName("생성 위치 보정"), SerializeField] private Vector3 hitEffectOffset = new Vector3(0f, 1.15f, 0.4f);
+    [InspectorName("크기 배율"), SerializeField, Min(0f)] private float hitEffectScale = 1f;
+
     [Header("화면 테두리")]
     [SerializeField] private CanvasGroup overlayPrefab;
     [SerializeField] private Color hitColor = new Color(0.86f, 0.22f, 0.10f, 1f);
@@ -68,12 +74,28 @@ public sealed class PlayerHitFeedback : MonoBehaviour
         }
         if (wobble == null) wobble = GetComponent<PlayerHitWobble>();
         wobble?.PlayDamage();
+        PlayHitParticles();
         if (!localPlayer || StageReturnFlow.IsInputBlocked || !EnsureOverlay()) return;
         elapsed = 0f;
         flashing = true;
         overlayCanvas.enabled = true;
         // Immediate, bounded feedback; repeated hits restart instead of stacking opacity.
         overlay.alpha = peakOpacity * 0.35f;
+    }
+
+    private void PlayHitParticles()
+    {
+        if (hitEffectPrefab == null || hitEffectScale <= 0f) return;
+        if (brain == null) brain = GetComponent<PlayerBrain>();
+        Transform anchor = hitEffectAnchor != null ? hitEffectAnchor
+            : brain != null && brain.FacingRoot != null ? brain.FacingRoot : transform;
+        ParticleSystem effect = Instantiate(hitEffectPrefab,
+            anchor.TransformPoint(hitEffectOffset), Quaternion.identity);
+        effect.transform.localScale = hitEffectPrefab.transform.localScale * hitEffectScale;
+        // Keep the burst in the player's scene so unloading the scene also removes it.
+        if (effect.gameObject.scene != gameObject.scene)
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(effect.gameObject, gameObject.scene);
+        effect.Play(true);
     }
 
     private bool EnsureOverlay()
