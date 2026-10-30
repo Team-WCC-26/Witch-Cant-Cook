@@ -117,7 +117,8 @@ public class PotInteraction : MapObjInteraction,
             bool inactive = player == null || !player.isActiveAndEnabled;
             if (!inactive)
             {
-                if (player.ActionController.IsRagdollLaunchPending || !IsPlayerClearOfPot(collision)) continue;
+                if (player.Health.IsRagdoll || player.ActionController.IsRagdollActive ||
+                    player.ActionController.IsRagdollLaunchPending || !IsPlayerClearOfPot(collision)) continue;
             }
             RestorePlayerEjectionCollisions(collision);
             playerEjectionCollisions.RemoveAt(index);

@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public sealed class PlayerCameraController : MonoBehaviour
 {
@@ -45,6 +48,10 @@ public sealed class PlayerCameraController : MonoBehaviour
     private Quaternion throwPointLocalRotation = Quaternion.identity;
 
     private bool canControlCursor = false;
+    private bool cursorReleased;
+    private readonly List<RaycastResult> pointerHits = new();
+    public bool IsPointerInputBlocked => cursorReleased || Cursor.visible ||
+        Cursor.lockState != CursorLockMode.Locked || Time.frameCount <= suppressLookThroughFrame;
     private int suppressLookThroughFrame;
     private Vector3 yawRootLocalPos;
 
@@ -124,6 +131,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     private void Update()
     {
         UpdateCameraView();
+        HandleCursorInput();
         if (input == null || brain == null || yawRoot == null || pitchRoot == null)
         {
             return;
@@ -290,13 +298,45 @@ public sealed class PlayerCameraController : MonoBehaviour
         return value;
     }
 
+    private void HandleCursorInput()
+    {
+        if (!canControlCursor || !Application.isFocused) return;
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            cursorReleased = true;
+            suppressLookThroughFrame = Time.frameCount + 1;
+            return;
+        }
+        if (LobbyHudUI.IsInputBlocked || StageReturnFlow.IsInputBlocked)
+        {
+            cursorReleased = true;
+            return;
+        }
+        if (!cursorReleased || Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
+        if (IsPointerOverUI()) return;
+        cursorReleased = false;
+        suppressLookThroughFrame = Time.frameCount + 1;
+    }
+
+    private bool IsPointerOverUI()
+    {
+        if (EventSystem.current == null || Mouse.current == null) return false;
+        var pointer = new PointerEventData(EventSystem.current) { position = Mouse.current.position.ReadValue() };
+        pointerHits.Clear();
+        EventSystem.current.RaycastAll(pointer, pointerHits);
+        foreach (RaycastResult hit in pointerHits)
+        {
+            if (hit.module is GraphicRaycaster) return true;
+        }
+        return false;
+    }
     private void RefreshCursor(bool focused)
     {
         if (!canControlCursor) return;
 #if UNITY_EDITOR
         focused = focused && IsEditorGameViewFocused();
 #endif
-        bool locked = focused && lockCursor && !StageReturnFlow.IsInputBlocked && !LobbyHudUI.IsInputBlocked;
+        bool locked = focused && lockCursor && !cursorReleased && !StageReturnFlow.IsInputBlocked && !LobbyHudUI.IsInputBlocked;
 #if UNITY_EDITOR
         if (locked) AllowEditorCursorCapture();
 #endif

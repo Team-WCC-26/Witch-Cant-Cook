@@ -33,6 +33,7 @@ public class PlayerRagdollController
     private Vector3 ragdollRootLocalPos;
     private Quaternion ragdollRootLocalRot;
     private readonly float[] dampingBeforeLaunch;
+    private readonly Pose[] recoveryBodyPoses;
     private bool rootWasKinematic;
     private bool rootUsedGravity;
     private bool rootColliderEnabled;
@@ -57,6 +58,7 @@ public class PlayerRagdollController
         this.animController = animController;
         bodyParts = brain.BodyParts;
         dampingBeforeLaunch = new float[bodyParts.Count];
+        recoveryBodyPoses = new Pose[bodyParts.Count];
         foreach (BodyPart part in bodyParts)
         {
             if (part != null && part.Rb != null &&
@@ -182,18 +184,17 @@ public class PlayerRagdollController
     // Restore root physics at the body's recovery position.
     public void Recover()
     {
-        if (!isRagdoll)
-        {
-            return;
-        }
+        if (!isRagdoll) return;
         Vector3 recoveryPos = PhysicsPos;
-        // Keep the standing collider above the supporting floor.
         if (pelvisBody != null && Physics.Raycast(pelvisBody.position + Vector3.up * RecoveryGroundDistance,
             Vector3.down, out RaycastHit groundHit, 3f, brain.GroundLayerMask.value & recoveryGroundMask,
             QueryTriggerInteraction.Ignore) && groundHit.normal.y >= 0.5f)
-        {
             recoveryPos.y = groundHit.point.y - rootColliderBottomOffset + 0.02f;
-        }
+
+        Quaternion recoveryRot = brain.StateResolver is RemotePlayerStateResolver
+            ? remoteRootRot : brain.transform.rotation;
+        AlignRootForRecovery(recoveryPos, recoveryRot);
+
         if (isLaunched)
         {
             for (int index = 0; index < bodyParts.Count; index++)
@@ -202,6 +203,20 @@ public class PlayerRagdollController
                     bodyParts[index].Rb.linearDamping = dampingBeforeLaunch[index];
             }
         }
+        ResetRagdollVelocity();
+        ResetRootVelocity();
+        SetRagdollPhysicsActive(false);
+        brain.Body.UseRoot();
+        if (brain.Rb != null)
+        {
+            brain.Rb.isKinematic = rootWasKinematic;
+            brain.Rb.collisionDetectionMode = rootWasKinematic
+                ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+            brain.Rb.useGravity = rootUsedGravity;
+        }
+        brain.Animator.enabled = true;
+        brain.Col.enabled = rootColliderEnabled;
+        Physics.SyncTransforms();
 
         isRagdoll = false;
         brain.Health?.SetRagdollActive(false);
@@ -210,30 +225,34 @@ public class PlayerRagdollController
         isLaunchPending = false;
         pelvisBody = null;
         hasRemoteTarget = false;
-
-        ResetRagdollVelocity();
-        ResetRootVelocity();
-
-        SetRagdollPhysicsActive(false);
-
-        brain.Rb.position = recoveryPos;
-        if (brain.StateResolver is RemotePlayerStateResolver) brain.Rb.rotation = remoteRootRot;
-        brain.Animator.transform.SetLocalPositionAndRotation(ragdollRootLocalPos, ragdollRootLocalRot);
-        brain.Animator.enabled = true;
-        brain.Col.enabled = rootColliderEnabled;
-        brain.Body.UseRoot();
-
-        if (brain.Rb != null)
-        {
-            brain.Rb.isKinematic = rootWasKinematic;
-            brain.Rb.collisionDetectionMode = rootWasKinematic
-                ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
-            brain.Rb.useGravity = rootUsedGravity;
-        }
-
-        Physics.SyncTransforms();
     }
 
+    private void AlignRootForRecovery(Vector3 pos, Quaternion rot)
+    {
+        for (int index = 0; index < bodyParts.Count; index++)
+        {
+            Rigidbody body = bodyParts[index] != null ? bodyParts[index].Rb : null;
+            if (body != null) recoveryBodyPoses[index] = new Pose(body.position, body.rotation);
+        }
+        brain.transform.SetPositionAndRotation(pos, rot);
+        if (brain.Rb != null)
+        {
+            brain.Rb.position = pos;
+            brain.Rb.rotation = rot;
+        }
+        brain.Animator.transform.SetLocalPositionAndRotation(ragdollRootLocalPos, ragdollRootLocalRot);
+        // Realign physics ancestors without transporting the ragdoll through its old root.
+        for (int index = 0; index < bodyParts.Count; index++)
+        {
+            Rigidbody body = bodyParts[index] != null ? bodyParts[index].Rb : null;
+            if (body == null) continue;
+            Pose pose = recoveryBodyPoses[index];
+            body.transform.SetPositionAndRotation(pose.position, pose.rotation);
+            body.position = pose.position;
+            body.rotation = pose.rotation;
+        }
+        Physics.SyncTransforms();
+    }
     private void ApplyLaunchImpulse()
     {
         Vector3 offset = pendingLaunchPos - PhysicsPos;
