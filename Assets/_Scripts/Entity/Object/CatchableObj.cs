@@ -47,6 +47,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     [SerializeField] private Collider col;
     [SerializeField] private Rigidbody rb;
+    [Tooltip("Extra colliders that follow the main collider when held, dropped or placed.")]
+    [SerializeField] private Collider[] additionalPhysicsColliders = Array.Empty<Collider>();
 
     [Header("Obj Settings")]
     [Tooltip("obj type")]
@@ -64,7 +66,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     public Rigidbody Rb => rb;
     public Vector3 LinearVelocity => TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating
         ? bounce.Velocity : rb != null ? rb.linearVelocity : Vector3.zero;
-    public bool CanBePicked => canBePicked && !IsSubmissionPending && !IsSubmissionReturning;
+    public bool CanBePicked => canBePicked && !IsSubmissionPending && !IsSubmissionReturning &&
+        (!TryGetComponent(out IngredientNalchi nalchi) || !nalchi.IsFlying);
     public bool IsSubmissionPending { get; private set; }
     public bool IsSubmissionReturning { get; private set; }
     public void SetSubmissionReturning(bool returning) => IsSubmissionReturning = returning;
@@ -264,7 +267,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     public void SetPhysicsState(bool enablePhysics)
     {
         if (rb == null) return;
-        col.enabled = enablePhysics;
+        SetCollidersEnabled(enablePhysics);
 
         // Held objects follow the hand transform directly; interpolation would lag that pose.
         rb.interpolation = enablePhysics ? initialInterpolation : RigidbodyInterpolation.None;
@@ -280,6 +283,13 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         rb.isKinematic = !enablePhysics;
         if (enablePhysics) rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.useGravity = enablePhysics;
+    }
+
+    private void SetCollidersEnabled(bool enabled)
+    {
+        if (col != null) col.enabled = enabled;
+        foreach (Collider extra in additionalPhysicsColliders)
+            if (extra != null) extra.enabled = enabled;
     }
 
     public void ChangePickState(bool isPick)
@@ -334,7 +344,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         if (rb == null) return;
         if (col == null) return;
 
-        col.enabled = true;
+        SetCollidersEnabled(true);
         if (!rb.isKinematic)
         {
             rb.linearVelocity = Vector3.zero;
