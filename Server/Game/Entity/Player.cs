@@ -311,6 +311,8 @@ public class Player : Entity
                     state.IsRun,
                     PlayerInteraction.None,
                     state.HeldObjType);
+
+                MakeDirty(DirtyMask.Transform);
             }
         }
 
