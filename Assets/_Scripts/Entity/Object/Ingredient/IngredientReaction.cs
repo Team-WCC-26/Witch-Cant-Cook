@@ -48,6 +48,12 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private float lastCutProcess;
     private Coroutine wobbleRoutine;
     private Transform wobblePivot;
+    private Transform motionPivot;
+    private bool conveyorVisualActive, hitWobbleActive, presentationSourceWasEnabled;
+    private Vector3 conveyorWorldOffset;
+    private Quaternion conveyorVisualRotation = Quaternion.identity;
+    private readonly List<Material> presentationMaterials = new();
+    private readonly List<Material> proxyMaterials = new();
     private MeshFilter wobbleMeshFilter;
     private MeshRenderer wobbleMeshRenderer;
     private MaterialPropertyBlock wobblePropertyBlock;
@@ -104,6 +110,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void OnDisable()
     {
+        ClearConveyorVisualMotion();
         StopHitWobble();
         grillPreview = false;
         if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);
@@ -160,6 +167,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     {
         CacheOriginalState();
         RestoreOriginalScale();
+        ClearConveyorVisualMotion();
         StopHitWobble();
         InitializeGauge();
         lastAction = IngredientAction.None;
@@ -423,7 +431,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         if (meshFilter == null) meshFilter = GetComponentInChildren<MeshFilter>();
         if (targetRenderer == null && meshFilter != null) targetRenderer = meshFilter.GetComponent<Renderer>();
-        bool wobbling = wobblePivot != null && wobblePivot.gameObject.activeSelf;
+        bool wobbling = motionPivot != null && motionPivot.gameObject.activeSelf;
         MeshFilter sourceFilter = wobbling ? wobbleMeshFilter : meshFilter;
         Renderer sourceRenderer = wobbling ? wobbleMeshRenderer : targetRenderer;
         if (sourceFilter == null || sourceFilter.sharedMesh == null || sourceRenderer == null) return;
@@ -515,25 +523,47 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         IngredientCutVfx.PlayAt(position, catchable != null ? catchable.Data as Ingredient : null);
     }
 
-    private void PlayHitWobble()
+    /// <summary>Applies world-space bobbing and local rotation to the shared visual proxy only.</summary>
+    public void SetConveyorVisualMotion(Vector3 worldOffset, Quaternion rotation)
     {
-        if (!isActiveAndEnabled || wobbleAngle <= 0f || meshFilter == null ||
-            targetRenderer is not MeshRenderer sourceRenderer ||
-            meshFilter.transform != sourceRenderer.transform ||
-            meshFilter.sharedMesh == null)
-            return;
+        if (!EnsureVisualProxy()) return;
+        conveyorVisualActive = true;
+        conveyorWorldOffset = worldOffset;
+        conveyorVisualRotation = rotation;
+        SyncVisualProxy();
+    }
 
-        if (wobblePivot == null)
+    public void ClearConveyorVisualMotion()
+    {
+        conveyorVisualActive = false;
+        conveyorWorldOffset = Vector3.zero;
+        conveyorVisualRotation = Quaternion.identity;
+        if (motionPivot != null)
         {
-            GameObject pivotObject = new GameObject("CutHitWobblePivot");
-            wobblePivot = pivotObject.transform;
-            wobblePivot.SetParent(meshFilter.transform, false);
+            motionPivot.localRotation = Quaternion.identity;
+            if (meshFilter != null && meshFilter.sharedMesh != null)
+                motionPivot.localPosition = meshFilter.sharedMesh.bounds.center;
+        }
+        UpdateVisualProxyVisibility();
+    }
 
-            GameObject visualObject = new GameObject("CutHitWobbleVisual");
-            visualObject.transform.SetParent(wobblePivot, false);
-            visualObject.layer = sourceRenderer.gameObject.layer;
-            wobbleMeshFilter = visualObject.AddComponent<MeshFilter>();
-            wobbleMeshRenderer = visualObject.AddComponent<MeshRenderer>();
+    private bool EnsureVisualProxy()
+    {
+        CacheOriginalState();
+        if (meshFilter == null || targetRenderer is not MeshRenderer sourceRenderer
+            || meshFilter.transform != sourceRenderer.transform || meshFilter.sharedMesh == null)
+            return false;
+        if (motionPivot == null)
+        {
+            motionPivot = new GameObject("IngredientVisualMotion").transform;
+            motionPivot.SetParent(meshFilter.transform, false);
+            wobblePivot = new GameObject("CutHitWobblePivot").transform;
+            wobblePivot.SetParent(motionPivot, false);
+            var visual = new GameObject("IngredientMotionVisual");
+            visual.transform.SetParent(wobblePivot, false);
+            visual.layer = sourceRenderer.gameObject.layer;
+            wobbleMeshFilter = visual.AddComponent<MeshFilter>();
+            wobbleMeshRenderer = visual.AddComponent<MeshRenderer>();
             wobbleMeshRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
             wobbleMeshRenderer.receiveShadows = sourceRenderer.receiveShadows;
             wobbleMeshRenderer.lightProbeUsage = sourceRenderer.lightProbeUsage;
@@ -542,27 +572,62 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             wobbleMeshRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
             wobbleMeshRenderer.sortingOrder = sourceRenderer.sortingOrder;
             wobblePropertyBlock = new MaterialPropertyBlock();
+            motionPivot.gameObject.SetActive(false);
         }
+        return true;
+    }
 
-        if (wobbleRoutine != null)
-            StopCoroutine(wobbleRoutine);
-
+    private void SyncVisualProxy()
+    {
+        if (motionPivot == null || meshFilter == null || meshFilter.sharedMesh == null) return;
+        bool wasVisible = motionPivot.gameObject.activeSelf;
+        if (!wasVisible) presentationSourceWasEnabled = targetRenderer.enabled;
         wobbleMeshFilter.sharedMesh = meshFilter.sharedMesh;
-        wobbleMeshRenderer.sharedMaterials = sourceRenderer.sharedMaterials;
-        for (int i = 0; i < wobbleMeshRenderer.sharedMaterials.Length; i++)
+        targetRenderer.GetSharedMaterials(presentationMaterials);
+        wobbleMeshRenderer.GetSharedMaterials(proxyMaterials);
+        bool changed = presentationMaterials.Count != proxyMaterials.Count;
+        for (int i = 0; !changed && i < presentationMaterials.Count; i++)
+            changed = presentationMaterials[i] != proxyMaterials[i];
+        if (changed) wobbleMeshRenderer.SetSharedMaterials(presentationMaterials);
+        targetRenderer.GetPropertyBlock(wobblePropertyBlock);
+        wobbleMeshRenderer.SetPropertyBlock(wobblePropertyBlock);
+        for (int i = 0; i < presentationMaterials.Count; i++)
         {
-            sourceRenderer.GetPropertyBlock(wobblePropertyBlock, i);
+            targetRenderer.GetPropertyBlock(wobblePropertyBlock, i);
             wobbleMeshRenderer.SetPropertyBlock(wobblePropertyBlock, i);
         }
-
         Bounds bounds = meshFilter.sharedMesh.bounds;
-        Vector3 pivot = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
-        wobblePivot.localPosition = pivot;
-        wobblePivot.GetChild(0).localPosition = -pivot;
-        wobblePivot.localRotation = Quaternion.identity;
-        wobblePivot.gameObject.SetActive(true);
-        sourceRenderer.enabled = false;
+        Vector3 bottom = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+        motionPivot.localPosition = bounds.center + meshFilter.transform.InverseTransformVector(conveyorWorldOffset);
+        motionPivot.localRotation = conveyorVisualRotation;
+        wobblePivot.localPosition = bottom - bounds.center;
+        wobblePivot.GetChild(0).localPosition = -bottom;
+        wobbleMeshRenderer.enabled = presentationSourceWasEnabled;
+        UpdateVisualProxyVisibility();
+    }
 
+    private void UpdateVisualProxyVisibility()
+    {
+        if (motionPivot == null) return;
+        bool visible = conveyorVisualActive || hitWobbleActive;
+        if (visible)
+        {
+            motionPivot.gameObject.SetActive(true);
+            targetRenderer.enabled = false;
+        }
+        else if (motionPivot.gameObject.activeSelf)
+        {
+            motionPivot.gameObject.SetActive(false);
+            if (targetRenderer != null) targetRenderer.enabled = presentationSourceWasEnabled;
+        }
+    }
+
+    private void PlayHitWobble()
+    {
+        if (!isActiveAndEnabled || wobbleAngle <= 0f || !EnsureVisualProxy()) return;
+        if (wobbleRoutine != null) StopCoroutine(wobbleRoutine);
+        hitWobbleActive = true;
+        SyncVisualProxy();
         wobbleDirection = -wobbleDirection;
         wobbleRoutine = StartCoroutine(HitWobbleRoutine());
     }
@@ -578,24 +643,17 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             elapsed += Time.deltaTime;
             yield return null;
         }
-
         wobbleRoutine = null;
         StopHitWobble();
     }
 
     private void StopHitWobble()
     {
-        if (wobbleRoutine != null)
-        {
-            StopCoroutine(wobbleRoutine);
-            wobbleRoutine = null;
-        }
-
-        if (wobblePivot == null || !wobblePivot.gameObject.activeSelf) return;
-        wobblePivot.localRotation = Quaternion.identity;
-        wobblePivot.gameObject.SetActive(false);
-        if (targetRenderer != null)
-            targetRenderer.enabled = true;
+        if (wobbleRoutine != null) StopCoroutine(wobbleRoutine);
+        wobbleRoutine = null;
+        hitWobbleActive = false;
+        if (wobblePivot != null) wobblePivot.localRotation = Quaternion.identity;
+        UpdateVisualProxyVisibility();
     }
     #endregion
 

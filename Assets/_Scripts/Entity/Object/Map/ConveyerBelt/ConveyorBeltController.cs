@@ -15,6 +15,7 @@ public class ConveyorItemState
     public CatchableObj Catchable; // 잡힘 여부(IsHold) 확인용, 없으면 null 허용
     public float LocalSpawnTime;   // 클라이언트가 스폰 이벤트를 수신한 로컬 Time.time
     public bool IsMovingOnBelt;
+    public ConveyorItemMotion Motion;
 
     // 착지 지점이 벨트 중심선에서 좌우로 벗어난 정도. 이동 내내 유지되어
     // 모든 재료가 하나의 레일 위를 도는 것처럼 보이지 않게 한다.
@@ -40,6 +41,10 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
     [SerializeField] private int beltId; // DB의 beltID와 동일한 값을 인스펙터에서 입력
     [SerializeField] private ConveyorPath path;
     [SerializeField] private float beltSpeed = 2f;
+    [InspectorName("\uc7ac\ub8cc \ub192\uc774 \ubcf4\uc815")]
+    [Tooltip("\uc7ac\ub8cc\ub9cc \uc6d4\ub4dc Y\ucd95\uc73c\ub85c \uc774\ub3d9\ud569\ub2c8\ub2e4. \uc591\uc218\ub294 \uc704, \uc74c\uc218\ub294 \uc544\ub798\uc774\uba70 \uc774\ud399\ud2b8\uc640 \uc6e8\uc774\ud3ec\uc778\ud2b8\uc5d0\ub294 \uc601\ud5a5\uc744 \uc8fc\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.")]
+    [SerializeField] private float itemHeightOffset = 0f;
+    [SerializeField] private ConveyorItemAnimationSettings itemAnimation = new();
     [SerializeField] private Renderer beltRenderer;
     [SerializeField] private float rotationLerpSpeed = 10f;
     [SerializeField] private float maxLateralOffset = 0.35f; // 벨트 폭 절반 정도로, 실제 벨트 폭에 맞춰 조정
@@ -48,6 +53,11 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
     public int BeltId => beltId;
     public ConveyorPath Path => path;
     public float Speed => beltSpeed;
+    public float ItemHeightOffset => itemHeightOffset;
+    public ConveyorItemAnimationSettings ItemAnimation => itemAnimation;
+
+    public float GetNearestItemDistance(Vector3 worldPosition)
+        => path.GetNearestDistance(worldPosition - Vector3.up * itemHeightOffset);
 
     private readonly List<ConveyorItemState> itemsOnBelt = new();
     private readonly Dictionary<long, ConveyorItemState> itemLookup = new();
@@ -59,6 +69,7 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
 
     private void OnDisable()
     {
+        ResetClientStage();
         ConveyorBeltRegistry.UnregisterBelt(this);
     }
 
@@ -89,10 +100,12 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
         if (itemObject.TryGetComponent(out IngredientTraitFly flight) && flight.IsFlying) return;
 
         itemObject.TryGetComponent(out CatchableObj catchable);
+        if (catchable != null && (catchable.IsHold || catchable.ParentEntityId > 0
+            || catchable.IsSubmissionPending || catchable.IsSubmissionReturning)) return;
 
         Vector3 currentPos = itemTransform.position;
         // 명시적 distance가 없으면(=스폰 직후) 지금 위치와 가장 가까운 경로 지점을 역산
-        float distance = explicitDistance ?? path.GetNearestDistance(currentPos);
+        float distance = explicitDistance ?? GetNearestItemDistance(currentPos);
         var (pathPoint, tangent) = path.Evaluate(distance);
 
         // 착지 지점이 벨트 중심선에서 좌우로 얼마나 벗어났는지 계산 (수평 폭 방향 기준)
@@ -120,13 +133,16 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
         itemsOnBelt.Add(state);
         itemLookup[serverItemId] = state;
         ConveyorBeltRegistry.SetOwner(serverItemId, this);
+        state.Motion = itemObject.GetComponent<ConveyorItemMotion>();
+        if (state.Motion == null) state.Motion = itemObject.AddComponent<ConveyorItemMotion>();
+        state.Motion.Begin(this, serverItemId);
     }
 
     /// <summary>
     /// 벨트 끝 트리거, 폭발 이벤트 등 "더 이상 이 벨트가 이동을 책임지지 않아도 될 때" 호출.
     /// 리스트/딕셔너리에서만 제거하며, 오브젝트 파괴나 풀 반환은 호출자 책임.
     /// </summary>
-    public void UnregisterItem(long serverItemId)
+    public void UnregisterItem(long serverItemId, bool restorePhysics = true)
     {
         if (itemLookup.TryGetValue(serverItemId, out var state))
         {
@@ -134,6 +150,7 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
             itemsOnBelt.Remove(state);
             itemLookup.Remove(serverItemId);
             ConveyorBeltRegistry.ClearOwner(serverItemId, this);
+            if (state.Motion != null) state.Motion.End(restorePhysics);
         }
     }
 
@@ -157,17 +174,15 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
         for (int i = itemsOnBelt.Count - 1; i >= 0; i--)
         {
             var item = itemsOnBelt[i];
-            if (!item.IsMovingOnBelt || item.ItemTransform == null) continue;
-
-            // 플레이어가 잡은 순간(IsHold == true) 벨트 관리에서 빠진다.
-            // CatchableObj.OnPick()이 호출되면 IsHold가 true가 되는데, 그 시점부터는
-            // PlayerInteract.ApplyPicked()가 transform.parent를 손으로 바꿔주므로
-            // 벨트가 계속 transform.position을 덮어쓰면 손에서 위치가 튐/안 붙는 문제가 생긴다.
-            if (item.Catchable != null && item.Catchable.IsHold)
+            if (!item.IsMovingOnBelt || item.ItemTransform == null || item.GameObject == null
+                || !item.GameObject.activeInHierarchy)
             {
-                itemsOnBelt.RemoveAt(i);
-                itemLookup.Remove(item.ServerItemId);
-                ConveyorBeltRegistry.ClearOwner(item.ServerItemId, this);
+                UnregisterItem(item.ServerItemId);
+                continue;
+            }
+            if (item.Motion != null && !item.Motion.CanRemainOnBelt)
+            {
+                UnregisterItem(item.ServerItemId, false);
                 continue;
             }
 
@@ -189,7 +204,7 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
             // 등록 시점에 계산해둔 좌우 오프셋을 유지한 채 경로를 따라간다.
             // (모든 재료가 하나의 중심선 위를 그대로 지나가지 않도록)
             Vector3 right = Vector3.Cross(Vector3.up, tangent).normalized;
-            Vector3 targetPos = point + right * item.LateralOffset;
+            Vector3 targetPos = point + right * item.LateralOffset + Vector3.up * itemHeightOffset;
 
             if (item.IsSettling)
             {
@@ -219,10 +234,8 @@ public class ConveyorBeltController : MonoBehaviour, IClientStageResettable
 
     public void ResetClientStage()
     {
-        foreach (ConveyorItemState item in itemsOnBelt)
-            ConveyorBeltRegistry.ClearOwner(item.ServerItemId, this);
-        itemsOnBelt.Clear();
-        itemLookup.Clear();
+        while (itemsOnBelt.Count > 0)
+            UnregisterItem(itemsOnBelt[itemsOnBelt.Count - 1].ServerItemId);
     }
     private void ScrollBeltTexture()
     {

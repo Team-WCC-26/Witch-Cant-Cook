@@ -37,7 +37,7 @@ public class ConveyorReentryTrigger : MonoBehaviour
         // 이 벨트뿐 아니라 다른 벨트가 이미 담당 중인 경우도 걸러내야 함
         if (ConveyorBeltRegistry.IsOwnedByAnyBelt(networkId)) return;
 
-        float distance = belt.Path.GetNearestDistance(other.transform.position);
+        float distance = belt.GetNearestItemDistance(other.transform.position);
         belt.RegisterItemAtDistance(networkId, other.transform, other.gameObject, distance);
     }
 }
