@@ -239,6 +239,8 @@ public sealed class PlayerBrain : MonoBehaviour
             ? new LocalPlayerStateResolver(this)
             : new RemotePlayerStateResolver(this);
 
+        GetComponent<PlayerHitFeedback>()?.BindHealth(Health, isMine);
+
         PlayerSpawnManager.Instance.RegisterPlayer(this);
 
         isInitialized = true;
