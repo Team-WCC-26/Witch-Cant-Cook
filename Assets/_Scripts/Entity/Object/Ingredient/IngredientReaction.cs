@@ -78,6 +78,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private bool hasOriginalState;
     private Mesh originalMesh;
     private Mesh originalColliderMesh;
+    private BoxCollider boxCollider;
+    private Vector3 originalBoxCenter, originalBoxSize;
     private Material[] originalMaterials;
     private bool originalRendererEnabled;
     private readonly List<MonoBehaviour> traitComponents = new();
@@ -191,6 +193,11 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         gaugeUI?.Hide();
         if (meshFilter != null) meshFilter.sharedMesh = originalMesh;
         ApplyColliderMesh(originalColliderMesh);
+        if (boxCollider != null)
+        {
+            boxCollider.center = originalBoxCenter;
+            boxCollider.size = originalBoxSize;
+        }
         if (targetRenderer != null)
         {
             targetRenderer.sharedMaterials = originalMaterials;
@@ -213,6 +220,12 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         if (meshCollider == null && meshFilter != null)
             meshCollider = meshFilter.GetComponent<MeshCollider>();
         originalColliderMesh = meshCollider != null ? meshCollider.sharedMesh : null;
+        if (meshFilter != null) boxCollider = meshFilter.GetComponent<BoxCollider>();
+        if (boxCollider != null)
+        {
+            originalBoxCenter = boxCollider.center;
+            originalBoxSize = boxCollider.size;
+        }
         if (targetRenderer != null)
         {
             originalMaterials = targetRenderer.sharedMaterials;
@@ -346,17 +359,42 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
+            Vector3 position = transform.position;
+            Quaternion rotation = transform.rotation;
+            Vector3 scale = transform.localScale;
             DisableTraitsAfterCut();
+            // Trait cleanup can restore an animated root to its spawn pose (e.g. corn).
+            // Keep the current placement; only the cut transition below may reset rotation.
+            transform.SetPositionAndRotation(position, rotation);
+            transform.localScale = scale;
             StopHitWobble();
             gaugeUI?.Hide();
             PlayCutParticle();
         }
         ApplyVisual(completedActions);
+        if ((newlyCompleted & IngredientAction.Cut) != 0) ResetCutPose();
         UpdateGrillOverlay();
         if (newlyCompleted != IngredientAction.None)
             OnActionCompleted?.Invoke(newlyCompleted);
     }
     
+    private void ResetCutPose()
+    {
+        // Placement and conveyor motion own the pose while the ingredient is attached.
+        if (catchable != null && (catchable.IsHold || catchable.Holder != null ||
+            catchable.ParentEntityId > 0 || ConveyorBeltRegistry.IsOwnedByAnyBelt(catchable.NetworkId)))
+            return;
+        if (transform.parent != null && transform.parent.GetComponentInParent<CatchableObj>(true) != null)
+            return;
+
+        Rigidbody body = catchable != null ? catchable.Rb : GetComponent<Rigidbody>();
+        transform.rotation = Quaternion.identity;
+        if (body == null) return;
+        body.rotation = Quaternion.identity;
+        // Stop the old tumble from immediately overturning the newly cut mesh.
+        if (!body.isKinematic) body.angularVelocity = Vector3.zero;
+    }
+
     private bool IsActionBlocked(IngredientAction action)
     {
         if (catchable.Data is not Ingredient ingredient)
@@ -400,6 +438,13 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         meshFilter.sharedMesh = mesh;
         ApplyColliderMesh(mesh);
+        // A cut mesh can be much flatter and have a different pivot than the whole ingredient.
+        // Its collision bounds must change too, otherwise it rests above/below the visible surface.
+        if (IsActionCompleted(IngredientAction.Cut) && boxCollider != null)
+        {
+            boxCollider.center = mesh.bounds.center;
+            boxCollider.size = mesh.bounds.size;
+        }
     }
 
     private void ApplyColliderMesh(Mesh mesh)
