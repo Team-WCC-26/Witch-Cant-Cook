@@ -63,7 +63,8 @@ public class IngredientTraitExplode : IngredientTrait
             PlayerBrain player = hit.GetComponentInParent<PlayerBrain>();
             if (player != null)
             {
-                Rigidbody playerBody = player.Rb;
+                if (player.StateResolver is RemotePlayerStateResolver) continue;
+                Rigidbody playerBody = player.Body.Rigidbody;
                 if (playerBody == null || playerBody.isKinematic || !affectedBodies.Add(playerBody))
                     continue;
 

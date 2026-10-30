@@ -444,13 +444,13 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
     private bool Overlaps(Component target)
     {
         if (intakeTrigger == null || target == null) return false;
+        if (target is PlayerBrain player) return player.Body.Overlaps(intakeTrigger);
         target.GetComponentsInChildren(true, overlapColliders);
         foreach (Collider col in overlapColliders)
         {
             if (!col.gameObject.activeInHierarchy) continue;
             // Exit detection with disabled held colliders
             if (target is CatchableObj obj && col.GetComponentInParent<CatchableObj>() != obj) continue;
-            if (target is PlayerBrain && col.GetComponentInParent<CatchableObj>() != null) continue;
             if (col.enabled && !intakeTrigger.bounds.Intersects(col.bounds)) continue;
             if (Physics.ComputePenetration(intakeTrigger, intakeTrigger.transform.position, intakeTrigger.transform.rotation,
                 col, col.transform.position, col.transform.rotation, out _, out _)) return true;

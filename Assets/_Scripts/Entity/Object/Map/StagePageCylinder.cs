@@ -75,7 +75,7 @@ public class StagePageCylinder : MonoBehaviour, IInteractTarget, IPunchReceiver
         wobblePivot.gameObject.SetActive(true);
         sourceRenderer.enabled = false;
 
-        Vector3 toPlayer = player.transform.position - transform.position;
+        Vector3 toPlayer = player.PhysicsPos - transform.position;
         float side = Vector3.Dot(transform.right, toPlayer.normalized);
         wobbleDirection = Mathf.Abs(side) > 0.15f ? Mathf.Sign(side) : -wobbleDirection;
         wobbleElapsed = 0f;

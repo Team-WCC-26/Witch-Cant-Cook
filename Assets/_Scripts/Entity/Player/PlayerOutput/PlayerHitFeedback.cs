@@ -124,7 +124,7 @@ public sealed class PlayerHitFeedback : MonoBehaviour
         Transform anchor = hitEffectAnchor != null ? hitEffectAnchor
             : brain != null && brain.FacingRoot != null ? brain.FacingRoot : transform;
         ParticleSystem effect = Instantiate(hitEffectPrefab,
-            anchor.TransformPoint(hitEffectOffset), Quaternion.identity);
+            brain.Body.GetWorldPoint(anchor, hitEffectOffset), Quaternion.identity);
         effect.transform.localScale = hitEffectPrefab.transform.localScale * hitEffectScale;
         // Keep the burst in the player's scene so unloading the scene also removes it.
         if (effect.gameObject.scene != gameObject.scene)

@@ -114,9 +114,10 @@ public sealed class PlayerBrain : MonoBehaviour
 
     #region Properties
     public PlayerActionController ActionController => actionController;
-    public Vector3 PhysicsPos => actionController != null ? actionController.PhysicsPos
+    public PlayerBodyContext Body { get; private set; }
+    public Vector3 PhysicsPos => Body != null ? Body.PhysicsPos
         : Rb != null ? Rb.position : transform.position;
-    public Vector3 VisualPos => actionController != null ? actionController.VisualPos : transform.position;
+    public Vector3 VisualPos => Body != null ? Body.VisualPos : transform.position;
     public PlayerInteract Interact => interact;
     public PlayerThrowTracker ThrowTrajectory { get; private set; }
     public PlayerStateResolver StateResolver => stateResolver;
@@ -149,6 +150,7 @@ public sealed class PlayerBrain : MonoBehaviour
         if (Glow != null)
             Glow.enabled = false;
 
+        Body = new PlayerBodyContext(this);
         actionController = new PlayerActionController(this);
         EnsureInteractionCasts();
         interact = new PlayerInteract(this);

@@ -159,7 +159,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         if (brain.ItemPoint != null)
         {
             brain.ItemPoint.SetPositionAndRotation(
-                brain.transform.position + yawRotation * itemPointLocalPosition,
+                brain.Body.VisualPos + yawRotation * itemPointLocalPosition,
                 yawRotation * itemPointLocalRotation
             );
         }
@@ -167,7 +167,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         if (brain.ThrowPoint != null)
         {
             brain.ThrowPoint.transform.SetPositionAndRotation(
-                brain.transform.position + yawRotation * throwPointLocalPosition,
+                brain.Body.VisualPos + yawRotation * throwPointLocalPosition,
                 yawRotation * throwPointLocalRotation
             );
         }

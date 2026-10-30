@@ -552,7 +552,12 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void UpdateLocalPlayerPresence()
     {
-        if (string.IsNullOrEmpty(localPlayerId)) return;
+        if (string.IsNullOrEmpty(localPlayerId))
+        {
+            if (!TryGetLocalPlayerInside(out PlayerBrain player) || !player.Body.IsRagdoll) return;
+            localPlayerInside = player;
+            localPlayerId = player.PlayerId;
+        }
         if (localPlayerInside == null || !TryGetLocalPlayerInside(out _))
         {
             ClearLocalPlayer(true);
@@ -657,10 +662,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             player.Health == null || player.Col == null || !player.gameObject.activeInHierarchy)
             return false;
 
-        return Physics.ComputePenetration(
-            innerTrigger, innerTrigger.transform.position, innerTrigger.transform.rotation,
-            player.Col, player.Col.transform.position, player.Col.transform.rotation,
-            out _, out _);
+        return player.Body.Overlaps(innerTrigger);
     }
 
     private void PausePlayerRecovery(PlayerBrain player)

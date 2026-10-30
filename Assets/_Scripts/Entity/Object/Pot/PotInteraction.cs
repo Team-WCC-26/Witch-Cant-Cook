@@ -776,19 +776,7 @@ public class PotInteraction : MapObjInteraction,
         if (!hasPotBounds) return true;
         // Require the entire collider to leave the pot envelope, including its hollow interior.
         potBounds.Expand(EjectionClearance * 2f);
-        if (!IsPlayerColliderClearOfPot(collision.player.Col, potBounds)) return false;
-        foreach (BodyPart part in collision.player.BodyParts)
-        {
-            Collider bodyCollider = part != null ? part.Col : null;
-            if (!IsPlayerColliderClearOfPot(bodyCollider, potBounds)) return false;
-        }
-        return true;
-    }
-
-    private static bool IsPlayerColliderClearOfPot(Collider bodyCollider, Bounds potBounds)
-    {
-        if (bodyCollider == null || !bodyCollider.enabled || !bodyCollider.gameObject.activeInHierarchy) return true;
-        return !potBounds.Intersects(bodyCollider.bounds);
+        return collision.player.Body.IsClearOf(potBounds);
     }
 
     private static void RestorePlayerEjectionCollisions(PlayerEjectionCollision collision)

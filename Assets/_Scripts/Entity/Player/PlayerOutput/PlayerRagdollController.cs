@@ -27,7 +27,6 @@ public class PlayerRagdollController
     private bool isRagdoll;
     private bool isLaunched;
     private Rigidbody pelvisBody;
-    private Vector3 pelvisOffset;
     private bool hasRemoteTarget;
     private Vector3 remotePelvisPos;
     private Vector3 remoteVelocity;
@@ -47,12 +46,9 @@ public class PlayerRagdollController
 
     public bool IsActive => isRagdoll;
     public bool IsLaunchPending => isLaunchPending;
-    public Quaternion PhysicsRot => isRagdoll && pelvisBody != null
-        ? pelvisBody.rotation : brain.transform.rotation;
-    public Vector3 PhysicsPos => isRagdoll && pelvisBody != null
-        ? pelvisBody.position - pelvisOffset : brain.Rb.position;
-    public Vector3 VisualPos => isRagdoll && pelvisBody != null
-        ? pelvisBody.transform.position - pelvisOffset : brain.transform.position;
+    public Quaternion PhysicsRot => brain.Body.PhysicsRot;
+    public Vector3 PhysicsPos => brain.Body.PhysicsPos;
+    public Vector3 VisualPos => brain.Body.VisualPos;
 
     // Initialize body physics and recovery references.
     public PlayerRagdollController(PlayerBrain brain, PlayerAnimController animController)
@@ -120,7 +116,7 @@ public class PlayerRagdollController
         ClampRagdollAngularVelocity();
 
         Physics.SyncTransforms();
-        if (pelvisBody != null) pelvisOffset = pelvisBody.position - brain.transform.position;
+        brain.Body.UseRagdoll(pelvisBody);
     }
 
     // Let the body collapse before applying the launch impulse.
@@ -165,7 +161,7 @@ public class PlayerRagdollController
     {
         if (!isRagdoll || pelvisBody == null) return;
         remotePelvisRot = rot;
-        remotePelvisPos = pos + pelvisOffset;
+        remotePelvisPos = pos + brain.Body.RagdollRootOffset;
         remoteVelocity = velocity;
         hasRemoteTarget = true;
     }
@@ -225,6 +221,7 @@ public class PlayerRagdollController
         brain.Animator.transform.SetLocalPositionAndRotation(ragdollRootLocalPos, ragdollRootLocalRot);
         brain.Animator.enabled = true;
         brain.Col.enabled = rootColliderEnabled;
+        brain.Body.UseRoot();
 
         if (brain.Rb != null)
         {
