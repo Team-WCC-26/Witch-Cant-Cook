@@ -59,6 +59,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
         ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCorn, HandleIngredientCorn);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -83,6 +84,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolSpawn);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientDistanceRequest);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCorn);
         isSubscribed = false;
     }
 
@@ -110,6 +112,14 @@ public class ObjectNetworkRouter : MonoBehaviour
             Distance = distance
         };
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(response));
+    }
+
+    private void HandleIngredientCorn(ReadOnlyMemory<byte> data)
+    {
+        IngredientCornPacket packet = PacketSerializer.Deserialize<IngredientCornPacket>(data);
+        if (catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable) && catchable != null &&
+            catchable.TryGetComponent(out IngredientCorn corn))
+            corn.HandleServerExplosion(packet);
     }
 
     private void HandleEntityDestroy(ReadOnlyMemory<byte> data)
