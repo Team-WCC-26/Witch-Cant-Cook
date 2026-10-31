@@ -14,7 +14,7 @@ public static class IngredientCutVfx
         return new Color(0.95f, 0.85f, 0.65f);
     }
 
-    public static void PlayAt(Vector3 position, Ingredient ingredient)
+    public static void PlayAt(Vector3 position, Ingredient ingredient, float scale = 1f)
     {
         if (prefab == null)
             prefab = Resources.Load<ParticleSystem>(PrefabPath);
@@ -26,6 +26,7 @@ public static class IngredientCutVfx
         }
 
         ParticleSystem instance = Object.Instantiate(prefab, position, Quaternion.identity);
+        instance.transform.localScale = prefab.transform.localScale * Mathf.Max(0f, scale);
         Play(instance, ResolveColor(ingredient));
 
         ParticleSystem.MainModule main = instance.main;

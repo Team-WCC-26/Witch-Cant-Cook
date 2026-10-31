@@ -237,7 +237,9 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
             float distance = Mathf.Max(0f, hit.distance - contactSkin);
             position += travel / length * Mathf.Min(distance, length);
             float incomingSpeed = velocity.magnitude;
+            Vector3 incomingVelocity = velocity;
             velocity = ReflectVelocity(velocity, normal, restitution, tangentialRetention, minimumReboundSpeed);
+            reaction?.PlayImpact(hit.collider, hit.point, normal, rb.mass * (velocity - incomingVelocity).magnitude);
             PushAndDamage(hit.collider, normal, incomingSpeed);
             remaining *= 1f - Mathf.Clamp01(distance / length);
             position += normal * contactSkin;

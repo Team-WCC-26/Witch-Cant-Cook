@@ -46,6 +46,8 @@ public class PlayerRagdollController
     private Vector3 pendingLaunchImpulse;
 
     public bool IsActive => isRagdoll;
+    public float RecoveryProgress => !isRagdoll ? 0f : Mathf.Clamp01(recoveryStableTime /
+        Mathf.Max(.01f, RecoverySettleDuration + brain.RagdollStunDuration));
     public bool IsLaunchPending => isLaunchPending;
     public Quaternion PhysicsRot => brain.Body.PhysicsRot;
     public Vector3 PhysicsPos => brain.Body.PhysicsPos;

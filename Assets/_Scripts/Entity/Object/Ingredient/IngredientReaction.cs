@@ -41,6 +41,15 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     [Header("Interact Gauge")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
+    [Header("충돌 파티클")]
+    [UnityEngine.Serialization.FormerlySerializedAs("wallImpactScale")]
+    [SerializeField, Min(0f), InspectorName("충돌 파티클 크기 배율")] private float impactScale = 1f;
+    [Tooltip("이 값 이상의 충격량(N·s)일 때 재생합니다. 일반 충돌은 Collision.impulse, 직접 계산하는 튕김은 질량 × 속도 변화량을 사용합니다.")]
+    [SerializeField, Min(0f), InspectorName("최소 충격량")] private float impactMinImpulse = 0.5f;
+    [UnityEngine.Serialization.FormerlySerializedAs("wallImpactCooldown")]
+    [SerializeField, Min(0f), InspectorName("충돌 파티클 재생 간격")] private float impactCooldown = 0.1f;
+    private float lastImpactTime = float.NegativeInfinity;
+
     private IngredientAction lastAction = IngredientAction.None;
     private IngredientAction completedActions = IngredientAction.None;
     private int curHP;
@@ -105,17 +114,58 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void Awake()
     {
+        if (catchable == null) catchable = GetComponent<CatchableObj>();
         CacheOriginalState();
         CacheOriginalScale();
         InitializeGauge();
     }
 
+
     private void OnDisable()
     {
+        ResetImpact();
         ClearConveyorVisualMotion();
         StopHitWobble();
         grillPreview = false;
         if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // Scripted bounce motion reports its own sweep contact below.
+        if (TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating) return;
+        if (collision.contactCount == 0) return;
+        ContactPoint contact = collision.GetContact(0);
+        float speed = Mathf.Abs(Vector3.Dot(collision.relativeVelocity, contact.normal));
+        for (int i = 1; i < collision.contactCount; i++)
+        {
+            ContactPoint candidate = collision.GetContact(i);
+            float candidateSpeed = Mathf.Abs(Vector3.Dot(collision.relativeVelocity, candidate.normal));
+            if (candidateSpeed <= speed) continue;
+            contact = candidate;
+            speed = candidateSpeed;
+        }
+        PlayImpact(collision.collider, contact.point, contact.normal, collision.impulse.magnitude);
+    }
+
+    private void ResetImpact()
+    {
+        lastImpactTime = float.NegativeInfinity;
+    }
+
+    public void PlayImpact(Collider other, Vector3 point, Vector3 normal, float impulse)
+    {
+        if (!isActiveAndEnabled || catchable == null ||
+            catchable.IsHold || catchable.ParentEntityId > 0 ||
+            catchable.IsSubmissionPending || catchable.IsSubmissionReturning ||
+            catchable.Data is not Ingredient ingredient || other == null || other.isTrigger ||
+            other.transform.IsChildOf(transform) ||
+            impulse <= 0f || impulse < impactMinImpulse || impactScale <= 0f ||
+            Time.time - lastImpactTime < impactCooldown)
+            return;
+
+        lastImpactTime = Time.time;
+        IngredientCutVfx.PlayAt(point + normal * 0.01f, ingredient, impactScale);
     }
 
     private void LateUpdate()
@@ -178,6 +228,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     public void ResetForPool()
     {
+        ResetImpact();
         CacheOriginalState();
         RestoreOriginalScale();
         ClearConveyorVisualMotion();
