@@ -161,6 +161,7 @@ MonoBehaviour:
   networkId: 0
   col: {fileID: 4390229893110300088}
   rb: {fileID: 5520676652034953291}
+  additionalPhysicsColliders: []
   category: 2
   acceptedCategories: 0
   canBePicked: 1
@@ -184,7 +185,6 @@ MonoBehaviour:
   catchable: {fileID: -3950667264815616381}
   warningVisual: {fileID: 0}
   warningAnimation: {fileID: 0}
-  cornImpactThreshold: 3
 --- !u!114 &-4382154072363871665
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientTraitExplode
   explosionVFXPrefab: {fileID: 2948390974073299325, guid: 90e0ecf246aa4d345b1b9f58490435d1, type: 3}
-  blastRadius: 4
+  blastRadius: 5
   blastForce: 12
   upwardModifier: 2
   blastMask:
@@ -226,6 +226,9 @@ MonoBehaviour:
   targetRenderer: {fileID: 2191469642156447257}
   meshCollider: {fileID: 0}
   gaugeUI: {fileID: 1504064107145506792}
+  impactScale: 1
+  impactMinImpulse: 0.5
+  impactCooldown: 0.1
   wobbleAngle: 12
   wobbleDuration: 0.35
   panPlacement: {fileID: 0}
@@ -257,6 +260,11 @@ MonoBehaviour:
     mesh: {fileID: -6380304942738169725, guid: ce5249ff6750bd640ba0074fb28bc8b9, type: 3}
     materials:
     - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
+  grillColor: {r: 0.21568628, g: 0.08627451, b: 0.023529412, a: 1}
+  grillEuler: {x: 0, y: 0, z: 25}
+  grillStripeCount: 5
+  grillStripeWidth: 0.34
+  grillStripeOffset: 0
 --- !u!114 &-9116075058137338827
 MonoBehaviour:
   m_ObjectHideFlags: 0

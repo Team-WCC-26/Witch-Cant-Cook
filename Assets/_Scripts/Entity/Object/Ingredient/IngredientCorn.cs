@@ -1,25 +1,21 @@
+using Protocol;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj), typeof(IngredientTraitExplode))]
 public class IngredientCorn : IngredientTrait
 {
-    private const float ExplosionDelay = 3f;
-    private const float WarningStartTime = 0.9f;
+    private const float HoldDuration = 3f;
+    private const float AbandonDuration = 10f;
     private const float WarningDuration = 2.1f;
 
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
     [Tooltip("경고 애니메이션을 적용할 시각 오브젝트. 물리 루트와 분리된 자식 오브젝트를 지정한다.")]
     [SerializeField] private Transform warningVisual;
-    [Tooltip("추후 제작된 경고 클립을 연결한다. 비워 둬도 폭발은 정상 작동하며, 연결 시 충돌 0.9초 후부터 재생한다.")]
+    [Tooltip("서버 폭발 예정 시점의 마지막 2.1초 동안 재생하는 경고 클립. 실제 폭발은 서버 패킷으로만 실행한다.")]
     [SerializeField] private AnimationClip warningAnimation;
 
-    [Header("Impact")]
-    [Tooltip("이 상대 충돌 속도(m/s) 이상이면 3초 후 폭발한다.")]
-    [SerializeField, Min(0f)] private float cornImpactThreshold = 3f;
-
     private IngredientTraitExplode explodeTrait;
-    private readonly IngredientTraitTimer explosionTimer = new();
     private Renderer[] warningRenderers;
     private MaterialPropertyBlock[][] originalPropertyBlocks;
     private MaterialPropertyBlock warningPropertyBlock;
@@ -27,14 +23,8 @@ public class IngredientCorn : IngredientTrait
     private Vector3 originalVisualScale;
     private Quaternion originalVisualRotation;
     private float elapsed;
-    private bool isArmed;
+    private PlayerBrain warningHolder;
     private bool hasExploded;
-
-    public float CornImpactThreshold
-    {
-        get => cornImpactThreshold;
-        set => cornImpactThreshold = Mathf.Max(0f, value);
-    }
 
     private void Reset()
     {
@@ -65,58 +55,21 @@ public class IngredientCorn : IngredientTrait
 
     protected override void StartTrait()
     {
-        explosionTimer.Stop();
         elapsed = 0f;
-        isArmed = false;
+        warningHolder = catchable.Holder;
         hasExploded = false;
         CapturePropertyBlocks();
     }
 
     protected override void StopTrait()
     {
-        explosionTimer.Stop();
-        isArmed = false;
+        warningHolder = null;
         RestoreWarningVisual();
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private bool HasReplacementAuthority()
     {
-        if (!IsTraitAvailable || isArmed || hasExploded)
-            return;
-
-        if (IsSelfCollision(collision.collider))
-            return;
-
-        if (collision.relativeVelocity.magnitude < cornImpactThreshold)
-            return;
-
-        if (!HasExplosionAuthority())
-            return;
-
-        // 첫 유효 충돌에서만 예약한다. 잡거나 내려놓거나 다시 충돌해도 취소하지 않는다.
-        isArmed = true;
-        elapsed = 0f;
-        explosionTimer.StartTimer(ExplosionDelay, TriggerCornEffect);
-    }
-
-    private bool IsSelfCollision(Collider other)
-    {
-        if (other == null || other.transform.IsChildOf(transform))
-            return true;
-
-        PlayerBrain holder = catchable.Holder;
-        if (holder == null) return false;
-
-        if (other.GetComponentInParent<PlayerBrain>() == holder)
-            return true;
-
-        CatchableObj otherObject = other.GetComponentInParent<CatchableObj>();
-        return otherObject != null && otherObject.Holder == holder;
-    }
-
-    private bool HasExplosionAuthority()
-    {
-        // 기존 충돌 재료와 동일하게 마지막으로 잡은 클라이언트만 교체를 요청한다.
+        // 폭발은 모든 클라이언트가 처리하고, 팝콘 생성만 한 클라이언트가 요청한다.
         if (catchable.NetworkId == 0) return true;
         if (!string.IsNullOrEmpty(catchable.LastHolderPlayerId))
             return catchable.IsLocalOwner;
@@ -138,18 +91,26 @@ public class IngredientCorn : IngredientTrait
 
     private void Update()
     {
-        if (!isArmed || hasExploded) return;
+        if (!IsTraitAvailable || hasExploded) return;
 
+        if (warningHolder != catchable.Holder)
+        {
+            warningHolder = catchable.Holder;
+            elapsed = 0f;
+            RestoreWarningVisual();
+        }
+
+        // 경고 연출만 예측한다. 이 시간이 지나도 서버 패킷 없이는 폭발하지 않는다.
         elapsed += Time.deltaTime;
         UpdateWarningVisual();
-        explosionTimer.Tick(Time.deltaTime);
     }
 
     private void UpdateWarningVisual()
     {
-        if (elapsed < WarningStartTime) return;
+        float warningStartTime = (warningHolder != null ? HoldDuration : AbandonDuration) - WarningDuration;
+        if (elapsed < warningStartTime) return;
 
-        float animationTime = Mathf.Clamp(elapsed - WarningStartTime, 0f, WarningDuration);
+        float animationTime = Mathf.Clamp(elapsed - warningStartTime, 0f, WarningDuration);
         float progress = animationTime / WarningDuration;
 
         if (warningVisual != null && warningAnimation != null)
@@ -224,11 +185,15 @@ public class IngredientCorn : IngredientTrait
         }
     }
 
-    private void TriggerCornEffect()
+    public void HandleServerExplosion(IngredientCornPacket packet)
     {
-        if (!IsTraitAvailable || hasExploded) return;
+        if (packet.EntityId != catchable.NetworkId || !IsTraitAvailable || hasExploded) return;
         hasExploded = true;
-        explodeTrait.Explode();
-        PushIngredientToPool(catchable);
+
+        Vector3 origin = packet.ExplosionOrigin.HasValue
+            ? new Vector3(packet.ExplosionOrigin.Value.X, packet.ExplosionOrigin.Value.Y, packet.ExplosionOrigin.Value.Z)
+            : transform.position;
+        explodeTrait.Explode(origin, packet.ExplosionSeed, HasReplacementAuthority());
+        // 옥수수 제거는 서버가 보낸 기존 엔티티 제거 통지를 따른다.
     }
 }

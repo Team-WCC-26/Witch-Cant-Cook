@@ -37,17 +37,26 @@ public class IngredientTraitExplode : IngredientTrait
         affectedBodies.Clear();
     }
 
-    public void Explode()
+    public void Explode(Vector3 origin, int seed, bool spawnReplacement)
     {
         if (!IsTraitAvailable || exploded) return;
         exploded = true;
 
-        Vector3 origin = transform.position;
         if (explosionVFXPrefab != null)
             Instantiate(explosionVFXPrefab, origin, Quaternion.identity);
 
-        ApplyBlast(origin);
-        SpawnReplacement(origin);
+        Random.State previousRandomState = Random.state;
+        try
+        {
+            Random.InitState(seed);
+            ApplyBlast(origin);
+        }
+        finally
+        {
+            Random.state = previousRandomState;
+        }
+        if (spawnReplacement)
+            SpawnReplacement(origin);
     }
 
     private void ApplyBlast(Vector3 origin)
