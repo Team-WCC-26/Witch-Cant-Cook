@@ -163,7 +163,7 @@ public class PlayerMovement
             rb.linearVelocity = velocity;
             lastGroundedTime = float.NegativeInfinity;
             bedBounceJumpBlockedUntil = Time.time + Mathf.Max(0.1f, brain.CoyoteTime);
-            SoundManager.GetOrCreate().Play(brain.BedBounceSound, contact.point);
+            SoundManager.GetOrCreate().Play(SoundId.BedBounce, contact.point);
             return;
         }
     }

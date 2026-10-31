@@ -267,6 +267,9 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     {
         IngredientSquidPacket packet = PacketSerializer.Deserialize<IngredientSquidPacket>(data.Span);
         if (packet.PlayerIds == null || packet.BlindDurationMs <= 0) return;
+        ObjectNetworkRouter objectRouter = FindFirstObjectByType<ObjectNetworkRouter>();
+        if (objectRouter != null && objectRouter.TryGet(packet.EntityId, out CatchableObj squid))
+            SoundManager.GetOrCreate().Play(SoundId.SquidInk, squid.transform.position);
         float duration = packet.BlindDurationMs / 1000f;
         foreach (string playerId in packet.PlayerIds)
         {

@@ -25,6 +25,8 @@ public class IngredientCorn : IngredientTrait
     private float elapsed;
     private PlayerBrain warningHolder;
     private bool hasExploded;
+    private bool warningSoundStarted;
+    private SoundHandle warningSound;
 
     private void Reset()
     {
@@ -58,11 +60,14 @@ public class IngredientCorn : IngredientTrait
         elapsed = 0f;
         warningHolder = catchable.Holder;
         hasExploded = false;
+        warningSoundStarted = false;
         CapturePropertyBlocks();
     }
 
     protected override void StopTrait()
     {
+        warningSound.Stop();
+        warningSoundStarted = false;
         warningHolder = null;
         RestoreWarningVisual();
     }
@@ -95,6 +100,8 @@ public class IngredientCorn : IngredientTrait
 
         if (warningHolder != catchable.Holder)
         {
+            warningSound.Stop();
+            warningSoundStarted = false;
             warningHolder = catchable.Holder;
             elapsed = 0f;
             RestoreWarningVisual();
@@ -109,6 +116,11 @@ public class IngredientCorn : IngredientTrait
     {
         float warningStartTime = (warningHolder != null ? HoldDuration : AbandonDuration) - WarningDuration;
         if (elapsed < warningStartTime) return;
+        if (!warningSoundStarted)
+        {
+            warningSoundStarted = true;
+            warningSound = SoundManager.GetOrCreate().Play(SoundId.CornExplosionWarning, transform.position, transform);
+        }
 
         float animationTime = Mathf.Clamp(elapsed - warningStartTime, 0f, WarningDuration);
         float progress = animationTime / WarningDuration;
@@ -189,10 +201,12 @@ public class IngredientCorn : IngredientTrait
     {
         if (packet.EntityId != catchable.NetworkId || !IsTraitAvailable || hasExploded) return;
         hasExploded = true;
+        warningSound.Stop();
 
         Vector3 origin = packet.ExplosionOrigin.HasValue
             ? new Vector3(packet.ExplosionOrigin.Value.X, packet.ExplosionOrigin.Value.Y, packet.ExplosionOrigin.Value.Z)
             : transform.position;
+        SoundManager.GetOrCreate().Play(SoundId.CornExplosion, origin);
         explodeTrait.Explode(origin, packet.ExplosionSeed, HasReplacementAuthority());
         // 옥수수 제거는 서버가 보낸 기존 엔티티 제거 통지를 따른다.
     }

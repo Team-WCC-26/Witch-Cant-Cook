@@ -263,6 +263,7 @@ public class IngredientEgg : IngredientTrait
     private void OnBroken(Vector3 point, Vector3 normal)
     {
         if (!IsTraitAvailable) return;
+        SoundManager.GetOrCreate().Play(SoundId.EggCrack, point);
         if (areaCreator != null)
         {
             areaCreator.CreateArea(eArea, point, normal);

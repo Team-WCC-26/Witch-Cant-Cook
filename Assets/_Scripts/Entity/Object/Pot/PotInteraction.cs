@@ -486,6 +486,7 @@ public class PotInteraction : MapObjInteraction,
         }
 
         if (!storedObjects.Add(catchable)) return false;
+        SoundManager.GetOrCreate().Play(SoundId.PotInsert, transform.position);
 
         catchable.ChangePickState(false);
         catchable.SetPhysicsState(false);
@@ -923,6 +924,8 @@ public class PotInteraction : MapObjInteraction,
     public void HandlePotCookComplete(PotCookCompletePacket packet)
     {
         if (packet == null) return;
+        if (pendingCookCompletePacket == null || pendingCookCompletePacket.DishEntityId != packet.DishEntityId)
+            SoundManager.GetOrCreate().Play(SoundId.PotCookComplete, transform.position);
 
         pendingCookCompletePacket = packet;
         HideCookingUI();

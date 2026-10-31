@@ -219,6 +219,7 @@ public class PlayerInteract
 
     public void QueueKnifeImpact()
     {
+        SoundManager.GetOrCreate().Play(SoundId.KnifeSwing, brain.transform.position);
         pendingAttackImpact = PendingAttackImpact.Knife;
         pendingKnife = HeldObj;
         pendingImpactDeadline = Time.time + 2f;
@@ -268,6 +269,7 @@ public class PlayerInteract
     private void ApplyPlayerPunch(PlayerHitWobble playerHit)
     {
         if (playerHit == null) return;
+        SoundManager.GetOrCreate().Play(SoundId.Punch, playerHit.transform.position);
         playerHit.PlayHit(brain.transform.position);
 
         PlayerBrain target = playerHit.GetComponent<PlayerBrain>();
