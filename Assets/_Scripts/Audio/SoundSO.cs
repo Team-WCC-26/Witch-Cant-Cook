@@ -8,7 +8,7 @@ public sealed class SoundSO : ScriptableObject
     [SerializeField] private AudioMixerGroup mixerGroup;
     [SerializeField, Range(0f, 1f)] private float volume = 1f;
     [SerializeField, Range(0.1f, 3f)] private float pitch = 1f;
-    [SerializeField] private bool loop;
+    [SerializeField] private bool loop = false;
     [SerializeField, Range(0f, 1f)] private float spatialBlend = 1f;
     [SerializeField, Min(0.01f)] private float minDistance = 1f;
     [SerializeField, Min(0.01f)] private float maxDistance = 20f;
