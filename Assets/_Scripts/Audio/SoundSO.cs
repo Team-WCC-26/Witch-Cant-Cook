@@ -4,9 +4,49 @@ using UnityEngine.Audio;
 using UnityEditor;
 #endif
 
+public enum SoundId
+{
+    //Default
+    None = 0,
+    
+    //BGM
+    GlobalBgm = 100,
+     
+    //SFX
+    BedBounce = 200,
+    Boiling = 201,
+    Punch = 202,
+    EggCrack = 203,
+    MushroomImpact = 204,
+    ObjectImpact = 205,
+    SquidInk = 206,
+    IngredientThrow = 207,
+    CarrotRocket = 208,
+    CornExplosion = 209,
+    CornExplosionWarning = 210,
+    PlayerGrabRelease = 211,
+    OvenRun = 212,
+    OvenCookComplete = 213,
+    PanCooking = 214,
+    Eject = 215,
+    KnifeSwing = 216,
+    KnifeHit = 217,
+    PotInsert = 218,
+    PotCooking = 219,
+    PotCookComplete = 220,
+    UIButtonClick = 221,
+    StageStart = 222,
+    TimeWarning = 223,
+    DishSubmit = 224,
+    StageTimeUp = 225,
+    StageSuccess = 226,
+    StageFailure = 227
+}
+
 [CreateAssetMenu(menuName = "Audio/Sound SO")]
 public sealed class SoundSO : ScriptableObject
 {
+    [SerializeField] private SoundId soundId;
     [SerializeField] private AudioClip clip;
     [SerializeField] private AudioMixerGroup mixerGroup;
     [SerializeField, Range(0f, 1f)] private float volume = 1f;
@@ -17,6 +57,7 @@ public sealed class SoundSO : ScriptableObject
     [SerializeField, Min(0.01f)] private float maxDistance = 20f;
 
     public AudioClip Clip => clip;
+    public SoundId Id => soundId;
 
     public void ApplyTo(AudioSource source)
     {
