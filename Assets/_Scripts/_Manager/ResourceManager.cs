@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 
 public class ResourceManager : Singleton<ResourceManager>
 {
@@ -138,6 +139,11 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask<T> LoadAsync<T>(string key) where T : UnityEngine.Object
     {
+        return await LoadAssetAsync<T>(key, null);
+    }
+
+    private async UniTask<T> LoadAssetAsync<T>(string key, IResourceLocation location) where T : UnityEngine.Object
+    {
         if (typeof(T) == typeof(Sprite)) return await SpriteCache.LoadAsync(key) as T;
         // 이미 캐시에 있는 경우
         if (_assetCache.TryGetValue(key, out var cachedAsset))
@@ -156,7 +162,9 @@ public class ResourceManager : Singleton<ResourceManager>
         AsyncOperationHandle<T> handle = default;
         try
         {
-            handle = Addressables.LoadAssetAsync<T>(key);
+            handle = location != null
+                ? Addressables.LoadAssetAsync<T>(location)
+                : Addressables.LoadAssetAsync<T>(key);
             await handle.ToUniTask();
             if (handle.Status == AsyncOperationStatus.Failed)
             {
@@ -199,12 +207,10 @@ public class ResourceManager : Singleton<ResourceManager>
                 if (!locator.Locate(key, typeof(UnityEngine.Object), out var locations)) continue;
                 foreach (var location in locations)
                 {
-                    // Build catalogs contain bundle/scene keys too; preload actual assets only.
-                    if (!typeof(UnityEngine.Object).IsAssignableFrom(location.ResourceType) ||
-                        typeof(Sprite).IsAssignableFrom(location.ResourceType)) continue;
+                    if (!ShouldPreload(location)) continue;
                     string address = location.PrimaryKey;
                     if (!addresses.Add(address) || _assetCache.ContainsKey(address)) continue;
-                    loadTasks.Add(PreloadAssetAsync(address));
+                    loadTasks.Add(PreloadAssetAsync(location));
                 }
             }
         }
@@ -219,10 +225,34 @@ public class ResourceManager : Singleton<ResourceManager>
     /// <summary>
     /// 개별 에셋 해제
     /// </summary>
-    private async UniTask PreloadAssetAsync(string address)
+    private static bool ShouldPreload(IResourceLocation location)
     {
-        if (await LoadAsync<UnityEngine.Object>(address) == null)
-            throw new InvalidOperationException($"Addressable asset failed to load: {address}");
+        // Sprites and audio retain their own loading policies and handles.
+        Type resourceType = location.ResourceType;
+        if (!typeof(UnityEngine.Object).IsAssignableFrom(resourceType) ||
+            typeof(Sprite).IsAssignableFrom(resourceType) ||
+            typeof(SoundSO).IsAssignableFrom(resourceType) ||
+            typeof(AudioClip).IsAssignableFrom(resourceType)) return false;
+
+        const string audioFolder = "Assets/Addressables/Audio";
+        if (IsInFolder(location.PrimaryKey, audioFolder) || IsInFolder(location.InternalId, audioFolder)) return false;
+
+#if UNITY_EDITOR
+        // Editor locators can return a child location whose primary key is its parent folder.
+        if (UnityEditor.AssetDatabase.IsValidFolder(location.PrimaryKey) ||
+            UnityEditor.AssetDatabase.IsValidFolder(location.InternalId)) return false;
+#endif
+        return true;
+    }
+
+    private static bool IsInFolder(string path, string folder) =>
+        !string.IsNullOrEmpty(path) && (string.Equals(path, folder, StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith(folder + "/", StringComparison.OrdinalIgnoreCase));
+
+    private async UniTask PreloadAssetAsync(IResourceLocation location)
+    {
+        if (await LoadAssetAsync<UnityEngine.Object>(location.PrimaryKey, location) == null)
+            throw new InvalidOperationException($"Addressable asset failed to load: {location.PrimaryKey}");
     }
 
     public void Release(string key)
