@@ -13,6 +13,16 @@ Shader "WCC/Skybox/Low Poly Starry Night"
         _FacetStrength ("Low Poly Facets", Range(0, 0.5)) = 0.16
         _Rotation ("Rotation", Range(0, 360)) = 18
         _Exposure ("Exposure", Range(0, 3)) = 1
+        [Toggle] _MeteorsEnabled ("별똥별 켜기", Float) = 1
+        _MeteorInterval ("별똥별 평균 출현 간격 (초)", Range(3,60)) = 12
+        _MeteorSpeed ("별똥별 속도 (도/초)", Range(5,90)) = 24
+        _MeteorTravel ("별똥별 이동 거리 (도)", Range(5,40)) = 18
+        _MeteorElevation ("별똥별 출현 높이 (도)", Range(15,70)) = 40
+        _MeteorTrailLength ("별똥별 꼬리 길이 (도)", Range(0.5,12)) = 4.5
+        _MeteorWidth ("별똥별 두께", Range(0.0001,0.004)) = 0.0007
+        _MeteorBrightness ("별똥별 밝기", Range(0,8)) = 2.5
+        [HDR] _MeteorColor ("별똥별 꼬리 색", Color) = (0.58,0.76,1,1)
+        [HideInInspector] _SkyPreviewTime ("Preview Time", Float) = -1
     }
     SubShader
     {
@@ -33,6 +43,9 @@ Shader "WCC/Skybox/Low Poly Starry Night"
                 half4 _StarColor, _WarmStarColor;
                 float _StarDensity, _StarSize, _StarIntensity;
                 float _FacetStrength, _Rotation, _Exposure;
+                half4 _MeteorColor;
+                float _MeteorsEnabled, _MeteorInterval, _MeteorSpeed, _MeteorTravel, _MeteorElevation;
+                float _MeteorTrailLength, _MeteorWidth, _MeteorBrightness, _SkyPreviewTime;
             CBUFFER_END
 
             struct Attributes
@@ -71,6 +84,60 @@ Shader "WCC/Skybox/Low Poly Starry Night"
                 float latitude = (uv.y - 0.5) * PI;
                 float c = cos(latitude);
                 return float3(sin(longitude) * c, sin(latitude), cos(longitude) * c);
+            }
+
+            half3 ShootingStars(float3 dir, float pixelFootprint)
+            {
+                if (_MeteorsEnabled < 0.5 || _MeteorBrightness <= 0.0 || dir.y < 0.02) return 0;
+                float time = max(0.0,_SkyPreviewTime >= 0.0 ? _SkyPreviewTime : _Time.y);
+                float baseDuration = max(_MeteorTravel,1.0)/max(_MeteorSpeed,1.0);
+                float interval = max(_MeteorInterval*3.0,baseDuration*1.2+1.0);
+                float aa = max(pixelFootprint*0.6,0.00002);
+                half3 result = 0;
+                // Three longitude sectors make occasional meteors visible from different camera directions.
+                // Event times/positions vary each cycle; no objects or per-frame allocations are required.
+                [unroll] for (int stream=0; stream<3; stream++)
+                {
+                    float clock = time/interval + stream*0.373;
+                    float cycle = floor(clock);
+                    float slotTime = frac(clock)*interval;
+                    float2 seed = float2(cycle,stream*71.13+9.7);
+                    float duration = baseDuration*lerp(0.8,1.2,Hash(seed+1.3));
+                    float delay = 0.25 + Hash(seed+3.1)*max(0.0,interval-baseDuration*1.2-0.5);
+                    float age = (slotTime-delay)/duration;
+                    if (age < 0.0 || age > 1.0) continue;
+
+                    float longitude = (stream+0.5)/3.0+(Hash(seed+13.7)-0.5)*0.27;
+                    float elevation = radians(clamp(_MeteorElevation+(Hash(seed+24.9)-0.5)*28.0,15.0,75.0));
+                    float3 start = SphereDirection(float2(longitude,0.5+elevation/PI));
+                    float3 east = normalize(float3(start.z,0,-start.x));
+                    float3 north = cross(start,east);
+                    float side = Hash(seed+45.3) < 0.5 ? -1.0 : 1.0;
+                    float3 direction = normalize(east*side*0.8-north*0.6);
+                    float travel = radians(_MeteorTravel)*age;
+                    float3 head = start*cos(travel)+direction*sin(travel);
+                    float3 motion = -start*sin(travel)+direction*cos(travel);
+                    float3 acrossAxis = normalize(cross(head,motion));
+                    float along = atan2(dot(dir,motion),dot(dir,head));
+                    float across = asin(clamp(dot(dir,acrossAxis),-1.0,1.0));
+
+                    float tailLength = radians(_MeteorTrailLength)*lerp(0.75,1.2,Hash(seed+62.0));
+                    float behind = -along;
+                    float tail = saturate(1.0-behind/max(tailLength,0.0001));
+                    float tailMask = step(0.0,behind)*step(behind,tailLength);
+                    float width = _MeteorWidth*lerp(0.15,1.0,tail);
+                    float tailCore = (1.0-smoothstep(width-aa,width+aa,abs(across)))*tail*tail;
+                    float glow = exp2(-across*across/max(_MeteorWidth*_MeteorWidth*20.0,1e-8))*tail*0.18;
+                    half3 trail = _MeteorColor.rgb*(tailCore+glow)*tailMask;
+
+                    float diamond = abs(along)+abs(across);
+                    float headCore = 1.0-smoothstep(_MeteorWidth*1.9-aa,_MeteorWidth*1.9+aa,diamond);
+                    float headGlow = exp2(-(along*along+across*across)/max(_MeteorWidth*_MeteorWidth*14.0,1e-8))*0.35;
+                    half3 headColor = lerp(_MeteorColor.rgb,half3(1.0,0.96,0.84),0.8);
+                    float envelope = smoothstep(0.0,0.12,age)*(1.0-smoothstep(0.68,1.0,age));
+                    result += (trail+headColor*(headCore+headGlow))*envelope;
+                }
+                return result*_MeteorBrightness*smoothstep(0.02,0.14,dir.y);
             }
 
             half4 Frag(Varyings input) : SV_Target
@@ -125,7 +192,7 @@ Shader "WCC/Skybox/Low Poly Starry Night"
                     }
                 }
                 float starVisibility = smoothstep(-0.02, 0.16, dir.y);
-                return half4((sky + starLight * _StarIntensity * starVisibility) * _Exposure, 1);
+                return half4((sky + starLight * _StarIntensity * starVisibility + ShootingStars(dir,pixelFootprint)) * _Exposure, 1);
             }
             ENDHLSL
         }
