@@ -12,6 +12,7 @@ public class IngredientDamageController : MonoBehaviour
     [SerializeField] private string playerTag = "Player";
 
     private float impactSpeed;
+    private Vector3 impactVelocity;
     private IngredientStat stat;
     private bool canDamage = true;
     private Coroutine damageRestoreCoroutine;
@@ -20,7 +21,8 @@ public class IngredientDamageController : MonoBehaviour
     #region Unity Callbacks
     private void FixedUpdate()
     {
-        impactSpeed = catchable.LinearVelocity.magnitude;
+        impactVelocity = catchable.LinearVelocity;
+        impactSpeed = impactVelocity.magnitude;
     }
 
     private void OnCollisionEnter(Collision collision)
@@ -35,6 +37,8 @@ public class IngredientDamageController : MonoBehaviour
         if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;
 
         brain.Health.TakeDamage(CalculateDamage());
+        if (impactSpeed > MinDamageSpeed)
+            brain.ActionController.Movement.ApplyIngredientKnockback(impactVelocity);
     }
 
     private void OnDisable()
@@ -49,14 +53,17 @@ public class IngredientDamageController : MonoBehaviour
     }
     #endregion
 
-    public void ApplyScriptedImpact(PlayerBrain brain, float speed)
+    public void ApplyScriptedImpact(PlayerBrain brain, Vector3 incomingVelocity)
     {
         if (!canDamage || brain == null || brain.StateResolver is not LocalPlayerStateResolver) return;
         if (stat == null) SetIngredinetStat();
         if (stat == null) return;
         if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;
-        impactSpeed = speed;
+        impactVelocity = incomingVelocity;
+        impactSpeed = incomingVelocity.magnitude;
         brain.Health.TakeDamage(CalculateDamage());
+        if (impactSpeed > MinDamageSpeed)
+            brain.ActionController.Movement.ApplyIngredientKnockback(impactVelocity);
     }
 
     // 지정된 시간 동안 재료의 충돌 피해를 비활성화한다.

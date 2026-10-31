@@ -46,6 +46,10 @@ public sealed class PlayerBrain : MonoBehaviour
     [field: SerializeField, Min(0f)] public float Acceleration { get; private set; }
     [field: SerializeField, Min(0f)] public float Deceleration { get; private set; }
 
+    [field: Header("Ingredient Knockback")]
+    [field: SerializeField, Min(0f)] public float KnockbackSpeed { get; private set; } = 8f;
+    [field: SerializeField, Min(0f)] public float KnockbackDuration { get; private set; } = 0.12f;
+
     [field: Header("Jump")]
     [field: SerializeField] public LayerMask GroundLayerMask { get; private set; } = ~0;
     [field: SerializeField] public float JumpPower { get; private set; } = 5.5f;

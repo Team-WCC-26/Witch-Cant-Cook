@@ -125,6 +125,8 @@ public class PlayerActionController
     // Advance the active physical movement controller.
     public void FixedTick(PlayerCombinedState state)
     {
+        movement.UpdateForcedMovement(state.PhysicalMode == PlayerPhysicalMode.Default &&
+            !ragdollController.IsActive && !(brain.Rocket != null && brain.Rocket.IsFlying));
         ragdollController.FixedTick();
         if (ragdollController.IsActive) return;
         if (brain.Rocket != null && brain.Rocket.FixedTick(state)) return;

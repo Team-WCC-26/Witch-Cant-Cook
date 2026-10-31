@@ -236,11 +236,11 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
             Vector3 normal = Quantize(hit.normal).normalized;
             float distance = Mathf.Max(0f, hit.distance - contactSkin);
             position += travel / length * Mathf.Min(distance, length);
-            float incomingSpeed = velocity.magnitude;
+
             Vector3 incomingVelocity = velocity;
             velocity = ReflectVelocity(velocity, normal, restitution, tangentialRetention, minimumReboundSpeed);
             reaction?.PlayImpact(hit.collider, hit.point, normal, rb.mass * (velocity - incomingVelocity).magnitude);
-            PushAndDamage(hit.collider, normal, incomingSpeed);
+            PushAndDamage(hit.collider, normal, incomingVelocity);
             remaining *= 1f - Mathf.Clamp01(distance / length);
             position += normal * contactSkin;
         }
@@ -307,8 +307,9 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
         Mathf.Round(value.y * Precision) / Precision,
         Mathf.Round(value.z * Precision) / Precision);
 
-    private void PushAndDamage(Collider other, Vector3 normal, float speed)
+    private void PushAndDamage(Collider other, Vector3 normal, Vector3 incomingVelocity)
     {
+        float speed = incomingVelocity.magnitude;
         Rigidbody body = other.attachedRigidbody;
         if (body == null || body == rb) return;
         if (lastPushTimes.TryGetValue(body, out double last) && simulationTime - last < pushCooldown) return;
@@ -319,10 +320,7 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
         {
             // The existing player movement channel will carry the local player's response.
             if (PlayerSpawnManager.Instance == null || !PlayerSpawnManager.Instance.IsMine(player.PlayerId)) return;
-            GetComponent<IngredientDamageController>()?.ApplyScriptedImpact(player, speed);
-            if (body.isKinematic || speed < minBounceSpeed) return;
-            player.ActionController.Movement.BeginForcedMovement(0.12f);
-            body.AddForce(-normal * Mathf.Min(speed * pushMultiplier, maxPushForce), ForceMode.Impulse);
+            GetComponent<IngredientDamageController>()?.ApplyScriptedImpact(player, incomingVelocity);
         }
         else if (item != null && item != source && !item.IsHold && item.ParentEntityId <= 0 && speed >= minBounceSpeed)
         {
