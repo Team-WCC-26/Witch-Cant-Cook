@@ -7,6 +7,7 @@ public sealed class PlayerHealthData
     public float MaxHealth { get; }
     public bool IsDmgBlocked { get; set; }
     public bool IsRagdoll { get; private set; }
+    public bool IsRecoveringFromDeath { get; private set; }
     public float NormalizedHealth => MaxHealth <= 0f ? 0f : CurHealth / MaxHealth;
 
     public event Action<PlayerHealthData> HealthChanged;
@@ -50,6 +51,7 @@ public sealed class PlayerHealthData
     public void RestoreFromServerRespawn()
     {
         nextDamageTime = 0f;
+        IsRecoveringFromDeath = IsRagdoll;
         SetHealth(MaxHealth);
         DeathConfirmed?.Invoke();
     }
@@ -57,6 +59,7 @@ public sealed class PlayerHealthData
     public void SetRagdollActive(bool active)
     {
         IsRagdoll = active;
+        if (!active) IsRecoveringFromDeath = false;
     }
 
     private void SetHealth(float health)

@@ -31,7 +31,6 @@ public sealed class PlayerRocketController : MonoBehaviour
     private Vector3 previousRemotePosition;
     private bool hasRemotePosition;
 
-    private readonly List<(Collider player, Collider ingredient)> ignoredCollisions = new();
     private readonly HashSet<int> hitPlayers = new();
     private readonly HashSet<Collider> separatingContacts = new();
 
@@ -87,7 +86,6 @@ public sealed class PlayerRocketController : MonoBehaviour
         carrot.SetPilot(this);
         carrot.SetFlightPresentation(true);
         SetFlightAnimation(true);
-        IgnoreNearbyIngredients();
         LiftForLaunch();
         carrot.transform.rotation = Quaternion.LookRotation(flightDirection, Vector3.up) *
                                     carrot.FlightRotationOffset;
@@ -137,7 +135,6 @@ public sealed class PlayerRocketController : MonoBehaviour
         flightDirection = Vector3.RotateTowards(flightDirection, desired,
             Mathf.Max(0f, settings.rocketTurnSpeed) * Mathf.Deg2Rad * stepTime, 0f).normalized;
 
-        IgnoreNearbyIngredients();
         float distance = Mathf.Max(0.1f, settings.rocketSpeed) * stepTime;
         if (TryFindBlockingHit(distance, out BlockingHit hit))
         {
@@ -159,7 +156,6 @@ public sealed class PlayerRocketController : MonoBehaviour
         bool wasRemote = remoteFlight;
         remoteFlight = false;
 
-        RestoreIgnoredCollisions();
         if (!wasRemote && brain != null && brain.Rb != null)
         {
             brain.Rb.useGravity = savedGravity;
@@ -355,43 +351,7 @@ public sealed class PlayerRocketController : MonoBehaviour
         if (other.GetComponentInParent<PlayerBrain>() == brain) return true;
         CatchableObj obj = other.GetComponentInParent<CatchableObj>();
         if (obj != null && (obj == carrot.Catchable || obj.Holder == brain)) return true;
-        return IsOrdinaryIngredient(other);
-    }
-
-    private static bool IsOrdinaryIngredient(Collider other)
-    {
-        CatchableObj obj = other.GetComponentInParent<CatchableObj>();
-        return obj != null && obj.Category == EntityCategory.Ingredient &&
-               obj.GetComponent<RocketBlockingIngredient>() == null;
-    }
-
-    private void IgnoreNearbyIngredients()
-    {
-        float range = Mathf.Max(0.1f, carrot.Settings.rocketSpeed) * Time.fixedDeltaTime +
-                      brain.Col.bounds.extents.magnitude + 2f;
-        Collider[] nearby = Physics.OverlapSphere(brain.Col.bounds.center, range,
-            Physics.AllLayers, QueryTriggerInteraction.Ignore);
-        Collider[] playerColliders = brain.GetComponentsInChildren<Collider>();
-        foreach (Collider ingredientCollider in nearby)
-        {
-            if (!IsOrdinaryIngredient(ingredientCollider)) continue;
-            foreach (Collider playerCollider in playerColliders)
-            {
-                if (!playerCollider.enabled || playerCollider.isTrigger || playerCollider == ingredientCollider) continue;
-                if (playerCollider.GetComponentInParent<CatchableObj>() != null) continue;
-                if (Physics.GetIgnoreCollision(playerCollider, ingredientCollider)) continue;
-                Physics.IgnoreCollision(playerCollider, ingredientCollider, true);
-                ignoredCollisions.Add((playerCollider, ingredientCollider));
-            }
-        }
-    }
-
-    private void RestoreIgnoredCollisions()
-    {
-        foreach (var pair in ignoredCollisions)
-            if (pair.player != null && pair.ingredient != null)
-                Physics.IgnoreCollision(pair.player, pair.ingredient, false);
-        ignoredCollisions.Clear();
+        return false;
     }
 
     private void HandleImpact(Collider collider)
@@ -404,6 +364,14 @@ public sealed class PlayerRocketController : MonoBehaviour
         else
         {
             Rigidbody body = collider.attachedRigidbody;
+            // Shape casts stop before physical contact, so notify the fish explicitly.
+            IngredientNalchi nalchi = collider.GetComponentInParent<IngredientNalchi>();
+            if (nalchi != null)
+            {
+                Vector3 impactVelocity = flightDirection * Mathf.Max(0.1f, carrot.Settings.rocketSpeed);
+                if (body != null) impactVelocity -= body.linearVelocity;
+                nalchi.ApplyImpact(impactVelocity.magnitude);
+            }
             if (body != null && !body.isKinematic)
                 body.AddForce(flightDirection * Mathf.Max(0f, carrot.Settings.rocketImpactForce), ForceMode.Impulse);
         }

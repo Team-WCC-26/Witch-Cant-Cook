@@ -32,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 64.73627, y: -0, z: 1.0254}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.7, y: 2.7, z: 2.7}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 2129848697889921226}
@@ -169,6 +169,11 @@ MonoBehaviour:
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
   actionVisuals: []
+  grillColor: {r: 0.21568628, g: 0.08627451, b: 0.023529412, a: 1}
+  grillEuler: {x: 0, y: 0, z: 25}
+  grillStripeCount: 5
+  grillStripeWidth: 0.34
+  grillStripeOffset: 0
 --- !u!65 &1561719006628804591
 BoxCollider:
   m_ObjectHideFlags: 0

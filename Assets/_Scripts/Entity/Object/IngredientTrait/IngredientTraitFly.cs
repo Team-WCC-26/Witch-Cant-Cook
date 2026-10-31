@@ -29,6 +29,12 @@ public class IngredientTraitFly : IngredientTrait
     [Tooltip("이 거리 안에 장애물이 있으면 방향을 전환한다.")]
     [SerializeField] private float obstacleDetectRange = 2f;
     [SerializeField] private float obstacleCheckRadius = 0.3f;
+    [Tooltip("Small local avoidance box used only for other flying fish. Map obstacles use the full physical bounds.")]
+    [SerializeField] private bool useCustomAvoidanceBounds;
+    [SerializeField] private Vector3 avoidanceCenter;
+    [SerializeField] private Vector3 avoidanceSize = Vector3.one * 0.6f;
+    [Tooltip("Extra clearance in world meters around the full physical bounds when avoiding map obstacles.")]
+    [SerializeField, Min(0f)] private float environmentClearance = 0.15f;
     [Tooltip("추가로 감지할 장애물 레이어. Default, Floor, Wall, Interactable은 항상 감지합니다.")]
     [SerializeField] private LayerMask obstacleLayerMask = ~0;
 
@@ -142,31 +148,84 @@ public class IngredientTraitFly : IngredientTrait
         Vector3 velocity = GetFlightVelocity(deltaTime);
         if (velocity.sqrMagnitude < 0.0001f) return;
         Vector3 direction = velocity.normalized;
-        Bounds bounds = GetBodyBounds();
-        // Slightly shrink the query so touching the floor at takeoff is not an obstacle overlap.
-        Vector3 extents = Vector3.Max(bounds.extents - Vector3.one * 0.01f, Vector3.one * 0.02f);
+        float distance = Mathf.Max(obstacleDetectRange, velocity.magnitude * deltaTime + 0.05f);
         int mask = obstacleLayerMask.value | LayerMask.GetMask("Default", "Floor", "Wall", "Interactable");
-        int count = Physics.BoxCastNonAlloc(bounds.center, extents, direction, obstacleHits,
-            Quaternion.identity, Mathf.Max(obstacleDetectRange, velocity.magnitude * deltaTime + 0.05f),
-            mask, QueryTriggerInteraction.Ignore);
         float nearest = float.PositiveInfinity;
         Vector3 normal = Vector3.zero;
-        for (int i = 0; i < count; i++)
-        {
-            RaycastHit hit = obstacleHits[i];
-            Collider collider = hit.collider;
-            if (collider == null || collider.attachedRigidbody == rb || collider.transform.IsChildOf(transform)) continue;
-            if (Vector3.Dot(direction, hit.normal) >= -0.001f || hit.distance >= nearest) continue;
-            nearest = hit.distance;
-            normal = hit.normal;
-        }
+
+        // Walls and props must clear both the body and wings, plus a world-space margin.
+        Bounds physicalBounds = GetBodyBounds();
+        FindObstacle(physicalBounds, Quaternion.identity, Mathf.Max(0f, environmentClearance),
+            direction, distance, mask, false, ref nearest, ref normal);
+
+        // Fish keep the independent, smaller sensing volume.
+        Bounds fishBounds = useCustomAvoidanceBounds ? GetFishAvoidanceBounds() : physicalBounds;
+        FindObstacle(fishBounds, useCustomAvoidanceBounds ? transform.rotation : Quaternion.identity,
+            -0.01f, direction, distance, mask, true, ref nearest, ref normal);
         if (float.IsPositiveInfinity(nearest)) return;
+
+        // Stop trying to climb into a ceiling or descend through a surface.
+        float currentY = rb != null ? rb.position.y : transform.position.y;
+        if (normal.y < -0.5f && velocity.y > 0f)
+            cachedDesiredY = Mathf.Min(cachedDesiredY, currentY);
+        else if (normal.y > 0.5f && velocity.y < 0f)
+            cachedDesiredY = Mathf.Max(cachedDesiredY, currentY);
 
         Vector3 reflected = Vector3.Reflect(flyDirection, normal);
         reflected.y = 0f;
         if (reflected.sqrMagnitude < 0.0001f || Vector3.Dot(reflected.normalized, flyDirection) > 0.99f)
             reflected = -flyDirection;
         flyDirection = reflected.normalized;
+    }
+
+    private void FindObstacle(Bounds bounds, Quaternion orientation, float padding, Vector3 direction,
+        float distance, int mask, bool fishOnly, ref float nearest, ref Vector3 normal)
+    {
+        Vector3 extents = Vector3.Max(bounds.extents + Vector3.one * padding, Vector3.one * 0.02f);
+        int count = Physics.BoxCastNonAlloc(bounds.center, extents, direction, obstacleHits,
+            orientation, distance, mask, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit hit = obstacleHits[i];
+            Collider collider = hit.collider;
+            if (collider == null || collider.attachedRigidbody == rb || collider.transform.IsChildOf(transform)) continue;
+            if ((collider.GetComponentInParent<IngredientNalchi>() != null) != fishOnly) continue;
+
+            Vector3 hitNormal = hit.normal;
+            if (hit.distance <= 0.0001f)
+            {
+                // An expanded box can already overlap the floor or a nearby wall.
+                // Casts report -direction for such overlaps; use the surface direction
+                // so moving away from the floor/wall does not trigger a reversal.
+                // ClosestPoint does not support non-convex map meshes.
+                bool concaveMesh = collider is MeshCollider mesh && !mesh.convex;
+                Vector3 point = concaveMesh
+                    ? collider.ClosestPointOnBounds(bounds.center)
+                    : collider.ClosestPoint(bounds.center);
+                Vector3 separation = bounds.center - point;
+                if (separation.sqrMagnitude > 0.000001f)
+                    hitNormal = separation.normalized;
+                else if (concaveMesh)
+                {
+                    // Combined room meshes can enclose the query in their AABB.
+                    // A real surface ahead is needed before reversing flight.
+                    if (!collider.Raycast(new Ray(bounds.center, direction), out RaycastHit surface,
+                        extents.magnitude)) continue;
+                    hitNormal = surface.normal;
+                }
+            }
+            if (Vector3.Dot(direction, hitNormal) >= -0.001f || hit.distance >= nearest) continue;
+            nearest = hit.distance;
+            normal = hitNormal;
+        }
+    }
+
+    private Bounds GetFishAvoidanceBounds()
+    {
+        Vector3 scale = transform.lossyScale;
+        scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+        return new Bounds(transform.TransformPoint(avoidanceCenter),
+            Vector3.Scale(Vector3.Max(avoidanceSize, Vector3.one * 0.01f), scale));
     }
 
     private Bounds GetBodyBounds()

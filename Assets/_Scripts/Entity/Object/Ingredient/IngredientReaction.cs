@@ -41,6 +41,15 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     [Header("Interact Gauge")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
+    [Header("충돌 파티클")]
+    [UnityEngine.Serialization.FormerlySerializedAs("wallImpactScale")]
+    [SerializeField, Min(0f), InspectorName("충돌 파티클 크기 배율")] private float impactScale = 1f;
+    [Tooltip("이 값 이상의 충격량(N·s)일 때 재생합니다. 일반 충돌은 Collision.impulse, 직접 계산하는 튕김은 질량 × 속도 변화량을 사용합니다.")]
+    [SerializeField, Min(0f), InspectorName("최소 충격량")] private float impactMinImpulse = 0.5f;
+    [UnityEngine.Serialization.FormerlySerializedAs("wallImpactCooldown")]
+    [SerializeField, Min(0f), InspectorName("충돌 파티클 재생 간격")] private float impactCooldown = 0.1f;
+    private float lastImpactTime = float.NegativeInfinity;
+
     private IngredientAction lastAction = IngredientAction.None;
     private IngredientAction completedActions = IngredientAction.None;
     private int curHP;
@@ -78,6 +87,8 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private bool hasOriginalState;
     private Mesh originalMesh;
     private Mesh originalColliderMesh;
+    private BoxCollider boxCollider;
+    private Vector3 originalBoxCenter, originalBoxSize;
     private Material[] originalMaterials;
     private bool originalRendererEnabled;
     private readonly List<MonoBehaviour> traitComponents = new();
@@ -103,17 +114,58 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void Awake()
     {
+        if (catchable == null) catchable = GetComponent<CatchableObj>();
         CacheOriginalState();
         CacheOriginalScale();
         InitializeGauge();
     }
 
+
     private void OnDisable()
     {
+        ResetImpact();
         ClearConveyorVisualMotion();
         StopHitWobble();
         grillPreview = false;
         if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // Scripted bounce motion reports its own sweep contact below.
+        if (TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating) return;
+        if (collision.contactCount == 0) return;
+        ContactPoint contact = collision.GetContact(0);
+        float speed = Mathf.Abs(Vector3.Dot(collision.relativeVelocity, contact.normal));
+        for (int i = 1; i < collision.contactCount; i++)
+        {
+            ContactPoint candidate = collision.GetContact(i);
+            float candidateSpeed = Mathf.Abs(Vector3.Dot(collision.relativeVelocity, candidate.normal));
+            if (candidateSpeed <= speed) continue;
+            contact = candidate;
+            speed = candidateSpeed;
+        }
+        PlayImpact(collision.collider, contact.point, contact.normal, collision.impulse.magnitude);
+    }
+
+    private void ResetImpact()
+    {
+        lastImpactTime = float.NegativeInfinity;
+    }
+
+    public void PlayImpact(Collider other, Vector3 point, Vector3 normal, float impulse)
+    {
+        if (!isActiveAndEnabled || catchable == null ||
+            catchable.IsHold || catchable.ParentEntityId > 0 ||
+            catchable.IsSubmissionPending || catchable.IsSubmissionReturning ||
+            catchable.Data is not Ingredient ingredient || other == null || other.isTrigger ||
+            other.transform.IsChildOf(transform) ||
+            impulse <= 0f || impulse < impactMinImpulse || impactScale <= 0f ||
+            Time.time - lastImpactTime < impactCooldown)
+            return;
+
+        lastImpactTime = Time.time;
+        IngredientCutVfx.PlayAt(point + normal * 0.01f, ingredient, impactScale);
     }
 
     private void LateUpdate()
@@ -141,6 +193,15 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     public void ApplyPlatePlacement(Transform slot)
     {
         ApplyPlacement(slot, platePlacement, plateOffsetPos, plateOffsetEuler);
+        RefreshPlateScale(slot);
+    }
+
+    // A stored plate inherits the pot's scale until it is ejected. Recalculate after
+    // any change to the plate's ancestry or scale, without changing placement offsets.
+    public void RefreshPlateScale(Transform slot)
+    {
+        if (slot == null || transform.parent != slot) return;
+        CacheOriginalScale();
 
         // Keep the prefab's size in world space, independent of the plate's scale.
         // Measure each rotated axis so placement rotation and scaled ancestors are included.
@@ -151,10 +212,12 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             slot.TransformVector(rotation * Vector3.forward).magnitude);
 
         const float MinAxisScale = 0.000001f;
-        transform.localScale = new Vector3(
+        Vector3 desiredScale = new Vector3(
             inheritedScale.x > MinAxisScale ? originalScale.x / inheritedScale.x : 0f,
             inheritedScale.y > MinAxisScale ? originalScale.y / inheritedScale.y : 0f,
             inheritedScale.z > MinAxisScale ? originalScale.z / inheritedScale.z : 0f);
+        if ((transform.localScale - desiredScale).sqrMagnitude > 0.000000000001f)
+            transform.localScale = desiredScale;
     }
 
     public void RestoreOriginalScale()
@@ -165,6 +228,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     public void ResetForPool()
     {
+        ResetImpact();
         CacheOriginalState();
         RestoreOriginalScale();
         ClearConveyorVisualMotion();
@@ -180,6 +244,11 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         gaugeUI?.Hide();
         if (meshFilter != null) meshFilter.sharedMesh = originalMesh;
         ApplyColliderMesh(originalColliderMesh);
+        if (boxCollider != null)
+        {
+            boxCollider.center = originalBoxCenter;
+            boxCollider.size = originalBoxSize;
+        }
         if (targetRenderer != null)
         {
             targetRenderer.sharedMaterials = originalMaterials;
@@ -202,6 +271,12 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         if (meshCollider == null && meshFilter != null)
             meshCollider = meshFilter.GetComponent<MeshCollider>();
         originalColliderMesh = meshCollider != null ? meshCollider.sharedMesh : null;
+        if (meshFilter != null) boxCollider = meshFilter.GetComponent<BoxCollider>();
+        if (boxCollider != null)
+        {
+            originalBoxCenter = boxCollider.center;
+            originalBoxSize = boxCollider.size;
+        }
         if (targetRenderer != null)
         {
             originalMaterials = targetRenderer.sharedMaterials;
@@ -335,17 +410,42 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
+            Vector3 position = transform.position;
+            Quaternion rotation = transform.rotation;
+            Vector3 scale = transform.localScale;
             DisableTraitsAfterCut();
+            // Trait cleanup can restore an animated root to its spawn pose (e.g. corn).
+            // Keep the current placement; only the cut transition below may reset rotation.
+            transform.SetPositionAndRotation(position, rotation);
+            transform.localScale = scale;
             StopHitWobble();
             gaugeUI?.Hide();
             PlayCutParticle();
         }
         ApplyVisual(completedActions);
+        if ((newlyCompleted & IngredientAction.Cut) != 0) ResetCutPose();
         UpdateGrillOverlay();
         if (newlyCompleted != IngredientAction.None)
             OnActionCompleted?.Invoke(newlyCompleted);
     }
     
+    private void ResetCutPose()
+    {
+        // Placement and conveyor motion own the pose while the ingredient is attached.
+        if (catchable != null && (catchable.IsHold || catchable.Holder != null ||
+            catchable.ParentEntityId > 0 || ConveyorBeltRegistry.IsOwnedByAnyBelt(catchable.NetworkId)))
+            return;
+        if (transform.parent != null && transform.parent.GetComponentInParent<CatchableObj>(true) != null)
+            return;
+
+        Rigidbody body = catchable != null ? catchable.Rb : GetComponent<Rigidbody>();
+        transform.rotation = Quaternion.identity;
+        if (body == null) return;
+        body.rotation = Quaternion.identity;
+        // Stop the old tumble from immediately overturning the newly cut mesh.
+        if (!body.isKinematic) body.angularVelocity = Vector3.zero;
+    }
+
     private bool IsActionBlocked(IngredientAction action)
     {
         if (catchable.Data is not Ingredient ingredient)
@@ -389,6 +489,13 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
         meshFilter.sharedMesh = mesh;
         ApplyColliderMesh(mesh);
+        // A cut mesh can be much flatter and have a different pivot than the whole ingredient.
+        // Its collision bounds must change too, otherwise it rests above/below the visible surface.
+        if (IsActionCompleted(IngredientAction.Cut) && boxCollider != null)
+        {
+            boxCollider.center = mesh.bounds.center;
+            boxCollider.size = mesh.bounds.size;
+        }
     }
 
     private void ApplyColliderMesh(Mesh mesh)

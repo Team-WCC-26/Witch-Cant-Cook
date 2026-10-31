@@ -26,6 +26,7 @@ public class IngredientNalchi : IngredientTrait
     private bool isStunned;
     // Spawned/wandering fish, including one stunned during flight, require a player pickup before pot intake.
     public bool IsAutonomous { get; private set; }
+    public bool IsFlying => IsTraitAvailable && flyTrait != null && flyTrait.IsFlying;
 
     private void Awake()
     {
@@ -70,12 +71,17 @@ public class IngredientNalchi : IngredientTrait
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!IsTraitAvailable || isStunned)
+        ApplyImpact(collision.relativeVelocity.magnitude);
+    }
+
+    // Also used by scripted collisions that stop short of a physics contact.
+    public void ApplyImpact(float relativeSpeed)
+    {
+        if (!IsTraitAvailable || isStunned || catchable.IsHold)
             return;
 
-        // 살짝 내려놓고 착지하는 정도의 약한 충돌은 무시하고,
-        // 일정 속도 이상으로 부딪혔을 때만 기절 처리한다.
-        if (collision.relativeVelocity.magnitude < minStunImpactSpeed)
+        // Ignore weak contacts such as gently landing after being put down.
+        if (relativeSpeed < minStunImpactSpeed)
             return;
 
         EnterStun();
@@ -108,6 +114,7 @@ public class IngredientNalchi : IngredientTrait
 
         // kinematic을 풀어 중력이 작용하게 해서 바닥으로 떨어지도록 한다.
         rb.isKinematic = false;
+        rb.useGravity = true;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
         stunTimer.StartTimer(stunDuration, RecoverFromStun);

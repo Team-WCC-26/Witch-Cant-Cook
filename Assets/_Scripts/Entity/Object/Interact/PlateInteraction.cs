@@ -3,6 +3,14 @@ using UnityEngine;
 public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable, IPanPrimaryReceiver
 {
     private CatchableObj currentFood;
+    private IngredientReaction currentFoodReaction;
+
+    private void LateUpdate()
+    {
+        if (currentFood != null && currentFoodReaction != null)
+            currentFoodReaction.RefreshPlateScale(transform);
+    }
+
 
     public bool IsEmpty => currentFood == null;
     public CatchableObj CurrentFood => currentFood;
@@ -23,6 +31,7 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
 
         CatchableObj food = currentFood;
         currentFood = null;
+        currentFoodReaction = null;
         food.transform.SetParent(null, true);
         if (food.TryGetComponent(out IngredientReaction reaction))
             reaction.RestoreOriginalScale();
@@ -38,6 +47,7 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
         if (entity == null || !entity.TryGetComponent(out IngredientReaction reaction)) return;
 
         currentFood = entity;
+        currentFoodReaction = reaction;
         entity.ChangePickState(false);
         entity.SetPhysicsState(false);
         reaction.ApplyPlatePlacement(transform);
@@ -52,6 +62,7 @@ public class PlateInteraction : MonoBehaviour, IEntityParentReceiver, IPoolable,
         if (entity.TryGetComponent(out IngredientReaction reaction))
             reaction.RestoreOriginalScale();
         currentFood = null;
+        currentFoodReaction = null;
         // The server may preserve the empty plate. Its submission lock must not survive
         // the confirmed removal of its food, or neither player can use it again locally.
         if (TryGetComponent(out CatchableObj plate)) plate.ReleaseSubmissionLock();
