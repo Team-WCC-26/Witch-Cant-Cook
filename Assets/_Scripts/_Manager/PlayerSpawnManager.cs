@@ -48,7 +48,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         if (!isSubscribed || ServerManager.Instance == null) return;
         ServerManager.Instance.UnRegisterHandler(_joinMemberID);
         ServerManager.Instance.UnRegisterHandler(_leaveMemberID);
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_PlayerRespawn);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSquid);
         isSubscribed = false;
     }
@@ -255,13 +254,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         return true;
     }
 
-    private void MemberRespawned(ReadOnlyMemory<byte> data)
-    {
-        PlayerRespawnPacket packet = PacketSerializer.Deserialize<PlayerRespawnPacket>(data.Span);
-        if (!players.TryGetValue(packet.PlayerID, out PlayerBrain player) || player.Health == null) return;
-        if (player.StateResolver is LocalPlayerStateResolver local) local.EnterRagdoll();
-        player.Health.RestoreFromServerRespawn();
-    }
 
     private void ReceiveSquidInk(ReadOnlyMemory<byte> data)
     {
@@ -285,7 +277,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
 
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
         ServerManager.Instance.RegisterHandler(_leaveMemberID, MemberLeft);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PlayerRespawn, MemberRespawned);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSquid, ReceiveSquidInk);
         isSubscribed = true;
         subscribeRoutine = null;
