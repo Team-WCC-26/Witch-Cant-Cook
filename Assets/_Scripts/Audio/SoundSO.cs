@@ -14,7 +14,6 @@ public enum SoundId
      
     //SFX
     BedBounce = 200,
-    Boiling = 201,
     Punch = 202,
     EggCrack = 203,
     MushroomImpact = 204,
@@ -58,6 +57,7 @@ public sealed class SoundSO : ScriptableObject
 
     public AudioClip Clip => clip;
     public SoundId Id => soundId;
+    public bool Loop => loop;
 
     public void ApplyTo(AudioSource source)
     {

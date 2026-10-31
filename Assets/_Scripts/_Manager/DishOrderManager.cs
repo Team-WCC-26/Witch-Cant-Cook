@@ -114,6 +114,7 @@ public class DishOrderManager : MonoBehaviour
         while (receivedPackets.TryDequeue(out DishStatePacket packet))
         {
             DishSubmissionVfx.PlayForServerResult(packet.State);
+            if (packet.State == DishState.Success) SoundManager.GetOrCreate().Play(SoundId.DishSubmit);
             ApplyState(packet.RecipeId, packet.State);
         }
 

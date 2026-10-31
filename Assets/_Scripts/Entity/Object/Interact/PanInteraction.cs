@@ -39,6 +39,7 @@ public class PanInteraction : MonoBehaviour,
     private long lastEjectedIngredientId;
     private int lastEjectSeed;
     private float pendingCookDuration = -1f;
+    private SoundHandle cookingSound;
     private IngredientEgg pendingEgg;
     private long pendingEggId;
 
@@ -154,6 +155,8 @@ public class PanInteraction : MonoBehaviour,
         if (pendingCookDuration < 0f) return;
 
         ingredient.GaugeUI?.StartFill(pendingCookDuration);
+        cookingSound.Stop();
+        cookingSound = SoundManager.GetOrCreate().Play(SoundId.PanCooking, transform.position, transform);
         pendingCookDuration = -1f;
     }
 
@@ -387,6 +390,7 @@ public class PanInteraction : MonoBehaviour,
     // 현재 재료의 조리 게이지를 숨긴다.
     private void HideCookGauge()
     {
+        cookingSound.Stop();
         currentIngredient?.GaugeUI?.Hide();
     }
 
@@ -493,6 +497,8 @@ public class PanInteraction : MonoBehaviour,
 
         pendingIngredientId = 0;
         AttachItem(ingredient, entity);
+        if (entity.Data is Ingredient data && data.id == (int)Define.eIngredient.EggInside)
+            SoundManager.GetOrCreate().Play(SoundId.EggCrack, transform.position);
         IngredientEgg.CompletePanInsert(this, entity.NetworkId);
         ReleaseEgg(pendingEggId);
     }
@@ -541,6 +547,8 @@ public class PanInteraction : MonoBehaviour,
         }
 
         currentIngredient.GaugeUI?.StartFill(duration);
+        cookingSound.Stop();
+        cookingSound = SoundManager.GetOrCreate().Play(SoundId.PanCooking, transform.position, transform);
     }
 
     // ICookReceiver: 서버의 조리 일시정지를 반영한다.

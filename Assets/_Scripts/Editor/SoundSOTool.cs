@@ -114,6 +114,11 @@ public static class SoundSOTool
             {
                 if (!ids.TryGetValue(pair.Key, out SoundId id))
                 {
+                    if (sounds.TryGetValue(pair.Key, out SoundSO disabledSound) && disabledSound.Id == SoundId.None)
+                    {
+                        Debug.LogWarning($"[Sound SO] Unmapped audio with a disabled SO preserved: {AssetDatabase.GetAssetPath(pair.Value)}");
+                        continue;
+                    }
                     Debug.LogError($"[Sound SO] No SoundId matches: {AssetDatabase.GetAssetPath(pair.Value)}");
                     errors++;
                     continue;

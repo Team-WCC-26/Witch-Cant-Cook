@@ -49,6 +49,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private enum OvenState { Idle, Waiting, Cooking, Opening }
 
     private OvenState state;
+    private SoundHandle operatingSound;
     private float responseDeadline;
     private float cookingDeadline;
     // 무한대이면 아직 문이 완전히 닫히지 않아 유지 시간 계산 전이다.
@@ -333,7 +334,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
             PausePlayerRecovery(player);
             player.Health.InstantDeath();
         }
-        if (completeAudio != null) completeAudio.Play();
+        SoundManager.GetOrCreate().Play(SoundId.OvenCookComplete, transform.position);
         BeginOpening();
     }
 
@@ -352,6 +353,12 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void SetState(OvenState nextState)
     {
+        if (state != nextState)
+        {
+            operatingSound.Stop();
+            if (nextState == OvenState.Cooking)
+                operatingSound = SoundManager.GetOrCreate().Play(SoundId.OvenRun, transform.position, transform);
+        }
         state = nextState;
         RefreshOperatingLights();
     }

@@ -60,6 +60,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     [SerializeField] private HeldAttachmentPoint holdAttachment = HeldAttachmentPoint.Automatic;
     [SerializeField] private LocalTransformData holdTransform = LocalTransformData.Identity;
     [SerializeField] private float throwForce = 0;
+    private float lastImpactSoundTime = float.NegativeInfinity;
 
 
     public Collider Col => col;
@@ -175,6 +176,18 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         }
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (Category == EntityCategory.Ingredient || IsHold || ParentEntityId > 0 ||
+            collision.contactCount == 0 || collision.relativeVelocity.sqrMagnitude < 1f ||
+            Time.time - lastImpactSoundTime < 0.15f) return;
+        if (collision.collider.GetComponentInParent<IngredientReaction>() != null) return;
+        CatchableObj other = collision.collider.GetComponentInParent<CatchableObj>();
+        if (other != null && GetInstanceID() > other.GetInstanceID()) return;
+        lastImpactSoundTime = Time.time;
+        SoundManager.GetOrCreate().Play(SoundId.ObjectImpact, collision.GetContact(0).point);
+    }
+
     private void OnDestroy()
     {
         OnDespawned?.Invoke();
@@ -196,6 +209,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public void ResetForPool()
     {
+        lastImpactSoundTime = float.NegativeInfinity;
         OnDespawned?.Invoke();
         if (ObjectPoolManager.Instance != null &&
             ObjectPoolManager.Instance.activeObjDict.TryGetValue(NetworkId, out UnityEngine.Object registered) &&
@@ -242,16 +256,19 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         IsHold = true;
         SetPhysicsState(false);
         OnPicked?.Invoke();
+        SoundManager.GetOrCreate().Play(SoundId.PlayerGrabRelease, transform.position);
     }
 
     public void OnDrop()
     {
+        bool wasHeld = IsHold;
         Holder = null;
 
         IsHold = false;
         canBePicked = true;
         SetPhysicsState(true);
         OnDropped?.Invoke();
+        if (wasHeld) SoundManager.GetOrCreate().Play(SoundId.PlayerGrabRelease, transform.position);
     }
 
     public void OnThrow()
@@ -320,6 +337,8 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         transform.position = ProtocolTypeConverter.ToUnityVector3(packet.Position);
 
         OnThrow();
+        if (Category == EntityCategory.Ingredient)
+            SoundManager.GetOrCreate().Play(SoundId.IngredientThrow, transform.position);
         Thrown?.Invoke(ProtocolTypeConverter.ToUnityVector3(packet.Velocity));
 
         if (rb == null) return;

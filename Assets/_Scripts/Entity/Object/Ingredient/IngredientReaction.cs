@@ -160,12 +160,14 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             catchable.IsSubmissionPending || catchable.IsSubmissionReturning ||
             catchable.Data is not Ingredient ingredient || other == null || other.isTrigger ||
             other.transform.IsChildOf(transform) ||
-            impulse <= 0f || impulse < impactMinImpulse || impactScale <= 0f ||
+            impulse <= 0f || impulse < impactMinImpulse ||
             Time.time - lastImpactTime < impactCooldown)
             return;
 
         lastImpactTime = Time.time;
-        IngredientCutVfx.PlayAt(point + normal * 0.01f, ingredient, impactScale);
+        SoundManager.GetOrCreate().Play(
+            GetComponent<IngredientMushroom>() != null ? SoundId.MushroomImpact : SoundId.ObjectImpact, point);
+        if (impactScale > 0f) IngredientCutVfx.PlayAt(point + normal * 0.01f, ingredient, impactScale);
     }
 
     private void LateUpdate()
@@ -410,6 +412,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
+            SoundManager.GetOrCreate().Play(SoundId.KnifeHit, transform.position);
             Vector3 position = transform.position;
             Quaternion rotation = transform.rotation;
             Vector3 scale = transform.localScale;

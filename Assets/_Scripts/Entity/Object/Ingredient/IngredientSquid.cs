@@ -86,6 +86,7 @@ public class IngredientSquid : IngredientTrait
             () => canSpray = true);
 
         //inkEffect?.Play();
+        SoundManager.GetOrCreate().Play(SoundId.SquidInk, transform.position);
 
         sprayAction?.Invoke();
     }

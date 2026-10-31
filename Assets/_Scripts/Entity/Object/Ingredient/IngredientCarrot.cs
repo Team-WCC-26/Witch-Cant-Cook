@@ -41,6 +41,7 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
 
     private PlayerRocketController pilot;
     private bool presentingFlight;
+    private SoundHandle flightSound;
 
     public CatchableObj Catchable => catchable;
     public CarrotRocketSettings Settings => rocketSettings;
@@ -112,17 +113,12 @@ public class IngredientCarrot : IngredientTrait, IHeldPrimaryAction, IHeldSecond
             else propulsionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
 
-        if (propulsionAudio != null)
-        {
-            if (flying)
-            {
-                if (!propulsionAudio.isPlaying) propulsionAudio.Play();
-            }
-            else propulsionAudio.Stop();
-        }
+        if (propulsionAudio != null) propulsionAudio.Stop();
 
         if (presentingFlight == flying) return;
         presentingFlight = flying;
+        flightSound.Stop();
+        if (flying) flightSound = SoundManager.GetOrCreate().Play(SoundId.CarrotRocket, transform.position, transform);
         if (flying) onFlightStarted.Invoke();
         else onFlightStopped.Invoke();
     }

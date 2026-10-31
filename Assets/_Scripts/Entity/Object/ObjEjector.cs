@@ -138,7 +138,10 @@ public abstract class ObjEjector
                 Object target = targets[index];
                 Vector3 direction = GetDirection(target);
                 if (target != null && ejectedTargets.Add(target))
+                {
+                    SoundManager.GetOrCreate().Play(SoundId.Eject, EjectPos);
                     EjectTarget(target, direction);
+                }
 
                 float remainingVisual = Mathf.Max(0f, visualDuration - launchDelay);
                 float delay = index + 1 < targets.Count

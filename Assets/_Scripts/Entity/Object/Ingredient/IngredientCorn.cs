@@ -29,6 +29,8 @@ public class IngredientCorn : IngredientTrait
     private float elapsed;
     private bool isArmed;
     private bool hasExploded;
+    private bool warningSoundStarted;
+    private SoundHandle warningSound;
 
     public float CornImpactThreshold
     {
@@ -69,11 +71,13 @@ public class IngredientCorn : IngredientTrait
         elapsed = 0f;
         isArmed = false;
         hasExploded = false;
+        warningSoundStarted = false;
         CapturePropertyBlocks();
     }
 
     protected override void StopTrait()
     {
+        warningSound.Stop();
         explosionTimer.Stop();
         isArmed = false;
         RestoreWarningVisual();
@@ -148,6 +152,11 @@ public class IngredientCorn : IngredientTrait
     private void UpdateWarningVisual()
     {
         if (elapsed < WarningStartTime) return;
+        if (!warningSoundStarted)
+        {
+            warningSoundStarted = true;
+            warningSound = SoundManager.GetOrCreate().Play(SoundId.CornExplosionWarning, transform.position, transform);
+        }
 
         float animationTime = Mathf.Clamp(elapsed - WarningStartTime, 0f, WarningDuration);
         float progress = animationTime / WarningDuration;
@@ -228,6 +237,8 @@ public class IngredientCorn : IngredientTrait
     {
         if (!IsTraitAvailable || hasExploded) return;
         hasExploded = true;
+        warningSound.Stop();
+        SoundManager.GetOrCreate().Play(SoundId.CornExplosion, transform.position);
         explodeTrait.Explode();
         PushIngredientToPool(catchable);
     }
