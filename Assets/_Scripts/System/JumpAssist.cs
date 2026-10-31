@@ -142,6 +142,7 @@ public class JumpAssist : MapObjInteraction
                 serverReady = false;
                 motion?.Kill();
                 state = PadState.Launching;
+                SoundManager.GetOrCreate().Play(SoundId.JumpPad, transform.position);
                 PreparePlayers();
                 LaunchIngredients();
                 motion = CreateMotion(restRotation);

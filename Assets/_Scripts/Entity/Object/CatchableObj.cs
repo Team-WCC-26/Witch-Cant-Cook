@@ -247,6 +247,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
 
     public void OnPick(PlayerBrain holder)
     {
+        bool playPickSound = !IsHold || Holder != holder;
         Holder = holder;
         LastHolderPlayerId = holder != null ? holder.PlayerId : null;
 
@@ -256,7 +257,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         IsHold = true;
         SetPhysicsState(false);
         OnPicked?.Invoke();
-        SoundManager.GetOrCreate().Play(SoundId.PlayerGrabRelease, transform.position);
+        if (playPickSound) SoundManager.GetOrCreate().Play(SoundId.PlayerGrab, transform.position);
     }
 
     public void OnDrop()
@@ -268,7 +269,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         canBePicked = true;
         SetPhysicsState(true);
         OnDropped?.Invoke();
-        if (wasHeld) SoundManager.GetOrCreate().Play(SoundId.PlayerGrabRelease, transform.position);
+        if (wasHeld) SoundManager.GetOrCreate().Play(SoundId.PlayerDrop, transform.position);
     }
 
     public void OnThrow()
@@ -337,8 +338,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
         transform.position = ProtocolTypeConverter.ToUnityVector3(packet.Position);
 
         OnThrow();
-        if (Category == EntityCategory.Ingredient)
-            SoundManager.GetOrCreate().Play(SoundId.IngredientThrow, transform.position);
+        SoundManager.GetOrCreate().Play(SoundId.IngredientThrow, transform.position);
         Thrown?.Invoke(ProtocolTypeConverter.ToUnityVector3(packet.Velocity));
 
         if (rb == null) return;

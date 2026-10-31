@@ -76,6 +76,8 @@ public static class SoundSOTool
             }
         }
 
+        ApplyClipAliases(clips, labels);
+
         Dictionary<string, SoundSO> sounds = new();
         HashSet<string> duplicateSounds = new();
         foreach (string path in SoundFolders.SelectMany(folder => FindPaths("t:SoundSO", folder))
@@ -126,7 +128,7 @@ public static class SoundSOTool
                 if (!sounds.TryGetValue(pair.Key, out SoundSO sound))
                 {
                     if (refreshAll) continue;
-                    string path = AudioFolder + "/" + labels[pair.Key] + "SO/" + Path.GetFileNameWithoutExtension(AssetDatabase.GetAssetPath(pair.Value)) + ".asset";
+                    string path = AudioFolder + "/" + labels[pair.Key] + "SO/" + id + ".asset";
                     if (File.Exists(path) || AssetDatabase.LoadMainAssetAtPath(path) != null)
                     {
                         Debug.LogError($"[Sound SO] Asset path occupied: {path}");
@@ -134,6 +136,14 @@ public static class SoundSOTool
                         continue;
                     }
                     sound = ScriptableObject.CreateInstance<SoundSO>();
+                    if (labels[pair.Key] == "BGM")
+                    {
+                        var defaults = new SerializedObject(sound);
+                        defaults.FindProperty("loop").boolValue = true;
+                        defaults.FindProperty("spatialBlend").boolValue = false;
+                        defaults.FindProperty("volume").floatValue = 0.35f;
+                        defaults.ApplyModifiedPropertiesWithoutUndo();
+                    }
                     AssetDatabase.CreateAsset(sound, path);
                     sounds.Add(pair.Key, sound);
                     created++;
@@ -179,6 +189,58 @@ public static class SoundSOTool
         }
         AssetDatabase.SaveAssets();
         Debug.Log($"[Sound SO] {(refreshAll ? "Refresh" : "Create/repair")} complete. Created: {created}, updated: {changed}, unmatched: {unmatched}, errors: {errors}");
+    }
+
+    // Keep imported filenames while mapping them to the game's stable sound IDs.
+    private static void ApplyClipAliases(Dictionary<string, AudioClip> clips, Dictionary<string, string> labels)
+    {
+        var aliases = new Dictionary<string, string[]>
+        {
+            { "Boiling", new[] { "PotCooking" } },
+            { "Carrot", new[] { "CarrotRocket" } },
+            { "Drop", new[] { "PlayerDrop" } },
+            { "Egg_Fall", new[] { "EggCrack" } },
+            { "Frying", new[] { "PanCooking" } },
+            { "Grab", new[] { "PlayerGrab" } },
+            { "JumpDae", new[] { "JumpPad" } },
+            { "knife", new[] { "KnifeSwing", "IngredientThrow" } },
+            { "Ingredient_Slash", new[] { "KnifeHit" } },
+            { "UI Button", new[] { "UIButtonClick" } },
+            { "Menu_BGM", new[] { "MenuBgm" } },
+            { "BGM", new[] { "GameBgm" } },
+            { "Mushroom_crash", new[] { "MushroomImpact" } },
+            { "Oven_Running", new[] { "OvenRun" } },
+            { "Oven_done", new[] { "OvenCookComplete" } },
+            { "Pot_in", new[] { "PotInsert" } },
+            { "Recipe_submit", new[] { "DishSubmit" } },
+            { "Stage_Start", new[] { "StageStart" } },
+            { "Stage_finish", new[] { "StageTimeUp", "StageSuccess", "StageFailure" } }
+        };
+        foreach (var pair in aliases)
+        {
+            string sourceKey = Normalize(pair.Key);
+            if (!clips.TryGetValue(sourceKey, out AudioClip clip)) continue;
+            string label = labels[sourceKey];
+            foreach (string target in pair.Value)
+            {
+                string targetKey = Normalize(target);
+                if (clips.TryGetValue(targetKey, out AudioClip existing) && existing != clip)
+                {
+                    Debug.LogError($"[Sound SO] Multiple clips map to {target}; preserving the canonical clip.");
+                    continue;
+                }
+                clips[targetKey] = clip;
+                labels[targetKey] = label;
+            }
+            clips.Remove(sourceKey);
+            labels.Remove(sourceKey);
+        }
+        // Their playback timing is intentionally excluded from the current setup.
+        foreach (string excluded in new[] { "1minute_left", "Oven_start" })
+        {
+            clips.Remove(Normalize(excluded));
+            labels.Remove(Normalize(excluded));
+        }
     }
 
     private static IEnumerable<string> FindPaths(string filter, string folder) =>

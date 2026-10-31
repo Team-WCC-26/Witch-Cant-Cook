@@ -332,9 +332,10 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         process = Mathf.Clamp01(process);
         gaugeUI?.ShowProgress(1f - process);
 
-        if (process <= lastCutProcess + 0.0001f || process >= 1f) return;
+        if (process <= lastCutProcess + 0.0001f) return;
         lastCutProcess = process;
-        PlayHitWobble();
+        SoundManager.GetOrCreate().Play(SoundId.KnifeHit, transform.position);
+        if (process < 1f) PlayHitWobble();
     }
 
     public bool Interact(IngredientAction action, int dmg = 0)
@@ -412,7 +413,9 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         completedActions |= action;
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
-            SoundManager.GetOrCreate().Play(SoundId.KnifeHit, transform.position);
+            if (lastCutProcess < 1f - 0.0001f)
+                SoundManager.GetOrCreate().Play(SoundId.KnifeHit, transform.position);
+            lastCutProcess = 1f;
             Vector3 position = transform.position;
             Quaternion rotation = transform.rotation;
             Vector3 scale = transform.localScale;

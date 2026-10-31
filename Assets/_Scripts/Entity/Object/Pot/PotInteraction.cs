@@ -29,6 +29,7 @@ public class PotInteraction : MapObjInteraction,
     [Header("Cooking")]
     [SerializeField] private InteractionGaugeUI gaugeUI;
     [SerializeField] private Animator cookingVisualAnimator;
+    [SerializeField] private SoundEmitter cookingSound;
     [SerializeField] private GameObject ingredientIcons;
     [SerializeField] private Image[] ingredientSlots;
     [SerializeField] private GameObject potIcon;
@@ -316,6 +317,7 @@ public class PotInteraction : MapObjInteraction,
         ClearIngredientIcons();
         SetGaugePartsActive(true);
         if (potIcon != null) potIcon.SetActive(true);
+        cookingSound?.Play();
         gaugeUI?.StartFill(duration, HideCookingUI);
     }
 
@@ -410,6 +412,7 @@ public class PotInteraction : MapObjInteraction,
 
     private void HideCookingUI()
     {
+        cookingSound?.Stop();
         if (potIcon != null) potIcon.SetActive(false);
         gaugeUI?.Hide();
     }
@@ -463,7 +466,7 @@ public class PotInteraction : MapObjInteraction,
     // 조리 시작 그릇 보관
     private void StoreCookingBowl(CatchableObj bowl)
     {
-        if (!TryStoreObject(bowl, parentRecipe)) return;
+        if (!TryStoreObject(bowl, parentRecipe, playInsertSound: false)) return;
         cookingBowl = bowl;
     }
 
@@ -476,7 +479,7 @@ public class PotInteraction : MapObjInteraction,
     }
 
     // 오브젝트 비활성 보관
-    private bool TryStoreObject(CatchableObj catchable, Transform storageParent)
+    private bool TryStoreObject(CatchableObj catchable, Transform storageParent, bool playInsertSound = true)
     {
         if (storageParent == null)
         {
@@ -486,7 +489,7 @@ public class PotInteraction : MapObjInteraction,
         }
 
         if (!storedObjects.Add(catchable)) return false;
-        SoundManager.GetOrCreate().Play(SoundId.PotInsert, transform.position);
+        if (playInsertSound) SoundManager.GetOrCreate().Play(SoundId.PotInsert, transform.position);
 
         catchable.ChangePickState(false);
         catchable.SetPhysicsState(false);

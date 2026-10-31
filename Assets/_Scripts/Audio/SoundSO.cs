@@ -11,6 +11,8 @@ public enum SoundId
     
     //BGM
     GlobalBgm = 100,
+    MenuBgm = 101,
+    GameBgm = 102,
      
     //SFX
     BedBounce = 200,
@@ -23,7 +25,7 @@ public enum SoundId
     CarrotRocket = 208,
     CornExplosion = 209,
     CornExplosionWarning = 210,
-    PlayerGrabRelease = 211,
+    PlayerGrab = 211,
     OvenRun = 212,
     OvenCookComplete = 213,
     PanCooking = 214,
@@ -39,7 +41,9 @@ public enum SoundId
     DishSubmit = 224,
     StageTimeUp = 225,
     StageSuccess = 226,
-    StageFailure = 227
+    StageFailure = 227,
+    JumpPad = 228,
+    PlayerDrop = 229
 }
 
 [CreateAssetMenu(menuName = "Audio/Sound SO")]

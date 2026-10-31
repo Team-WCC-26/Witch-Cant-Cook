@@ -9,6 +9,7 @@ public sealed class RoomHudSession : MonoBehaviour
     private static RoomHudSession instance;
     private ServerManager server;
     private StageSelectionSession stages;
+    private bool stageEndSoundPlayed;
     public RoomHudState State { get; } = new();
     public LobbyHudState Lobby { get; } = new();
     public int PendingMoneyPacketCount { get; private set; }
@@ -78,6 +79,7 @@ public sealed class RoomHudSession : MonoBehaviour
     public void OnRoomJoined()
     {
         ResetRoom();
+        SoundManager.GetOrCreate().PlayBgm(SoundId.GameBgm);
         RoomJoined?.Invoke();
         OnStageChanged();
     }
@@ -85,6 +87,7 @@ public sealed class RoomHudSession : MonoBehaviour
     public void OnRoomLeft()
     {
         ResetRoom();
+        SoundManager.GetOrCreate().PlayBgm(SoundId.MenuBgm);
         RoomLeft?.Invoke();
         Changed?.Invoke();
     }
@@ -92,6 +95,7 @@ public sealed class RoomHudSession : MonoBehaviour
     private void ResetRoom()
     {
         State.ResetRoom();
+        stageEndSoundPlayed = false;
         PendingMoneyPacketCount = 0;
         LastReceivedPendingMoney = null;
         PendingMoneyBeforeLastPacket = null;
@@ -146,7 +150,10 @@ public sealed class RoomHudSession : MonoBehaviour
         State.ApplyStage(stages.SelectedStageId, stages.HasStageSelection, stages.IsStageRunning,
             Time.unscaledTimeAsDouble);
         if (!wasRunning && State.IsStageRunning)
+        {
+            stageEndSoundPlayed = false;
             SoundManager.GetOrCreate().Play(SoundId.StageStart);
+        }
         if (State.IsStageRunning) Lobby.BeginStage();
         Changed?.Invoke();
     }
@@ -170,7 +177,7 @@ public sealed class RoomHudSession : MonoBehaviour
     private void OnStageStopped(StageStopPacket packet)
     {
         if (!State.ApplyStageTimeEnded()) return;
-        SoundManager.GetOrCreate().Play(SoundId.StageTimeUp);
+        PlayStageEndSound(SoundId.StageTimeUp);
         StageTimeEnded?.Invoke();
         Changed?.Invoke();
     }
@@ -185,9 +192,17 @@ public sealed class RoomHudSession : MonoBehaviour
             foreach (Stage stage in data.GetStage().GetAll())
                 if (stage != null && stage.stageNum == State.StageNumber) { goal = stage.goal; break; }
         if (!State.ApplyStageSettlement(packet.PendingMoney, packet.Money, packet.IsSuccess, goal)) return;
-        SoundManager.GetOrCreate().Play(packet.IsSuccess ? SoundId.StageSuccess : SoundId.StageFailure);
+        PlayStageEndSound(packet.IsSuccess ? SoundId.StageSuccess : SoundId.StageFailure);
         Changed?.Invoke();
         SettlementRecorded?.Invoke(State.LatestSettlement);
+    }
+
+    // Time-up and settlement can arrive together and share one finish clip.
+    private void PlayStageEndSound(SoundId sound)
+    {
+        if (stageEndSoundPlayed) return;
+        stageEndSoundPlayed = true;
+        SoundManager.GetOrCreate().Play(sound);
     }
 
     private void OnDisable()

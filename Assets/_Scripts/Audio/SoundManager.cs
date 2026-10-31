@@ -12,10 +12,12 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 public sealed class SoundManager : MonoBehaviour
 {
     [SerializeField, Min(1)] private int maxVoices = 32;
+    [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.7f;
     private static SoundManager instance;
     private readonly List<Voice> voices = new();
     private int nextId;
     private SoundHandle bgm;
+    private SoundId currentBgm = SoundId.None;
     private readonly Dictionary<SoundId, SoundSO> sounds = new();
     private readonly List<AsyncOperationHandle> loadHandles = new();
     private readonly List<PendingSound> pendingSounds = new();
@@ -45,9 +47,9 @@ public sealed class SoundManager : MonoBehaviour
     private static void ResetInstance() => instance = null;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void StartGlobalBgm()
+    private static void StartMenuBgm()
     {
-        GetOrCreate().PlayBgm(SoundId.GlobalBgm);
+        GetOrCreate().PlayBgm(SoundId.MenuBgm);
     }
 
     private void Awake()
@@ -99,6 +101,7 @@ public sealed class SoundManager : MonoBehaviour
         pendingSounds.Clear();
         foreach (Voice voice in voices)
             if (!voice.IsBgm) Release(voice);
+        if (next.name == "TitleScene") PlayBgm(SoundId.MenuBgm);
     }
     #endregion
 
@@ -140,8 +143,10 @@ public sealed class SoundManager : MonoBehaviour
             WarnUnavailable(soundId);
             return;
         }
+        if (currentBgm == soundId && bgm.IsPlaying) return;
         bgm.Stop();
         bgm = Play(soundId);
+        currentBgm = bgm.IsPlaying ? soundId : SoundId.None;
         Voice voice = FindVoice(nextId);
         if (bgm.IsPlaying && voice != null)
         {
@@ -156,7 +161,11 @@ public sealed class SoundManager : MonoBehaviour
         if (sound != null) PlayBgm(sound.Id);
     }
 
-    public void StopBgm() => bgm.Stop();
+    public void StopBgm()
+    {
+        bgm.Stop();
+        currentBgm = SoundId.None;
+    }
 
     public void StopAll()
     {
@@ -187,6 +196,7 @@ public sealed class SoundManager : MonoBehaviour
         Voice voice = Acquire();
         if (voice == null) return default;
         sound.ApplyTo(voice.Source);
+        if ((int)sound.Id >= 200) voice.Source.volume *= Mathf.Clamp01(sfxVolume);
         voice.FollowTarget = followTarget;
         voice.HasFollowTarget = followTarget != null;
         voice.Source.transform.position = followTarget != null ? followTarget.position : pos;
