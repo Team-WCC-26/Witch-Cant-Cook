@@ -9,16 +9,6 @@ public class DoorController : Singleton<DoorController>
     [SerializeField] private Door lobbyDoor;
     [SerializeField] private Door kitchenDoor;
 
-
-    [SerializeField]
-    private StageConfig config;
-    private int currentStageIndex = 0;
-
-    public StageData CurrentStageData => config.allStages[currentStageIndex];
-
-    private bool isGameStarted = false; // 게임 시작 여부 체크용 (선택)
-
-
     #region Stage Actions
     public static event Action<DoorId> DoorOpened;
     #endregion

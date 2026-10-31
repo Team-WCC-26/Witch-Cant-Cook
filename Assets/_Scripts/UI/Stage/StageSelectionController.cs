@@ -39,10 +39,17 @@ public class StageSelectionController : MonoBehaviour
     private void Update()
     {
         if (session == null) TrySubscribe();
+
         if (data == null) data = FindFirstObjectByType<DataManager>();
+
         if (!initialized && data != null && data.IsDataLoaded) RebuildPages();
+
         bool connected = session != null && session.IsRoomReady;
-        if (connected != lastConnected) { lastConnected = connected; RefreshNavigation(); }
+        if (connected != lastConnected) 
+        { 
+            lastConnected = connected; RefreshNavigation(); 
+        }
+
         if (pendingStageId != 0 && Time.unscaledTime >= pendingUntil)
         {
             pendingStageId = 0;
