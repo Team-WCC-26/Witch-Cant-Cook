@@ -26,6 +26,11 @@ public class IngredientNalchi : IngredientTrait
     private bool isStunned;
     private bool inPan;
     private IngredientReaction reaction;
+    private Animator flopAnimator;
+    private bool originalAnimatorEnabled;
+    private Vector3 originalAnimatorPos;
+    private Quaternion originalAnimatorRot;
+    private Vector3 originalAnimatorScale;
     private bool CanFly => IsTraitAvailable && !inPan &&
         (reaction == null || !reaction.IsActionCompleted(IngredientAction.Grill | IngredientAction.Cook));
     // Spawned/wandering fish, including one stunned during flight, require a player pickup before pot intake.
@@ -46,6 +51,14 @@ public class IngredientNalchi : IngredientTrait
             rb = GetComponent<Rigidbody>();
 
         reaction = GetComponent<IngredientReaction>();
+        flopAnimator = GetComponentInChildren<Animator>(true);
+        if (flopAnimator != null)
+        {
+            originalAnimatorEnabled = flopAnimator.enabled;
+            originalAnimatorPos = flopAnimator.transform.localPosition;
+            originalAnimatorRot = flopAnimator.transform.localRotation;
+            originalAnimatorScale = flopAnimator.transform.localScale;
+        }
     }
 
     private void Update()
@@ -65,12 +78,14 @@ public class IngredientNalchi : IngredientTrait
     public void EnterPan()
     {
         inPan = true;
-        OnPicked();
+        StopMovement();
+        SetFlopAnimation(false);
     }
 
     public void LeavePan()
     {
         inPan = false;
+        SetFlopAnimation(CanFly);
         BeginFlyDelay();
     }
 
@@ -97,6 +112,7 @@ public class IngredientNalchi : IngredientTrait
         isStunned = false;
         IsAutonomous = true;
         flyTrait.StopFlying();
+        SetFlopAnimation(CanFly);
         BeginFlyDelay();
     }
 
@@ -106,16 +122,37 @@ public class IngredientNalchi : IngredientTrait
         catchable.OnDropped -= OnDropped;
         if (reaction != null) reaction.OnActionCompleted -= HandleActionCompleted;
 
-        flyDelayTimer.Stop();
-        stunTimer.Stop();
-        flyTrait.StopFlying();
-        IsAutonomous = false;
+        StopMovement();
+        SetFlopAnimation(false);
     }
 
     private void HandleActionCompleted(IngredientAction action)
     {
         if ((action & (IngredientAction.Grill | IngredientAction.Cook)) != 0)
-            OnPicked();
+        {
+            StopMovement();
+            SetFlopAnimation(false);
+        }
+    }
+
+    private void SetFlopAnimation(bool active)
+    {
+        if (flopAnimator == null) return;
+        if (active)
+        {
+            flopAnimator.enabled = originalAnimatorEnabled;
+            return;
+        }
+
+        if (!flopAnimator.enabled) return;
+
+        // Restore the model pose instead of freezing midway through a flop.
+        flopAnimator.Rebind();
+        flopAnimator.enabled = false;
+        if (flopAnimator.transform == transform) return;
+        flopAnimator.transform.localPosition = originalAnimatorPos;
+        flopAnimator.transform.localRotation = originalAnimatorRot;
+        flopAnimator.transform.localScale = originalAnimatorScale;
     }
 
     #region Fly
@@ -164,8 +201,12 @@ public class IngredientNalchi : IngredientTrait
     #region Catchable
     private void OnPicked()
     {
+        StopMovement();
+    }
+
+    private void StopMovement()
+    {
         IsAutonomous = false;
-        // 들고 있는 동안에는 비행/대기/기절 상태가 전부 의미 없으므로 모두 정지시킨다.
         flyDelayTimer.Stop();
         stunTimer.Stop();
         isStunned = false;
