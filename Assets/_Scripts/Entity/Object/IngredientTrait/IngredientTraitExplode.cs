@@ -16,7 +16,8 @@ public class IngredientTraitExplode : IngredientTrait
     [Header("Player Knockback")]
     [SerializeField, Min(0f)] private float playerForceMultiplier = 2.2f;
     [SerializeField, Min(0f)] private float playerSpinImpulse = 0.8f;
-    [SerializeField, Min(0f)] private float playerKnockbackDuration = 0.8f;
+    // Preserve serialized values from the former forced-movement path.
+    [SerializeField, HideInInspector] private float playerKnockbackDuration = 0.8f;
 
     [Header("Replacement Ingredient")]
     [SerializeField] private Define.eIngredient replacementIngredient = Define.eIngredient.Popcorn;
@@ -73,18 +74,17 @@ public class IngredientTraitExplode : IngredientTrait
             if (player != null)
             {
                 if (player.StateResolver is RemotePlayerStateResolver) continue;
-                Rigidbody playerBody = player.Body.Rigidbody;
-                if (playerBody == null || playerBody.isKinematic || !affectedBodies.Add(playerBody))
+                Rigidbody playerBody = player.Rb;
+                if (playerBody == null || !affectedBodies.Add(playerBody))
                     continue;
 
                 if (player.Interact.HeldObj != null && player.Interact.HeldObj != source)
                     player.Interact.ForceDropHeld();
 
-                // 이동 코드가 다음 FixedUpdate에서 폭발 속도/회전을 덮어쓰지 않도록 한다.
-                player.ActionController.Movement.BeginForcedMovement(playerKnockbackDuration);
-                ApplyKnockback(playerBody, origin, playerForceMultiplier);
+                Vector3 impulse = GetKnockbackImpulse(player.Body.Rigidbody, origin, playerForceMultiplier);
                 float spinDirection = Random.value < 0.5f ? -1f : 1f;
-                playerBody.AddTorque(Vector3.up * (playerSpinImpulse * spinDirection), ForceMode.Impulse);
+                player.ActionController.ApplyRagdollBlast(impulse,
+                    Vector3.up * (playerSpinImpulse * spinDirection));
                 continue;
             }
 
@@ -100,6 +100,11 @@ public class IngredientTraitExplode : IngredientTrait
 
     private void ApplyKnockback(Rigidbody rb, Vector3 origin, float multiplier)
     {
+        rb.AddForce(GetKnockbackImpulse(rb, origin, multiplier), ForceMode.Impulse);
+    }
+
+    private Vector3 GetKnockbackImpulse(Rigidbody rb, Vector3 origin, float multiplier)
+    {
         Vector3 direction = rb.worldCenterOfMass - origin;
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.001f)
@@ -109,9 +114,8 @@ public class IngredientTraitExplode : IngredientTrait
             if (direction.sqrMagnitude < 0.001f) direction = Vector3.forward;
         }
 
-        Vector3 impulse = direction.normalized * (blastForce * multiplier) +
+        return direction.normalized * (blastForce * multiplier) +
                           Vector3.up * upwardModifier;
-        rb.AddForce(impulse, ForceMode.Impulse);
     }
 
     private void SpawnReplacement(Vector3 origin)

@@ -134,6 +134,24 @@ public class PlayerRagdollController
         isLaunchPending = pelvisBody != null;
     }
 
+    public void ApplyBlast(Vector3 impulse, Vector3 angularVelocity)
+    {
+        Enter();
+        if (pelvisBody == null) return;
+        recoveryStableTime = 0f;
+        isLaunchPending = false;
+        // Preserve root-mass tuning without multiplying impulse by the bone count.
+        Vector3 velocityChange = impulse / Mathf.Max(0.01f, brain.Rb.mass);
+        foreach (BodyPart part in bodyParts)
+        {
+            if (part == null || part.Rb == null || part.Rb.isKinematic) continue;
+            Vector3 rotationVelocity = Vector3.Cross(angularVelocity,
+                part.Rb.worldCenterOfMass - pelvisBody.worldCenterOfMass);
+            part.Rb.AddForce(velocityChange + rotationVelocity, ForceMode.VelocityChange);
+            part.Rb.AddTorque(angularVelocity, ForceMode.VelocityChange);
+        }
+    }
+
     // Apply remote tracking or the local launch gravity.
     public void FixedTick()
     {

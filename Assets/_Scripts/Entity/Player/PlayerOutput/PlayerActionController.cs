@@ -64,6 +64,19 @@ public class PlayerActionController
         awaitingRagdollState = true;
     }
 
+    // Enter ragdoll and apply the explosion immediately.
+    public void ApplyRagdollBlast(Vector3 impulse, Vector3 angularVelocity)
+    {
+        if (brain.StateResolver is not LocalPlayerStateResolver resolver) return;
+        resolver.EnterRagdoll();
+        brain.Rocket?.StopFlight();
+        brain.Interact.CancelPendingAttackImpact();
+        brain.Interact.ForceDropHeld();
+        ragdollController.ApplyBlast(impulse, angularVelocity);
+        prevMode = PlayerPhysicalMode.Ragdoll;
+        awaitingRagdollState = true;
+    }
+
     // Follow the owner's pelvis while the limbs keep their local physics.
     public void UpdateRemoteRagdoll(Vector3 pos, Quaternion rot, Vector3 velocity)
     {
