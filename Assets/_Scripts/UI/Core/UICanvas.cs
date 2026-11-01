@@ -13,6 +13,13 @@ public class UICanvas : MonoBehaviour
     #region Unity Callbacks
     private IEnumerator Start()
     {
+        if (gameObject.scene.name == "MainScene" && GetComponentInChildren<DemoCompleteUI>(true) == null)
+        {
+            GameObject demoComplete = Resources.Load<GameObject>("UI/DemoCompleteUI");
+            if (demoComplete != null) Instantiate(demoComplete, transform, false);
+            else Debug.LogError("DemoCompleteUI prefab is missing from Resources/UI.", this);
+        }
+
         if (UIManager.Instance == null) yield break;
 
         UIManager.SetParents(parents);
