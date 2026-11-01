@@ -34,6 +34,8 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
 
     public ConveyorPath Path => path;
 
+    #region Unity Callbacks
+
     private void OnEnable() => rebuildRequested = true;
     private void OnValidate() => rebuildRequested = true;
 
@@ -42,6 +44,10 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
         if (rebuildRequested || GetLayoutHash() != layoutHash) Rebuild();
         if (Application.isPlaying) RenderAtTime(Time.time);
     }
+
+    private void OnDisable() => ReleaseGeometry();
+
+    #endregion
 
     [ContextMenu("경로 이펙트 다시 생성")]
     public void Rebuild()
@@ -71,6 +77,7 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
             routeRight[i] = Vector3.Cross(Vector3.up, sample.tangent).normalized;
         }
         layoutHash = GetLayoutHash();
+        ReleaseGeometry();
         RenderAtTime(Application.isPlaying ? Time.time : 0f);
     }
 
@@ -85,7 +92,6 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
             LineRenderer line = backgroundRibbons[i];
             if (line == null) continue;
             float center = i - (backgroundRibbons.Length - 1) * 0.5f;
-            float phase = i * Mathf.PI;
             for (int p = 0; p < routePoints.Length; p++)
             {
                 float d = distances[p];
@@ -100,11 +106,6 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
                 renderPoints[p] = routePoints[p] + Vector3.up * (heightOffset + height * spread * ribbonSize)
                     + routeRight[p] * (side * spread * ribbonSize);
             }
-            line.useWorldSpace = true;
-            line.textureMode = LineTextureMode.Tile;
-            line.widthMultiplier = RibbonWidths[i % RibbonWidths.Length] * ribbonWidthScale * ribbonSize;
-            line.positionCount = renderPoints.Length;
-            line.SetPositions(renderPoints);
             UpdateGeometry(i, line);
         }
     }
@@ -118,6 +119,12 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
         public Vector3[] vertices;
         public Vector4[] tangents;
         public Vector3[] centerline;
+        public Vector2[][] groupOffsets;
+        public LineRenderer style;
+        public Matrix4x4 worldToLocal;
+        public float widthMultiplier;
+        public Vector3[] coreCenters;
+        public Vector3[] coreTangents;
     }
 
     private RibbonGeometry[] geometry;
@@ -126,9 +133,6 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
     private void UpdateGeometry(int index, LineRenderer style)
     {
         const int strands = 28; // Two light cores, their halos, and 24 internal filaments.
-        var filter = style.GetComponent<MeshFilter>();
-        var renderer = style.GetComponent<MeshRenderer>();
-        if (filter == null || renderer == null) return;
         if (geometry == null || geometry.Length != backgroundRibbons.Length)
         {
             ReleaseGeometry();
@@ -138,8 +142,11 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
         int strandStride = points * 2;
         int vertexCount = strands * strandStride;
         var surface = geometry[index];
-        if (surface == null || surface.mesh == null || surface.vertices.Length != vertexCount)
+        if (surface == null || surface.mesh == null || surface.vertices.Length != vertexCount || surface.style != style)
         {
+            var filter = style.GetComponent<MeshFilter>();
+            var renderer = style.GetComponent<MeshRenderer>();
+            if (filter == null || renderer == null) return;
             if (surface != null && surface.mesh != null)
             {
                 if (Application.isPlaying) Destroy(surface.mesh);
@@ -150,9 +157,14 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
                 mesh = new Mesh { name = "MagicFlow_LuminousBundle", hideFlags = HideFlags.HideAndDontSave },
                 filter = filter,
                 renderer = renderer,
+                style = style,
                 vertices = new Vector3[vertexCount],
                 tangents = new Vector4[vertexCount],
-                centerline = new Vector3[points]
+                centerline = new Vector3[points],
+                groupOffsets = new[] { new Vector2[points], new Vector2[points] },
+                coreCenters = new Vector3[points * 2],
+                coreTangents = new Vector3[points * 2],
+                widthMultiplier = -1f
             };
             surface.mesh.MarkDynamic();
             var uv = new Vector2[vertexCount];
@@ -185,14 +197,24 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
             geometry[index] = surface;
         }
 
-        float radius = style.widthMultiplier * 0.5f;
-        float widthScale = style.widthMultiplier / 1.44f;
-        for (int strand = 0; strand < strands; strand++)
+        float widthMultiplier = RibbonWidths[index % RibbonWidths.Length] * ribbonWidthScale * ribbonSize;
+        Matrix4x4 worldToLocal = surface.filter.transform.worldToLocalMatrix;
+        if (surface.widthMultiplier != widthMultiplier || surface.worldToLocal != worldToLocal)
         {
-            int group = strand % 2;
-            int detail = (strand - 4) / 2;
+            surface.widthMultiplier = widthMultiplier;
+            surface.worldToLocal = worldToLocal;
+            surface.mesh.bounds = CalculateBounds(index, widthMultiplier, worldToLocal);
+            style.useWorldSpace = true;
+            style.textureMode = LineTextureMode.Tile;
+            style.widthMultiplier = widthMultiplier;
+            style.positionCount = points;
+        }
+        Quaternion worldToLocalRot = Quaternion.Inverse(surface.filter.transform.rotation);
+        float radius = widthMultiplier * 0.5f;
+        float widthScale = widthMultiplier / 1.44f;
+        for (int group = 0; group < 2; group++)
+        {
             int familySeed = waveSeed + group * 113;
-            int detailSeed = familySeed + detail * 37 + 271;
             for (int p = 0; p < points; p++)
             {
                 float d = distances[p];
@@ -205,14 +227,31 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
                     + SmoothNoise(warped * 0.49f, familySeed + 97) * 0.22f);
                 float height = radius * (SmoothNoise(warped, familySeed) * 0.85f
                     + SmoothNoise(warped * 1.63f + 7.1f, familySeed + 11) * 0.20f);
-                if (strand >= 4)
+                surface.groupOffsets[group][p] = new Vector2(side, height);
+            }
+        }
+        for (int strand = 0; strand < strands; strand++)
+        {
+            int group = strand % 2;
+            int detail = (strand - 4) / 2;
+            int detailSeed = waveSeed + group * 113 + detail * 37 + 271;
+            bool reuseCore = strand >= 2 && strand < 4;
+            if (!reuseCore)
+            {
+                for (int p = 0; p < points; p++)
                 {
-                    side += ((detail - 5.5f) * 0.012f
-                        + SmoothNoise(drift / 1.8f, detailSeed) * 0.045f) * widthScale;
-                    height += ((detail - 5.5f) * 0.009f
-                        + SmoothNoise(drift / 2.1f, detailSeed + 67) * 0.065f) * widthScale;
+                    float drift = distances[p] - timeForGeometry * waveSpeed * (group == 0 ? 0.24f : 0.19f);
+                    float side = surface.groupOffsets[group][p].x;
+                    float height = surface.groupOffsets[group][p].y;
+                    if (strand >= 4)
+                    {
+                        side += ((detail - 5.5f) * 0.012f
+                            + SmoothNoise(drift / 1.8f, detailSeed) * 0.045f) * widthScale;
+                        height += ((detail - 5.5f) * 0.009f
+                            + SmoothNoise(drift / 2.1f, detailSeed + 67) * 0.065f) * widthScale;
+                    }
+                    surface.centerline[p] = renderPoints[p] + routeRight[p] * side + Vector3.up * height;
                 }
-                surface.centerline[p] = renderPoints[p] + routeRight[p] * side + Vector3.up * height;
             }
             float width = strand < 2 ? 0.055f + group * 0.010f
                 : (strand < 4 ? 0.30f + group * 0.020f : 0.022f + (strand % 4) * 0.004f);
@@ -221,25 +260,72 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
             {
                 int before = Mathf.Max(0, p - 1);
                 int after = Mathf.Min(points - 1, p + 1);
-                Vector3 tangent = (surface.centerline[after] - surface.centerline[before]).normalized;
-                Vector3 tangentLocal = filter.transform.InverseTransformDirection(tangent).normalized;
-                Vector3 centerLocal = filter.transform.InverseTransformPoint(surface.centerline[p]);
+                int coreIndex = group * points + p;
+                Vector3 tangentLocal;
+                Vector3 centerLocal;
+                if (reuseCore)
+                {
+                    tangentLocal = surface.coreTangents[coreIndex];
+                    centerLocal = surface.coreCenters[coreIndex];
+                }
+                else
+                {
+                    Vector3 tangent = (surface.centerline[after] - surface.centerline[before]).normalized;
+                    tangentLocal = (worldToLocalRot * tangent).normalized;
+                    centerLocal = worldToLocal.MultiplyPoint3x4(surface.centerline[p]);
+                    if (strand < 2)
+                    {
+                        surface.coreTangents[coreIndex] = tangentLocal;
+                        surface.coreCenters[coreIndex] = centerLocal;
+                    }
+                }
                 int v = strand * strandStride + p * 2;
                 surface.vertices[v] = surface.vertices[v + 1] = centerLocal;
                 surface.tangents[v] = new Vector4(tangentLocal.x,tangentLocal.y,tangentLocal.z,-halfWidth);
                 surface.tangents[v + 1] = new Vector4(tangentLocal.x,tangentLocal.y,tangentLocal.z,halfWidth);
             }
         }
-        surface.mesh.vertices = surface.vertices;
+        surface.mesh.SetVertices(surface.vertices, 0, surface.vertices.Length,
+            UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
         surface.mesh.tangents = surface.tangents;
-        surface.mesh.RecalculateBounds();
-        var bounds = surface.mesh.bounds;
-        bounds.Expand(style.widthMultiplier * 0.60f);
-        surface.mesh.bounds = bounds;
-        filter.sharedMesh = surface.mesh;
-        if (renderer.sharedMaterial != style.sharedMaterial) renderer.sharedMaterial = style.sharedMaterial;
-        renderer.enabled = true;
-        style.enabled = false;
+        if (surface.filter.sharedMesh != surface.mesh) surface.filter.sharedMesh = surface.mesh;
+        if (surface.renderer.sharedMaterial != style.sharedMaterial) surface.renderer.sharedMaterial = style.sharedMaterial;
+        if (!surface.renderer.enabled) surface.renderer.enabled = true;
+        if (style.enabled) style.enabled = false;
+    }
+
+    private Bounds CalculateBounds(int index, float widthMultiplier, Matrix4x4 worldToLocal)
+    {
+        // Bound the noise extrema and camera-facing shader expansion in world space.
+        float center = index - (backgroundRibbons.Length - 1) * 0.5f;
+        float widthScale = widthMultiplier / 1.44f;
+        float maxSide = Mathf.Abs(lateralWaveAmplitude * spread * ribbonSize)
+            + widthMultiplier * 0.5f * 0.87f + 0.111f * Mathf.Abs(widthScale);
+        float maxHeight = Mathf.Abs(waveAmplitude * spread * ribbonSize)
+            + widthMultiplier * 0.5f * 1.05f + 0.1145f * Mathf.Abs(widthScale);
+        float halfWidth = 0.16f * Mathf.Abs(widthScale);
+        var bounds = new Bounds();
+        for (int point = 0; point < routePoints.Length; point++)
+        {
+            Vector3 centerWorld = routePoints[point]
+                + Vector3.up * (heightOffset + center * 0.17f * spread * ribbonSize)
+                + routeRight[point] * (center * 0.12f * spread * ribbonSize);
+            Vector3 extentWorld = new Vector3(Mathf.Abs(routeRight[point].x) * maxSide + halfWidth,
+                Mathf.Abs(routeRight[point].y) * maxSide + maxHeight + halfWidth,
+                Mathf.Abs(routeRight[point].z) * maxSide + halfWidth);
+            Vector3 extentLocal = new Vector3(
+                Mathf.Abs(worldToLocal.m00) * extentWorld.x + Mathf.Abs(worldToLocal.m01) * extentWorld.y + Mathf.Abs(worldToLocal.m02) * extentWorld.z,
+                Mathf.Abs(worldToLocal.m10) * extentWorld.x + Mathf.Abs(worldToLocal.m11) * extentWorld.y + Mathf.Abs(worldToLocal.m12) * extentWorld.z,
+                Mathf.Abs(worldToLocal.m20) * extentWorld.x + Mathf.Abs(worldToLocal.m21) * extentWorld.y + Mathf.Abs(worldToLocal.m22) * extentWorld.z);
+            Vector3 centerLocal = worldToLocal.MultiplyPoint3x4(centerWorld);
+            if (point == 0) bounds = new Bounds(centerLocal, extentLocal * 2f);
+            else
+            {
+                bounds.Encapsulate(centerLocal - extentLocal);
+                bounds.Encapsulate(centerLocal + extentLocal);
+            }
+        }
+        return bounds;
     }
 
     // Quintic interpolation keeps the random field smooth in space and time.
@@ -261,8 +347,6 @@ public sealed class ConveyorMagicFlowVisual : MonoBehaviour
             return (value & 0x00FFFFFFu) / 8388607.5f - 1f;
         }
     }
-
-    private void OnDisable() => ReleaseGeometry();
 
     private void ReleaseGeometry()
     {
