@@ -54,8 +54,6 @@ public class LobbyCreator : MonoBehaviour
             RoomPassword = _passwordInput.text,
         };
 
-        StageSelectionSession stages = StageSelectionSession.Instance;
-        stages.BeginRoomCreation();
         try
         {
             await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
@@ -63,7 +61,6 @@ public class LobbyCreator : MonoBehaviour
         }
         catch (System.Exception exception)
         {
-            stages.CancelRoomCreation();
             Debug.LogException(exception, this);
         }
     }
