@@ -113,6 +113,7 @@ public sealed class PlayerBrain : MonoBehaviour
     private CinemachineCamera virtualCamera = null;
     private bool isInitialized = false;
     private PlayerRocketController rocket;
+    private PlayerFocusHighlight focusHighlight;
 
     #endregion
 
@@ -318,6 +319,15 @@ public sealed class PlayerBrain : MonoBehaviour
         {
             EffectController = GetComponent<PlayerEffectController>();
         }
+
+        if (isMine)
+        {
+            if (focusHighlight == null) focusHighlight = GetComponent<PlayerFocusHighlight>();
+            if (focusHighlight == null) focusHighlight = gameObject.AddComponent<PlayerFocusHighlight>();
+            focusHighlight.enabled = true;
+            focusHighlight.Initialize(this);
+        }
+        else if (focusHighlight != null) focusHighlight.enabled = false;
 
     }
 

@@ -15,6 +15,8 @@ public class PlayerInteract
     private float pendingImpactDeadline;
     private CatchableObj preparedThrow;
     private uint throwReleaseVersion;
+    private readonly CatchableFocusQuery pickupFocus = new();
+    public event System.Action<long> EntityInteractionRequested;
 
     public CatchableObj HeldObj { get; private set; }
     public bool IsHolding => HeldObj != null;
@@ -76,6 +78,7 @@ public class PlayerInteract
         if (!IsHolding) return;
 
         IInteractTarget target = FindInteractTarget();
+        if (target is CatchableObj item) EntityInteractionRequested?.Invoke(item.NetworkId);
         OvenButton ovenButton = target.GetTargetComponent<OvenButton>();
         if (ovenButton != null)
         {
@@ -200,6 +203,7 @@ public class PlayerInteract
 
     public void RequestEntityInteract(long targetEntityId)
     {
+        EntityInteractionRequested?.Invoke(targetEntityId);
         EntityInteractPacket packet = new()
         {
             TargetEntityId = targetEntityId
@@ -485,6 +489,8 @@ public class PlayerInteract
     #region Find Interactable Target
     public IInteractTarget FindInteractTarget()
     {
+        // Empty-hand pickup and the sparkle use the exact same reticle-centered target.
+        if (!IsHolding && FindPickupFocus() is CatchableObj pickup) return pickup;
         foreach (PhysicsCastProbe probe in interactionCasts)
         {
             if (probe == null) continue;
@@ -493,6 +499,16 @@ public class PlayerInteract
             if (target != null) return target;
         }
         return null;
+    }
+
+    public CatchableObj FindPickupFocus()
+    {
+        Camera camera = brain.PlayerCam;
+        if (camera == null) return null;
+        PhysicsCastProbe probe = brain.CameraInteractionCast;
+        Ray ray = probe != null ? probe.BuildRay() : camera.ViewportPointToRay(new Vector3(.5f, .5f));
+        return pickupFocus.Find(camera, ray, probe != null ? probe.Distance : brain.InteractDistance,
+            probe != null ? probe.Radius : brain.InteractRadius, brain.transform);
     }
 
     private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray, RaycastHit[] hits)
@@ -506,6 +522,7 @@ public class PlayerInteract
             Collider hitCollider = hit.collider;
             if (hitCollider.transform.IsChildOf(brain.transform)) continue;
             IInteractTarget target = GetInteractTargetInParent(hitCollider);
+            if (!IsHolding && brain.PlayerCam != null && target is CatchableObj) continue;
             if (target == null || !target.Accepts(GetSourceCategory())) continue;
 
             float score = probe.Type == PhysicsCastProbe.CastType.Raycast
