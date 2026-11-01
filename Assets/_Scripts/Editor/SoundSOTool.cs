@@ -208,6 +208,7 @@ public static class SoundSOTool
             { "Ingredient_crash", new[] { "ObjectImpact" } },
             { "Pot_done", new[] { "PotCookComplete" } },
             { "Ingredient_Slash", new[] { "KnifeHit" } },
+            { "Squid", new[] { "SquidInk" } },
             { "UI Button", new[] { "UIButtonClick" } },
             { "Menu_BGM", new[] { "MenuBgm" } },
             { "BGM", new[] { "GameBgm" } },

@@ -311,7 +311,17 @@ MonoBehaviour:
   platePlacement: {fileID: 0}
   plateOffsetPos: {x: 0, y: 0, z: 0}
   plateOffsetEuler: {x: 0, y: 0, z: 0}
-  actionVisuals: []
+  actionVisuals:
+  - action: 0
+    mesh: {fileID: 1439042669314204377, guid: e962bbd6cccc35e46bca9c07e429cff6, type: 3}
+    materials:
+    - {fileID: -5620918211782827528, guid: e962bbd6cccc35e46bca9c07e429cff6, type: 3}
+  - action: 1
+    mesh: {fileID: -1906858854181764153, guid: 9ba4a249574d33642b0a44063cc517dd, type: 3}
+    materials:
+    - {fileID: 5562506453914796557, guid: 9ba4a249574d33642b0a44063cc517dd, type: 3}
+  resizeBoxForVisual: 0
+  useGrillOverlay: 1
   grillColor: {r: 0.21568628, g: 0.08627451, b: 0.023529412, a: 1}
   grillEuler: {x: 0, y: 0, z: 25}
   grillStripeCount: 5

@@ -96,6 +96,11 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private Vector3 originalBoxCenter, originalBoxSize;
     private Material[] originalMaterials;
     private bool originalRendererEnabled;
+    private MeshFilter originalMeshFilter;
+    private Renderer originalTargetRenderer;
+    private SkinnedMeshRenderer originalSkinnedRenderer;
+    private MeshFilter actionMeshFilter;
+    private MeshRenderer actionMeshRenderer;
     private readonly List<MonoBehaviour> traitComponents = new();
     private readonly List<bool> originalTraitEnabled = new();
     private readonly List<Collider> bounceMaterialColliders = new();
@@ -253,6 +258,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         wobbleDirection = 1f;
 
         gaugeUI?.Hide();
+        RestoreOriginalRenderer();
         if (meshFilter != null) meshFilter.sharedMesh = originalMesh;
         ApplyColliderMesh(originalColliderMesh);
         if (boxCollider != null)
@@ -278,7 +284,11 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         if (hasOriginalState) return;
         if (meshFilter == null) meshFilter = GetComponentInChildren<MeshFilter>(true);
         if (targetRenderer == null && meshFilter != null) targetRenderer = meshFilter.GetComponent<Renderer>();
-        originalMesh = meshFilter != null ? meshFilter.sharedMesh : null;
+        originalMeshFilter = meshFilter;
+        originalTargetRenderer = targetRenderer;
+        originalSkinnedRenderer = targetRenderer as SkinnedMeshRenderer;
+        originalMesh = meshFilter != null ? meshFilter.sharedMesh :
+            originalSkinnedRenderer != null ? originalSkinnedRenderer.sharedMesh : null;
         if (meshCollider == null && meshFilter != null)
             meshCollider = meshFilter.GetComponent<MeshCollider>();
         originalColliderMesh = meshCollider != null ? meshCollider.sharedMesh : null;
@@ -508,6 +518,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private void ApplyMesh(Mesh mesh)
     {
         if (mesh == null) return;
+        SelectActionRenderer(mesh);
         if (meshFilter == null) return;
 
         meshFilter.sharedMesh = mesh;
@@ -519,6 +530,49 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             boxCollider.center = mesh.bounds.center;
             boxCollider.size = mesh.bounds.size;
         }
+    }
+
+    // Unskinned action meshes cannot be displayed by changing a MeshFilter beside a
+    // SkinnedMeshRenderer. Keep the animated source intact and reuse a static visual.
+    private void SelectActionRenderer(Mesh mesh)
+    {
+        if (originalSkinnedRenderer == null) return;
+        if (mesh == originalMesh)
+        {
+            RestoreOriginalRenderer();
+            return;
+        }
+        if (actionMeshRenderer == null)
+        {
+            var visual = new GameObject("IngredientActionVisual");
+            visual.transform.SetParent(originalSkinnedRenderer.transform, false);
+            visual.layer = originalSkinnedRenderer.gameObject.layer;
+            actionMeshFilter = visual.AddComponent<MeshFilter>();
+            actionMeshRenderer = visual.AddComponent<MeshRenderer>();
+            actionMeshRenderer.sharedMaterials = originalMaterials;
+            actionMeshRenderer.shadowCastingMode = originalSkinnedRenderer.shadowCastingMode;
+            actionMeshRenderer.receiveShadows = originalSkinnedRenderer.receiveShadows;
+            actionMeshRenderer.lightProbeUsage = originalSkinnedRenderer.lightProbeUsage;
+            actionMeshRenderer.reflectionProbeUsage = originalSkinnedRenderer.reflectionProbeUsage;
+            actionMeshRenderer.renderingLayerMask = originalSkinnedRenderer.renderingLayerMask;
+            actionMeshRenderer.sortingLayerID = originalSkinnedRenderer.sortingLayerID;
+            actionMeshRenderer.sortingOrder = originalSkinnedRenderer.sortingOrder;
+        }
+        bool changedRenderer = targetRenderer != actionMeshRenderer;
+        meshFilter = actionMeshFilter;
+        targetRenderer = actionMeshRenderer;
+        originalSkinnedRenderer.enabled = false;
+        actionMeshRenderer.gameObject.SetActive(true);
+        if (changedRenderer) actionMeshRenderer.enabled = originalRendererEnabled;
+    }
+
+    private void RestoreOriginalRenderer()
+    {
+        if (originalSkinnedRenderer == null) return;
+        if (actionMeshRenderer != null) actionMeshRenderer.gameObject.SetActive(false);
+        meshFilter = originalMeshFilter;
+        targetRenderer = originalTargetRenderer;
+        originalSkinnedRenderer.enabled = originalRendererEnabled;
     }
 
     private void ApplyColliderMesh(Mesh mesh)
