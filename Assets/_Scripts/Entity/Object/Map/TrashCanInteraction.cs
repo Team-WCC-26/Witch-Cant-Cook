@@ -211,7 +211,11 @@ public sealed class TrashCanInteraction : MapObjInteraction, IEntityParentReceiv
         if (PlayerSpawnManager.Instance != null && PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerId, out PlayerBrain player))
         {
             insidePlayers[packet.PlayerId] = player;
-            if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId)) RequestProcessing();
+            if (PlayerSpawnManager.Instance.IsMine(packet.PlayerId))
+            {
+                if (!alreadyInside) player.Interact?.ForceDropHeld();
+                RequestProcessing();
+            }
         }
     }
 
