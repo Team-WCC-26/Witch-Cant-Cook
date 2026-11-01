@@ -12,6 +12,16 @@ public class Oven() : CookingTool(new MultiSlotStorage()), IFixedTool
         {
             StartPlayerDamage(); // 조리가 시작된 순간부터 초당 데미지
         }
+        else if (!_timerManager.CheckHandleValid(_cookTimer))
+        {
+            _cookTimer = _timerManager.Schedule(2000, this, null!);
+
+            CookStartPacket packet = new()
+            {
+                ToolEntityId = EntityId,
+                CookingTimeMs = _timerManager.RemainingTime(_cookTimer)
+            };
+        }
 
         return true;
     }

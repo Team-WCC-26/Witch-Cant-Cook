@@ -138,11 +138,8 @@ internal class DishManager
         if (_timeLimitHandleDict.TryGetValue(recipeId, out var handles) && handles.TryDequeue(out var handle))
         {
             _timerManager.Cancel(handle);
-            
-            if (_orderCnt-- == 3)
-            {
-                _timerManager.Resume(_spawnDelayHandle);
-            }
+
+            DecreaseOrderCnt();
 
             BroadCastDishState(recipeId, DishState.Success);
 
@@ -179,6 +176,8 @@ internal class DishManager
     {
         if (!_timeLimitHandleDict.TryGetValue(recipeId, out var queue) || !queue.TryDequeue(out _)) return;
 
+        DecreaseOrderCnt();
+
         if (_dishses.TryGetValue(recipeId, out var recipe))
         {
             BroadCastDishState(recipeId, DishState.Fail);
@@ -194,5 +193,15 @@ internal class DishManager
         };
 
         _room.BroadCast(PacketSerializer.Serialize(packet, true));
+    }
+
+    private void DecreaseOrderCnt()
+    {
+        if (_orderCnt == 0) return;
+
+        if (_orderCnt-- == 3)
+        {
+            _timerManager.Resume(_spawnDelayHandle);
+        }
     }
 }

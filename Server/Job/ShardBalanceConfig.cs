@@ -8,7 +8,7 @@ public static class ShardBalanceConfig
     public static bool Enabled { get; set; } = true;
 
     // 측정 지표 요약 로그 출력 여부 (주기당 1회)
-    public static bool EnableMetricsLog { get; set; } = true;
+    public static bool EnableMetricsLog { get; set; } = false;
 
     // 부하 측정 주기 (ms)
     public static int MeasurementPeriodMs { get; set; } = 1000;
