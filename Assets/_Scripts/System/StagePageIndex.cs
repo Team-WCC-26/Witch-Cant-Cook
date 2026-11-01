@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-// Pages and protocol requests use Stage.stageNum, never Stage.id or list positions.
+// Server stage numbers map to Stage.stageNum, never Stage.id or list positions.
 public sealed class StagePageIndex
 {
     private readonly List<int> stageIds = new();
@@ -32,18 +32,6 @@ public sealed class StagePageIndex
     }
 
     public bool TryGetStage(int stageNum, out Stage stage) => stagesByNumber.TryGetValue(stageNum, out stage);
-
-    public int IndexOf(int stageId) => stageIds.IndexOf(stageId);
-
-    public bool TryGetAdjacentStage(int stageId, int direction, out int adjacentStageId)
-    {
-        adjacentStageId = stageId;
-        int index = IndexOf(stageId);
-        int adjacentIndex = index + Math.Sign(direction);
-        if (direction == 0 || index < 0 || adjacentIndex < 0 || adjacentIndex >= stageIds.Count) return false;
-        adjacentStageId = stageIds[adjacentIndex];
-        return true;
-    }
 
     public IReadOnlyList<int> GetIngredientIds(int stageId) =>
         ingredientsByStage.TryGetValue(stageId, out var ingredients) ? ingredients : Array.Empty<int>();

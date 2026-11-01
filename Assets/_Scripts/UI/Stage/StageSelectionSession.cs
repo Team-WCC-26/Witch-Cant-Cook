@@ -1,20 +1,17 @@
 using System;
-using Cysharp.Threading.Tasks;
 using Protocol;
 using Server;
 using UnityEngine;
 
-// UI-owned stage packet receiver. Uses the existing ServerManager API unchanged.
-// Boards and the HUD share this receiver instead of registering competing handlers.
+// Server-owned stage state. Boards and the HUD share this receiver; clients never select a stage here.
 public sealed class StageSelectionSession : MonoBehaviour
 {
     private static StageSelectionSession instance;
     private ServerManager server;
     private PlayerSpawnManager players;
-    private bool selectionSyncNeeded;
-    private int pendingRequestedStage;
     private bool stageEndPending;
     private bool hasLeftRoom;
+    private bool roomCreationPending;
 
     public static StageSelectionSession Instance
     {
@@ -31,10 +28,10 @@ public sealed class StageSelectionSession : MonoBehaviour
         }
     }
 
-    public int SelectedStageId { get; private set; } = 1;
+    public int SelectedStageId { get; private set; }
     public bool HasStageSelection { get; private set; }
     public bool IsStageRunning { get; private set; }
-    public bool IsRoomReady => server != null && players != null &&
+    public bool IsRoomReady => server != null && server.IsConnected && players != null &&
         !string.IsNullOrEmpty(players.MyID) && players.ContainsPlayer(players.MyID);
 
     public event Action Changed;
@@ -59,7 +56,6 @@ public sealed class StageSelectionSession : MonoBehaviour
     {
         if (server == null) TryRegister();
         if (players == null) players = FindFirstObjectByType<PlayerSpawnManager>();
-        SynchronizeNewPlayer();
     }
 
     private void TryRegister()
@@ -75,16 +71,21 @@ public sealed class StageSelectionSession : MonoBehaviour
         players = FindFirstObjectByType<PlayerSpawnManager>();
     }
 
+    public void BeginRoomCreation() => roomCreationPending = true;
+    public void CancelRoomCreation() => roomCreationPending = false;
+
     // Called by the existing lobby UI, which already owns S_JoinRoom.
     // Door state comes from StageManager.DoorOpened, so neither handler is replaced.
-    public void OnRoomJoined(bool hasOtherPlayers = false)
+    public void OnRoomJoined()
     {
+        // A confirmed creation starts at stage 1 by the server's room-init contract.
+        // Joining an existing room still waits for that room's current stage packet.
+        bool createdRoom = roomCreationPending;
+        roomCreationPending = false;
         hasLeftRoom = false;
-        SelectedStageId = 1;
+        SelectedStageId = createdRoom ? 1 : 0;
         IsStageRunning = false;
-        HasStageSelection = !hasOtherPlayers;
-        selectionSyncNeeded = false;
-        pendingRequestedStage = 0;
+        HasStageSelection = createdRoom;
         stageEndPending = false;
         RoomHudSession.Instance.OnRoomJoined();
         Changed?.Invoke();
@@ -92,67 +93,23 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     public void OnRoomLeft()
     {
+        roomCreationPending = false;
         hasLeftRoom = true;
-        SelectedStageId = 1;
+        SelectedStageId = 0;
         IsStageRunning = false;
         HasStageSelection = false;
-        selectionSyncNeeded = false;
-        pendingRequestedStage = 0;
         stageEndPending = false;
         RoomHudSession.Instance.OnRoomLeft();
         Changed?.Invoke();
     }
 
-    // Called from PlayerSpawnManager's existing S_PlayerEnter handler, only on existing members.
-    public void OnPlayerEntered(string playerId)
-    {
-        if (players == null) players = FindFirstObjectByType<PlayerSpawnManager>();
-        if (string.IsNullOrEmpty(playerId) || players == null || playerId == players.MyID) return;
-        selectionSyncNeeded = true;
-    }
-
-    private async void SynchronizeNewPlayer()
-    {
-        if (!selectionSyncNeeded || !IsRoomReady || !HasStageSelection || IsStageRunning ||
-            pendingRequestedStage != 0) return;
-
-        // Reuse the server's existing broadcast. Wait for our own page-change acknowledgment
-        // first so an older cached page cannot overwrite a selection made during the join.
-        selectionSyncNeeded = false;
-        try
-        {
-            await server.SendData(PacketSerializer.Serialize(new StageSetPacket { StageNum = SelectedStageId }));
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception);
-        }
-    }
-
-    public async UniTask RequestSelection(int stageId)
-    {
-        TryRegister();
-        if (!IsRoomReady) throw new InvalidOperationException("Join a room before selecting a stage.");
-        if (StageReturnFlow.IsInputBlocked) throw new InvalidOperationException("Wait for the lobby return before selecting a stage.");
-        if (!HasStageSelection) throw new InvalidOperationException("Wait for the room's selected stage before changing pages.");
-        pendingRequestedStage = stageId;
-        try
-        {
-            await server.SendData(PacketSerializer.Serialize(new StageSetPacket { StageNum = stageId }));
-        }
-        catch
-        {
-            if (pendingRequestedStage == stageId) pendingRequestedStage = 0;
-            throw;
-        }
-    }
-
     private void OnStageSet(ReadOnlyMemory<byte> bytes)
     {
         if (hasLeftRoom) return;
-        SelectedStageId = PacketSerializer.Deserialize<StageSetPacket>(bytes).StageNum;
+        int stageId = PacketSerializer.Deserialize<StageSetPacket>(bytes).StageNum;
+        if (stageId <= 0) return;
+        SelectedStageId = stageId;
         HasStageSelection = true;
-        if (pendingRequestedStage == SelectedStageId) pendingRequestedStage = 0;
         Changed?.Invoke();
         StageSelected?.Invoke(SelectedStageId);
     }
@@ -161,10 +118,10 @@ public sealed class StageSelectionSession : MonoBehaviour
     {
         if (hasLeftRoom) return;
         if (stageEndPending) return;
-        SelectedStageId = PacketSerializer.Deserialize<StageStartPacket>(bytes).StageNum;
+        int stageId = PacketSerializer.Deserialize<StageStartPacket>(bytes).StageNum;
+        if (stageId <= 0) return;
+        SelectedStageId = stageId;
         HasStageSelection = true;
-        pendingRequestedStage = 0;
-        selectionSyncNeeded = false;
         IsStageRunning = true;
         Changed?.Invoke();
         StageStarted?.Invoke(SelectedStageId);
@@ -211,7 +168,6 @@ public sealed class StageSelectionSession : MonoBehaviour
         if (hasLeftRoom) return;
         if (doorId != DoorId.Kitchen || stageEndPending) return;
         IsStageRunning = true;
-        selectionSyncNeeded = false;
         Changed?.Invoke();
     }
 

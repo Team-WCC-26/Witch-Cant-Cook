@@ -5,10 +5,10 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Produces editable scene objects and wires all slots and both physical page controls.
+// Produces an editable information board driven by the server's current stage.
 public static class StageWorldCanvasBuilder
 {
-    [MenuItem("GameObject/UI/Stage Selection World Canvas", false, 10)]
+    [MenuItem("GameObject/UI/Server Stage Info World Canvas", false, 10)]
     public static void CreateBoard()
     {
         Transform parent = Selection.activeTransform;
@@ -26,7 +26,7 @@ public static class StageWorldCanvasBuilder
         canvas.worldCamera = Camera.main;
         Background(root, new Color(.82f, .82f, .80f));
         var view = root.gameObject.AddComponent<StageSelectionWorldUI>();
-        TMP_Text title = Text("Stage Title", root, 20, 14, 860, 42, "스테이지 1", 30, true);
+        TMP_Text title = Text("Stage Title", root, 20, 14, 860, 42, "스테이지", 30, true);
 
         Text("Ingredients Heading", root, 24, 70, 520, 32, "재료", 25);
         RectTransform ingredientPanel = Panel("Ingredients", root, 20, 108, 564, 264);
@@ -43,35 +43,17 @@ public static class StageWorldCanvasBuilder
         for (int i = 0; i < 3; i++)
             events[i] = Item(eventPanel, "Event " + (i + 1), 12, 8 + i * 82, 252, 76);
 
-        TMP_Text previous = Text("Previous Arrow", root, 20, 402, 46, 60, "◀", 34, true);
         RectTransform tipPanel = Panel("Tip", root, 78, 390, 454, 76);
         Text("Tip Heading", tipPanel, 10, 4, 420, 20, "TIP", 18);
         TMP_Text tip = Text("Tip Text", tipPanel, 10, 26, 434, 46, "", 18);
         RectTransform goalPanel = Panel("Goal", root, 550, 390, 272, 76);
         Text("Goal Heading", goalPanel, 10, 4, 252, 20, "목표", 18);
         TMP_Text goal = Text("Goal Text", goalPanel, 10, 26, 252, 46, "", 18);
-        TMP_Text next = Text("Next Arrow", root, 834, 402, 46, 60, "▶", 34, true);
         TMP_Text status = Text("Status", root, 20, 474, 860, 22, "", 15, true);
-        view.Configure(title, tip, goal, status, previous, next, ingredients, events);
+        view.Configure(title, tip, goal, status, ingredients, events);
         controller.Configure(view);
-        Cylinder(board.transform, controller, "Previous Page Cylinder", -1.35f, StagePageCylinder.PageDirection.Previous);
-        Cylinder(board.transform, controller, "Next Page Cylinder", 1.35f, StagePageCylinder.PageDirection.Next);
         EditorSceneManager.MarkSceneDirty(board.scene);
         Selection.activeGameObject = board;
-    }
-
-    private static void Cylinder(Transform parent, StageSelectionController controller, string name,
-        float x, StagePageCylinder.PageDirection direction)
-    {
-        GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        cylinder.name = name;
-        cylinder.transform.SetParent(parent, false);
-        cylinder.transform.localPosition = new Vector3(x, -.12f, 0);
-        cylinder.transform.localRotation = Quaternion.Euler(90, 0, 0);
-        cylinder.transform.localScale = new Vector3(.55f, .12f, .55f);
-        // Included in PlayerBrain's default interaction mask (layers 7 and 10).
-        cylinder.layer = 10;
-        cylinder.AddComponent<StagePageCylinder>().Configure(controller, direction);
     }
 
     private static StageBoardItemUI Item(Transform parent, string name, float x, float y, float width, float height)

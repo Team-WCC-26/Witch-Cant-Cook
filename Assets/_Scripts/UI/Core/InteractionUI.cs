@@ -78,8 +78,6 @@ public sealed class InteractionUI : UIBase
     {
         if (target.GetTargetComponent<OvenButton>() != null) return "누르기";
         if (target.GetTargetComponent<Bell>() != null) return "제출";
-        if (target.GetTargetComponent<StagePageCylinder>() is StagePageCylinder page)
-            return page.Direction == StagePageCylinder.PageDirection.Previous ? "이전" : "다음";
         return "공격";
     }
 

@@ -8,18 +8,28 @@ public class StageSelectionWorldUI : MonoBehaviour
     [SerializeField] private TMP_Text tipText;
     [SerializeField] private TMP_Text goalText;
     [SerializeField] private TMP_Text statusText;
-    [SerializeField] private TMP_Text previousArrow;
-    [SerializeField] private TMP_Text nextArrow;
+    // Retain the serialized links so existing scene arrows can be hidden without rebuilding their UI.
+    [SerializeField, HideInInspector] private TMP_Text previousArrow;
+    [SerializeField, HideInInspector] private TMP_Text nextArrow;
 
     [Tooltip("왼쪽 열 위에서 아래 3개, 오른쪽 열 위에서 아래 3개 순서")]
     [SerializeField] private StageBoardItemUI[] ingredients = Array.Empty<StageBoardItemUI>();
     [SerializeField] private StageBoardItemUI[] events = Array.Empty<StageBoardItemUI>();
 
     public void Configure(TMP_Text title, TMP_Text tip, TMP_Text goal, TMP_Text status,
-        TMP_Text previous, TMP_Text next, StageBoardItemUI[] ingredientSlots, StageBoardItemUI[] eventSlots)
+        StageBoardItemUI[] ingredientSlots, StageBoardItemUI[] eventSlots)
     {
         stageTitle = title; tipText = tip; goalText = goal; statusText = status;
-        previousArrow = previous; nextArrow = next; ingredients = ingredientSlots; events = eventSlots;
+        ingredients = ingredientSlots; events = eventSlots;
+        HidePageControls();
+    }
+
+    private void OnEnable() => HidePageControls();
+
+    private void HidePageControls()
+    {
+        if (previousArrow != null) previousArrow.gameObject.SetActive(false);
+        if (nextArrow != null) nextArrow.gameObject.SetActive(false);
     }
 
     public void Show(Stage stage, StagePageIndex pages, DataManager data)
@@ -62,13 +72,12 @@ public class StageSelectionWorldUI : MonoBehaviour
         foreach (StageBoardItemUI slot in events) 
             if (slot != null) slot.Clear();
 
-        SetNavigation(false, false, status);
+        SetStatus(status);
     }
 
-    public void SetNavigation(bool previousAvailable, bool nextAvailable, string status)
+    public void SetStatus(string status)
     {
-        if (previousArrow != null) previousArrow.color = previousAvailable ? Color.black : Color.gray;
-        if (nextArrow != null) nextArrow.color = nextAvailable ? Color.black : Color.gray;
+        HidePageControls();
         if (statusText != null) statusText.text = status ?? "";
     }
 }
