@@ -61,6 +61,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCorn, HandleIngredientCorn);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCornStart, HandleIngredientCornStart);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSquid, HandleIngredientSquid);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -87,6 +88,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientDistanceRequest);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCorn);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCornStart);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSquid);
         isSubscribed = false;
     }
 
@@ -128,11 +130,32 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         IngredientCornPacket packet = PacketSerializer.Deserialize<IngredientCornPacket>(data);
         if (catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable) && catchable != null &&
-            catchable.TryGetComponent(out IngredientCorn corn))
+            catchable.TryGetComponent(out IngredientCorn corn) && corn.IsTraitAvailable)
         {
             // Run the blast before returning the source to its pool. The server keeps this ID.
             corn.HandleServerExplosion(packet);
             TryReplaceCornWithPopcorn(catchable);
+        }
+    }
+
+    private void HandleIngredientSquid(ReadOnlyMemory<byte> data)
+    {
+        IngredientSquidPacket packet = PacketSerializer.Deserialize<IngredientSquidPacket>(data.Span);
+        if (packet.PlayerIds == null || packet.BlindDurationMs <= 0) return;
+
+        // Ignore queued ink after the source has been prepared or despawned.
+        if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj source) || source == null ||
+            !source.TryGetComponent(out IngredientSquid squid) || !squid.IsTraitAvailable) return;
+
+        PlayerSpawnManager spawnManager = PlayerSpawnManager.Instance;
+        if (spawnManager == null) return;
+
+        float duration = packet.BlindDurationMs / 1000f;
+        foreach (string playerId in packet.PlayerIds)
+        {
+            if (string.IsNullOrEmpty(playerId) ||
+                !spawnManager.TryGetPlayer(playerId, out PlayerBrain player) || player == null) continue;
+            player.EffectController.ApplyBlind(duration);
         }
     }
 

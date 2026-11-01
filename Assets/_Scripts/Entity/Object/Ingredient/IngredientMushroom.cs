@@ -3,5 +3,5 @@ using UnityEngine;
 [RequireComponent(typeof(IngredientReaction), typeof(IngredientTraitBounce))]
 public class IngredientMushroom : IngredientTrait
 {
-    // IngredientReaction manages cut suppression and restores the original bounce state for pooling.
+    // IngredientReaction stops bounce after preparation and restores raw bounce state for pooling.
 }

@@ -51,7 +51,7 @@ public class IngredientTraitBounce : MonoBehaviour, IPoolable
     public Vector3 Velocity => running ? velocity : rb != null ? rb.linearVelocity : Vector3.zero;
     private bool Available => source != null && !source.IsHold && source.ParentEntityId <= 0 &&
         !source.IsSubmissionPending && !source.IsSubmissionReturning &&
-        (reaction == null || !reaction.IsActionCompleted(IngredientAction.Cut));
+        (reaction == null || !reaction.AreSpecialTraitsDisabled);
 
     #region Unity Callbacks
 

@@ -30,6 +30,10 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 {
     public event Action<IngredientAction> OnActionCompleted;
 
+    // Whole eggs keep their cracking/pan-transfer lifecycle; EggInside is a separate ingredient.
+    public bool AreSpecialTraitsDisabled => !TryGetComponent<IngredientEgg>(out _) &&
+        IsActionCompleted(IngredientAction.Cut | IngredientAction.Grill | IngredientAction.Cook);
+
     [SerializeField] private CatchableObj catchable;
     public CatchableObj Catchable => catchable;
 
@@ -178,8 +182,9 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             return;
 
         lastImpactTime = Time.time;
-        SoundManager.GetOrCreate().Play(
-            GetComponent<IngredientMushroom>() != null ? SoundId.MushroomImpact : SoundId.ObjectImpact, point);
+        bool isMushroom = TryGetComponent<IngredientMushroom>(out _);
+        if (!isMushroom || !IsActionCompleted(IngredientAction.Cut))
+            SoundManager.GetOrCreate().Play(isMushroom ? SoundId.MushroomImpact : SoundId.ObjectImpact, point);
         if (impactScale > 0f) IngredientCutVfx.PlayAt(point + normal * 0.01f, ingredient, impactScale);
     }
 
@@ -324,24 +329,21 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         hasOriginalState = true;
     }
 
-    private void DisableTraitsAfterCut()
+    private void DisableSpecialTraits()
     {
         CacheOriginalState();
         foreach (MonoBehaviour component in traitComponents)
         {
             if (component == null) continue;
+            // Explicitly stop motion even if placement already disabled the component.
+            if (component is IngredientTraitBounce bounce) bounce.StopSimulation();
             component.enabled = false; // OnDisable cancels timers, flight, and subscriptions.
             component.StopAllCoroutines();
         }
         // Clear the actual colliders here, including when Bounce was already disabled.
-        // A component's OnDisable alone is not an authoritative cut-state transition.
+        // A component's OnDisable alone is not an authoritative preparation-state transition.
         foreach (Collider col in bounceMaterialColliders)
             if (col != null) col.sharedMaterial = null;
-        if (bounceMaterialColliders.Count > 0)
-        {
-            int remaining = bounceMaterialColliders.FindAll(col => col != null && col.sharedMaterial != null).Count;
-            Debug.Log($"[Mushroom Cut] entity={catchable?.NetworkId}, colliders={bounceMaterialColliders.Count}, materialRemaining={remaining}", this);
-        }
     }
 
     public void ApplyCutProgress(float process)
@@ -430,19 +432,22 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     {
         IngredientAction newlyCompleted = action & ~completedActions;
         completedActions |= action;
+        if (newlyCompleted != IngredientAction.None && AreSpecialTraitsDisabled)
+        {
+            Vector3 position = transform.position;
+            Quaternion rotation = transform.rotation;
+            Vector3 scale = transform.localScale;
+            DisableSpecialTraits();
+            // Trait cleanup can restore an animated root to its spawn pose (e.g. corn).
+            // Preserve the current pan/oven placement while stopping those effects.
+            transform.SetPositionAndRotation(position, rotation);
+            transform.localScale = scale;
+        }
         if ((newlyCompleted & IngredientAction.Cut) != 0)
         {
             if (lastCutProcess < 1f - 0.0001f)
                 SoundManager.GetOrCreate().Play(SoundId.KnifeHit, transform.position);
             lastCutProcess = 1f;
-            Vector3 position = transform.position;
-            Quaternion rotation = transform.rotation;
-            Vector3 scale = transform.localScale;
-            DisableTraitsAfterCut();
-            // Trait cleanup can restore an animated root to its spawn pose (e.g. corn).
-            // Keep the current placement; only the cut transition below may reset rotation.
-            transform.SetPositionAndRotation(position, rotation);
-            transform.localScale = scale;
             StopHitWobble();
             gaugeUI?.Hide();
             PlayCutParticle();

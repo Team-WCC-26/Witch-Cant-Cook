@@ -9,7 +9,7 @@ public abstract class IngredientTrait : MonoBehaviour
         get
         {
             IngredientReaction reaction = GetComponentInParent<IngredientReaction>(true);
-            return isActiveAndEnabled && (reaction == null || !reaction.IsActionCompleted(IngredientAction.Cut));
+            return isActiveAndEnabled && (reaction == null || !reaction.AreSpecialTraitsDisabled);
         }
     }
 

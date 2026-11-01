@@ -17,6 +17,10 @@ public class IngredientDamageController : MonoBehaviour
     private bool canDamage = true;
     private Coroutine damageRestoreCoroutine;
     private int damage => stat.damage;
+    // Cutting removes the mushroom's harmful bounce, including ordinary physics contacts.
+    // Check the marker regardless of its enabled state; preparation disables trait components.
+    private bool IsCutMushroom => TryGetComponent<IngredientMushroom>(out _) &&
+        TryGetComponent(out IngredientReaction reaction) && reaction.IsActionCompleted(IngredientAction.Cut);
 
     #region Unity Callbacks
     private void FixedUpdate()
@@ -28,7 +32,7 @@ public class IngredientDamageController : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         if (catchable.TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating) return;
-        if (!canDamage) return;
+        if (!canDamage || IsCutMushroom) return;
         if (!collision.gameObject.CompareTag(playerTag)) return;
         PlayerBrain brain = collision.gameObject.GetComponentInParent<PlayerBrain>();
         if (brain == null || brain.StateResolver is not LocalPlayerStateResolver) return;
@@ -55,7 +59,7 @@ public class IngredientDamageController : MonoBehaviour
 
     public void ApplyScriptedImpact(PlayerBrain brain, Vector3 incomingVelocity)
     {
-        if (!canDamage || brain == null || brain.StateResolver is not LocalPlayerStateResolver) return;
+        if (!canDamage || IsCutMushroom || brain == null || brain.StateResolver is not LocalPlayerStateResolver) return;
         if (stat == null) SetIngredinetStat();
         if (stat == null) return;
         if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(CatchableObj))]
+[RequireComponent(typeof(CatchableObj), typeof(IngredientReaction))]
 public class IngredientOnion : IngredientTrait
 {
     [Header("References")]

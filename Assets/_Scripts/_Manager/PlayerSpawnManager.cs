@@ -50,7 +50,6 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         if (!isSubscribed || ServerManager.Instance == null) return;
         ServerManager.Instance.UnRegisterHandler(_joinMemberID);
         ServerManager.Instance.UnRegisterHandler(_leaveMemberID);
-        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSquid);
         isSubscribed = false;
     }
 
@@ -256,27 +255,12 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     }
 
 
-    private void ReceiveSquidInk(ReadOnlyMemory<byte> data)
-    {
-        IngredientSquidPacket packet = PacketSerializer.Deserialize<IngredientSquidPacket>(data.Span);
-        if (packet.PlayerIds == null || packet.BlindDurationMs <= 0) return;
-
-        float duration = packet.BlindDurationMs / 1000f;
-        foreach (string playerId in packet.PlayerIds)
-        {
-            if (string.IsNullOrEmpty(playerId) || !players.TryGetValue(playerId, out PlayerBrain player) || player == null)
-                continue;
-            player.EffectController.ApplyBlind(duration);
-        }
-    }
-
     private IEnumerator WaitForServerManager()
     {
         yield return new WaitUntil(() => ServerManager.Instance != null);
 
         ServerManager.Instance.RegisterHandler(_joinMemberID, MemberJoined);
         ServerManager.Instance.RegisterHandler(_leaveMemberID, MemberLeft);
-        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSquid, ReceiveSquidInk);
         isSubscribed = true;
         subscribeRoutine = null;
     }

@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 7487898934483325409}
   - component: {fileID: -7750319739028657001}
   - component: {fileID: 5729132004843726150}
+  - component: {fileID: 7889874000101}
   m_Layer: 7
   m_Name: HoneyBottle
   m_TagString: Untagged
@@ -243,3 +244,37 @@ MonoBehaviour:
   targetLayers:
     serializedVersion: 2
     m_Bits: 128
+--- !u!114 &7889874000101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3243848449515356353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1855ad3062b984445a5aa475f2688386, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientReaction
+  catchable: {fileID: 287341765393210474}
+  meshFilter: {fileID: 8051904339507552232}
+  targetRenderer: {fileID: 7825709835659866974}
+  meshCollider: {fileID: 0}
+  gaugeUI: {fileID: 0}
+  impactScale: 1
+  impactMinImpulse: 0.5
+  impactCooldown: 0.1
+  wobbleAngle: 12
+  wobbleDuration: 0.35
+  panPlacement: {fileID: 0}
+  platePlacement: {fileID: 0}
+  plateOffsetPos: {x: 0, y: 0, z: 0}
+  plateOffsetEuler: {x: 0, y: 0, z: 0}
+  actionVisuals: []
+  resizeBoxForVisual: 0
+  useGrillOverlay: 1
+  grillColor: {r: 0.21568628, g: 0.08627451, b: 0.023529412, a: 1}
+  grillEuler: {x: 0, y: 0, z: 25}
+  grillStripeCount: 5
+  grillStripeWidth: 0.34
+  grillStripeOffset: 0

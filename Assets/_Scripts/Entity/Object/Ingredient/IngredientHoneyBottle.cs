@@ -3,6 +3,7 @@ using Server;
 using System.Net.NetworkInformation;
 using UnityEngine;
 
+[RequireComponent(typeof(CatchableObj), typeof(IngredientReaction))]
 public class IngredientHoneyBottle : IngredientTrait
 {
     [Header("References")]
