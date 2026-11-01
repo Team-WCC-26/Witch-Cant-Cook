@@ -7,6 +7,7 @@ using Server;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
 {
@@ -48,6 +49,11 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
         registeredServer = null;
         _refreshButton.onClick.RemoveListener(RefreshLobby);
         if (_passwordInput != null) _passwordInput.OnButtonClicked -= SendJoinRoomPacket;
+    }
+
+    public void ReturnToTitle()
+    {
+        SceneManager.LoadScene("TitleScene");
     }
 
     public void RefreshLobby()

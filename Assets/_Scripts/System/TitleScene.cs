@@ -12,6 +12,7 @@ public class TitleScene : MonoBehaviour
 {
     [Header("UI Elements")]
     [SerializeField] private Button BTN_start;
+    [SerializeField] private Button BTN_Exit;
     [SerializeField] private GameObject loadingPanel;
     [SerializeField] private RectTransform spinner;
     [SerializeField] private TMP_Text loadingStatusText;
@@ -48,9 +49,29 @@ public class TitleScene : MonoBehaviour
 
     void Start()
     {
+        if (BTN_Exit == null)
+        {
+            foreach (Button button in FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (button.name != "BTN_Exit" || button.gameObject.scene != gameObject.scene) continue;
+                BTN_Exit = button;
+                break;
+            }
+        }
+        if (BTN_Exit != null) BTN_Exit.onClick.AddListener(QuitGame);
+
         PrepareLoadingText();
         BTN_start.onClick.AddListener(OnClickStartBTN);
         loadingPanel.SetActive(false);
+    }
+
+    public void QuitGame()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     private void PrepareLoadingText()
