@@ -101,7 +101,6 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
 
     private void SendJoinRoomPacket(string id, string password = "")
     {
-        StageSelectionSession.Instance.CancelRoomCreation();
         JoinRoomPacket packet = new()
         {
             RoomId = id,
@@ -115,11 +114,7 @@ public class LobbyRouterUI : SlotHandlerUIBase<LobbySlotData, LobbySlot>
     {
         var packet = MemoryPackSerializer.Deserialize<JoinRoomPacket>(data.Span);
 
-        if (packet.RoomId == "N" || packet.RoomId == "F")
-        {
-            StageSelectionSession.Instance.CancelRoomCreation();
-            return;
-        }
+        if (packet.RoomId == "N" || packet.RoomId == "F") return;
         StageSelectionSession.Instance.OnRoomJoined();
 
         //_chat.gameObject.SetActive(true);

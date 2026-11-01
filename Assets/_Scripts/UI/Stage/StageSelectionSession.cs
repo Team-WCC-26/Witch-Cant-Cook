@@ -11,7 +11,6 @@ public sealed class StageSelectionSession : MonoBehaviour
     private PlayerSpawnManager players;
     private bool stageEndPending;
     private bool hasLeftRoom;
-    private bool roomCreationPending;
 
     public static StageSelectionSession Instance
     {
@@ -71,21 +70,16 @@ public sealed class StageSelectionSession : MonoBehaviour
         players = FindFirstObjectByType<PlayerSpawnManager>();
     }
 
-    public void BeginRoomCreation() => roomCreationPending = true;
-    public void CancelRoomCreation() => roomCreationPending = false;
-
     // Called by the existing lobby UI, which already owns S_JoinRoom.
     // Door state comes from StageManager.DoorOpened, so neither handler is replaced.
     public void OnRoomJoined()
     {
-        // A confirmed creation starts at stage 1 by the server's room-init contract.
-        // Joining an existing room still waits for that room's current stage packet.
-        bool createdRoom = roomCreationPending;
-        roomCreationPending = false;
+        // Creators and joining players both display stage 1 initially.
+        // A subsequent server stage packet replaces this initial display.
         hasLeftRoom = false;
-        SelectedStageId = createdRoom ? 1 : 0;
+        SelectedStageId = 1;
         IsStageRunning = false;
-        HasStageSelection = createdRoom;
+        HasStageSelection = true;
         stageEndPending = false;
         RoomHudSession.Instance.OnRoomJoined();
         Changed?.Invoke();
@@ -93,7 +87,6 @@ public sealed class StageSelectionSession : MonoBehaviour
 
     public void OnRoomLeft()
     {
-        roomCreationPending = false;
         hasLeftRoom = true;
         SelectedStageId = 0;
         IsStageRunning = false;
