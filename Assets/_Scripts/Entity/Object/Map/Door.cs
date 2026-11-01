@@ -13,6 +13,8 @@ public class Door : MonoBehaviour
 
     private bool isOpen;
 
+    public bool IsOpen => isOpen;
+
     private Quaternion leftClosed;
     private Quaternion rightClosed;
 
