@@ -111,7 +111,7 @@ public sealed class TrashCanEjector : ObjEjector
         if (target is PlayerBrain player)
         {
             trashCan.ReleasePlayer(player);
-            EjectPlayer(player, trashCan.PlayerEjectForce, direction);
+            player.ActionController.LaunchRagdoll(EjectPos, direction * trashCan.PlayerEjectForce);
         }
         else if (target is CatchableObj obj)
         {
