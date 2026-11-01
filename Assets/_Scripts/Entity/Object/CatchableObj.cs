@@ -68,6 +68,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     public Vector3 LinearVelocity => TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating
         ? bounce.Velocity : rb != null ? rb.linearVelocity : Vector3.zero;
     public bool CanBePicked => canBePicked && !IsSubmissionPending && !IsSubmissionReturning &&
+        (!TryGetComponent<IngredientEgg>(out var egg) || !egg.IsRawContents) &&
         (!TryGetComponent(out IngredientNalchi nalchi) || !nalchi.IsFlying);
     public bool IsSubmissionPending { get; private set; }
     public bool IsSubmissionReturning { get; private set; }
@@ -85,6 +86,7 @@ public class CatchableObj : MonoBehaviour, IPoolable, IInteractTarget
     public void ReleaseSubmissionLock() => IsSubmissionPending = false;
     public EntityCategory Category => category;
     public EntityCategory AcceptedCategories =>
+        TryGetComponent<IngredientEgg>(out var egg) && egg.IsRawContents ? EntityCategory.None :
         Category == EntityCategory.Ingredient && acceptedCategories == EntityCategory.None
             ? GetDefaultIngredientAcceptedCategories()
             : acceptedCategories;

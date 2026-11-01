@@ -66,6 +66,7 @@ public sealed class InteractionUI : UIBase
             primary = GetPanPrimary(heldPan, target);
         else if (target.GetTargetComponent<PanInteraction>() is PanInteraction pan && pan.CanReceiveIngredient &&
             heldObject.TryGetComponent<IngredientReaction>(out _) &&
+            !heldObject.TryGetComponent<IngredientEgg>(out _) &&
             heldObject.Data?.id != (int)Define.eIngredient.EggInside && heldObject.NetworkId != 0)
             primary = "넣기";
         else primary = "놓기";
@@ -88,7 +89,7 @@ public sealed class InteractionUI : UIBase
             ((target.GetTargetComponent<StoveInteraction>() is StoveInteraction stove && stove.CanReceivePan) ||
              (target.GetTargetComponent<PrepInteraction>() is PrepInteraction prep && prep.CanReceivePan)))
             return "놓기";
-        if (pan.HasIngredient && target.GetTargetComponent<PlateInteraction>() is PlateInteraction plate && plate.IsEmpty)
+        if (pan.CanTransferIngredient && target.GetTargetComponent<PlateInteraction>() is PlateInteraction plate && plate.IsEmpty)
             return "담기";
         return pan.HasIngredient ? "배출" : string.Empty;
     }

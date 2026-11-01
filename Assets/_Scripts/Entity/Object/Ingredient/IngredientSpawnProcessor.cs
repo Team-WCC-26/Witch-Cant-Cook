@@ -98,8 +98,6 @@ public sealed class IngredientSpawnProcessor : MonoBehaviour
         }
         else Debug.LogWarning($"[SpawnSystem] CatchableObj missing. NetworkID: {request.NetworkID}, Object: {go.name}");
         ObjectPoolManager.Instance.activeObjDict.Add(request.NetworkID, go);
-        if (isIngredient && catchable != null)
-            IngredientEgg.PrepareSpawnedInside(request.IngredientID, request.Position, catchable);
         if (ConveyorBeltRegistry.TryGetBeltById(request.ConveyId, out ConveyorBeltController belt) && belt != null)
             belt.RegisterItem(request.NetworkID, go.transform, go);
     }

@@ -135,6 +135,8 @@ public sealed class CookNetworkRouter : MonoBehaviour
 
             if (!TryResolveReceiver(packet.ToolEntityId, out ICookReceiver receiver))
             {
+                // A completed ingredient may have left its pan in the same server tick.
+                if (packet.ToolEntityId <= 0) continue;
                 if ((packet.CookType & IngredientState.Cut) == 0)
                     Debug.LogError($"Cook complete target not found. ToolEntityId: {packet.ToolEntityId}");
 

@@ -40,6 +40,7 @@ namespace Server
             OnPlayerHealthChanged?.Invoke(packet.PlayerHps);
             OnCookCompleted?.Invoke(packet.CookCompleteIngredients);
             OnCookProcessChanged?.Invoke(packet.CookProcessIngredients);
+            IngredientEgg.ResolvePanEjections();
         }
 
         ~WorldStateRouter()

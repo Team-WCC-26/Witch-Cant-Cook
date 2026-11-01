@@ -98,8 +98,10 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     [Header("Action Visuals")]
     [SerializeField] private IngredientActionVisual[] actionVisuals;
+    [SerializeField] private bool resizeBoxForVisual;
 
     [Header("Grill Overlay")]
+    [SerializeField] private bool useGrillOverlay = true;
     [SerializeField] private Color grillColor = new Color(55f / 255f, 22f / 255f, 6f / 255f, 1f);
     [SerializeField] private Vector3 grillEuler = new Vector3(0f, 0f, 25f);
     [SerializeField, Min(1f)] private float grillStripeCount = 5f;
@@ -461,6 +463,14 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     }
 
     #region Visual Apply
+    // Presentation only: authoritative ingredient identity and cooking flags are unchanged.
+    public void ApplyPresentation(Mesh mesh, Material[] materials)
+    {
+        CacheOriginalState();
+        ApplyMesh(mesh);
+        ApplyMaterials(materials);
+    }
+
     private void ApplyVisual(IngredientAction action)
     {
         IngredientActionVisual visual = FindActionVisual(action);
@@ -497,7 +507,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         ApplyColliderMesh(mesh);
         // A cut mesh can be much flatter and have a different pivot than the whole ingredient.
         // Its collision bounds must change too, otherwise it rests above/below the visible surface.
-        if (IsActionCompleted(IngredientAction.Cut) && boxCollider != null)
+        if ((resizeBoxForVisual || IsActionCompleted(IngredientAction.Cut)) && boxCollider != null)
         {
             boxCollider.center = mesh.bounds.center;
             boxCollider.size = mesh.bounds.size;
@@ -535,7 +545,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
 
     private void UpdateGrillOverlay()
     {
-        bool visible = isActiveAndEnabled && (grillPreview || IsActionCompleted(IngredientAction.Grill));
+        bool visible = useGrillOverlay && isActiveAndEnabled && (grillPreview || IsActionCompleted(IngredientAction.Grill));
         if (!visible)
         {
             if (grillRenderer != null) grillRenderer.gameObject.SetActive(false);

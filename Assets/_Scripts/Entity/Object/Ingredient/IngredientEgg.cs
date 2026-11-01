@@ -5,37 +5,46 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-public class IngredientEgg : IngredientTrait
+public class IngredientEgg : IngredientTrait, IPoolable
 {
     [Header("References")]
     [SerializeField] private Define.eIngredient eArea = Define.eIngredient.EggInside;
+    [SerializeField] private Mesh contentsMesh;
+    [SerializeField] private Material[] contentsMaterials;
+    [SerializeField, Min(0.1f)] private float insertResponseTimeout = 2f;
 
+    private static readonly Dictionary<long, IngredientEgg> pendingEggs = new();
+    private static readonly Dictionary<long, IngredientEgg> pendingEjections = new();
+    private readonly NetworkResponseWait insertResponse = new();
     private IngredientTraitFragile fragileTrait;
     private IngredientTraitAreaCreator areaCreator;
-
-    private const int StagingDepth = 100000;
-    private const long CoordinateMask = 0xFFFFFF;
-    private static readonly Dictionary<long, IngredientEgg> pendingEggs = new();
-    private static readonly HashSet<long> cancelledSpawns = new();
-    private static IngredientNetworkBridge transferBridge;
+    private IngredientDamageController damageController;
+    private IngredientReaction reaction;
     private CatchableObj catchable;
     private PanInteraction pendingPan;
-    private IngredientNetworkBridge requestBridge;
     private long sourceId;
-    private long insideId;
     private bool wasThrown;
     private bool hasLanded;
+    private bool contentsOpened;
+    private bool inPan;
+    private bool awaitingEjectionState;
+    private bool rawAreaRequested;
     private bool originalCanBePicked;
+    private bool originalDamageEnabled;
 
-    #region Unity Callbacks
+    public bool IsCooked => reaction != null && reaction.IsActionCompleted(IngredientAction.Grill);
+    public bool IsRawContents => contentsOpened && !IsCooked;
+
     private void Awake()
     {
         fragileTrait = GetComponent<IngredientTraitFragile>();
         areaCreator = GetComponent<IngredientTraitAreaCreator>();
+        damageController = GetComponent<IngredientDamageController>();
+        reaction = GetComponent<IngredientReaction>();
         catchable = GetComponent<CatchableObj>();
-
-        if (fragileTrait != null)
-            fragileTrait.OnBroken += OnBroken;
+        originalDamageEnabled = damageController != null && damageController.enabled;
+        if (fragileTrait != null) fragileTrait.OnBroken += OnBroken;
+        if (reaction != null) reaction.OnActionCompleted += HandleActionCompleted;
         if (catchable != null)
         {
             catchable.OnPicked += ResetFlight;
@@ -46,8 +55,8 @@ public class IngredientEgg : IngredientTrait
 
     private void OnDestroy()
     {
-        if (fragileTrait != null)
-            fragileTrait.OnBroken -= OnBroken;
+        if (fragileTrait != null) fragileTrait.OnBroken -= OnBroken;
+        if (reaction != null) reaction.OnActionCompleted -= HandleActionCompleted;
         if (catchable != null)
         {
             catchable.OnPicked -= ResetFlight;
@@ -56,213 +65,180 @@ public class IngredientEgg : IngredientTrait
         }
     }
 
+    private void Update() => insertResponse.Tick();
+
     private void OnCollisionEnter(Collision collision)
     {
-        if (pendingPan != null) return;
-        hasLanded = true;
+        if (pendingPan == null && !IsRawContents) hasLanded = true;
     }
-
-    #endregion
 
     public bool TryInsertIntoPan(PanInteraction pan)
     {
-        if (!IsTraitAvailable || pendingPan != null || catchable == null || catchable.NetworkId <= 0 ||
+        if (!IsTraitAvailable || IsRawContents || pendingPan != null ||
+            pan == null || !pan.CanReceiveIngredient || catchable == null || catchable.NetworkId <= 0 ||
             catchable.IsHold || !catchable.IsLocalOwner || !wasThrown || hasLanded ||
-            fragileTrait == null || IngredientNetworkBridge.Instance == null ||
-            ServerManager.Instance == null || !fragileTrait.TryBreakBlock())
-        {
-            return false;
-        }
+            reaction == null || contentsMesh == null || fragileTrait == null ||
+            ServerManager.Instance == null || !ServerManager.Instance.IsConnected ||
+            (!IsCooked && !fragileTrait.TryBreakBlock())) return false;
 
         pendingPan = pan;
-        requestBridge = IngredientNetworkBridge.Instance;
         sourceId = catchable.NetworkId;
-        insideId = 0;
         originalCanBePicked = catchable.CanBePicked;
         catchable.ChangePickState(false);
-        pendingEggs.Add(sourceId, this);
+        pendingEggs[sourceId] = this;
         pan.ReserveEgg(sourceId, this);
-
-        // The unchanged server echoes Position. A unique off-map staging position
-        // correlates the response without borrowing a gameplay position or changing packets.
-        Vector3 position = EncodeStagingPosition(sourceId);
-        IngredientSpawnPacket packet = new()
+        insertResponse.Begin("계란 팬 투입", sourceId, insertResponseTimeout, CancelPanInsert);
+        // Preserve the egg identity so server stats and recipe matching stay valid.
+        SendInsert(new EntityInsertPacket
         {
-            IngredientID = (int)Define.eIngredient.EggInside,
-            Position = ProtocolTypeConverter.ToNumericsVector3(position),
-            Quaternion = System.Numerics.Quaternion.Identity
-        };
-        SendRequest(PacketSerializer.Serialize(packet), this).Forget();
+            SubjectEntityId = sourceId,
+            TargetEntityId = pan.Catchable.NetworkId
+        }, sourceId).Forget();
         return true;
+    }
+
+    private async UniTask SendInsert(EntityInsertPacket packet, long requestedId)
+    {
+        try { await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet)); }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception, this);
+            if (sourceId == requestedId) CancelPanInsert();
+        }
     }
 
     public void CancelPanInsert()
     {
-        if (sourceId <= 0 || !pendingEggs.Remove(sourceId)) return;
-        if (requestBridge != null && requestBridge == IngredientNetworkBridge.Instance)
-        {
-            if (insideId > 0)
-                RequestDestroy(insideId);
-            else
-                cancelledSpawns.Add(sourceId);
-        }
-
+        insertResponse.Cancel();
+        if (sourceId <= 0) return;
+        pendingEggs.Remove(sourceId);
         pendingPan?.ReleaseEgg(sourceId);
-        pendingPan = null;
         sourceId = 0;
-        insideId = 0;
+        pendingPan = null;
         fragileTrait?.ReleaseBreakBlock();
         if (catchable != null) catchable.ChangePickState(originalCanBePicked);
+    }
+
+    // Every client changes appearance only after the server confirms pan membership.
+    public void EnterPan()
+    {
+        bool crackSound = !contentsOpened && !IsCooked;
+        CancelPanInsert();
+        contentsOpened = true;
+        inPan = true;
+        if (catchable != null) pendingEjections.Remove(catchable.NetworkId);
+        awaitingEjectionState = false;
+        if (fragileTrait != null) fragileTrait.enabled = false;
+        if (!IsCooked) reaction.ApplyPresentation(contentsMesh, contentsMaterials);
+        if (damageController != null) damageController.enabled = IsCooked && originalDamageEnabled;
+        catchable.ChangePickState(false);
+        if (crackSound && Application.isPlaying)
+            SoundManager.GetOrCreate().Play(SoundId.EggCrack, transform.position);
+    }
+
+    public void LeavePan() => inPan = false;
+
+    public void HandlePanEjected()
+    {
+        if (!contentsOpened || IsCooked || catchable == null) return;
+        inPan = false;
+        awaitingEjectionState = true;
+        catchable.ChangePickState(false);
+        pendingEjections[catchable.NetworkId] = this;
+    }
+
+    // Eject can arrive before the same tick's CookComplete. Classify after WorldState
+    // has applied all cooking flags, preventing a just-cooked egg from becoming a puddle.
+    public static void ResolvePanEjections()
+    {
+        if (pendingEjections.Count == 0) return;
+        foreach (IngredientEgg egg in new List<IngredientEgg>(pendingEjections.Values))
+        {
+            if (egg == null || egg.catchable == null) continue;
+            long id = egg.catchable.NetworkId;
+            if (egg.IsCooked || egg.catchable.ParentEntityId > 0 || !egg.catchable.IsLocalOwner)
+            {
+                pendingEjections.Remove(id);
+                egg.awaitingEjectionState = false;
+                if (egg.IsCooked && egg.catchable.ParentEntityId <= 0)
+                    egg.catchable.ChangePickState(true);
+                continue;
+            }
+            if (egg.areaCreator == null || IngredientNetworkBridge.Instance == null ||
+                ServerManager.Instance == null || !ServerManager.Instance.IsConnected) continue;
+            pendingEjections.Remove(id);
+            egg.awaitingEjectionState = false;
+            if (egg.rawAreaRequested) continue;
+            egg.rawAreaRequested = true;
+            // Use the existing networked slippery area, including its unpickable state.
+            egg.areaCreator.CreateArea(egg.eArea);
+            egg.PushIngredientToPool(egg.catchable);
+        }
     }
 
     public static void ResetPanTransfers()
     {
         foreach (IngredientEgg egg in new List<IngredientEgg>(pendingEggs.Values))
-        {
             if (egg != null) egg.CancelPanInsert();
-        }
         pendingEggs.Clear();
-        // Keep same-session cancellations so their late spawn replies are still cleaned up.
-        if (transferBridge != IngredientNetworkBridge.Instance)
-            cancelledSpawns.Clear();
-        transferBridge = IngredientNetworkBridge.Instance;
-    }
-
-    public static void PrepareSpawnedInside(int ingredientId, Vector3 position, CatchableObj inside)
-    {
-        if (ingredientId != (int)Define.eIngredient.EggInside ||
-            !TryDecodeStagingPosition(position, out long eggId)) return;
-
-        if (inside.TryGetComponent(out IngredientTraitArea area)) area.ConvertToIngredient();
-        if (inside.ParentEntityId <= 0) inside.SetPhysicsState(false);
-
-        if (cancelledSpawns.Remove(eggId))
-        {
-            RequestDestroy(inside.NetworkId);
-            return;
-        }
-        if (!pendingEggs.TryGetValue(eggId, out IngredientEgg egg)) return;
-
-        egg.insideId = inside.NetworkId;
-        if (egg.pendingPan == null || !egg.pendingPan.isActiveAndEnabled)
-        {
-            egg.CancelPanInsert();
-            return;
-        }
-
-        egg.pendingPan.ReserveInside(eggId, inside.NetworkId);
-        EntityInsertPacket packet = new()
-        {
-            SubjectEntityId = inside.NetworkId,
-            TargetEntityId = egg.pendingPan.Catchable.NetworkId
-        };
-        SendRequest(PacketSerializer.Serialize(packet), egg).Forget();
-    }
-
-    public static void CompletePanInsert(PanInteraction pan, long replacementId)
-    {
-        IngredientEgg source = null;
-        foreach (IngredientEgg egg in pendingEggs.Values)
-        {
-            if (egg.pendingPan == pan && egg.insideId == replacementId)
-            {
-                source = egg;
-                break;
-            }
-        }
-        if (source == null) return;
-        long originalId = source.sourceId;
-        pendingEggs.Remove(originalId);
-        source.pendingPan = null;
-        source.sourceId = 0;
-        source.insideId = 0;
-        RequestDestroy(originalId);
+        pendingEjections.Clear();
     }
 
     public static void HandleDestroyedEntity(long entityId)
     {
-        IngredientEgg cancelled = null;
-        foreach (var pair in pendingEggs)
-        {
-            if (pair.Key == entityId || pair.Value.insideId == entityId)
-            {
-                cancelled = pair.Value;
-                break;
-            }
-        }
-        cancelled?.CancelPanInsert();
+        if (pendingEggs.TryGetValue(entityId, out IngredientEgg egg)) egg.CancelPanInsert();
+        pendingEjections.Remove(entityId);
     }
 
-    protected override void StartTrait()
+    public void ResetForPool()
     {
+        CancelPanInsert();
+        if (catchable != null) pendingEjections.Remove(catchable.NetworkId);
         wasThrown = false;
         hasLanded = false;
-        pendingPan = null;
-        sourceId = 0;
-        insideId = 0;
+        contentsOpened = false;
+        inPan = false;
+        awaitingEjectionState = false;
+        rawAreaRequested = false;
+        if (damageController != null) damageController.enabled = originalDamageEnabled;
     }
+
+    protected override void StartTrait() => ResetForPool();
 
     protected override void StopTrait()
     {
         CancelPanInsert();
+        if (catchable != null) pendingEjections.Remove(catchable.NetworkId);
     }
 
     private void ResetFlight()
     {
-        if (pendingPan != null) CancelPanInsert();
+        CancelPanInsert();
         wasThrown = false;
         hasLanded = false;
+        if (IsRawContents || awaitingEjectionState) catchable.ChangePickState(false);
     }
 
     private void HandleThrown(Vector3 velocity)
     {
         wasThrown = velocity.sqrMagnitude > 0f;
         hasLanded = false;
+        if (IsRawContents || awaitingEjectionState) catchable.ChangePickState(false);
     }
 
-    private static Vector3 EncodeStagingPosition(long eggId)
+    private void HandleActionCompleted(IngredientAction action)
     {
-        return new Vector3(eggId & CoordinateMask, (eggId >> 24) & CoordinateMask,
-            -StagingDepth - (eggId >> 48));
-    }
-
-    private static bool TryDecodeStagingPosition(Vector3 position, out long eggId)
-    {
-        eggId = 0;
-        float high = -position.z - StagingDepth;
-        if (position.x < 0f || position.x > CoordinateMask || position.y < 0f ||
-            position.y > CoordinateMask || high < 0f || high > 32767f ||
-            position.x != Mathf.Floor(position.x) || position.y != Mathf.Floor(position.y) ||
-            high != Mathf.Floor(high)) return false;
-        eggId = (long)position.x | ((long)position.y << 24) | ((long)high << 48);
-        return eggId > 0;
-    }
-
-    private static async UniTask SendRequest(byte[] packet, IngredientEgg source)
-    {
-        long requestSourceId = source.sourceId;
-        try
-        {
-            await ServerManager.Instance.SendData(packet);
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception, source);
-            if (source != null && source.sourceId == requestSourceId)
-                source.CancelPanInsert();
-        }
-    }
-
-    private static void RequestDestroy(long entityId)
-    {
-        if (ServerManager.Instance == null) return;
-        EntityDestroyPacket packet = new() { EntityId = entityId };
-        ServerManager.Instance.SendData(PacketSerializer.Serialize(packet)).Forget();
+        if ((action & IngredientAction.Grill) == 0) return;
+        contentsOpened = true;
+        if (fragileTrait != null) fragileTrait.enabled = false;
+        if (damageController != null) damageController.enabled = originalDamageEnabled;
+        if (!inPan && catchable != null && catchable.ParentEntityId <= 0)
+            catchable.ChangePickState(true);
     }
 
     private void OnBroken(Vector3 point, Vector3 normal)
     {
-        if (!IsTraitAvailable) return;
+        if (!IsTraitAvailable || contentsOpened) return;
         SoundManager.GetOrCreate().Play(SoundId.EggCrack, point);
         if (areaCreator != null)
         {
