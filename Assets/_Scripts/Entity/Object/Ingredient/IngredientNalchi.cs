@@ -24,9 +24,15 @@ public class IngredientNalchi : IngredientTrait
     private readonly IngredientTraitTimer stunTimer = new();
 
     private bool isStunned;
+    private bool inPan;
+    private IngredientReaction reaction;
+    private bool CanFly => IsTraitAvailable && !inPan &&
+        (reaction == null || !reaction.IsActionCompleted(IngredientAction.Grill | IngredientAction.Cook));
     // Spawned/wandering fish, including one stunned during flight, require a player pickup before pot intake.
     public bool IsAutonomous { get; private set; }
     public bool IsFlying => IsTraitAvailable && flyTrait != null && flyTrait.IsFlying;
+
+    #region Unity Callbacks
 
     private void Awake()
     {
@@ -38,13 +44,56 @@ public class IngredientNalchi : IngredientTrait
 
         if (rb == null)
             rb = GetComponent<Rigidbody>();
+
+        reaction = GetComponent<IngredientReaction>();
+    }
+
+    private void Update()
+    {
+        float deltaTime = Time.deltaTime;
+        flyDelayTimer.Tick(deltaTime);
+        stunTimer.Tick(deltaTime);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        ApplyImpact(collision.relativeVelocity.magnitude);
+    }
+
+    #endregion
+
+    public void EnterPan()
+    {
+        inPan = true;
+        OnPicked();
+    }
+
+    public void LeavePan()
+    {
+        inPan = false;
+        BeginFlyDelay();
+    }
+
+    // Also used by scripted collisions that stop short of a physics contact.
+    public void ApplyImpact(float relativeSpeed)
+    {
+        if (!CanFly || isStunned || catchable.IsHold)
+            return;
+
+        // Ignore weak contacts such as gently landing after being put down.
+        if (relativeSpeed < minStunImpactSpeed)
+            return;
+
+        EnterStun();
     }
 
     protected override void StartTrait()
     {
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
+        if (reaction != null) reaction.OnActionCompleted += HandleActionCompleted;
 
+        inPan = false;
         isStunned = false;
         IsAutonomous = true;
         flyTrait.StopFlying();
@@ -55,6 +104,7 @@ public class IngredientNalchi : IngredientTrait
     {
         catchable.OnPicked -= OnPicked;
         catchable.OnDropped -= OnDropped;
+        if (reaction != null) reaction.OnActionCompleted -= HandleActionCompleted;
 
         flyDelayTimer.Stop();
         stunTimer.Stop();
@@ -62,40 +112,22 @@ public class IngredientNalchi : IngredientTrait
         IsAutonomous = false;
     }
 
-    private void Update()
+    private void HandleActionCompleted(IngredientAction action)
     {
-        float dt = Time.deltaTime;
-        flyDelayTimer.Tick(dt);
-        stunTimer.Tick(dt);
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        ApplyImpact(collision.relativeVelocity.magnitude);
-    }
-
-    // Also used by scripted collisions that stop short of a physics contact.
-    public void ApplyImpact(float relativeSpeed)
-    {
-        if (!IsTraitAvailable || isStunned || catchable.IsHold)
-            return;
-
-        // Ignore weak contacts such as gently landing after being put down.
-        if (relativeSpeed < minStunImpactSpeed)
-            return;
-
-        EnterStun();
+        if ((action & (IngredientAction.Grill | IngredientAction.Cook)) != 0)
+            OnPicked();
     }
 
     #region Fly
     private void BeginFlyDelay()
     {
+        if (!CanFly) return;
         flyDelayTimer.StartWait(delayBeforeFly, BeginFly);
     }
 
     private void BeginFly()
     {
-        if (!IsTraitAvailable || isStunned || catchable.IsHold)
+        if (!CanFly || isStunned || catchable.IsHold || catchable.ParentEntityId > 0)
             return;
 
         // The flight trait owns its physics and releases conveyor movement when takeoff succeeds.
@@ -144,6 +176,7 @@ public class IngredientNalchi : IngredientTrait
     private void OnDropped()
     {
         IsAutonomous = false;
+        if (!CanFly) return;
         // 손에서 놓으면 물리(중력)가 적용되도록 kinematic을 해제한다.
         // 이걸 안 해주면 CatchableObj가 들고 있는 동안 켜둔 kinematic이 그대로 남아
         // 놓은 자리에 그대로 박제된 것처럼 보인다.

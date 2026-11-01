@@ -150,6 +150,7 @@ public class PanInteraction : MonoBehaviour,
             area.ConvertToIngredient();
 
         if (ingredient.TryGetComponent(out IngredientEgg egg)) egg.EnterPan();
+        if (ingredient.TryGetComponent(out IngredientNalchi nalchi)) nalchi.EnterPan();
 
         Transform slot = ingredientSlot != null ? ingredientSlot : transform;
         ingredient.ApplyPanPlacement(slot);
@@ -171,6 +172,7 @@ public class PanInteraction : MonoBehaviour,
         if (ingredient.TryGetComponent(out IngredientEgg egg)) egg.LeavePan();
         ingredient.transform.SetParent(null, true);
         ingredient.RestoreOriginalScale();
+        if (ingredient.TryGetComponent(out IngredientNalchi nalchi)) nalchi.LeavePan();
     }
 
     // Collider에서 팬에 넣을 수 있는 재료를 찾는다.
