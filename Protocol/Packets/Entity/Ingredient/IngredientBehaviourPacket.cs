@@ -11,6 +11,14 @@ public partial class IngredientCollisionPacket
 }
 
 [MemoryPackable]
+[PacketId(PacketId.S_IngredientCornStart)]
+public partial class IngredientCornExplodeStartPacket
+{
+    public long EntityId { get; set; }
+    public long ExplosionDelayMs { get; set; }
+}
+
+[MemoryPackable]
 [PacketId(PacketId.S_IngredientCorn)]
 public partial class IngredientCornPacket
 {

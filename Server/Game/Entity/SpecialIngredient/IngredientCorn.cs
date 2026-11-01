@@ -3,76 +3,37 @@ using System.Numerics;
 
 namespace Server;
 
-public sealed class IngredientCorn : IngredientBehaviour, IPickupHandler, IDropHandler
+public sealed class IngredientCorn : IngredientBehaviour, ICollisionHandler
 {
-    private const long _holdDurationMs = 3000;
-    private const long _abandonDurationMs = 10000;
+    private const long _expoldeDelayMs = 3000;
+    private const int _popcornId = 12400;
 
-    private TimerHandle _holdTimer;
-    private TimerHandle _abandonTimer;
     private bool _triggered;
 
     public override void OnEnable()
     {
         _triggered = false;
-
-        if (Ingredient.Parent is Player)
-        {
-            ScheduleHold();
-        }
-        else
-        {
-            ScheduleAbandon();
-        }
     }
 
-    public override void OnDisable()
+    public byte[]? OnCollision()
     {
-        Cancel(ref _holdTimer);
-        Cancel(ref _abandonTimer);
-    }
-
-    public byte[]? OnPickUp(Player player)
-    {
-        if (_triggered) return null;
-
-        Cancel(ref _abandonTimer);
-        ScheduleHold();
-
-        return null;
-    }
-
-    public byte[]? OnDrop()
-    {
-        if (_triggered) return null;
-
-        Cancel(ref _holdTimer);
-        ScheduleAbandon();
-
-        return null;
-    }
-
-    private void ScheduleHold()
-    {
-        Cancel(ref _holdTimer);
-        _holdTimer = Schedule(_holdDurationMs, this, static corn => corn.TriggerExplosion());
-    }
-
-    private void ScheduleAbandon()
-    {
-        Cancel(ref _abandonTimer);
-        _abandonTimer = Schedule(_abandonDurationMs, this, static corn => corn.TriggerExplosion());
-    }
-
-    private void TriggerExplosion()
-    {
-        _holdTimer = default;
-        _abandonTimer = default;
-
-        if (_triggered || !Enabled) return;
+        if (_triggered || !Enabled) return null;
 
         _triggered = true;
 
+        TimerManager.Schedule(_expoldeDelayMs, this, static c => c.Explode());
+
+        IngredientCornExplodeStartPacket packet = new()
+        {
+            EntityId = Ingredient.EntityId,
+            ExplosionDelayMs = _expoldeDelayMs,
+        };
+
+        return Serialize(packet);
+    }
+
+    private void Explode()
+    {
         Vector3? explosionOrigin = null;
 
         if (Ingredient.Parent is Player holder)
@@ -87,6 +48,6 @@ public sealed class IngredientCorn : IngredientBehaviour, IPickupHandler, IDropH
             ExplosionOrigin = explosionOrigin
         });
 
-        Ingredient.Destroy();
+        Ingredient.InitIngredientId(_popcornId);
     }
 }
