@@ -13,6 +13,10 @@ public class IngredientTraitExplode : IngredientTrait
     [SerializeField, Min(0f)] private float upwardModifier = 2f;
     [SerializeField] private LayerMask blastMask = ~0;
 
+    [Header("Object Rotation")]
+    [Tooltip("폭발에 맞은 일반 물체에 더할 각속도(rad/s). 옥수수 자체에는 적용하지 않습니다.")]
+    [SerializeField, Min(0f)] private float objectSpinVelocityChange = 0.8f;
+
     [Header("Player Knockback")]
     [SerializeField, Min(0f)] private float playerForceMultiplier = 2.2f;
     [SerializeField, Min(0f)] private float playerSpinImpulse = 0.8f;
@@ -101,6 +105,8 @@ public class IngredientTraitExplode : IngredientTrait
     private void ApplyKnockback(Rigidbody rb, Vector3 origin, float multiplier)
     {
         rb.AddForce(GetKnockbackImpulse(rb, origin, multiplier), ForceMode.Impulse);
+        if (objectSpinVelocityChange > 0f)
+            rb.AddTorque(Random.onUnitSphere * objectSpinVelocityChange, ForceMode.VelocityChange);
     }
 
     private Vector3 GetKnockbackImpulse(Rigidbody rb, Vector3 origin, float multiplier)

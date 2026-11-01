@@ -36,15 +36,7 @@ public class StagePageCylinder : MonoBehaviour, IInteractTarget, IPunchReceiver
         direction = pageDirection;
     }
 
-    private void OnCollisionEnter(Collision collision) => ReceiveContact(collision.collider);
-    private void OnTriggerEnter(Collider other) => ReceiveContact(other);
-
-    private void ReceiveContact(Collider other)
-    {
-        PlayerBrain player = other.GetComponentInParent<PlayerBrain>();
-        if (player != null && board != null) board.TurnPage((int)direction, player);
-    }
-
+    // 몸체 접촉으로는 페이지를 넘기지 않고, 펀치 판정에서만 변경을 요청한다.
     public void OnPunched(PlayerBrain player)
     {
         PlayClickWobble(player);
