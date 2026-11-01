@@ -34,6 +34,8 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
     protected override void Awake()
     {
         base.Awake();
+        if (GetComponent<StageRespawnController>() == null)
+            gameObject.AddComponent<StageRespawnController>();
     }
 
     private void OnEnable()

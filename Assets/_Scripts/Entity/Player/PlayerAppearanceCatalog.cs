@@ -21,7 +21,13 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
     }
 
     [SerializeField] private Part[] parts;
+    [SerializeField] private List<Mesh> excludedMeshes = new List<Mesh>();
     private static PlayerAppearanceCatalog catalog;
+
+    public bool IsRandomExcluded(Mesh mesh)
+    {
+        return excludedMeshes.Contains(mesh);
+    }
 
     public static void Apply(PlayerBrain player, string playerId)
     {
@@ -44,10 +50,22 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
         bool useFullBody = (Next(ref state) & 1u) != 0;
         foreach (Part part in catalog.parts)
         {
+            int allowedCount = catalog.GetAllowedCount(part);
+            if (part.name == "Body" && allowedCount == 0)
+            {
+                Debug.LogError("Allow at least one Body item in Random exclusions.", player);
+                return;
+            }
+            if (part.name == "Full" && allowedCount == 0) useFullBody = false;
+        }
+        foreach (Part part in catalog.parts)
+        {
             bool enabled = (Next(ref state) & 1u) != 0;
-            int index = (int)(Next(ref state) % (uint)part.variants.Length);
+            uint variantSeed = Next(ref state);
+            int allowedCount = catalog.GetAllowedCount(part);
             if (!renderers.TryGetValue(part.name, out SkinnedMeshRenderer renderer)) continue;
             enabled = part.name == "Body" || (part.name == "Full" ? useFullBody : !useFullBody && enabled);
+            enabled &= allowedCount > 0;
             renderer.gameObject.SetActive(enabled);
             if (!enabled)
             {
@@ -55,7 +73,15 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
                 continue;
             }
 
-            Variant variant = part.variants[index];
+            int allowedIndex = (int)(variantSeed % (uint)allowedCount);
+            Variant variant = null;
+            foreach (Variant candidate in part.variants)
+            {
+                if (catalog.IsRandomExcluded(candidate.mesh)) continue;
+                if (allowedIndex-- != 0) continue;
+                variant = candidate;
+                break;
+            }
             var mappedBones = new Transform[variant.boneNames.Length];
             for (int boneIndex = 0; boneIndex < mappedBones.Length; boneIndex++)
             {
@@ -71,6 +97,16 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
             renderer.bones = mappedBones;
             renderer.localBounds = variant.bounds;
         }
+    }
+
+    private int GetAllowedCount(Part part)
+    {
+        int count = 0;
+        foreach (Variant variant in part.variants)
+        {
+            if (!IsRandomExcluded(variant.mesh)) count++;
+        }
+        return count;
     }
 
     private static uint Hash(string value)
@@ -103,6 +139,44 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
     }
 
     private const string CatalogPath = "Assets/Resources/PlayerAppearanceCatalog.asset";
+
+    public static PlayerAppearanceCatalog GetEditorCatalog()
+    {
+        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<PlayerAppearanceCatalog>(CatalogPath);
+        if (asset == null)
+        {
+            RebuildCatalog();
+            asset = UnityEditor.AssetDatabase.LoadAssetAtPath<PlayerAppearanceCatalog>(CatalogPath);
+        }
+        return asset;
+    }
+
+    public void SetRandomExcluded(Mesh mesh, bool excluded)
+    {
+        UnityEditor.Undo.RecordObject(this, "Change random appearance exclusion");
+        if (excluded)
+        {
+            if (!excludedMeshes.Contains(mesh)) excludedMeshes.Add(mesh);
+        }
+        else
+        {
+            excludedMeshes.Remove(mesh);
+        }
+        UnityEditor.EditorUtility.SetDirty(this);
+        UnityEditor.AssetDatabase.SaveAssets();
+    }
+
+    public void ImportLegacyExclusions(HashSet<string> legacyKeys)
+    {
+        foreach (Part part in parts)
+        {
+            foreach (Variant variant in part.variants)
+            {
+                UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(variant.mesh, out string assetGuid, out long localId);
+                if (legacyKeys.Contains($"{assetGuid}:{localId}")) SetRandomExcluded(variant.mesh, true);
+            }
+        }
+    }
 
     [UnityEditor.MenuItem("Tools/Player/Rebuild Appearance Catalog")]
     public static void RebuildCatalog()
