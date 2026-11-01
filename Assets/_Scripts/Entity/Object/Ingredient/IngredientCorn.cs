@@ -1,17 +1,18 @@
 using Protocol;
+using Server;
 using UnityEngine;
 
 [RequireComponent(typeof(CatchableObj), typeof(IngredientTraitExplode))]
 public class IngredientCorn : IngredientTrait
 {
-    private const float HoldDuration = 3f;
-    private const float AbandonDuration = 10f;
     private const float WarningDuration = 2.1f;
+
+    [Header("Collision")]
+    [Tooltip("폭발을 예약하는 최소 충격량(N·s). Collision.impulse.magnitude와 비교합니다.")]
+    [SerializeField, Min(0f)] private float cornImpactThreshold = 1f;
 
     [Header("References")]
     [SerializeField] private CatchableObj catchable;
-    [Tooltip("경고 애니메이션을 적용할 시각 오브젝트. 물리 루트와 분리된 자식 오브젝트를 지정한다.")]
-    [SerializeField] private Transform warningVisual;
     [Tooltip("서버 폭발 예정 시점의 마지막 2.1초 동안 재생하는 경고 클립. 실제 폭발은 서버 패킷으로만 실행한다.")]
     [SerializeField] private AnimationClip warningAnimation;
 
@@ -19,11 +20,10 @@ public class IngredientCorn : IngredientTrait
     private Renderer[] warningRenderers;
     private MaterialPropertyBlock[][] originalPropertyBlocks;
     private MaterialPropertyBlock warningPropertyBlock;
-    private Vector3 originalVisualPosition;
-    private Vector3 originalVisualScale;
-    private Quaternion originalVisualRotation;
-    private float elapsed;
-    private PlayerBrain warningHolder;
+    private IngredientReaction reaction;
+    private double explosionTime;
+    private bool explosionScheduled;
+    private bool collisionReported;
     private bool hasExploded;
     private bool warningSoundStarted;
     private SoundHandle warningSound;
@@ -40,25 +40,15 @@ public class IngredientCorn : IngredientTrait
             catchable = GetComponent<CatchableObj>();
 
         explodeTrait = GetComponent<IngredientTraitExplode>();
-        if (warningVisual == null)
-        {
-            MeshFilter visual = GetComponentInChildren<MeshFilter>();
-            if (visual != null) warningVisual = visual.transform;
-        }
-
+        reaction = GetComponent<IngredientReaction>();
         warningRenderers = GetComponentsInChildren<Renderer>();
-        if (warningVisual != null)
-        {
-            originalVisualPosition = warningVisual.localPosition;
-            originalVisualScale = warningVisual.localScale;
-            originalVisualRotation = warningVisual.localRotation;
-        }
     }
 
     protected override void StartTrait()
     {
-        elapsed = 0f;
-        warningHolder = catchable.Holder;
+        explosionTime = 0d;
+        explosionScheduled = false;
+        collisionReported = false;
         hasExploded = false;
         warningSoundStarted = false;
         CapturePropertyBlocks();
@@ -68,7 +58,8 @@ public class IngredientCorn : IngredientTrait
     {
         warningSound.Stop();
         warningSoundStarted = false;
-        warningHolder = null;
+        explosionScheduled = false;
+        collisionReported = false;
         RestoreWarningVisual();
     }
 
@@ -94,39 +85,82 @@ public class IngredientCorn : IngredientTrait
         return authorityId == manager.MyID;
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        float impact = collision.impulse.magnitude;
+        bool thresholdMet = impact >= cornImpactThreshold;
+        string ignoreReason = GetCollisionIgnoreReason(collision.collider);
+        string action = ignoreReason != null ? $"IGNORE:{ignoreReason}" :
+            thresholdMet ? "REQUEST_EXPLOSION" : "BELOW_THRESHOLD";
+        Debug.Log($"[Corn Impact] entity={catchable?.NetworkId}, other={collision.collider?.name}, impulse={impact:F4} N·s, threshold={cornImpactThreshold:F4} N·s, thresholdMet={thresholdMet}, action={action}", this);
+        if (ignoreReason != null || !thresholdMet) return;
+
+        collisionReported = true;
+        Debug.Log($"[Corn Collision TX] entity={catchable.NetworkId}, packet=C_IngredientCollision", this);
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(new IngredientCollisionPacket
+        {
+            EntityId = catchable.NetworkId
+        }));
+    }
+
+    private string GetCollisionIgnoreReason(Collider other)
+    {
+        if (!IsTraitAvailable) return "TRAIT_UNAVAILABLE";
+        if (catchable == null) return "MISSING_CATCHABLE";
+        if (hasExploded) return "ALREADY_EXPLODED";
+        if (explosionScheduled) return "COUNTDOWN_RUNNING";
+        if (collisionReported) return "COLLISION_ALREADY_SENT";
+        if (catchable.NetworkId == 0) return "NO_NETWORK_ID";
+        if (!HasReplacementAuthority()) return "NOT_AUTHORITY";
+        if (ServerManager.Instance == null || !ServerManager.Instance.IsConnected) return "DISCONNECTED";
+        if (other == null || other.isTrigger || other.transform.IsChildOf(transform)) return "SELF_OR_TRIGGER";
+
+        // Exclude holding contacts while allowing the world and other players to arm the corn.
+        PlayerBrain holder = catchable.Holder;
+        if (holder != null &&
+            (other.GetComponentInParent<PlayerBrain>() == holder ||
+             other.transform.IsChildOf(holder.transform)))
+            return "HOLDER_COLLIDER";
+        CatchableObj otherCatchable = other.GetComponentInParent<CatchableObj>();
+        if (holder != null && otherCatchable != null && otherCatchable.Holder == holder)
+            return "HOLDER_EQUIPMENT";
+        return null;
+    }
+    public void HandleServerExplosionStart(IngredientCornExplodeStartPacket packet)
+    {
+        if (packet.EntityId != catchable.NetworkId || !IsTraitAvailable ||
+            hasExploded || explosionScheduled) return;
+
+        // The server owns the fuse. Picking up, dropping, and further impacts never reset it.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[Corn Start RX] entity={packet.EntityId}, delayMs={packet.ExplosionDelayMs}", this);
+#endif
+        explosionScheduled = true;
+        collisionReported = true;
+        explosionTime = Time.unscaledTimeAsDouble + System.Math.Max(0L, packet.ExplosionDelayMs) / 1000d;
+        UpdateWarningVisual();
+    }
+
     private void Update()
     {
-        if (!IsTraitAvailable || hasExploded) return;
-
-        if (warningHolder != catchable.Holder)
-        {
-            warningSound.Stop();
-            warningSoundStarted = false;
-            warningHolder = catchable.Holder;
-            elapsed = 0f;
-            RestoreWarningVisual();
-        }
-
-        // 경고 연출만 예측한다. 이 시간이 지나도 서버 패킷 없이는 폭발하지 않는다.
-        elapsed += Time.deltaTime;
+        if (!IsTraitAvailable || hasExploded || !explosionScheduled) return;
         UpdateWarningVisual();
     }
 
     private void UpdateWarningVisual()
     {
-        float warningStartTime = (warningHolder != null ? HoldDuration : AbandonDuration) - WarningDuration;
-        if (elapsed < warningStartTime) return;
+        double remaining = explosionTime - Time.unscaledTimeAsDouble;
+        if (remaining > WarningDuration) return;
         if (!warningSoundStarted)
         {
             warningSoundStarted = true;
+            Debug.Log($"[Corn Warning Start] entity={catchable.NetworkId}, remainingSeconds={remaining:F3}, durationSeconds={WarningDuration:F1}, clipAssigned={warningAnimation != null}, reactionPresent={reaction != null}", this);
             warningSound = SoundManager.GetOrCreate().Play(SoundId.CornExplosionWarning, transform.position, transform);
         }
 
-        float animationTime = Mathf.Clamp(elapsed - warningStartTime, 0f, WarningDuration);
-        float progress = animationTime / WarningDuration;
-
-        if (warningVisual != null && warningAnimation != null)
-            warningAnimation.SampleAnimation(warningVisual.gameObject, animationTime);
+        // For a 3-second fuse, wait 0.9 seconds and play the entire clip over the final 2.1 seconds.
+        // Reaching the deadline only holds the last pose; the explosion still requires its packet.
+        float progress = Mathf.Clamp01((float)((WarningDuration - remaining) / WarningDuration));
 
         for (int i = 0; i < warningRenderers.Length; i++)
         {
@@ -145,6 +179,8 @@ public class IngredientCorn : IngredientTrait
                 renderer.SetPropertyBlock(warningPropertyBlock, j);
             }
         }
+        if (reaction != null && warningAnimation != null)
+            reaction.SampleWarningAnimation(warningAnimation, progress * warningAnimation.length);
     }
 
     private void TintWarningColor(Material material, string property, float progress)
@@ -177,12 +213,7 @@ public class IngredientCorn : IngredientTrait
 
     private void RestoreWarningVisual()
     {
-        if (warningVisual != null)
-        {
-            warningVisual.localPosition = originalVisualPosition;
-            warningVisual.localScale = originalVisualScale;
-            warningVisual.localRotation = originalVisualRotation;
-        }
+        reaction?.ClearWarningAnimation();
 
         if (originalPropertyBlocks == null) return;
         for (int i = 0; i < warningRenderers.Length; i++)
@@ -200,14 +231,19 @@ public class IngredientCorn : IngredientTrait
     public void HandleServerExplosion(IngredientCornPacket packet)
     {
         if (packet.EntityId != catchable.NetworkId || !IsTraitAvailable || hasExploded) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[Corn Explosion RX] entity={packet.EntityId}", this);
+#endif
         hasExploded = true;
+        explosionScheduled = false;
         warningSound.Stop();
+        RestoreWarningVisual();
 
         Vector3 origin = packet.ExplosionOrigin.HasValue
             ? new Vector3(packet.ExplosionOrigin.Value.X, packet.ExplosionOrigin.Value.Y, packet.ExplosionOrigin.Value.Z)
             : transform.position;
         SoundManager.GetOrCreate().Play(SoundId.CornExplosion, origin);
         explodeTrait.Explode(origin, packet.ExplosionSeed, HasReplacementAuthority());
-        // 옥수수 제거는 서버가 보낸 기존 엔티티 제거 통지를 따른다.
+        // 수신 라우터가 동일 엔티티 ID의 팝콘 프리팹으로 교체한다.
     }
 }

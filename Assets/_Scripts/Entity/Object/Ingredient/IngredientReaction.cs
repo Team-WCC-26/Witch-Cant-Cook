@@ -58,6 +58,11 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private Coroutine wobbleRoutine;
     private Transform wobblePivot;
     private Transform motionPivot;
+    private Transform warningPivot;
+    private bool warningVisualActive;
+    private AnimationClip sampledWarningClip;
+    private Vector3 warningClipPosition;
+    private Quaternion warningClipRotation;
     private bool conveyorVisualActive, hitWobbleActive, presentationSourceWasEnabled;
     private Vector3 conveyorWorldOffset;
     private Quaternion conveyorVisualRotation = Quaternion.identity;
@@ -126,6 +131,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private void OnDisable()
     {
         ResetImpact();
+        ClearWarningAnimation();
         ClearConveyorVisualMotion();
         StopHitWobble();
         grillPreview = false;
@@ -235,6 +241,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         ResetImpact();
         CacheOriginalState();
         RestoreOriginalScale();
+        ClearWarningAnimation();
         ClearConveyorVisualMotion();
         StopHitWobble();
         InitializeGauge();
@@ -670,6 +677,45 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         UpdateVisualProxyVisibility();
     }
 
+    // Sample only a transform in the render-only hierarchy. No Collider or Rigidbody lives here.
+    public void SampleWarningAnimation(AnimationClip clip, float time)
+    {
+        if (!isActiveAndEnabled || clip == null || !EnsureVisualProxy()) return;
+        if (sampledWarningClip != clip)
+        {
+            ResetWarningPose();
+            clip.SampleAnimation(warningPivot.gameObject, 0f);
+            warningClipPosition = warningPivot.localPosition;
+            warningClipRotation = warningPivot.localRotation;
+            sampledWarningClip = clip;
+        }
+
+        ResetWarningPose();
+        clip.SampleAnimation(warningPivot.gameObject, time);
+        warningPivot.localPosition -= warningClipPosition;
+        warningPivot.localRotation = Quaternion.Inverse(warningClipRotation) * warningPivot.localRotation;
+        // Ignore authored scale curves; preserve the original visible size.
+        warningPivot.localScale = Vector3.one;
+        warningVisualActive = true;
+        SyncVisualProxy();
+    }
+
+    private void ResetWarningPose()
+    {
+        if (warningPivot == null) return;
+        warningPivot.localPosition = Vector3.zero;
+        warningPivot.localRotation = Quaternion.identity;
+        warningPivot.localScale = Vector3.one;
+    }
+
+    public void ClearWarningAnimation()
+    {
+        warningVisualActive = false;
+        sampledWarningClip = null;
+        ResetWarningPose();
+        UpdateVisualProxyVisibility();
+    }
+
     private bool EnsureVisualProxy()
     {
         CacheOriginalState();
@@ -682,8 +728,10 @@ public class IngredientReaction : MonoBehaviour, IPoolable
             motionPivot.SetParent(meshFilter.transform, false);
             wobblePivot = new GameObject("CutHitWobblePivot").transform;
             wobblePivot.SetParent(motionPivot, false);
+            warningPivot = new GameObject("IngredientWarningVisual").transform;
+            warningPivot.SetParent(wobblePivot, false);
             var visual = new GameObject("IngredientMotionVisual");
-            visual.transform.SetParent(wobblePivot, false);
+            visual.transform.SetParent(warningPivot, false);
             visual.layer = sourceRenderer.gameObject.layer;
             wobbleMeshFilter = visual.AddComponent<MeshFilter>();
             wobbleMeshRenderer = visual.AddComponent<MeshRenderer>();
@@ -724,7 +772,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
         motionPivot.localPosition = bounds.center + meshFilter.transform.InverseTransformVector(conveyorWorldOffset);
         motionPivot.localRotation = conveyorVisualRotation;
         wobblePivot.localPosition = bottom - bounds.center;
-        wobblePivot.GetChild(0).localPosition = -bottom;
+        wobbleMeshFilter.transform.localPosition = -bottom;
         wobbleMeshRenderer.enabled = presentationSourceWasEnabled;
         UpdateVisualProxyVisibility();
     }
@@ -732,7 +780,7 @@ public class IngredientReaction : MonoBehaviour, IPoolable
     private void UpdateVisualProxyVisibility()
     {
         if (motionPivot == null) return;
-        bool visible = conveyorVisualActive || hitWobbleActive;
+        bool visible = conveyorVisualActive || hitWobbleActive || warningVisualActive;
         if (visible)
         {
             motionPivot.gameObject.SetActive(true);

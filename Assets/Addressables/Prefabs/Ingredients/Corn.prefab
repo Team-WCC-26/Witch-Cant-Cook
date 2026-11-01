@@ -182,9 +182,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1584a53f8d19f2d408c5d0e25a9dd569, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientCorn
+  cornImpactThreshold: 1
   catchable: {fileID: -3950667264815616381}
-  warningVisual: {fileID: 0}
-  warningAnimation: {fileID: 0}
+  warningVisual: {fileID: 1018524745069915510}
+  warningAnimation: {fileID: 7400000, guid: d564e94077ce4f342b74deb9e9ddb964, type: 2}
 --- !u!114 &-4382154072363871665
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204,6 +205,7 @@ MonoBehaviour:
   blastMask:
     serializedVersion: 2
     m_Bits: 192
+  objectSpinVelocityChange: 0.8
   playerForceMultiplier: 2.2
   playerSpinImpulse: 0.8
   playerKnockbackDuration: 0.8
@@ -260,6 +262,8 @@ MonoBehaviour:
     mesh: {fileID: -6380304942738169725, guid: ce5249ff6750bd640ba0074fb28bc8b9, type: 3}
     materials:
     - {fileID: 2100000, guid: 419a2cca391594048b11412e3e42c46d, type: 2}
+  resizeBoxForVisual: 0
+  useGrillOverlay: 1
   grillColor: {r: 0.21568628, g: 0.08627451, b: 0.023529412, a: 1}
   grillEuler: {x: 0, y: 0, z: 25}
   grillStripeCount: 5

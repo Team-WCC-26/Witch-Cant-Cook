@@ -60,6 +60,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
         ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCorn, HandleIngredientCorn);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCornStart, HandleIngredientCornStart);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -85,6 +86,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientDistanceRequest);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCorn);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCornStart);
         isSubscribed = false;
     }
 
@@ -114,12 +116,82 @@ public class ObjectNetworkRouter : MonoBehaviour
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(response));
     }
 
+    private void HandleIngredientCornStart(ReadOnlyMemory<byte> data)
+    {
+        IngredientCornExplodeStartPacket packet = PacketSerializer.Deserialize<IngredientCornExplodeStartPacket>(data);
+        if (catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable) && catchable != null &&
+            catchable.TryGetComponent(out IngredientCorn corn))
+            corn.HandleServerExplosionStart(packet);
+    }
+
     private void HandleIngredientCorn(ReadOnlyMemory<byte> data)
     {
         IngredientCornPacket packet = PacketSerializer.Deserialize<IngredientCornPacket>(data);
         if (catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable) && catchable != null &&
             catchable.TryGetComponent(out IngredientCorn corn))
+        {
+            // Run the blast before returning the source to its pool. The server keeps this ID.
             corn.HandleServerExplosion(packet);
+            TryReplaceCornWithPopcorn(catchable);
+        }
+    }
+
+    private bool TryReplaceCornWithPopcorn(CatchableObj source)
+    {
+        long entityId = source.NetworkId;
+        if (!catchableDics.TryGetValue(entityId, out CatchableObj registered) || registered != source)
+            return false;
+
+        Ingredient data = DataManager.Instance?.GetIngredient().GetData((int)Define.eIngredient.Popcorn);
+        ObjectPoolManager pool = ObjectPoolManager.Instance;
+        if (data == null || pool == null)
+        {
+            Debug.LogError($"[Corn Replace] Popcorn data/pool unavailable. EntityId={entityId}");
+            return false;
+        }
+
+        // Prepare a normal ingredient before touching the live corn, so a failed spawn leaves it intact.
+        Vector3 position = source.transform.position;
+        Quaternion rotation = source.transform.rotation;
+        GameObject go = pool.Pop(data.prefabName, position, rotation,
+            out CatchableObj popcorn, out IngredientReaction reaction);
+        if (go == null || popcorn == null)
+        {
+            if (go != null) pool.Push(go);
+            Debug.LogError($"[Corn Replace] Popcorn prefab unavailable. EntityId={entityId}");
+            return false;
+        }
+        FoodRecipeIdentity.Initialize(popcorn, data, null);
+        reaction?.ResetForPool();
+
+        long parentEntityId = source.ParentEntityId;
+        PlayerBrain holder = source.Holder;
+        Vector3 velocity = Vector3.zero;
+        Vector3 angularVelocity = Vector3.zero;
+        if (source.TryGetComponent(out Rigidbody sourceBody) && !sourceBody.isKinematic)
+        {
+            velocity = sourceBody.linearVelocity;
+            angularVelocity = sourceBody.angularVelocity;
+        }
+
+        // This is a local presentation replacement, never an entity destruction/spawn request.
+        RemoveAndRelease(entityId);
+        popcorn.NetworkId = entityId;
+        Register(entityId, popcorn);
+        if (popcorn.TryGetComponent(out Rigidbody body) && !body.isKinematic)
+        {
+            body.linearVelocity = velocity;
+            body.angularVelocity = angularVelocity;
+        }
+        if (holder != null)
+            holder.Interact.ApplyPicked(popcorn);
+        else if (parentEntityId > 0)
+        {
+            popcorn.ParentEntityId = parentEntityId;
+            NotifyParent(parentEntityId, popcorn, true);
+        }
+        Debug.Log($"[Corn Replace] entity={entityId}, ingredient={data.id}, corn returned to pool", popcorn);
+        return true;
     }
 
     private void HandleEntityDestroy(ReadOnlyMemory<byte> data)
