@@ -65,8 +65,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     {
         if (!base.AddPlayer(player)) return false;
 
-        StartPlayerDamage(); // 들어가게 된 직후부터 초당 데미지
-
         if (InsidePlayers.Count >= 2) ForceEject();
 
         return true;
@@ -75,8 +73,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     public override bool RemovePlayer(Player player)
     {
         var res = base.RemovePlayer(player);
-
-        if (InsidePlayers.Count == 0) StopPlayerDamage();
 
         return res;
     }

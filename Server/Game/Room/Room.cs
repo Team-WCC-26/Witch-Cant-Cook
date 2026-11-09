@@ -1,4 +1,5 @@
 ﻿using Protocol;
+using System.Net.Sockets;
 
 namespace Server;
 
@@ -31,7 +32,7 @@ public class Room
 
     // 현재 스테이지 (재접속 스냅샷 동기화용)
     public int Stage => _stage;
-    private int _stage = 0;
+    private int _stage = 1;
 
     private long _nextEntityId = 0;
 
@@ -101,6 +102,7 @@ public class Room
         _money = 0;
         _pendingMoney = 0;
         _nextEntityId = 0;
+        _stage = 1;
 
         // 퇴장 트리거를 룸 수명 엔티티로 등록한다 (엔티티 Id 초기화 직후 생성)
         LeaveRoomTrigger trigger = new();
@@ -112,7 +114,7 @@ public class Room
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
         _doors[DoorId.Kitchen] = new(DoorId.Kitchen, 2, 3, _timerManager, HandleDoorOpened);
 
-        if (!SetStage(1))
+        if (!SetStage(_stage))
         {
             throw new InvalidOperationException("Stage 1 데이터가 존재하지 않습니다.");
         }
@@ -140,8 +142,20 @@ public class Room
 
         _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.EndStage());
 
+        foreach (var player in Players)
+        {
+            player.Init();
+        }
+
         _dishManager.Start();
         _ingredientSpawner.Start();
+
+        StageStartPacket packet = new()
+        {
+            StageNum = _stage
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
     public void Stop()
@@ -885,6 +899,11 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
 
         _awaitingResultConfirm = true;
+
+        if (packet.IsSuccess)
+        {
+            SetStage(_stage + 1);
+        }
     }
 
     // 전원이 확인했는지 재평가한다 (확인 추가 또는 퇴장으로 인원 변화 시 호출)
