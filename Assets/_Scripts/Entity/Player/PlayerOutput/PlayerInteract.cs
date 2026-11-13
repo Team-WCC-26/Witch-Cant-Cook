@@ -19,6 +19,8 @@ public class PlayerInteract
     public event System.Action<long> EntityInteractionRequested;
 
     public CatchableObj HeldObj { get; private set; }
+
+    public bool IsPreparingThrow => preparedThrow != null && preparedThrow == HeldObj;
     public bool IsHolding => HeldObj != null;
 
     public PlayerInteract(PlayerBrain brain)

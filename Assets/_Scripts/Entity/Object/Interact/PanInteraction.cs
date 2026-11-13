@@ -472,20 +472,7 @@ public class PanInteraction : MonoBehaviour,
     // IHeldObjectReceiver: 플레이어가 들고 있는 재료 팬에 넣기
     public bool TryReceiveHeldObject(CatchableObj heldObj, PlayerInteract interact)
     {
-        //함수 인자 검증
-        if (heldObj == null) return false;
-        if (interact == null) return false;
-
-        if (currentIngredient != null) return false; //팬에 이미 재료가 있음
-        if (pendingIngredientId != 0) return false; //이미 서버에 요청 중인 재료가 있음
-        // Eggs can enter a pan only by throwing, including cooked eggs put back in.
-        if (heldObj.TryGetComponent<IngredientEgg>(out _)) return false;
-        if (heldObj.Data is Ingredient data && data.id == (int)Define.eIngredient.EggInside)
-            return false;
-        if (!heldObj.TryGetComponent(out IngredientReaction _)) return false; //재료가 아님
-        if (heldObj.NetworkId == 0) return false;
-        if (catchable == null || catchable.NetworkId == 0) return false;
-
+        if (interact == null || !CanReceiveHeldIngredient(heldObj)) return false;
         pendingIngredientId = heldObj.NetworkId;
         interact.RequestEntityInteract(catchable.NetworkId);
         return true;
@@ -578,4 +565,14 @@ public class PanInteraction : MonoBehaviour,
     }
 
     #endregion
+
+
+    // Shared by the action and its HUD hint so rejected ingredients never show "insert".
+    public bool CanReceiveHeldIngredient(CatchableObj heldObj)
+    {
+        return heldObj != null && CanReceiveIngredient &&
+            heldObj.NetworkId != 0 && heldObj.TryGetComponent<IngredientReaction>(out _) &&
+            !heldObj.TryGetComponent<IngredientEgg>(out _) &&
+            heldObj.Data?.id != (int)Define.eIngredient.EggInside;
+    }
 }
