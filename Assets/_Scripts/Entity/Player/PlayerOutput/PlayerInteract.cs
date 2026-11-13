@@ -221,6 +221,15 @@ public class PlayerInteract
         pendingImpactDeadline = Time.time + 2f;
     }
 
+    public void QueueRemoteKnifeImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        pendingAttackImpact = PendingAttackImpact.Knife;
+        pendingKnife = HeldObj;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
+
     public void QueueKnifeImpact()
     {
         SoundManager.GetOrCreate().Play(SoundId.KnifeSwing, brain.transform.position);
@@ -273,14 +282,19 @@ public class PlayerInteract
     private void ApplyPlayerPunch(PlayerHitWobble playerHit)
     {
         if (playerHit == null) return;
-        SoundManager.GetOrCreate().Play(SoundId.Punch, playerHit.transform.position);
-        playerHit.PlayHit(brain.transform.position);
-
-        PlayerBrain target = playerHit.GetComponent<PlayerBrain>();
-        if (target != null && target != brain &&
-            target.StateResolver is LocalPlayerStateResolver)
-            target.Health?.TakeDamage(brain.PunchDamage);
+        ApplyPlayerHit(brain, playerHit.GetComponent<PlayerBrain>(), SoundId.Punch);
     }
+
+// Share victim-owned health requests, hit feedback and damage settings across attacks.
+    internal static void ApplyPlayerHit(PlayerBrain attacker, PlayerBrain target, SoundId hitSound)
+    {
+        if (attacker == null || target == null || target == attacker) return;
+        SoundManager.GetOrCreate().Play(hitSound, target.transform.position);
+        target.GetComponent<PlayerHitWobble>()?.PlayHit(attacker.transform.position);
+        if (target.StateResolver is LocalPlayerStateResolver)
+            target.Health?.TakeDamage(attacker.PunchDamage);
+    }
+
 
     private PlayerHitWobble TryFindPunchedPlayer(Ray ray, float radius, float distance)
     {
@@ -314,6 +328,12 @@ public class PlayerInteract
         if (!TryConsumeAttackImpact(PendingAttackImpact.Knife, out CatchableObj knife)) return;
         if (HeldObj != knife || knife == null) return;
 
+        if (TryFindPunchedPlayer(BuildInteractRay(), GetInteractRadius(), GetInteractDistance()) is PlayerHitWobble playerHit)
+        {
+            ApplyPlayerHit(brain, playerHit.GetComponent<PlayerBrain>(), SoundId.KnifeHit);
+            return;
+        }
+
         IInteractTarget impactTarget = FindInteractTarget();
         Bell bell = impactTarget.GetTargetComponent<Bell>();
         if (bell != null)
@@ -326,6 +346,29 @@ public class PlayerInteract
         if (!target.TryGetComponent(out IngredientReaction _)) return;
         RequestEntityInteract(target.NetworkId);
     }
+
+    public void OnRemoteKnifeImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver ||
+            pendingAttackImpact != PendingAttackImpact.Knife) return;
+        bool valid = Time.time <= pendingImpactDeadline &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default &&
+            brain.StateResolver.CurrentState.HeldEntityCategory == EntityCategory.Knife &&
+            (pendingKnife == null || HeldObj == pendingKnife) &&
+            !StageReturnFlow.IsInputBlocked;
+        CancelPendingAttackImpact();
+        if (!valid) return;
+
+        Transform facing = brain.FacingRoot != null ? brain.FacingRoot : brain.transform;
+        Vector3 origin = brain.Col != null ? brain.Col.bounds.center : facing.position + Vector3.up;
+        PlayerHitWobble playerHit = TryFindPunchedPlayer(
+            new Ray(origin, facing.forward),
+            GetInteractRadius() + RemotePunchRadiusBonus,
+            GetInteractDistance() + RemotePunchDistanceBonus);
+        if (playerHit != null)
+            ApplyPlayerHit(brain, playerHit.GetComponent<PlayerBrain>(), SoundId.KnifeHit);
+    }
+
 
     private bool TryConsumeAttackImpact(PendingAttackImpact expected, out CatchableObj knife)
     {

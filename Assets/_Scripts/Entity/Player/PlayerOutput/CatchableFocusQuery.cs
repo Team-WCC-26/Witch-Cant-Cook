@@ -10,12 +10,25 @@ public sealed class CatchableFocusQuery
 
     public CatchableObj Find(Camera camera, Ray ray, float distance, float radius, Transform playerRoot)
     {
+        return FindInternal(camera, ray, distance, radius, playerRoot, false);
+    }
+
+    // Preview uses a screen-space radius without extending actual pickup reach.
+    public CatchableObj FindPreview(Camera camera, Ray ray, float distance, float viewportRadius, Transform playerRoot)
+    {
+        return FindInternal(camera, ray, distance, Mathf.Max(.01f, viewportRadius), playerRoot, true);
+    }
+
+    private CatchableObj FindInternal(Camera camera, Ray ray, float distance, float radius, Transform playerRoot, bool preview)
+    {
         if (camera == null || distance <= 0f) return null;
         int count;
         do
         {
-            count = Physics.OverlapCapsuleNonAlloc(ray.origin, ray.GetPoint(distance), Mathf.Max(.01f, radius),
-                candidates, Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            count = preview
+                ? Physics.OverlapSphereNonAlloc(ray.origin, distance, candidates, Physics.AllLayers, QueryTriggerInteraction.Ignore)
+                : Physics.OverlapCapsuleNonAlloc(ray.origin, ray.GetPoint(distance), Mathf.Max(.01f, radius),
+                    candidates, Physics.AllLayers, QueryTriggerInteraction.Ignore);
             if (count < candidates.Length) break;
             if (candidates.Length >= 1024) return null;
             System.Array.Resize(ref candidates, candidates.Length * 2);
@@ -38,6 +51,7 @@ public sealed class CatchableFocusQuery
             if (viewport.z <= 0f || viewport.x < 0f || viewport.x > 1f || viewport.y < 0f || viewport.y > 1f) continue;
             Vector2 offset = new((viewport.x - .5f) * camera.aspect, viewport.y - .5f);
             float score = offset.sqrMagnitude;
+            if (preview && score > radius * radius) continue;
             if (score > bestScore || (score == bestScore && range >= bestDistance)) continue;
             if (!IsVisible(camera.transform.position, bounds.center, item, playerRoot)) continue;
             best = item;

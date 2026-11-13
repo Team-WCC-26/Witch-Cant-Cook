@@ -2925,6 +2925,7 @@ GameObject:
   - component: {fileID: 9100000000000000001}
   - component: {fileID: 9100000000000000002}
   - component: {fileID: 2918737854948435200}
+  - component: {fileID: -2731757239887594952}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -2999,7 +3000,7 @@ MonoBehaviour:
   <KnockbackDuration>k__BackingField: 0.5
   <GroundLayerMask>k__BackingField:
     serializedVersion: 2
-    m_Bits: 1281
+    m_Bits: 3329
   <JumpPower>k__BackingField: 5.5
   <BedBounceSpeed>k__BackingField: 7
   <BedBounceSound>k__BackingField: {fileID: 11400000, guid: eac312f28ed846cc98f577c2f1d6e18c, type: 2}
@@ -3410,6 +3411,20 @@ MonoBehaviour:
   peakOpacity: 0.28
   duration: 0.28
   attackTime: 0.025
+--- !u!114 &-2731757239887594952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3553836231192102681}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 073b6caf7f2b49968d1f6e3baa2be874, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFocusHighlight
+  previewDistance: 30
+  previewViewportRadius: 0.12
 --- !u!1 &3665109766101093656
 GameObject:
   m_ObjectHideFlags: 0

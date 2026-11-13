@@ -207,12 +207,14 @@ public class PlayerActionController
     }
 
     // Play a received primary action.
-    public void PlayRemotePrimaryAction(PlayerCombinedState state)
+public void PlayRemotePrimaryAction(PlayerCombinedState state)
     {
         if (state.PhysicalMode != PlayerPhysicalMode.Default) return;
 
         if (state.HeldEntityCategory == EntityCategory.Player)
             brain.Interact.QueueRemotePunchImpact();
+        else if (state.HeldEntityCategory == EntityCategory.Knife)
+            brain.Interact.QueueRemoteKnifeImpact();
 
         animController.UpdateTick(state, IsGroundedForAnimation(), IsFalling());
         animController.PlayPrimaryAction();

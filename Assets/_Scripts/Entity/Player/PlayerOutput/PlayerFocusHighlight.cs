@@ -5,6 +5,10 @@ using UnityEngine;
 [DefaultExecutionOrder(1000)]
 public sealed class PlayerFocusHighlight : MonoBehaviour
 {
+    [SerializeField, Min(.1f), InspectorName("원거리 표시 거리")] private float previewDistance = 30f;
+    [SerializeField, Range(.01f, .5f), InspectorName("원거리 에임 허용 범위")] private float previewViewportRadius = .12f;
+    private readonly CatchableFocusQuery previewQuery = new();
+    public bool IsPickupReady { get; private set; }
     private const string ResourcePath = "VFX/InteractionFocusSparkle/InteractionFocusSparkle";
     private PlayerBrain brain;
     private PlayerInteract subscribedInteract;
@@ -12,6 +16,8 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
     private CatchableObj suppressed;
     private long suppressedId;
     private long requestedId;
+    private readonly System.Collections.Generic.List<InteractionFocusSparkleVfx> effectPool = new();
+    private InteractionFocusSparkleVfx effectPrefab;
     private InteractionFocusSparkleVfx effect;
     private float retryLoadAt;
     private bool missingAssetReported;
@@ -47,7 +53,7 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
         }
 
         Subscribe();
-        CatchableObj next = brain.Interact.FindPickupFocus();
+        CatchableObj next = FindFocus(out bool pickupReady);
         bool stillSuppressed = next != null &&
             ((next == suppressed && next.NetworkId == suppressedId) || (requestedId != 0 && next.NetworkId == requestedId));
         if (!stillSuppressed) { suppressed = null; requestedId = 0; }
@@ -64,27 +70,42 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
             focused.OnPicked += OnFocusedPicked;
             focused.OnDespawned += OnFocusedDespawned;
             effect.Follow(bounds);
-            effect.gameObject.SetActive(true);
-            effect.PlayLoop();
+            effect.SetPickupReady(pickupReady);
+            effect.FadeIn();
         }
-        else effect.Follow(bounds);
+        else
+        {
+            effect.Follow(bounds);
+            effect.SetPickupReady(pickupReady);
+        }
+        IsPickupReady = pickupReady;
     }
 
     private bool EnsureEffect()
     {
         if (effect != null) return true;
-        if (Time.unscaledTime < retryLoadAt) return false;
-        retryLoadAt = Time.unscaledTime + 1f;
-        GameObject prefab = Resources.Load<GameObject>(ResourcePath);
-        if (prefab == null || !prefab.TryGetComponent(out InteractionFocusSparkleVfx prefabEffect))
+        foreach (InteractionFocusSparkleVfx pooled in effectPool)
         {
-            if (!missingAssetReported) Debug.LogWarning($"Interaction sparkle prefab missing: Resources/{ResourcePath}", this);
-            missingAssetReported = true;
-            return false;
+            if (pooled == null || pooled.gameObject.activeSelf) continue;
+            effect = pooled;
+            return true;
         }
-        effect = Instantiate(prefabEffect);
+        if (effectPrefab == null)
+        {
+            if (Time.unscaledTime < retryLoadAt) return false;
+            GameObject prefab = Resources.Load<GameObject>(ResourcePath);
+            if (prefab == null || !prefab.TryGetComponent(out effectPrefab))
+            {
+                retryLoadAt = Time.unscaledTime + 1f;
+                if (!missingAssetReported) Debug.LogWarning($"Interaction sparkle prefab missing: Resources/{ResourcePath}", this);
+                missingAssetReported = true;
+                return false;
+            }
+        }
+        effect = Instantiate(effectPrefab);
         effect.name = "Local Player Interaction Sparkle";
         effect.gameObject.SetActive(false);
+        effectPool.Add(effect);
         return true;
     }
 
@@ -116,9 +137,10 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
             focused.OnDespawned -= OnFocusedDespawned;
         }
         focused = null;
+        IsPickupReady = false;
         if (effect == null) return;
-        effect.StopEffect();
-        effect.gameObject.SetActive(false);
+        effect.FadeOut();
+        effect = null;
     }
 
     private void OnDisable()
@@ -132,6 +154,22 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (effect != null) Destroy(effect.gameObject);
+        foreach (InteractionFocusSparkleVfx pooled in effectPool)
+            if (pooled != null) Destroy(pooled.gameObject);
+        effectPool.Clear();
+    }
+
+
+    private CatchableObj FindFocus(out bool pickupReady)
+    {
+        // Gold must identify the exact object an empty-hand click can pick up.
+        CatchableObj pickup = !brain.Interact.IsHolding ? brain.Interact.FindPickupFocus() : null;
+        pickupReady = pickup != null;
+        if (pickupReady) return pickup;
+
+        Camera camera = brain.PlayerCam;
+        PhysicsCastProbe probe = brain.CameraInteractionCast;
+        Ray ray = probe != null ? probe.BuildRay() : camera.ViewportPointToRay(new Vector3(.5f, .5f));
+        return previewQuery.FindPreview(camera, ray, previewDistance, previewViewportRadius, brain.transform);
     }
 }

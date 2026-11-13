@@ -20,8 +20,12 @@ public void OnPunchImpact()
             brain.Interact.OnPunchImpact();
     }
 
-    public void OnKnifeImpact()
+public void OnKnifeImpact()
     {
-        brain?.Interact?.OnKnifeImpact();
+        if (brain?.Interact == null) return;
+        if (brain.StateResolver is RemotePlayerStateResolver)
+            brain.Interact.OnRemoteKnifeImpact();
+        else
+            brain.Interact.OnKnifeImpact();
     }
 }

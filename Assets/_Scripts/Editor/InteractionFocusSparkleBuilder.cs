@@ -16,17 +16,19 @@ public static class InteractionFocusSparkleBuilder
         AssetDatabase.Refresh();
         Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/FocusSparkle.shader");
         if (shader == null) throw new System.InvalidOperationException("FocusSparkle.shader is missing.");
-        Material stars = MaterialAsset("BlueStar", shader, 1f, 1.4f);
-        Material dots = MaterialAsset("BlueGlow", shader, 0f, 1.15f);
+        Material diamonds = MaterialAsset("BlueStar", shader, 1f, 1.15f);
+        Material dots = MaterialAsset("BlueGlow", shader, 0f, 1.1f);
         AnimationClip clip = AnimationAsset();
-
-        var root = new GameObject("Interaction Focus Sparkle");
+        GameObject existingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        InteractionFocusSparkleVfx existing = existingPrefab != null
+            ? existingPrefab.GetComponent<InteractionFocusSparkleVfx>() : null;
+        var root = new GameObject("Interaction Focus Particles");
         try
         {
             var pivot = new GameObject("Particles").transform;
             pivot.SetParent(root.transform, false);
-            ParticleSystem starSystem = Particle(pivot, "Blue White Stars", stars, true);
-            ParticleSystem glowSystem = Particle(pivot, "Blue Violet Glimmer", dots, false);
+            ParticleSystem diamondSystem = Particle(pivot, "Floating Diamonds", diamonds, true);
+            ParticleSystem dotSystem = Particle(pivot, "Floating Dots", dots, false);
             var animation = root.AddComponent<Animation>();
             animation.AddClip(clip, clip.name);
             animation.clip = clip;
@@ -34,9 +36,21 @@ public static class InteractionFocusSparkleBuilder
             animation.cullingType = AnimationCullingType.AlwaysAnimate;
             animation.wrapMode = WrapMode.Loop;
             var effect = root.AddComponent<InteractionFocusSparkleVfx>();
-            effect.Configure(new[] { starSystem, glowSystem }, animation, pivot);
+            if (existing != null)
+            {
+                var source = new SerializedObject(existing);
+                var destination = new SerializedObject(effect);
+                foreach (string property in new[] { "boundsPadding", "particleSizeMultiplier", "minimumScreenParticleSize", "fadeInDuration", "fadeOutDuration", "colorTransitionDuration" })
+                    destination.FindProperty(property).floatValue = source.FindProperty(property).floatValue;
+                foreach (string property in new[] { "pickupColorMin", "pickupColorMax" })
+                    destination.FindProperty(property).colorValue = source.FindProperty(property).colorValue;
+                destination.ApplyModifiedPropertiesWithoutUndo();
+            }
+            effect.Configure(new[] { diamondSystem, dotSystem }, animation, pivot);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(diamonds);
+            AssetDatabase.SaveAssetIfDirty(dots);
+            AssetDatabase.SaveAssetIfDirty(clip);
         }
         finally { Object.DestroyImmediate(root); }
     }
@@ -79,7 +93,7 @@ public static class InteractionFocusSparkleBuilder
         return clip;
     }
 
-    private static ParticleSystem Particle(Transform parent, string name, Material material, bool star)
+    private static ParticleSystem Particle(Transform parent, string name, Material material, bool diamond)
     {
         var obj = new GameObject(name);
         obj.transform.SetParent(parent, false);
@@ -93,57 +107,63 @@ public static class InteractionFocusSparkleBuilder
         main.simulationSpace = ParticleSystemSimulationSpace.Local;
         main.scalingMode = ParticleSystemScalingMode.Shape;
         main.useUnscaledTime = true;
-        main.maxParticles = star ? 48 : 64;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(star ? .45f : .7f, star ? .85f : 1.2f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(.015f, .045f);
-        main.startSize = new ParticleSystem.MinMaxCurve(star ? .07f : .025f, star ? .14f : .065f);
+        main.maxParticles = 64;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(.8f, 1.3f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(.08f, .18f);
+        main.startSize = new ParticleSystem.MinMaxCurve(diamond ? .16f : .1f, diamond ? .28f : .18f);
         main.startRotation = new ParticleSystem.MinMaxCurve(0, Mathf.PI * 2f);
-        main.startColor = new ParticleSystem.MinMaxGradient(new Color(.28f,.46f,1f,.9f), new Color(.55f,.73f,1f,1f));
+        main.startColor = new ParticleSystem.MinMaxGradient(new Color(.28f,.46f,1f,.95f), new Color(.55f,.8f,1f,1f));
         main.stopAction = ParticleSystemStopAction.None;
 
         var emission = system.emission;
         emission.enabled = true;
-        emission.rateOverTime = star ? 20f : 32f;
+        emission.rateOverTime = diamond ? 14f : 20f;
         var shape = system.shape;
         shape.enabled = true;
         shape.shapeType = ParticleSystemShapeType.Sphere;
-        shape.radius = .52f;
-        shape.radiusThickness = .04f;
-        shape.randomDirectionAmount = .45f;
+        shape.radius = .55f;
+        shape.radiusThickness = .12f;
+        shape.randomDirectionAmount = .35f;
 
         var size = system.sizeOverLifetime;
         size.enabled = true;
         size.size = new ParticleSystem.MinMaxCurve(1, new AnimationCurve(
-            new Keyframe(0,0), new Keyframe(.2f,.65f), new Keyframe(.45f,1), new Keyframe(.7f,.55f), new Keyframe(1,0)));
+            new Keyframe(0,.25f), new Keyframe(.12f,1), new Keyframe(.72f,.9f), new Keyframe(1,.2f)));
         var color = system.colorOverLifetime;
         color.enabled = true;
         var gradient = new Gradient();
         gradient.SetKeys(new[] {
-            new GradientColorKey(new Color(.5f,.72f,1f),0),
-            new GradientColorKey(new Color(.48f,.48f,1f),.65f),
-            new GradientColorKey(new Color(.3f,.56f,1f),1)
-        }, new[] { new GradientAlphaKey(0,0), new GradientAlphaKey(1,.25f), new GradientAlphaKey(.8f,.6f), new GradientAlphaKey(0,1) });
+            new GradientColorKey(new Color(.55f,.8f,1f),0),
+            new GradientColorKey(new Color(.45f,.65f,1f),.65f),
+            new GradientColorKey(new Color(.3f,.65f,1f),1)
+        }, new[] { new GradientAlphaKey(0,0), new GradientAlphaKey(1,.12f), new GradientAlphaKey(1,.72f), new GradientAlphaKey(0,1) });
         color.color = gradient;
         var velocity = system.velocityOverLifetime;
         velocity.enabled = true;
         velocity.space = ParticleSystemSimulationSpace.Local;
-        velocity.y = new ParticleSystem.MinMaxCurve(.025f);
-        velocity.orbitalY = new ParticleSystem.MinMaxCurve(.12f);
+        velocity.y = new ParticleSystem.MinMaxCurve(.12f);
+        velocity.orbitalY = new ParticleSystem.MinMaxCurve(.4f);
         var noise = system.noise;
         noise.enabled = true;
-        noise.strength = .018f;
-        noise.frequency = .8f;
-        noise.scrollSpeed = .25f;
+        noise.strength = .035f;
+        noise.frequency = .65f;
+        noise.scrollSpeed = .3f;
         noise.quality = ParticleSystemNoiseQuality.Low;
         var rotation = system.rotationOverLifetime;
         rotation.enabled = true;
-        rotation.z = new ParticleSystem.MinMaxCurve(.12f);
+        rotation.z = new ParticleSystem.MinMaxCurve(.4f);
 
         var renderer = system.GetComponent<ParticleSystemRenderer>();
         renderer.sharedMaterial = material;
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
         renderer.alignment = ParticleSystemRenderSpace.View;
         renderer.sortMode = ParticleSystemSortMode.Distance;
+        renderer.SetActiveVertexStreams(new System.Collections.Generic.List<ParticleSystemVertexStream>
+        {
+            ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV,
+            ParticleSystemVertexStream.AgePercent, ParticleSystemVertexStream.StableRandomX
+        });
+        renderer.minParticleSize = .004f;
         renderer.shadowCastingMode = ShadowCastingMode.Off;
         renderer.receiveShadows = false;
         return system;
