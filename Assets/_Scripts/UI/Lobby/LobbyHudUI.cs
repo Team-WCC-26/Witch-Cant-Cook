@@ -1,11 +1,8 @@
 using System.Globalization;
-using Cysharp.Threading.Tasks;
-using Server;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public sealed class LobbyHudUI : UIBase
@@ -26,8 +23,7 @@ public sealed class LobbyHudUI : UIBase
     [SerializeField] private Button confirmReturnButton;
     [SerializeField] private Button cancelReturnButton;
     private static LobbyHudUI modalOwner;
-    private static bool titleTransitionInProgress;
-    public static bool IsInputBlocked => modalOwner != null || titleTransitionInProgress;
+    public static bool IsInputBlocked => modalOwner != null || RoomTitleReturn.IsRunning;
     private bool returningToTitle;
     private RoomHudSession session;
     private bool showCode = true;
@@ -107,7 +103,7 @@ public sealed class LobbyHudUI : UIBase
 
     private void ShowReturnConfirmation()
     {
-        if (titleTransitionInProgress || returningToTitle || modalOwner != null || returnConfirmation == null ||
+        if (RoomTitleReturn.IsRunning || returningToTitle || modalOwner != null || returnConfirmation == null ||
             session == null || !session.Lobby.IsActive) return;
         modalOwner = this;
         returnConfirmationText.text = "타이틀로 돌아가시겠습니까?";
@@ -134,20 +130,11 @@ public sealed class LobbyHudUI : UIBase
     {
         if (returningToTitle || modalOwner != this) return;
         returningToTitle = true;
-        titleTransitionInProgress = true;
         confirmReturnButton.interactable = false;
         cancelReturnButton.interactable = false;
         try
         {
-            const string titleScene = "TitleScene";
-            if (!Application.CanStreamedLevelBeLoaded(titleScene))
-                throw new System.InvalidOperationException("TitleScene is missing from the build scene list.");
-            ServerManager server = ServerManager.Instance;
-            if (server != null) await server.ExitRoomAsync();
-            StageSelectionSession.Instance.OnRoomLeft();
-            await SceneManager.LoadSceneAsync(titleScene);
-            // Pooled objects survive scene changes; discard the previous room's live objects.
-            if (ObjectPoolManager.Instance != null) ObjectPoolManager.Instance.ReturnRoomObjects();
+            await RoomTitleReturn.RunAsync();
         }
         catch (System.Exception exception)
         {
@@ -158,7 +145,6 @@ public sealed class LobbyHudUI : UIBase
             confirmReturnButton.interactable = true;
             cancelReturnButton.interactable = true;
         }
-        finally { titleTransitionInProgress = false; }
     }
 
     private void Refresh()

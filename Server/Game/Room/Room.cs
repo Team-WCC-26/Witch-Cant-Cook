@@ -1,4 +1,4 @@
-﻿using Protocol;
+using Protocol;
 
 namespace Server;
 
@@ -900,9 +900,16 @@ public class Room
     // 전원 확인 완료: 로비 문을 열고 이동을 지시한다 (실제 이동 연산은 클라이언트가 수행)
     private void ReturnToLobby()
     {
+        bool stageCleared = _lastStageResult?.IsSuccess == true;
         _awaitingResultConfirm = false;
         _stageResultConfirms.Clear();
         _lastStageResult = null;
+
+        if (stageCleared && SetStage(_stage + 1))
+        {
+            StageSetPacket stageSet = new() { StageNum = _stage };
+            BroadCast(PacketSerializer.Serialize(stageSet, true));
+        }
 
         HandleDoorOpened(_doors[DoorId.Lobby]);
 

@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public sealed class MapObjNetworkRouter : MonoBehaviour
 {
@@ -17,6 +18,8 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private readonly Dictionary<long, MapObjInteraction> mapObjects = new();
 
     private MapObjInteraction currentRegisterTarget;
+    [SerializeField] private LeaveRoomTriggerInteraction leaveRoomTrigger;
+    private RoomHudSession roomSession;
     
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
@@ -31,7 +34,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         mapObjects.Clear();
         currentRegisterTarget = null;
         foreach (MapObjInteraction target in FindObjectsByType<MapObjInteraction>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            target.SetNetworkId(0);
+            if (target is not LeaveRoomTriggerInteraction) target.SetNetworkId(0);
     }
 
     #region Unity Callbacks
@@ -39,12 +42,25 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private void OnEnable()
     {
         DoorController.DoorOpened += OnDoorOpened;
+        roomSession = RoomHudSession.Instance;
+        roomSession.RoomJoined += ClearLeaveRoomTrigger;
+        roomSession.RoomLeft += ClearLeaveRoomTrigger;
+        roomSession.Changed += RefreshLeaveRoomTriggerVisibility;
+        RefreshLeaveRoomTriggerVisibility();
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
     }
 
     private void OnDisable()
     {
         DoorController.DoorOpened -= OnDoorOpened;
+        if (roomSession != null)
+        {
+            roomSession.RoomJoined -= ClearLeaveRoomTrigger;
+            roomSession.RoomLeft -= ClearLeaveRoomTrigger;
+            roomSession.Changed -= RefreshLeaveRoomTriggerVisibility;
+        }
+        ClearLeaveRoomTrigger();
+        roomSession = null;
 
         if (subscribeRoutine != null)
         {
@@ -62,6 +78,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_TrashCanEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_CookingSubmitEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerExit);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_LeaveRoomTriggerState);
         isSubscribed = false;
     }
 
@@ -78,6 +95,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_TrashCanEject, OnTrashCanEjected);
         ServerManager.Instance.RegisterHandler(PacketId.S_CookingSubmitEject, OnCookingSubmitEjected);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerExit, OnToolPlayerExited);
+        ServerManager.Instance.RegisterHandler(PacketId.S_LeaveRoomTriggerState, OnLeaveRoomTriggerState);
         isSubscribed = true;
         subscribeRoutine = null;
     }
@@ -89,10 +107,52 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
             pad.HandleJumpPadEvent(packet);
     }
 
+    private void OnLeaveRoomTriggerState(ReadOnlyMemory<byte> data)
+    {
+        if (!roomSession.Lobby.IsInRoom) return;
+        var packet = PacketSerializer.Deserialize<LeaveRoomTriggerStatePacket>(data.Span);
+        if (packet.TriggerEntityId <= 0) return;
+
+        if (!string.IsNullOrEmpty(packet.EjectedPlayerId) &&
+            packet.EjectedPlayerId == roomSession.Lobby.LocalPlayerId)
+        {
+            RoomTitleReturn.RunAsync(serverAlreadyRemovedPlayer: true).Forget();
+            return;
+        }
+
+        if (leaveRoomTrigger == null)
+        {
+            Debug.LogError("Assign the scene's ReturnToTitle object to the map router.", this);
+            return;
+        }
+        leaveRoomTrigger.SetNetworkId(packet.TriggerEntityId);
+        leaveRoomTrigger.ApplyState(packet.State, packet.RemainingMs);
+        RefreshLeaveRoomTriggerVisibility();
+    }
+
+    private void RefreshLeaveRoomTriggerVisibility()
+    {
+        if (leaveRoomTrigger != null)
+            leaveRoomTrigger.gameObject.SetActive(roomSession.Lobby.IsActive && leaveRoomTrigger.IsRegistered);
+    }
+
+    private void ClearLeaveRoomTrigger()
+    {
+        if (leaveRoomTrigger == null) return;
+        leaveRoomTrigger.SetNetworkId(0);
+        leaveRoomTrigger.ApplyState(LeaveRoomTriggerState.Idle, 0);
+        leaveRoomTrigger.gameObject.SetActive(false);
+    }
+
     #region Map Object Getters
 
     public bool TryGetMapObject(long entityId, out MapObjInteraction mapObj)
     {
+        if (leaveRoomTrigger != null && leaveRoomTrigger.IsRegistered && leaveRoomTrigger.NetworkId == entityId)
+        {
+            mapObj = leaveRoomTrigger;
+            return true;
+        }
         return mapObjects.TryGetValue(entityId, out mapObj);
     }
 
@@ -100,7 +160,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     {
         obj = null;
 
-        if (!mapObjects.TryGetValue(entityId, out MapObjInteraction mapObj))
+        if (!TryGetMapObject(entityId, out MapObjInteraction mapObj))
             return false;
 
         obj = mapObj as T;
@@ -136,6 +196,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
         foreach (MapObjInteraction mapObj in targets)
         {
+            if (mapObj is LeaveRoomTriggerInteraction) continue;
             mapObj.InitializeRouter(this);
             if (mapObj.IsRegistered)
             {
