@@ -82,8 +82,8 @@ public sealed class InteractionUI : UIBase
         if (heldObject.TryGetComponent<PanInteraction>(out PanInteraction heldPan))
             return GetPanPrimary(heldPan, target);
         if (heldObject.TryGetComponent<IngredientReaction>(out _) &&
-            target.GetTargetComponent<PanInteraction>() is PanInteraction pan)
-            return pan.CanReceiveHeldIngredient(heldObject) ? "넣기" : string.Empty;
+            target.GetTargetComponent<IHeldIngredientReceiver>() is IHeldIngredientReceiver receiver)
+            return receiver.CanReceiveHeldIngredient(heldObject) ? "넣기" : string.Empty;
         return "놓기";
     }
 

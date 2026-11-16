@@ -532,15 +532,24 @@ public class PlayerInteract
     #endregion
 
     #region Find Interactable Target
-    public IInteractTarget FindInteractTarget()
+public IInteractTarget FindInteractTarget()
     {
+        // 재료를 들었을 때 솥은 화면 중앙이 초록색 표면에 닿는 경우에만 선택한다.
+        bool heldIngredient = HeldObj != null && HeldObj.Category == EntityCategory.Ingredient &&
+            HeldObj.TryGetComponent<IngredientReaction>(out _);
+        if (heldIngredient)
+        {
+            PotInteraction pot = PotInsertSurface.Find(brain.PlayerCam, brain.transform);
+            if (pot != null) return pot;
+        }
+
         // Empty-hand pickup and the sparkle use the exact same reticle-centered target.
         if (!IsHolding && FindPickupFocus() is CatchableObj pickup) return pickup;
         foreach (PhysicsCastProbe probe in interactionCasts)
         {
             if (probe == null) continue;
             RaycastHit[] hits = probe.Cast(out Ray ray);
-            IInteractTarget target = SelectInteractTarget(probe, ray, hits);
+            IInteractTarget target = SelectInteractTarget(probe, ray, hits, heldIngredient);
             if (target != null) return target;
         }
         return null;
@@ -556,7 +565,8 @@ public class PlayerInteract
             probe != null ? probe.Radius : brain.InteractRadius, brain.transform);
     }
 
-    private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray, RaycastHit[] hits)
+private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray,
+        RaycastHit[] hits, bool excludePot = false)
     {
         IInteractTarget bestTarget = null;
         float bestScore = float.PositiveInfinity;
@@ -569,6 +579,8 @@ public class PlayerInteract
             IInteractTarget target = GetInteractTargetInParent(hitCollider);
             if (!IsHolding && brain.PlayerCam != null && target is CatchableObj) continue;
             if (target == null || !target.Accepts(GetSourceCategory())) continue;
+            // 검정 몸통이나 내부 투입 트리거를 맞혀도 재료 넣기로 처리하지 않는다.
+            if (excludePot && target.GetTargetComponent<PotInteraction>() != null) continue;
 
             float score = probe.Type == PhysicsCastProbe.CastType.Raycast
                 ? hit.distance

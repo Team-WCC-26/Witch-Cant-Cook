@@ -14,6 +14,7 @@ public enum PotState
 }
 
 public class PotInteraction : MapObjInteraction,
+    IHeldIngredientReceiver,
     IPunchReceiver,
     IEntityParentReceiver,
     ICookReceiver,
@@ -74,6 +75,11 @@ public class PotInteraction : MapObjInteraction,
     private PotState state = PotState.Idle;
     public PotState State => state;
 
+    [Header("Held Ingredient Input")]
+    [SerializeField, Min(0.1f)] private float heldInsertResponseTimeout = 3f;
+    private readonly NetworkResponseWait heldInsertResponse = new();
+    private CatchableObj pendingHeldIngredient;
+
     // Object storage
     private readonly HashSet<CatchableObj> pendingObjects = new(); // Awaiting server response
     private readonly HashSet<CatchableObj> storedObjects = new(); // Total Input
@@ -107,6 +113,11 @@ public class PotInteraction : MapObjInteraction,
     private void OnEnable()
     {
         ResetPotData();
+    }
+
+    private void Update()
+    {
+        heldInsertResponse.Tick();
     }
 
     private void FixedUpdate()
@@ -213,6 +224,8 @@ public class PotInteraction : MapObjInteraction,
         ClearIngredientIcons();
 
         // Object storage
+        heldInsertResponse.Cancel();
+        pendingHeldIngredient = null;
         pendingObjects.Clear();
         storedObjects.Clear();
         recipeObjects.Clear();
@@ -289,6 +302,11 @@ public class PotInteraction : MapObjInteraction,
     {
         if (catchable == null) return;
 
+        if (pendingHeldIngredient == catchable)
+        {
+            heldInsertResponse.Cancel();
+            pendingHeldIngredient = null;
+        }
         pendingObjects.Remove(catchable);
         if (storedObjects.Contains(catchable)) return;
 
@@ -816,6 +834,40 @@ public class PotInteraction : MapObjInteraction,
     #endregion
 
     #region Interface Implementations
+
+    public bool CanReceiveHeldIngredient(CatchableObj heldObj)
+    {
+        return isActiveAndEnabled && IsRegistered && ServerManager.Instance != null &&
+            IsHeldIngredient(heldObj) && !heldInsertResponse.IsWaiting && pendingHeldIngredient == null &&
+            !pendingObjects.Contains(heldObj) && !storedObjects.Contains(heldObj);
+    }
+
+    private static bool IsHeldIngredient(CatchableObj heldObj)
+    {
+        return heldObj != null && heldObj.NetworkId != 0 &&
+            heldObj.Category == EntityCategory.Ingredient &&
+            !heldObj.IsSubmissionPending && !heldObj.IsSubmissionReturning &&
+            heldObj.TryGetComponent<IngredientReaction>(out _);
+    }
+
+    public bool TryReceiveHeldObject(CatchableObj heldObj, PlayerInteract interact)
+    {
+        if (interact == null || interact.HeldObj != heldObj || !IsHeldIngredient(heldObj)) return false;
+
+        // A recognized insert click must not fall through to dropping while blocked or awaiting a response.
+        if (!CanReceiveHeldIngredient(heldObj)) return true;
+
+        pendingHeldIngredient = heldObj;
+        pendingObjects.Add(heldObj);
+        heldInsertResponse.Begin("Pot insert", heldObj.NetworkId, heldInsertResponseTimeout, () =>
+        {
+            pendingObjects.Remove(heldObj);
+            if (pendingHeldIngredient == heldObj) pendingHeldIngredient = null;
+        });
+        // Keep the object in the hand until the authoritative parent change confirms insertion.
+        RequestObjEntry(heldObj);
+        return true;
+    }
 
     // IEntityParentReceiver: 서버 부모 변경으로 오브젝트 진입 
     public void HandleEntityAdded(CatchableObj entity)

@@ -1028,6 +1028,7 @@ MonoBehaviour:
   cookCompleteEffectOrigin: {fileID: 770644907865445497}
   cookCompleteEffectOffset: {x: 0, y: 0.15, z: 0}
   cookCompleteEffectSpread: 2
+  heldInsertResponseTimeout: 3
   ejectPoint: {fileID: 6707980391395126494}
   ejectInterval: 0.8
   ejectBaseDirection: {x: -230, y: 210, z: -10}
@@ -1957,13 +1958,49 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1573771098962916629, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1165826989303151968}
   m_SourcePrefab: {fileID: 100100000, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
 --- !u!4 &371744101699514061 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2205911513192312751, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
   m_PrefabInstance: {fileID: 1996303681319911778}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1036782182537180279 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1573771098962916629, guid: 46079ea9245d9fc43a97aad7847ad97d, type: 3}
+  m_PrefabInstance: {fileID: 1996303681319911778}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1165826989303151968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1036782182537180279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f33df889bc677f64aba2e68a62c19aef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PotInsertSurface
+  insertReach: 3
+  vertices:
+  - {x: -0.13449183, y: -9.103829e-12, z: -0.08043819}
+  - {x: -0.00011546842, y: 0.000000021429523, z: -0.00094888423}
+  - {x: -0.07625425, y: -9.103829e-12, z: -0.13690743}
+  - {x: -0.15669243, y: -9.103829e-12, z: -0.0024156088}
+  - {x: 0.002415603, y: -9.103829e-12, z: -0.15669243}
+  - {x: -0.13690743, y: -9.103829e-12, z: 0.07625423}
+  - {x: 0.08043819, y: -9.103829e-12, z: -0.13449183}
+  - {x: -0.08043821, y: -9.103829e-12, z: 0.13449183}
+  - {x: 0.13690743, y: -9.103829e-12, z: -0.07625423}
+  - {x: -0.0024156114, y: -9.103829e-12, z: 0.15669243}
+  - {x: 0.15669243, y: -9.103829e-12, z: 0.0024156054}
+  - {x: 0.07625423, y: -9.103829e-12, z: 0.13690743}
+  - {x: 0.13449183, y: -9.103829e-12, z: 0.08043819}
+  triangles: 00000000010000000200000003000000010000000000000002000000010000000400000005000000010000000300000004000000010000000600000007000000010000000500000006000000010000000800000009000000010000000700000008000000010000000a0000000b00000001000000090000000a000000010000000c0000000c000000010000000b000000
 --- !u!1001 &2191568584085241341
 PrefabInstance:
   m_ObjectHideFlags: 0

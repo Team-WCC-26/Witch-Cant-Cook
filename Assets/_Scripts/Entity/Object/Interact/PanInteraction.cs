@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class PanInteraction : MonoBehaviour,
     IHeldPrimaryAction,
-    IHeldObjectReceiver,
+    IHeldIngredientReceiver,
     IEntityParentReceiver,
     ICookReceiver,
     IClientStageResettable
@@ -14,6 +14,7 @@ public class PanInteraction : MonoBehaviour,
     public void ResetClientStage()
     {
         CancelTossTracking();
+        heldInsertResponse.Cancel();
         pendingEgg?.CancelPanInsert();
         pendingEgg = null;
         pendingEggId = 0;
@@ -34,6 +35,8 @@ public class PanInteraction : MonoBehaviour,
     private long pendingIngredientId;
     private long pendingTossId;
     private readonly NetworkResponseWait tossResponse = new();
+    [SerializeField, Min(0.1f)] private float heldInsertResponseTimeout = 3f;
+    private readonly NetworkResponseWait heldInsertResponse = new();
     private static readonly Dictionary<long, PanInteraction> tossRequests = new();
     private long trackedTossId;
     private long lastEjectedIngredientId;
@@ -68,6 +71,7 @@ public class PanInteraction : MonoBehaviour,
     private void OnDisable()
     {
         CancelTossTracking();
+        heldInsertResponse.Cancel();
         pendingEgg?.CancelPanInsert();
         pendingEgg = null;
         pendingEggId = 0;
@@ -90,6 +94,7 @@ public class PanInteraction : MonoBehaviour,
     private void Update()
     {
         tossResponse.Tick();
+        heldInsertResponse.Tick();
     }
 
     #endregion
@@ -129,7 +134,7 @@ public class PanInteraction : MonoBehaviour,
 
     private void HandleTriggerExit(Collider other)
     {
-        if (pendingEgg != null) return;
+        if (pendingEgg != null || heldInsertResponse.IsWaiting) return;
         if (!TryGetItem(other, out _, out CatchableObj ingredientCatchable)) return;
         if (ingredientCatchable.NetworkId != pendingIngredientId) return;
 
@@ -472,8 +477,16 @@ public class PanInteraction : MonoBehaviour,
     // IHeldObjectReceiver: 플레이어가 들고 있는 재료 팬에 넣기
     public bool TryReceiveHeldObject(CatchableObj heldObj, PlayerInteract interact)
     {
-        if (interact == null || !CanReceiveHeldIngredient(heldObj)) return false;
-        pendingIngredientId = heldObj.NetworkId;
+        if (interact == null || interact.HeldObj != heldObj || !IsHeldIngredient(heldObj)) return false;
+        // Consume a recognized insert click instead of dropping during a pending/rejected insertion.
+        if (!CanReceiveHeldIngredient(heldObj)) return true;
+
+        long ingredientId = heldObj.NetworkId;
+        pendingIngredientId = ingredientId;
+        heldInsertResponse.Begin("Pan insert", ingredientId, heldInsertResponseTimeout, () =>
+        {
+            if (pendingIngredientId == ingredientId) pendingIngredientId = 0;
+        });
         interact.RequestEntityInteract(catchable.NetworkId);
         return true;
     }
@@ -495,6 +508,7 @@ public class PanInteraction : MonoBehaviour,
         if (pendingEgg != null && entity.NetworkId != pendingIngredientId)
             pendingEgg.CancelPanInsert();
 
+        heldInsertResponse.Cancel();
         pendingIngredientId = 0;
         AttachItem(ingredient, entity);
         ReleaseEgg(pendingEggId);
@@ -570,8 +584,16 @@ public class PanInteraction : MonoBehaviour,
     // Shared by the action and its HUD hint so rejected ingredients never show "insert".
     public bool CanReceiveHeldIngredient(CatchableObj heldObj)
     {
-        return heldObj != null && CanReceiveIngredient &&
-            heldObj.NetworkId != 0 && heldObj.TryGetComponent<IngredientReaction>(out _) &&
+        return isActiveAndEnabled && ServerManager.Instance != null &&
+            CanReceiveIngredient && !heldInsertResponse.IsWaiting && IsHeldIngredient(heldObj);
+    }
+
+    private static bool IsHeldIngredient(CatchableObj heldObj)
+    {
+        return heldObj != null && heldObj.NetworkId != 0 &&
+            heldObj.Category == EntityCategory.Ingredient &&
+            !heldObj.IsSubmissionPending && !heldObj.IsSubmissionReturning &&
+            heldObj.TryGetComponent<IngredientReaction>(out _) &&
             !heldObj.TryGetComponent<IngredientEgg>(out _) &&
             heldObj.Data?.id != (int)Define.eIngredient.EggInside;
     }
