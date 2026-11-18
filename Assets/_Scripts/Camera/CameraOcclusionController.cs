@@ -28,6 +28,14 @@ public sealed class CameraOcclusionController : MonoBehaviour
     private Vector3 lastCameraPos;
     private bool hasDebugSegments;
 
+#if WCC_TEST_TOOLS
+    public bool IsGameplayViewActive => CanFade();
+    public double DetectionMilliseconds { get; private set; }
+    public double FadeMilliseconds { get; private set; }
+    public int OccludedTargetCount { get; private set; }
+    public int FadedRendererCount { get; private set; }
+#endif
+
     #region Unity Callbacks
 
     private void Awake()
@@ -134,18 +142,38 @@ public sealed class CameraOcclusionController : MonoBehaviour
             lastCameraPos = cameraPos;
             hasDebugSegments = true;
             var targets = CameraOcclusionTarget.ActiveTargets;
+#if WCC_TEST_TOOLS
+            DetectionMilliseconds = 0;
+            FadeMilliseconds = 0;
+            OccludedTargetCount = 0;
+            FadedRendererCount = 0;
+            CameraOcclusionTarget.ResetPerformanceCounters();
+#endif
             for (int index = 0; index < targets.Count; index++)
             {
                 CameraOcclusionTarget target = targets[index];
                 bool useOverride = target.OverrideSettings;
                 float padding = useOverride ? target.DetectionPadding : detectionPadding;
+#if WCC_TEST_TOOLS
+                long detectionStart = System.Diagnostics.Stopwatch.GetTimestamp();
+#endif
                 bool occluded = target.IsOccluding(cameraPos, samplePoints, padding, minOccludedSamples);
+#if WCC_TEST_TOOLS
+                long fadeStart = System.Diagnostics.Stopwatch.GetTimestamp();
+                DetectionMilliseconds += (fadeStart - detectionStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                if (occluded) OccludedTargetCount++;
+#endif
                 target.UpdateFade(occluded,
                     useOverride ? target.OccludedAlpha : occludedAlpha,
                     useOverride ? target.FadeOutDuration : fadeOutDuration,
                     useOverride ? target.FadeInDuration : fadeInDuration,
                     useOverride ? target.RestoreDelay : restoreDelay,
                     Time.unscaledDeltaTime);
+#if WCC_TEST_TOOLS
+                FadeMilliseconds += (System.Diagnostics.Stopwatch.GetTimestamp() - fadeStart)
+                    * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                FadedRendererCount += target.FadedRendererCount;
+#endif
             }
             hasFadedTargets = true;
         }

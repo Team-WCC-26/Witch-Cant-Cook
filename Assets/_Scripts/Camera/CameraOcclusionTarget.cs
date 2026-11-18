@@ -63,6 +63,13 @@ public sealed class CameraOcclusionTarget : MonoBehaviour
     private bool faded;
     private bool[] occludedSamples = Array.Empty<bool>();
 
+#if WCC_TEST_TOOLS
+    private int preparedRendererCount;
+    public int FadedRendererCount => faded ? preparedRendererCount : 0;
+    public static double PreparationMilliseconds { get; private set; }
+    public static int CreatedMaterialCount { get; private set; }
+#endif
+
     public static IReadOnlyList<CameraOcclusionTarget> ActiveTargets => activeTargets;
     public bool OverrideSettings => overrideSettings;
     public float OccludedAlpha => Mathf.Clamp01(occludedAlpha);
@@ -130,6 +137,15 @@ public sealed class CameraOcclusionTarget : MonoBehaviour
     }
 
     #endregion
+
+#if WCC_TEST_TOOLS
+    /// <summary>Clears per-frame material preparation measurements.</summary>
+    public static void ResetPerformanceCounters()
+    {
+        PreparationMilliseconds = 0;
+        CreatedMaterialCount = 0;
+    }
+#endif
 
     /// <summary>Checks whether enough distinct sight segments intersect this target.</summary>
     public bool IsOccluding(Vector3 cameraPos, Vector3[] samplePoints, float padding, int minOccludedSamples = 1)
@@ -288,6 +304,10 @@ public sealed class CameraOcclusionTarget : MonoBehaviour
 
     private void PrepareMaterials()
     {
+#if WCC_TEST_TOOLS
+        long preparationStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        preparedRendererCount = 0;
+#endif
         var materialCopies = new Dictionary<Material, Material>();
         bool unsupported = false;
         foreach (RendererState state in rendererStates)
@@ -313,10 +333,17 @@ public sealed class CameraOcclusionTarget : MonoBehaviour
                 state.fadedMaterials[index] = copy;
                 state.changed = true;
             }
+#if WCC_TEST_TOOLS
+            if (state.changed) preparedRendererCount++;
+#endif
         }
         if (unsupported)
             Debug.LogWarning("[Camera Occlusion] Unsupported opaque shaders were left unchanged on " + name, this);
         materialsPrepared = true;
+#if WCC_TEST_TOOLS
+        PreparationMilliseconds += (System.Diagnostics.Stopwatch.GetTimestamp() - preparationStart)
+            * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+#endif
     }
 
     private Material CreateFadeMaterial(Material original)
@@ -338,6 +365,9 @@ public sealed class CameraOcclusionTarget : MonoBehaviour
         };
         material.CopyPropertiesFromMaterial(original);
         ConfigureTransparentMaterial(material);
+#if WCC_TEST_TOOLS
+        CreatedMaterialCount++;
+#endif
         return material;
     }
 

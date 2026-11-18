@@ -48,6 +48,15 @@ public sealed class PlayerCameraController : MonoBehaviour
     private bool canControlCamera = false;
     private Vector3 yawRootLocalPos;
 
+#if WCC_TEST_TOOLS
+    private bool performanceRotationActive;
+    private float performanceInitialYaw;
+    private float performanceInitialPitch;
+    private float performanceYawOffset;
+    private bool performancePreviousInputBlocked;
+    public bool IsPerformanceRotationActive => performanceRotationActive;
+#endif
+
     #region Unity Callbacks
     private void Awake()
     {
@@ -107,6 +116,9 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void OnDisable()
     {
+#if WCC_TEST_TOOLS
+        EndPerformanceRotation();
+#endif
         ResetCameraView();
         CursorController.ReleaseGameplayOwner(this);
     }
@@ -119,6 +131,14 @@ public sealed class PlayerCameraController : MonoBehaviour
             return;
         }
         Vector2 look = CursorController.IsPointerInputAllowed ? input.RawLookDelta : Vector2.zero;
+#if WCC_TEST_TOOLS
+        if (performanceRotationActive)
+        {
+            yawDeg = performanceInitialYaw + performanceYawOffset;
+            pitchDeg = performanceInitialPitch;
+            look = Vector2.zero;
+        }
+#endif
 
         if (look.sqrMagnitude >= 0.000001f)
         {
@@ -160,6 +180,40 @@ public sealed class PlayerCameraController : MonoBehaviour
     }
 
     #endregion
+
+#if WCC_TEST_TOOLS
+    /// <summary>Locks local input and saves the current view for a rotation measurement.</summary>
+    public bool BeginPerformanceRotation()
+    {
+        if (performanceRotationActive || !canControlCamera || input == null || input.IsInputBlocked
+            || yawRoot == null || pitchRoot == null || IsSpecialViewActive) return false;
+        performanceInitialYaw = yawDeg;
+        performanceInitialPitch = pitchDeg;
+        performanceYawOffset = 0f;
+        performancePreviousInputBlocked = input.IsInputBlocked;
+        performanceRotationActive = true;
+        input.IsInputBlocked = true;
+        return true;
+    }
+
+    /// <summary>Sets the measured yaw offset from the saved starting view.</summary>
+    public void SetPerformanceRotation(float yawOffset)
+    {
+        if (performanceRotationActive) performanceYawOffset = yawOffset;
+    }
+
+    /// <summary>Restores local input and the view after a rotation measurement.</summary>
+    public void EndPerformanceRotation()
+    {
+        if (!performanceRotationActive) return;
+        performanceRotationActive = false;
+        if (input != null) input.IsInputBlocked = performancePreviousInputBlocked;
+        yawDeg = performanceInitialYaw;
+        pitchDeg = performanceInitialPitch;
+        if (yawRoot != null) yawRoot.rotation = YawRotation;
+        if (pitchRoot != null) pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
+    }
+#endif
 
     public void BindCamera(CinemachineCamera virtualCamera)
     {
