@@ -6,8 +6,6 @@ public class PlayerAnimController
     private readonly Animator animator;
 
     private readonly int speedHash = Animator.StringToHash("Speed");
-    private readonly int moveXHash = Animator.StringToHash("MoveX");
-    private readonly int moveYHash = Animator.StringToHash("MoveY");
     private readonly int strafeSpeedHash = Animator.StringToHash("StrafeSpeed");
     private readonly int moveLeftHash = Animator.StringToHash("MoveLeft");
     private readonly int moveRightHash = Animator.StringToHash("MoveRight");
@@ -75,8 +73,6 @@ public class PlayerAnimController
 
         // Keep the last direction while movement decelerates.
         Vector2 moveDir = lastMoveDir;
-        animator.SetFloat(moveXHash, moveDir.x, DirectionDampTime, Time.deltaTime);
-        animator.SetFloat(moveYHash, moveDir.y, DirectionDampTime, Time.deltaTime);
         animator.SetFloat(moveLeftHash, moveDir.x < 0f ? 1f : 0f, DirectionDampTime, Time.deltaTime);
         animator.SetFloat(moveRightHash, moveDir.x > 0f ? 1f : 0f, DirectionDampTime, Time.deltaTime);
         animator.SetFloat(moveForwardHash, moveDir.y > 0f ? 1f : 0f, DirectionDampTime, Time.deltaTime);
@@ -91,8 +87,6 @@ public class PlayerAnimController
     public void ForceIdle()
     {
         lastMoveDir = Vector2.up;
-        animator.SetFloat(moveXHash, 0f);
-        animator.SetFloat(moveYHash, 1f);
         animator.SetFloat(moveLeftHash, 0f);
         animator.SetFloat(moveRightHash, 0f);
         animator.SetFloat(moveForwardHash, 1f);
