@@ -9,7 +9,7 @@ using UnityEngine.Serialization;
 public class DishOrderManager : MonoBehaviour
 {
 
-    [Tooltip("All scrolls show the same first three active orders, aligned to the top.")]
+    [Tooltip("Recipe card views display the first three active orders. Use the Recipe HUD view for screen-space display.")]
     [FormerlySerializedAs("scrollSlots")]
     [SerializeField] private RecipeScrollView[] scrollViews = Array.Empty<RecipeScrollView>();
 

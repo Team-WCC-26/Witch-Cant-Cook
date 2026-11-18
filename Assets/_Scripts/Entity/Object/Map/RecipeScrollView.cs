@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Attach to the scroll root. Only the child cards are hidden; the 3D scroll remains visible.
+// Displays up to three orders using the existing recipe card views.
 public class RecipeScrollView : MonoBehaviour
 {
     [SerializeField] private RectTransform cardRoot;
@@ -11,6 +11,7 @@ public class RecipeScrollView : MonoBehaviour
     public const int Capacity = 3;
     private StageReturnFlow stageFlow;
     private Canvas recipeCanvas;
+    private CanvasGroup hudGroup;
     private bool canvasStateCached;
     private bool originalCanvasEnabled;
 
@@ -19,6 +20,7 @@ public class RecipeScrollView : MonoBehaviour
         if (!canvasStateCached)
         {
             recipeCanvas = GetComponent<Canvas>();
+            hudGroup = GetComponent<CanvasGroup>();
             originalCanvasEnabled = recipeCanvas != null && recipeCanvas.enabled;
             canvasStateCached = true;
         }
@@ -35,9 +37,19 @@ public class RecipeScrollView : MonoBehaviour
     private void RefreshCanvasVisibility()
     {
         if (recipeCanvas != null) recipeCanvas.enabled = originalCanvasEnabled && !stageFlow.State.ShowsSettlement;
+        if (hudGroup != null)
+        {
+            hudGroup.alpha = stageFlow.State.ShowsSettlement ? 0f : 1f;
+            hudGroup.blocksRaycasts = !stageFlow.State.ShowsSettlement;
+        }
     }
 
-    public void Configure(RectTransform root, RecipeOrderCardUI[] views) { cardRoot = root; cards = views; }
+    public void Configure(RectTransform root, RecipeOrderCardUI[] views)
+    {
+        cardRoot = root;
+        cards = views;
+        ConfigureLayout();
+    }
     private void Awake()
     {
         ResolveCards();
@@ -57,6 +69,23 @@ public class RecipeScrollView : MonoBehaviour
     private void ConfigureLayout()
     {
         if (cardRoot == null) return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
+        {
+            VerticalLayoutGroup oldLayout = cardRoot.GetComponent<VerticalLayoutGroup>();
+            if (oldLayout != null) oldLayout.enabled = false;
+
+            HorizontalLayoutGroup row = cardRoot.GetComponent<HorizontalLayoutGroup>();
+            if (row == null) row = cardRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.childAlignment = TextAnchor.UpperRight;
+            row.spacing = 16f;
+            row.childControlWidth = false;
+            row.childControlHeight = false;
+            row.childForceExpandWidth = false;
+            row.childForceExpandHeight = false;
+            return;
+        }
 
         VerticalLayoutGroup layout = cardRoot.GetComponent<VerticalLayoutGroup>();
 
