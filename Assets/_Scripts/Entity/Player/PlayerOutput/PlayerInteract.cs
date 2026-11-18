@@ -632,7 +632,15 @@ public class PlayerInteract
         Vector3 targetCenter = targetCollider.bounds.center;
         Vector3 castCenter = ray.GetPoint(Mathf.Max(0f, Vector3.Dot(targetCenter - ray.origin, ray.direction)));
         float offset = Vector3.Distance(castCenter, targetCenter);
-        float offsetScore = Mathf.Clamp01(offset / Mathf.Max(0.01f, probe.Radius));
+        float offsetScore;
+        if (probe.Type == PhysicsCastProbe.CastType.BoxCast)
+        {
+            Vector3 localOffset = Quaternion.Inverse(probe.BoxRot) * (targetCenter - castCenter);
+            Vector3 halfExtents = probe.GetBoxHalfExtents();
+            offsetScore = Mathf.Clamp01(Mathf.Max(Mathf.Abs(localOffset.x) / halfExtents.x,
+                Mathf.Abs(localOffset.y) / halfExtents.y, Mathf.Abs(localOffset.z) / halfExtents.z));
+        }
+        else offsetScore = Mathf.Clamp01(offset / Mathf.Max(0.01f, probe.Radius));
         float distanceRatio = Mathf.Clamp01(distance / probe.Distance);
         int distanceScore = Mathf.Min(Mathf.FloorToInt(distanceRatio * 3f), 2);
         return offsetScore + distanceScore;
