@@ -37,6 +37,7 @@ public sealed class PlayerCameraController : MonoBehaviour
     private float pitchDeg = 0f;
     public Quaternion YawRotation => Quaternion.Euler(0f, yawDeg, 0f);
     public Vector3 AimDirection => (YawRotation * Quaternion.Euler(pitchDeg, 0f, 0f) * Vector3.forward).normalized;
+    public bool IsSpecialViewActive => trashCanDistances.Count > 0 || trashCanBlend > 0f;
 
     private Vector3 itemPointLocalPosition;
     private Quaternion itemPointLocalRotation = Quaternion.identity;
