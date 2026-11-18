@@ -7,7 +7,6 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
 {
     [SerializeField, Min(.1f), InspectorName("원거리 표시 거리")] private float previewDistance = 30f;
     [SerializeField, Range(.01f, .5f), InspectorName("원거리 에임 허용 범위")] private float previewViewportRadius = .12f;
-    private readonly CatchableFocusQuery previewQuery = new();
     public bool IsPickupReady { get; private set; }
     private const string ResourcePath = "VFX/InteractionFocusSparkle/InteractionFocusSparkle";
     private PlayerBrain brain;
@@ -53,11 +52,11 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
         }
 
         Subscribe();
-        CatchableObj next = FindFocus(out bool pickupReady);
+        CatchableObj next = brain.Interact.FindFocus(previewDistance, previewViewportRadius, out bool pickupReady);
         bool stillSuppressed = next != null &&
             ((next == suppressed && next.NetworkId == suppressedId) || (requestedId != 0 && next.NetworkId == requestedId));
         if (!stillSuppressed) { suppressed = null; requestedId = 0; }
-        if (next == null || stillSuppressed || !CatchableFocusQuery.TryGetBounds(next, out Bounds bounds))
+        if (next == null || stillSuppressed || !TryGetFocusBounds(next, out Bounds bounds))
         {
             HideFocus();
             return;
@@ -160,16 +159,10 @@ public sealed class PlayerFocusHighlight : MonoBehaviour
     }
 
 
-    private CatchableObj FindFocus(out bool pickupReady)
+    private static bool TryGetFocusBounds(CatchableObj item, out Bounds bounds)
     {
-        // Gold must identify the exact object an empty-hand click can pick up.
-        CatchableObj pickup = !brain.Interact.IsHolding ? brain.Interact.FindPickupFocus() : null;
-        pickupReady = pickup != null;
-        if (pickupReady) return pickup;
-
-        Camera camera = brain.PlayerCam;
-        PhysicsCastProbe probe = brain.CameraInteractionCast;
-        Ray ray = probe != null ? probe.BuildRay() : camera.ViewportPointToRay(new Vector3(.5f, .5f));
-        return previewQuery.FindPreview(camera, ray, previewDistance, previewViewportRadius, brain.transform);
+        Collider collider = item != null ? item.Col : null;
+        bounds = collider != null ? collider.bounds : default;
+        return collider != null && collider.enabled && !collider.isTrigger && collider.gameObject.activeInHierarchy;
     }
 }

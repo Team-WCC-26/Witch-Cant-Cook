@@ -15,7 +15,10 @@ public class PlayerInteract
     private float pendingImpactDeadline;
     private CatchableObj preparedThrow;
     private uint throwReleaseVersion;
-    private readonly CatchableFocusQuery pickupFocus = new();
+    private readonly CatchableFocusQuery focusQuery = new();
+    private int targetFrame = -1;
+    private CatchableObj targetHeldObj;
+    private IInteractTarget currentTarget;
     public event System.Action<long> EntityInteractionRequested;
 
     public CatchableObj HeldObj { get; private set; }
@@ -532,7 +535,17 @@ public class PlayerInteract
     #endregion
 
     #region Find Interactable Target
-public IInteractTarget FindInteractTarget()
+    /// <summary>Returns the shared interaction target for the current frame.</summary>
+    public IInteractTarget FindInteractTarget()
+    {
+        if (targetFrame == Time.frameCount && targetHeldObj == HeldObj) return currentTarget;
+        targetFrame = Time.frameCount;
+        targetHeldObj = HeldObj;
+        currentTarget = ResolveInteractTarget();
+        return currentTarget;
+    }
+
+    private IInteractTarget ResolveInteractTarget()
     {
         // 재료를 들었을 때 솥은 화면 중앙이 초록색 표면에 닿는 경우에만 선택한다.
         bool heldIngredient = HeldObj != null && HeldObj.Category == EntityCategory.Ingredient &&
@@ -543,8 +556,6 @@ public IInteractTarget FindInteractTarget()
             if (pot != null) return pot;
         }
 
-        // Empty-hand pickup and the sparkle use the exact same reticle-centered target.
-        if (!IsHolding && FindPickupFocus() is CatchableObj pickup) return pickup;
         foreach (PhysicsCastProbe probe in interactionCasts)
         {
             if (probe == null) continue;
@@ -555,17 +566,27 @@ public IInteractTarget FindInteractTarget()
         return null;
     }
 
+    /// <summary>Returns the selected pickup target without running a separate query.</summary>
     public CatchableObj FindPickupFocus()
     {
-        Camera camera = brain.PlayerCam;
-        if (camera == null) return null;
-        PhysicsCastProbe probe = brain.CameraInteractionCast;
-        Ray ray = probe != null ? probe.BuildRay() : camera.ViewportPointToRay(new Vector3(.5f, .5f));
-        return pickupFocus.Find(camera, ray, probe != null ? probe.Distance : brain.InteractDistance,
-            probe != null ? probe.Radius : brain.InteractRadius, brain.transform);
+        return !IsHolding ? FindInteractTarget() as CatchableObj : null;
     }
 
-private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray,
+    /// <summary>Returns one highlight target and its pickup readiness.</summary>
+    public CatchableObj FindFocus(float previewDistance, float previewViewportRadius, out bool pickupReady)
+    {
+        CatchableObj pickup = FindPickupFocus();
+        pickupReady = pickup != null;
+        if (pickupReady) return pickup;
+        Camera camera = brain.PlayerCam;
+        if (camera == null) return null;
+        Ray ray = brain.CameraInteractionCast != null
+            ? brain.CameraInteractionCast.BuildRay()
+            : camera.ViewportPointToRay(new Vector3(.5f, .5f));
+        return focusQuery.FindPreview(camera, ray, previewDistance, previewViewportRadius, brain.transform);
+    }
+
+    private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray,
         RaycastHit[] hits, bool excludePot = false)
     {
         IInteractTarget bestTarget = null;
@@ -577,7 +598,7 @@ private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray,
             Collider hitCollider = hit.collider;
             if (hitCollider.transform.IsChildOf(brain.transform)) continue;
             IInteractTarget target = GetInteractTargetInParent(hitCollider);
-            if (!IsHolding && brain.PlayerCam != null && target is CatchableObj) continue;
+            if (!IsHolding && target is CatchableObj item && !CatchableFocusQuery.IsAvailable(item)) continue;
             if (target == null || !target.Accepts(GetSourceCategory())) continue;
             // 검정 몸통이나 내부 투입 트리거를 맞혀도 재료 넣기로 처리하지 않는다.
             if (excludePot && target.GetTargetComponent<PotInteraction>() != null) continue;
@@ -586,6 +607,13 @@ private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray,
                 ? hit.distance
                 : GetTargetScore(probe, ray, hitCollider, hit.distance);
             if (score > bestScore || (score == bestScore && hit.distance >= bestDistance)) continue;
+            if (!IsHolding && target is CatchableObj pickup)
+            {
+                Vector3 origin = probe == brain.CameraInteractionCast && brain.PlayerCam != null
+                    ? brain.PlayerCam.transform.position : ray.origin;
+                Vector3 point = hit.distance > 0f ? hit.point : hitCollider.bounds.center;
+                if (!focusQuery.IsVisible(origin, point, pickup, brain.transform)) continue;
+            }
 
             bestTarget = target;
             bestScore = score;

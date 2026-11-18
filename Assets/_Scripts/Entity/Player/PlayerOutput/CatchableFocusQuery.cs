@@ -1,34 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// One camera-centered pickup query shared by interaction and its visual focus indicator.
+// Player-owned preview and visibility helpers; actual targeting uses the interaction probes.
 public sealed class CatchableFocusQuery
 {
     private Collider[] candidates = new Collider[64];
     private RaycastHit[] visibilityHits = new RaycastHit[32];
     private readonly HashSet<CatchableObj> visited = new();
 
-    public CatchableObj Find(Camera camera, Ray ray, float distance, float radius, Transform playerRoot)
-    {
-        return FindInternal(camera, ray, distance, radius, playerRoot, false);
-    }
-
-    // Preview uses a screen-space radius without extending actual pickup reach.
+    /// <summary>Finds a distant preview without deciding the actual interaction target.</summary>
     public CatchableObj FindPreview(Camera camera, Ray ray, float distance, float viewportRadius, Transform playerRoot)
     {
-        return FindInternal(camera, ray, distance, Mathf.Max(.01f, viewportRadius), playerRoot, true);
-    }
-
-    private CatchableObj FindInternal(Camera camera, Ray ray, float distance, float radius, Transform playerRoot, bool preview)
-    {
+        float radius = Mathf.Max(.01f, viewportRadius);
         if (camera == null || distance <= 0f) return null;
         int count;
         do
         {
-            count = preview
-                ? Physics.OverlapSphereNonAlloc(ray.origin, distance, candidates, Physics.AllLayers, QueryTriggerInteraction.Ignore)
-                : Physics.OverlapCapsuleNonAlloc(ray.origin, ray.GetPoint(distance), Mathf.Max(.01f, radius),
-                    candidates, Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            count = Physics.OverlapSphereNonAlloc(ray.origin, distance, candidates,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore);
             if (count < candidates.Length) break;
             if (candidates.Length >= 1024) return null;
             System.Array.Resize(ref candidates, candidates.Length * 2);
@@ -51,7 +40,7 @@ public sealed class CatchableFocusQuery
             if (viewport.z <= 0f || viewport.x < 0f || viewport.x > 1f || viewport.y < 0f || viewport.y > 1f) continue;
             Vector2 offset = new((viewport.x - .5f) * camera.aspect, viewport.y - .5f);
             float score = offset.sqrMagnitude;
-            if (preview && score > radius * radius) continue;
+            if (score > radius * radius) continue;
             if (score > bestScore || (score == bestScore && range >= bestDistance)) continue;
             if (!IsVisible(camera.transform.position, bounds.center, item, playerRoot)) continue;
             best = item;
@@ -61,9 +50,11 @@ public sealed class CatchableFocusQuery
         return best;
     }
 
+    /// <summary>Checks pickup availability.</summary>
     public static bool IsAvailable(CatchableObj item) => item != null && item.isActiveAndEnabled &&
         item.gameObject.activeInHierarchy && item.CanBePicked && !item.IsHold;
 
+    /// <summary>Gets the active item collider bounds.</summary>
     public static bool TryGetBounds(CatchableObj item, out Bounds bounds)
     {
         Collider collider = item != null ? item.Col : null;
@@ -76,7 +67,8 @@ public sealed class CatchableFocusQuery
         return false;
     }
 
-    private bool IsVisible(Vector3 origin, Vector3 point, CatchableObj item, Transform playerRoot)
+    /// <summary>Checks whether another collider blocks the target point.</summary>
+    public bool IsVisible(Vector3 origin, Vector3 point, CatchableObj item, Transform playerRoot)
     {
         Vector3 delta = point - origin;
         float distance = delta.magnitude;
