@@ -31,7 +31,7 @@ public class Room
 
     // 현재 스테이지 (재접속 스냅샷 동기화용)
     public int Stage => _stage;
-    private int _stage = 0;
+    private int _stage = 1;
 
     private long _nextEntityId = 0;
 
@@ -76,6 +76,14 @@ public class Room
     // 마지막 정산 결과 (확인 대기 중 재접속한 플레이어의 스냅샷 동기화용)
     private StageResultSnapshot? _lastStageResult;
 
+    // === 재접속 유예 창 동안의 위치변화 이벤트 재생 캐시 ===
+    // 이벤트가 서버를 통과할 때(브로드캐스트 직후, 같은 샤드 작업 안에서) 원본 데이터를 기록한다.
+    // 재접속 스냅샷 생성 시 플레이어의 Detached 시각 이후 기록분만 골라 재생 목록으로 싣고,
+    // 클라는 이를 로컬 재시뮬레이션해 창 동안 놓친 엔티티 위치를 근사 복구한다.
+    // (서버는 엔티티 Transform을 추적하지 않으므로 원본 패킷 데이터만 보존한다)
+    public const int ReplayEventCapacity = 256; // 링버퍼 상한 (유예 최대 120초 분량, 초과분은 가장 오래된 것부터 폐기 - 페이로드는 기존 청킹 전송으로 처리)
+    private readonly Queue<ReplayEventSnapshot> _replayEvents = new();
+
     private IngredientSpawner _ingredientSpawner;
     private DishManager _dishManager;
 
@@ -101,6 +109,7 @@ public class Room
         _money = 0;
         _pendingMoney = 0;
         _nextEntityId = 0;
+        _stage = 1;
 
         // 퇴장 트리거를 룸 수명 엔티티로 등록한다 (엔티티 Id 초기화 직후 생성)
         LeaveRoomTrigger trigger = new();
@@ -112,7 +121,7 @@ public class Room
         _doors[DoorId.Lobby] = new(DoorId.Lobby, 2, 3, _timerManager, HandleDoorOpened);
         _doors[DoorId.Kitchen] = new(DoorId.Kitchen, 2, 3, _timerManager, HandleDoorOpened);
 
-        if (!SetStage(1))
+        if (!SetStage(_stage))
         {
             throw new InvalidOperationException("Stage 1 데이터가 존재하지 않습니다.");
         }
@@ -140,8 +149,20 @@ public class Room
 
         _stageTimer = _timerManager.Schedule(StagePlayTimeMs, this, static room => room.EndStage());
 
+        foreach (var player in Players)
+        {
+            player.Init();
+        }
+
         _dishManager.Start();
         _ingredientSpawner.Start();
+
+        StageStartPacket packet = new()
+        {
+            StageNum = _stage
+        };
+
+        BroadCast(PacketSerializer.Serialize(packet, true));
     }
 
     public void Stop()
@@ -429,8 +450,9 @@ public class Room
     /// 재접속 스냅샷 생성: 서버가 추적하는 현재 상태를 읽어 만든다 (Dirty Consume 없이 읽기만 한다)
     /// <para/> 반드시 PushJob(샤드 작업) 안에서 호출해 일관 시점에 생성해야 한다
     /// <para/> 서버가 추적하지 않는 값(도구/재료 Transform 등)은 포함하지 않는다
+    /// <para/> detachedAtMs(유예 시작 시각) 이후에 기록된 재생 이벤트만 시간 순서대로 ReplayEvents에 포함한다
     /// </summary>
-    public SnapshotData CreateReconnectSnapshot()
+    public SnapshotData CreateReconnectSnapshot(long detachedAtMs)
     {
         SnapshotData snapshot = new()
         {
@@ -550,7 +572,31 @@ public class Room
         snapshot.NextOrderRemainingMs = _dishManager.GetNextOrderRemainingMs();
         snapshot.Spawners.AddRange(_ingredientSpawner.GetSpawnRemainingList());
 
+        // 유예 창 동안의 위치변화 이벤트 재생 목록 (Detached 시각 이후 기록분만, Queue 열거 순서 = 기록 시간 순서)
+        // 창 이전 이벤트는 클라가 이미 수신했으므로 제외한다
+        foreach (var replayEvent in _replayEvents)
+        {
+            if (replayEvent.RecordedAtMs <= detachedAtMs) continue;
+
+            snapshot.ReplayEvents.Add(replayEvent);
+        }
+
         return snapshot;
+    }
+
+    // 유예 창 재생 이벤트 기록 (반드시 이벤트 방출과 같은 샤드 작업 안에서 호출한다 - 브로드캐스트 직후 관측만 수행하고 게임 로직은 변경하지 않는다)
+    // 재접속 스위치와 무관하게 항상 기록한다 (비용 미미, 소비는 스냅샷 생성 시점에만 발생)
+    public void RecordReplayEvent(ReplayEventSnapshot replayEvent)
+    {
+        replayEvent.RecordedAtMs = Environment.TickCount64;
+
+        // 링버퍼 상한 초과분은 가장 오래된 것부터 폐기한다 (유예 최대 120초 분량 커버)
+        if (_replayEvents.Count >= ReplayEventCapacity)
+        {
+            _replayEvents.Dequeue();
+        }
+
+        _replayEvents.Enqueue(replayEvent);
     }
 
     public void BroadCastForce(byte[] packet)
@@ -885,6 +931,11 @@ public class Room
         BroadCast(PacketSerializer.Serialize(packet, true));
 
         _awaitingResultConfirm = true;
+
+        if (packet.IsSuccess)
+        {
+            SetStage(_stage + 1);
+        }
     }
 
     // 전원이 확인했는지 재평가한다 (확인 추가 또는 퇴장으로 인원 변화 시 호출)

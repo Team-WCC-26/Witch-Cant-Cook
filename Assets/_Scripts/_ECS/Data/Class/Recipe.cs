@@ -8,6 +8,7 @@ public class Recipe : IData
     public string name;
     public string prefabName;
     public int timeLimit;
+    public int Money = -1;
     public int nextRecipeSpawnDelay;
     public int spawnProbability;
     public string IconName;

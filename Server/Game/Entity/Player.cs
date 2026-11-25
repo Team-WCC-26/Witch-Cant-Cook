@@ -65,6 +65,7 @@ public class Player : Entity
             MakeDirty(DirtyMask.Hp);
         }
     }
+
     public Quaternion Rotation
     {
         get => _rotation;
@@ -93,6 +94,25 @@ public class Player : Entity
 
     // 배치 보관 동기화: 상태 인지 전송(네트워크 스레드)과 샤드 작업(AddBatch/Flush)의 경합을 막는다
     private readonly object _batchLock = new();
+
+    public void Init()
+    {
+        Entity? heldEntity = HoldingEntity;
+
+        if (heldEntity != null)
+        {
+            heldEntity.Parent = null;
+        }
+
+        // 컨테이너 도구(솥/오븐/쓰레기통) 안에 있으면 멤버십부터 정리한다 (잔류 참조 방지)
+        if (Parent is ContainerTool container)
+        {
+            container.RemovePlayer(this);
+        }
+
+        Parent = null;
+        Hp = MaxHp;
+    }
 
     // 일반 전송: 연결 상태에 따라 직접 전송하거나 pending 배치에 보관/폐기한다 (ACK 게이팅 준수)
     public ValueTask Send(ReadOnlyMemory<byte> packet)
@@ -196,21 +216,7 @@ public class Player : Entity
     // 리스폰: 소유/부모 정보를 초기화하고 클라의 고정 스폰포인트로 되돌리도록 패킷 전송
     public void Respawn()
     {
-        Entity? heldEntity = HoldingEntity;
-
-        if (heldEntity != null)
-        {
-            heldEntity.Parent = null;
-        }
-
-        // 컨테이너 도구(솥/오븐/쓰레기통) 안에 있으면 멤버십부터 정리한다 (잔류 참조 방지)
-        if (Parent is ContainerTool container)
-        {
-            container.RemovePlayer(this);
-        }
-
-        Parent = null;
-        Hp = MaxHp;
+        Init();
 
         if (Room == null) return;
 

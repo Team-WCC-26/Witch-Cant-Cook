@@ -610,6 +610,7 @@ public class SessionRegistry
             long snapshotId = 0;
             int generation = 0;
             bool expire = false;
+            long detachedAtMs = 0;
 
             // 레코드 상태 전이와 세션 교체를 한 임계구역에서 수행한다 (소유권 재검증)
             lock (record.Lock)
@@ -640,6 +641,9 @@ public class SessionRegistry
                     record.Room = room;
                     record.SnapshotPayload = null;
 
+                    // 스냅샷 재생 목록 필터 기준 시각 (유예 시작 시각 - lock 안에서 캡처해 경합 없이 읽는다)
+                    detachedAtMs = record.DetachedAtMs;
+
                     // 세션만 교체한다: Room.Enter 재호출, Entity 재등록, Player 중복 추가 없음
                     // (record 상태와 player/세션 상태를 같은 임계구역에서 함께 갱신한다)
                     player.Session = newSession;
@@ -664,7 +668,7 @@ public class SessionRegistry
             }
 
             // 서버 현재 상태 전체 스냅샷을 같은 잡 안에서 일관 시점에 생성한다 (Dirty Consume 없이 읽기만)
-            SnapshotData snapshot = room.CreateReconnectSnapshot();
+            SnapshotData snapshot = room.CreateReconnectSnapshot(detachedAtMs);
 
             // ACK 전 재요청(청크 유실 복구)에 대비해 payload를 보관한다
             byte[] payload = MemoryPackSerializer.Serialize(snapshot);

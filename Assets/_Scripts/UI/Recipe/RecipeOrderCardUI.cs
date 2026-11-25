@@ -7,6 +7,7 @@ using Protocol;
 public class RecipeOrderCardUI : MonoBehaviour
 {
     [SerializeField] private TMP_Text dishName;
+    [SerializeField] private RecipeCardDetails details;
     [SerializeField] private Image dishImage;
     [SerializeField] private RecipeTimerRing timerFill;
     [SerializeField] private TMP_Text timeText;
@@ -14,6 +15,7 @@ public class RecipeOrderCardUI : MonoBehaviour
     [SerializeField] private TMP_Text[] finalMethodLabels = Array.Empty<TMP_Text>();
     [SerializeField] private RecipeIngredientUI ingredientPrefab;
     [SerializeField] private RectTransform ingredientRoot;
+    [SerializeField] private RecipeIngredientUI[] authoredIngredientViews = Array.Empty<RecipeIngredientUI>();
     private readonly System.Collections.Generic.List<RecipeIngredientUI> ingredientViews = new();
     public long OrderId { get; private set; } = -1;
     public RecipeCardData BoundData { get; private set; }
@@ -22,6 +24,9 @@ public class RecipeOrderCardUI : MonoBehaviour
     [SerializeField, Min(1f)] private float timerFontSize = 28f;
     [SerializeField, Min(1f)] private float methodFontSize = 16f;
     private int bindingVersion;
+    private bool ingredientViewsPrepared;
+
+    private void Awake() => PrepareIngredientViews();
     private void OnEnable() => ApplyTypography();
     private void OnDisable() => bindingVersion++;
 
@@ -46,15 +51,30 @@ public class RecipeOrderCardUI : MonoBehaviour
             ingredientRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(ingredientRoot.rect.height, 164f));
     }
 
+    private void PrepareIngredientViews()
+    {
+        if (ingredientViewsPrepared) return;
+
+        ingredientViewsPrepared = true;
+        foreach (RecipeIngredientUI view in authoredIngredientViews)
+        {
+            if (view == null) continue;
+            ingredientViews.Add(view);
+            view.gameObject.SetActive(false);
+        }
+    }
+
     public void Bind(DishOrder order, RecipeCardData data)
     {
+        PrepareIngredientViews();
         ApplyTypography();
         int version = ++bindingVersion;
         Func<bool> current = () => this != null && bindingVersion == version;
         OrderId = order.Id;
         BoundData = data;
-        if (dishName != null)
-            dishName.text = string.IsNullOrWhiteSpace(data?.name) ? $"Recipe #{order.RecipeId}" : data.name;
+        string displayName = string.IsNullOrWhiteSpace(data?.name) ? $"Recipe #{order.RecipeId}" : data.name;
+        if (dishName != null) dishName.text = displayName;
+        details?.Bind(displayName, data?.rewardBeans ?? -1);
         SpriteCache.Assign(dishImage, data?.iconName, current);
         RecipeIngredientUI.BindMethods(data?.finalConditionFlag ?? IngredientState.None, finalMethodImages, finalMethodLabels, current);
         int count = data?.ingredients?.Count ?? 0;
@@ -67,6 +87,8 @@ public class RecipeOrderCardUI : MonoBehaviour
         }
         gameObject.SetActive(true);
     }
+
+    public void SetDetailsProgress(float progress) => details?.SetProgress(progress);
 
     public void SetRemaining(DishOrder order, double now)
     {
