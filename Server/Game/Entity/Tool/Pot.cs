@@ -286,6 +286,20 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         }
 
         Room.BroadCast(PacketSerializer.Serialize(packet, true));
+
+        // 재접속 유예 창 재생 목록 기록 (방출 지점과 같은 샤드 작업/Tick 안에서 관측만 수행)
+        ReplayEventSnapshot replayEvent = new()
+        {
+            Kind = ReplayEventKind.PotEject,
+            EntityId = packet.PotEntityId,
+            Seed = packet.EjectSeed,
+            DelayMs = packet.EjectDelayMs
+        };
+
+        replayEvent.EntityIds.AddRange(packet.EntityIds);
+        replayEvent.PlayerIds.AddRange(packet.PlayerIds);
+
+        Room.RecordReplayEvent(replayEvent);
     }
 
     private void CancelCook()

@@ -108,6 +108,16 @@ public class IngredientSpawner
 
         _room.BroadCast(PacketSerializer.Serialize(packet, true));
 
+        // 재접속 유예 창 재생 목록 기록 (타이머 콜백 = 룸 Tick과 같은 샤드 스레드에서 관측만 수행)
+        // 원본 패킷도 Transform을 전송하지 않으므로 위치는 ConveyId(벨트 스폰 지점)로 산출한다
+        _room.RecordReplayEvent(new ReplayEventSnapshot()
+        {
+            Kind = ReplayEventKind.ConveySpawn,
+            EntityId = packet.EntityId,
+            IngredientId = packet.IngredientId,
+            ConveyId = packet.ConveyId
+        });
+
         schedule.Schedule();
     }
 

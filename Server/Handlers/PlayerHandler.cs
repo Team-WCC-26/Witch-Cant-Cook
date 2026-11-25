@@ -34,6 +34,16 @@ public class PlayerHandler : PacketHandlerBase
                 };
 
                 room.BroadCast(PacketSerializer.Serialize(ejectPacket, true));
+
+                // 재접속 유예 창 재생 목록 기록 (같은 샤드 작업 안에서 관측만 수행)
+                room.RecordReplayEvent(new ReplayEventSnapshot()
+                {
+                    Kind = ReplayEventKind.PanEject,
+                    EntityId = ejectPacket.PanEntityId,
+                    RelatedEntityId = ejectPacket.IngredientEntityId,
+                    Position = ejectPacket.Position,
+                    Seed = ejectPacket.EjectSeed
+                });
             }
         });
     }
