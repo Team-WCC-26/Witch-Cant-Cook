@@ -76,7 +76,6 @@ public sealed class InteractionUI : UIBase
         if (heldObject != null && (heldObject.IsSubmissionPending || heldObject.IsSubmissionReturning))
             return string.Empty;
         if (target.GetTargetComponent<OvenButton>() != null) return "버튼 누르기";
-        if (target.GetTargetComponent<Bell>() != null) return "제출";
         if (heldObject == null) return "주먹질 / 집기";
         if (heldObject.TryGetComponent<KnifeInteraction>(out _)) return "휘두르기 / 손질하기";
         if (heldObject.TryGetComponent<PanInteraction>(out PanInteraction heldPan))

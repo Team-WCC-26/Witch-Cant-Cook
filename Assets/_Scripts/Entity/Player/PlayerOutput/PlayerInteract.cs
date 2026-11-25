@@ -340,13 +340,6 @@ public class PlayerInteract
         }
 
         IInteractTarget impactTarget = FindInteractTarget();
-        Bell bell = impactTarget.GetTargetComponent<Bell>();
-        if (bell != null)
-        {
-            bell.Ring();
-            return;
-        }
-
         if (impactTarget is not CatchableObj target) return;
         if (!target.TryGetComponent(out IngredientReaction _)) return;
         RequestEntityInteract(target.NetworkId);

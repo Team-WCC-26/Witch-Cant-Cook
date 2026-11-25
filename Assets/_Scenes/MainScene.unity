@@ -56302,7 +56302,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8868798051005477837, guid: 08eef31b41edb7c4c9c52f0613166fc4, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -87291,9 +87291,6 @@ PrefabInstance:
       addedObject: {fileID: 3203470229957554535}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: dbae1c74e9fc52943b418b5f9d42c29d, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 712751594728942374}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: dbae1c74e9fc52943b418b5f9d42c29d, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1558828027}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: dbae1c74e9fc52943b418b5f9d42c29d, type: 3}
       insertIndex: -1
@@ -88724,7 +88721,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1993419165998903775, guid: 3de9fa15a5203954dbc407f9d3c6b34e, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2485260476309046967, guid: 3de9fa15a5203954dbc407f9d3c6b34e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -128373,7 +128370,7 @@ GameObject:
   - component: {fileID: 1558828029}
   - component: {fileID: 1558828028}
   m_Layer: 11
-  m_Name: Cube
+  m_Name: Collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -177214,21 +177211,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 154849966}
   m_LocalEulerAnglesHint: {x: 90, y: 90, z: 0}
---- !u!4 &712751594728942374
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5568767120387968793}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.20471658, y: -0.06479175, z: 0.0013791072}
-  m_LocalScale: {x: 1.1717741, y: 0.89605725, z: 1.0339123}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1113910840}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &793724603899654065
 Transform:
   m_ObjectHideFlags: 0
@@ -177650,41 +177632,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.12342172, y: 1.4176022, z: 1.2688907}
   m_Center: {x: -0.25261685, y: 1.5038466, z: -0.010214529}
---- !u!114 &1249058157878513304
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5568767120387968793}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: df8466457bfca6c48b849752bc83059e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SubmitZone
-  eToolId: 0
-  acceptedCategories: 0
-  surface: 0
-  suctionPoint: {fileID: 0}
-  returnPoint: {fileID: 0}
-  suctionDuration: 0.3
-  ejectDirection: {x: 0, y: 1, z: 1}
-  ejectForce: 3
-  frontFace: 2
-  logDiagnostics: 1
-  lastStatus: 
-  stationarySeconds: 0.5
-  linearSpeedTolerance: 0.01
-  angularSpeedTolerance: 0.01
-  positionTolerance: 0.001
-  rotationTolerance: 0.1
-  frontFaceTolerance: 0.01
-  responseTimeout: 3
-  ejectInterval: 0.15
-  ejectRandomRangeX: 0.3
-  ejectRandomRangeYMin: -0.05
-  ejectRandomRangeYMax: 0.2
-  ejectRandomRangeZ: 0.3
 --- !u!23 &1711813855601965348
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -177903,24 +177850,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6717500841879922621}
   m_Mesh: {fileID: 7863892004452973651, guid: dad0c88e7f9b56d4ba8ed6a6d4a8e0b9, type: 3}
---- !u!1 &5568767120387968793
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 712751594728942374}
-  - component: {fileID: 6714494668478180513}
-  - component: {fileID: 1249058157878513304}
-  m_Layer: 11
-  m_Name: Pedestral_SubmitTrigger
-  m_TagString: Untagged
-  m_Icon: {fileID: -5487077368411116049, guid: 0000000000000000d000000000000000, type: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
 --- !u!1001 &6391606250207182726
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -177993,27 +177922,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1830583564}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &6714494668478180513
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5568767120387968793}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.8057414, y: 0.12402681, z: 1.7471312}
-  m_Center: {x: -0.027203191, y: 0.85706013, z: -0.011518797}
 --- !u!1 &6717500841879922621
 GameObject:
   m_ObjectHideFlags: 0
@@ -178477,22 +178385,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df8466457bfca6c48b849752bc83059e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SubmitZone
-  eToolId: 0
+  eToolId: 100
   acceptedCategories: 0
-  surface: 1
-  suctionPoint: {fileID: 0}
-  returnPoint: {fileID: 0}
   suctionDuration: 0.3
   ejectDirection: {x: 0, y: 1, z: 1}
   ejectForce: 3
   frontFace: 2
   logDiagnostics: 1
   lastStatus: 
-  stationarySeconds: 0.5
-  linearSpeedTolerance: 0.01
-  angularSpeedTolerance: 0.01
-  positionTolerance: 0.001
-  rotationTolerance: 0.1
   frontFaceTolerance: 0.01
   responseTimeout: 3
   ejectInterval: 0.15
