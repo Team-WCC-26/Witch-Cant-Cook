@@ -18,6 +18,7 @@ public class RecipeCardData
     public string iconName;
     public int recipeId;
     public string name;
+    public int rewardBeans = -1;
     public Sprite sprite;
     public IngredientState finalConditionFlag;
     [Min(0.01f)] public float timeLimit = 60f; // Seconds.

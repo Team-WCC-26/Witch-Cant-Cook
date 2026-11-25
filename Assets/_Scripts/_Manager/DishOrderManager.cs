@@ -216,6 +216,7 @@ public class DishOrderManager : MonoBehaviour
         {
             recipeId = recipe.id,
             name = recipe.name,
+            rewardBeans = recipe.Money,
             timeLimit = recipe.timeLimit,
             iconName = dishIngredient?.IconName
         };
