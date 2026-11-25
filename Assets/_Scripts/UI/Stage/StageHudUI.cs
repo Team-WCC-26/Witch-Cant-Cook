@@ -1,6 +1,8 @@
 using System.Globalization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // Displays the HUD prefab and its stage-start slide animation.
@@ -36,6 +38,10 @@ public sealed class StageHudUI : UIBase
     private bool goalResolved;
     private int? stageGoal;
     private float targetProgress;
+    private TMP_Text earlySettlementHint;
+    private bool sendingEarlySettlement;
+    private double earlySettlementRetryAt;
+    private const string EarlySettlementHint = "<color=#FFE3A0>Enter</color>  조기 결산";
 
     private void OnEnable()
     {
@@ -72,12 +78,72 @@ public sealed class StageHudUI : UIBase
         RefreshClock();
         if (session != null && !goalResolved && TryResolveGoal(session.State))
             RefreshMoney(session.State);
+        UpdateEarlySettlement();
         if (goalProgress != null)
             goalProgress.SetValueWithoutNotify(Mathf.MoveTowards(goalProgress.value, targetProgress,
                 Time.unscaledDeltaTime / Mathf.Max(.01f, progressFillDuration)));
         if (!introPlaying) return;
         introElapsed += Time.unscaledDeltaTime;
         ApplySlidePositions();
+    }
+
+    private void UpdateEarlySettlement()
+    {
+        RoomHudState state = session?.State;
+        double now = Time.unscaledTimeAsDouble;
+        if (state == null || !state.IsStageRunning)
+            earlySettlementRetryAt = 0d;
+
+        bool eligible = state != null && state.IsStageRunning && !state.HasStageTimeExpired(now) &&
+            state.HasPendingMoney && stageGoal.HasValue && state.PendingMoney >= stageGoal.Value &&
+            session.Lobby.IsInRoom && !StageReturnFlow.IsInputBlocked && !StageRespawnController.IsInputBlocked;
+        if (!eligible)
+        {
+            if (earlySettlementHint != null && earlySettlementHint.gameObject.activeSelf)
+                earlySettlementHint.gameObject.SetActive(false);
+            return;
+        }
+
+        if (earlySettlementHint == null) CreateEarlySettlementHint();
+        bool waiting = sendingEarlySettlement || now < earlySettlementRetryAt;
+        earlySettlementHint.text = waiting ? "조기 결산 요청 중…" : EarlySettlementHint;
+        if (!earlySettlementHint.gameObject.activeSelf) earlySettlementHint.gameObject.SetActive(true);
+        Keyboard keyboard = Keyboard.current;
+        if (waiting || keyboard == null ||
+            (!keyboard.enterKey.wasPressedThisFrame && !keyboard.numpadEnterKey.wasPressedThisFrame)) return;
+        GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        if (selected != null && selected.GetComponentInParent<TMP_InputField>() is { isFocused: true }) return;
+        RequestEarlySettlement(StageSelectionSession.Instance);
+    }
+
+    private async void RequestEarlySettlement(StageSelectionSession stageSession)
+    {
+        if (!stageSession.IsRoomReady) return;
+        sendingEarlySettlement = true;
+        earlySettlementRetryAt = Time.unscaledTimeAsDouble + 2d;
+        try { await stageSession.RequestEarlySettlementAsync(); }
+        catch (System.Exception error)
+        {
+            earlySettlementRetryAt = 0d;
+            Debug.LogException(error, this);
+        }
+        finally { sendingEarlySettlement = false; }
+    }
+
+    private void CreateEarlySettlementHint()
+    {
+        var hint = new GameObject("Early Settlement Hint", typeof(RectTransform), typeof(TextMeshProUGUI));
+        hint.layer = gameObject.layer;
+        hint.transform.SetParent(transform, false);
+        var rect = (RectTransform)hint.transform;
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0f);
+        rect.anchoredPosition = new Vector2(-36f, 36f);
+        rect.sizeDelta = new Vector2(330f, 44f);
+        earlySettlementHint = hint.GetComponent<TMP_Text>();
+        if (moneyText != null) earlySettlementHint.font = moneyText.font;
+        earlySettlementHint.alignment = TextAlignmentOptions.MidlineRight;
+        earlySettlementHint.fontSize = 28f;
+        earlySettlementHint.raycastTarget = false;
     }
 
     private void Refresh()

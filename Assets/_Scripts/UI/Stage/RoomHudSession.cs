@@ -192,6 +192,7 @@ public sealed class RoomHudSession : MonoBehaviour
             foreach (Stage stage in data.GetStage().GetAll())
                 if (stage != null && stage.stageNum == State.StageNumber) { goal = stage.goal; break; }
         if (!State.ApplyStageSettlement(packet.PendingMoney, packet.Money, packet.IsSuccess, goal)) return;
+        stages.PreviewNextStage(State.LatestSettlement);
         PlayStageEndSound(packet.IsSuccess ? SoundId.StageSuccess : SoundId.StageFailure);
         Changed?.Invoke();
         SettlementRecorded?.Invoke(State.LatestSettlement);

@@ -8,28 +8,56 @@ public class StageSelectionWorldUI : MonoBehaviour
     [SerializeField] private TMP_Text tipText;
     [SerializeField] private TMP_Text goalText;
     [SerializeField] private TMP_Text statusText;
-    // Retain the serialized links so existing scene arrows can be hidden without rebuilding their UI.
-    [SerializeField, HideInInspector] private TMP_Text previousArrow;
-    [SerializeField, HideInInspector] private TMP_Text nextArrow;
+    [SerializeField] private TMP_Text previousArrow;
+    [SerializeField] private TMP_Text nextArrow;
+    [SerializeField] private StagePageCylinder previousTarget;
+    [SerializeField] private StagePageCylinder nextTarget;
 
     [Tooltip("왼쪽 열 위에서 아래 3개, 오른쪽 열 위에서 아래 3개 순서")]
     [SerializeField] private StageBoardItemUI[] ingredients = Array.Empty<StageBoardItemUI>();
     [SerializeField] private StageBoardItemUI[] events = Array.Empty<StageBoardItemUI>();
 
     public void Configure(TMP_Text title, TMP_Text tip, TMP_Text goal, TMP_Text status,
-        StageBoardItemUI[] ingredientSlots, StageBoardItemUI[] eventSlots)
+        StageBoardItemUI[] ingredientSlots, StageBoardItemUI[] eventSlots,
+        TMP_Text previous = null, TMP_Text next = null)
     {
         stageTitle = title; tipText = tip; goalText = goal; statusText = status;
         ingredients = ingredientSlots; events = eventSlots;
-        HidePageControls();
+        previousArrow = previous;
+        nextArrow = next;
+        SetPageControls(false, false);
     }
 
-    private void OnEnable() => HidePageControls();
-
-    private void HidePageControls()
+    internal void BindPageTargets(StageSelectionController controller)
     {
-        if (previousArrow != null) previousArrow.gameObject.SetActive(false);
-        if (nextArrow != null) nextArrow.gameObject.SetActive(false);
+        BindPageTarget(previousTarget, previousArrow, controller, -1);
+        BindPageTarget(nextTarget, nextArrow, controller, 1);
+    }
+
+    private static void BindPageTarget(StagePageCylinder target, TMP_Text arrow,
+        StageSelectionController controller, int direction)
+    {
+        if (target == null)
+        {
+            if (arrow == null) return;
+            GameObject arrowObject = arrow.gameObject;
+            arrowObject.layer = LayerMask.NameToLayer("Interactable");
+            if (!arrow.TryGetComponent(out BoxCollider hitbox))
+                hitbox = arrowObject.AddComponent<BoxCollider>();
+            Rect rect = arrow.rectTransform.rect;
+            hitbox.isTrigger = true;
+            hitbox.center = rect.center;
+            hitbox.size = new Vector3(rect.width, rect.height, 40f);
+            if (!arrow.TryGetComponent(out target))
+                target = arrowObject.AddComponent<StagePageCylinder>();
+        }
+        target.Bind(controller, direction);
+    }
+
+    internal void SetPageControls(bool canGoPrevious, bool canGoNext)
+    {
+        if (previousArrow != null) previousArrow.gameObject.SetActive(canGoPrevious);
+        if (nextArrow != null) nextArrow.gameObject.SetActive(canGoNext);
     }
 
     public void Show(Stage stage, StagePageIndex pages, DataManager data)
@@ -77,7 +105,6 @@ public class StageSelectionWorldUI : MonoBehaviour
 
     public void SetStatus(string status)
     {
-        HidePageControls();
         if (statusText != null) statusText.text = status ?? "";
     }
 }

@@ -43,7 +43,7 @@ public sealed class RoomHudPresenter : MonoBehaviour
         if (switching || session == null) return;
         if (manager == null) manager = FindFirstObjectByType<UIManager>();
         if (manager == null || !manager.HasUIParents) return;
-        int mode = !session.Lobby.IsInRoom ? 0 : returnFlow.State.ShowsSettlement ? 3 : session.Lobby.IsActive ? 1 : 2;
+        int mode = !session.Lobby.IsInRoom ? 0 : returnFlow.State.IsInSettlementFlow ? 3 : session.Lobby.IsActive ? 1 : 2;
         dirty = false;
         if (shownMode == mode) return;
         switching = true;

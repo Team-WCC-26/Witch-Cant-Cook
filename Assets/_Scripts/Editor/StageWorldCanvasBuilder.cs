@@ -50,7 +50,9 @@ public static class StageWorldCanvasBuilder
         Text("Goal Heading", goalPanel, 10, 4, 252, 20, "목표", 18);
         TMP_Text goal = Text("Goal Text", goalPanel, 10, 26, 252, 46, "", 18);
         TMP_Text status = Text("Status", root, 20, 474, 860, 22, "", 15, true);
-        view.Configure(title, tip, goal, status, ingredients, events);
+        TMP_Text previous = Text("Previous Arrow", root, 20, 402, 46, 60, "\u25C0", 34, true);
+        TMP_Text next = Text("Next Arrow", root, 834, 402, 46, 60, "\u25B6", 34, true);
+        view.Configure(title, tip, goal, status, ingredients, events, previous, next);
         controller.Configure(view);
         EditorSceneManager.MarkSceneDirty(board.scene);
         Selection.activeGameObject = board;

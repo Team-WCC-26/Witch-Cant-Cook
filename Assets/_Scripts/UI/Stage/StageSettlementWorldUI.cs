@@ -30,6 +30,20 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
     [Tooltip("임시 원형 대신 사용할 실패 도장 이미지입니다.")]
     [SerializeField] private Sprite failureStamp;
     private Canvas interactionCanvas;
+    private bool overlayConfigured;
+    private bool forcedOverlay;
+    private RenderMode modeBeforeOverlay;
+    private Transform worldCanvasParent;
+    private Vector3 worldCanvasScale;
+    private Quaternion worldCanvasRotation;
+    private Vector3 worldCanvasPosition;
+    private Vector2 worldCanvasAnchorMin;
+    private Vector2 worldCanvasAnchorMax;
+    private Vector2 worldCanvasSize;
+    private int worldCanvasSortingOrder;
+    private CanvasScaler overlayScaler;
+
+    private const float DefaultWorldBoardScale = 0.002365348f;
 
     private RoomHudSession room;
     private StageReturnFlow flow;
@@ -49,6 +63,7 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
             var boards = new List<StageSettlementWorldUI>(FindObjectsByType<StageSettlementWorldUI>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None));
             GameObject prefab = null;
+            bool hasRecipeBoard = false;
             foreach (RecipeScrollView recipe in FindObjectsByType<RecipeScrollView>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 if (recipe == null || recipe.transform.parent == null || !recipe.transform.parent.gameObject.activeInHierarchy) continue;
@@ -59,11 +74,8 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
                     (candidate.recipeCanvas == null && candidate.transform.parent == recipe.transform.parent)));
                 if (board == null)
                 {
-                    ResourceManager resources = ResourceManager.Instance;
-                    if (resources == null) throw new System.InvalidOperationException("Settlement board requires ResourceManager.");
-                    if (prefab == null) prefab = await resources.LoadAsync<GameObject>("StageSettlementWorldCanvas");
+                    if (prefab == null) prefab = await LoadPrefab();
                     if (recipe == null) continue;
-                    if (prefab == null) throw new System.InvalidOperationException("Addressable StageSettlementWorldCanvas is missing.");
                     // Recheck after loading; another scene instance may have become available.
                     board = System.Array.Find(FindObjectsByType<StageSettlementWorldUI>(FindObjectsInactive.Include, FindObjectsSortMode.None),
                         candidate => candidate.recipeCanvas == recipe.gameObject);
@@ -77,10 +89,115 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
                     }
                 }
                 board.BindRecipe(recipe, created);
+                hasRecipeBoard = true;
+            }
+
+            if (!hasRecipeBoard && StageReturnFlow.IsSettlementActive)
+            {
+                StageSettlementWorldUI board = boards.Find(candidate => candidate != null &&
+                    candidate.settlementCanvas != null && IsRecipeBig(candidate.transform) &&
+                    (candidate.transform.parent == null || candidate.transform.parent.gameObject.activeInHierarchy));
+                if (board != null)
+                {
+                    board.Activate();
+                    return;
+                }
+                board = boards.Find(candidate => candidate != null && candidate.settlementCanvas != null &&
+                    (candidate.transform.parent == null || candidate.transform.parent.gameObject.activeInHierarchy));
+                if (board == null)
+                {
+                    if (prefab == null) prefab = await LoadPrefab();
+                    if (!StageReturnFlow.IsSettlementActive) return;
+                    GameObject root = Instantiate(prefab);
+                    board = root.GetComponent<StageSettlementWorldUI>();
+                    if (board == null) { Destroy(root); throw new System.InvalidOperationException("Settlement prefab has no StageSettlementWorldUI."); }
+                }
+                board.ShowAsOverlay();
             }
         }
         catch (System.Exception error) { Debug.LogException(error); }
         finally { ensuringBoards = false; }
+    }
+
+    private static async UniTask<GameObject> LoadPrefab()
+    {
+        ResourceManager resources = ResourceManager.Instance;
+        if (resources == null) throw new System.InvalidOperationException("Settlement board requires ResourceManager.");
+        GameObject prefab = await resources.LoadAsync<GameObject>("StageSettlementWorldCanvas");
+        if (prefab == null) throw new System.InvalidOperationException("Addressable StageSettlementWorldCanvas is missing.");
+        return prefab;
+    }
+
+    private void ShowAsOverlay()
+    {
+        Canvas canvas = settlementCanvas != null ? settlementCanvas.GetComponent<Canvas>() : null;
+        if (canvas == null) throw new System.InvalidOperationException("Settlement prefab has no Canvas.");
+        if (!forcedOverlay && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+        {
+            forcedOverlay = true;
+            modeBeforeOverlay = canvas.renderMode;
+        }
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        Activate();
+    }
+
+    private void Activate()
+    {
+        if (!enabled) enabled = true;
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        Refresh();
+    }
+
+    private void ConfigureOverlay()
+    {
+        if (overlayConfigured) return;
+        overlayConfigured = true;
+        var rect = (RectTransform)interactionCanvas.transform;
+        worldCanvasParent = rect.parent;
+        worldCanvasScale = rect.localScale;
+        worldCanvasRotation = rect.localRotation;
+        worldCanvasPosition = rect.anchoredPosition3D;
+        worldCanvasAnchorMin = rect.anchorMin;
+        worldCanvasAnchorMax = rect.anchorMax;
+        worldCanvasSize = rect.sizeDelta;
+        worldCanvasSortingOrder = interactionCanvas.sortingOrder;
+        rect.SetParent(null, false);
+        rect.localScale = Vector3.one;
+        interactionCanvas.worldCamera = null;
+        interactionCanvas.sortingOrder = Mathf.Max(interactionCanvas.sortingOrder, 100);
+        if (!interactionCanvas.TryGetComponent(out CanvasScaler _))
+        {
+            overlayScaler = interactionCanvas.gameObject.AddComponent<CanvasScaler>();
+            overlayScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            overlayScaler.referenceResolution = new Vector2(1920f, 1080f);
+            overlayScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+        }
+        if (overlayScaler != null) overlayScaler.enabled = true;
+    }
+
+    private void RestoreCanvasLayout()
+    {
+        if (interactionCanvas == null) return;
+        if (forcedOverlay)
+        {
+            forcedOverlay = false;
+            if (interactionCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                interactionCanvas.renderMode = modeBeforeOverlay;
+        }
+        if (overlayConfigured)
+        {
+            overlayConfigured = false;
+            if (overlayScaler != null) overlayScaler.enabled = false;
+            var rect = (RectTransform)interactionCanvas.transform;
+            rect.SetParent(worldCanvasParent, false);
+            rect.localScale = worldCanvasScale;
+            rect.localRotation = worldCanvasRotation;
+            rect.anchorMin = worldCanvasAnchorMin;
+            rect.anchorMax = worldCanvasAnchorMax;
+            rect.anchoredPosition3D = worldCanvasPosition;
+            rect.sizeDelta = worldCanvasSize;
+            interactionCanvas.sortingOrder = worldCanvasSortingOrder;
+        }
     }
 
     private static bool IsRecipeBig(Transform node)
@@ -137,21 +254,35 @@ public sealed class StageSettlementWorldUI : MonoBehaviour
         if (flow != null) flow.Changed -= Refresh;
         if (recipeCanvas != null) recipeCanvas.SetActive(originalRecipeActive);
         if (settlementCanvas != null) settlementCanvas.SetActive(false);
+        RestoreCanvasLayout();
+    }
+
+    private void OnDestroy()
+    {
+        if (overlayConfigured && settlementCanvas != null && settlementCanvas != gameObject)
+            Destroy(settlementCanvas);
     }
 
     private void Refresh()
     {
         bool settling = flow.State.ShowsSettlement && flow.State.Settlement != null;
-        bool visible = settling && IsRecipeBig(recipeCanvas != null ? recipeCanvas.transform : transform);
+        bool overlay = interactionCanvas != null && interactionCanvas.renderMode == RenderMode.ScreenSpaceOverlay;
+        bool visible = settling && (overlay || IsRecipeBig(recipeCanvas != null ? recipeCanvas.transform : transform));
+        if (visible && overlay) ConfigureOverlay();
         if (recipeCanvas != null) recipeCanvas.SetActive(!settling && originalRecipeActive);
         if (settlementCanvas != null) settlementCanvas.SetActive(visible);
+        if (!visible || !overlay) RestoreCanvasLayout();
         if (!visible) return;
 
-        // Reuse the authored camera, or create one for clients whose scene snapshot lacks it.
-        RectTransform cameraCanvas = settlementCanvas != null ? settlementCanvas.transform as RectTransform : transform as RectTransform;
-        StageSettlementCamera cameraController = StageSettlementCamera.EnsureForScroll(cameraCanvas);
-        if (interactionCanvas != null && cameraController != null)
-            interactionCanvas.worldCamera = cameraController.RenderingCamera;
+        if (interactionCanvas != null && interactionCanvas.renderMode == RenderMode.WorldSpace)
+        {
+            // Older scene instances can lose their world-scale override when edited as overlays.
+            if (transform.localScale == Vector3.one && interactionCanvas.transform.localScale == Vector3.one)
+                transform.localScale = Vector3.one * DefaultWorldBoardScale;
+            StageSettlementCamera cameraController = StageSettlementCamera.EnsureForScroll(
+                interactionCanvas.transform as RectTransform);
+            if (cameraController != null) interactionCanvas.worldCamera = cameraController.RenderingCamera;
+        }
         StageSettlementData result = flow.State.Settlement;
         if (recipeCanvas != null && loggedRun != result.RunNumber)
         {
