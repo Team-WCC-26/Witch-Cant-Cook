@@ -12,6 +12,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public Dictionary<long, CatchableObj> catchableDics = new();
     private readonly Dictionary<long, long> pendingParentChanges = new();
+    private readonly Dictionary<long, EntityPickupPacket> pendingIngredientSpawns = new();
     private readonly Dictionary<long, IEntityThrowParentReceiver> detachedThrowParents = new();
     private readonly Dictionary<long, long> containerEjections = new();
 
@@ -20,18 +21,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
 
-    // Only after the server confirms its round entities have been cleared.
-    public void ResetClientStage()
-    {
-        var ids = new List<long>(catchableDics.Keys);
-        foreach (long id in ids) RemoveAndRelease(id);
-        catchableDics.Clear();
-        pendingParentChanges.Clear();
-        detachedThrowParents.Clear();
-        containerEjections.Clear();
-        IngredientEgg.ResetPanTransfers();
-    }
-
+    #region Unity Callbacks
     private void Awake()
     {
         if (mapObjRouter == null)
@@ -41,29 +31,6 @@ public class ObjectNetworkRouter : MonoBehaviour
     private void OnEnable()
     {
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
-    }
-
-    private IEnumerator SubscribeWhenReady()
-    {
-        // Packet ownership
-        yield return new WaitUntil(() => ServerManager.Instance != null);
-
-        if (mapObjRouter == null)
-            mapObjRouter = FindFirstObjectByType<MapObjNetworkRouter>();
-
-        ServerManager.Instance.Router.OnEntityParentChanged += HandleEntityParentChanged;
-        ServerManager.Instance.Router.OnEntityDestroyed += HandleEntityDestroyed;
-        ServerManager.Instance.Router.OnCookProcessChanged += HandleCookProcessChanged;
-        ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, HandleEntityThrow);
-        ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
-        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
-        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCorn, HandleIngredientCorn);
-        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCornStart, HandleIngredientCornStart);
-        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSquid, HandleIngredientSquid);
-        isSubscribed = true;
-        subscribeRoutine = null;
     }
 
     private void OnDisable()
@@ -90,6 +57,44 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCornStart);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSquid);
         isSubscribed = false;
+    }
+
+    #endregion
+
+    /// <summary>Clears client entity state after the server confirms the round reset.</summary>
+    public void ResetClientStage()
+    {
+        var ids = new List<long>(catchableDics.Keys);
+        foreach (long id in ids) RemoveAndRelease(id);
+        catchableDics.Clear();
+        pendingParentChanges.Clear();
+        pendingIngredientSpawns.Clear();
+        detachedThrowParents.Clear();
+        containerEjections.Clear();
+        IngredientEgg.ResetPanTransfers();
+    }
+
+    private IEnumerator SubscribeWhenReady()
+    {
+        // Packet ownership
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+
+        if (mapObjRouter == null)
+            mapObjRouter = FindFirstObjectByType<MapObjNetworkRouter>();
+
+        ServerManager.Instance.Router.OnEntityParentChanged += HandleEntityParentChanged;
+        ServerManager.Instance.Router.OnEntityDestroyed += HandleEntityDestroyed;
+        ServerManager.Instance.Router.OnCookProcessChanged += HandleCookProcessChanged;
+        ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, HandleEntityThrow);
+        ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCorn, HandleIngredientCorn);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCornStart, HandleIngredientCornStart);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSquid, HandleIngredientSquid);
+        isSubscribed = true;
+        subscribeRoutine = null;
     }
 
     private void HandleIngredientDistanceRequest(ReadOnlyMemory<byte> data)
@@ -255,6 +260,8 @@ public class ObjectNetworkRouter : MonoBehaviour
         {
             if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
             {
+                if (pendingIngredientSpawns.ContainsKey(packet.EntityId))
+                    pendingIngredientSpawns[packet.EntityId] = null;
                 pendingParentChanges[packet.EntityId] = packet.ParentEntityId;
                 continue;
             }
@@ -296,7 +303,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         NotifyParent(parentEntityId, catchable, true);
     }
 
-    // 엔티티를 기존 부모에서 분리한다.
+    /// <summary>Detaches a picked entity from its previous container.</summary>
     public void HandleEntityPicked(CatchableObj catchable)
     {
         if (catchable == null) return;
@@ -359,6 +366,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         detachedThrowParents.Remove(entityId);
         IngredientEgg.HandleDestroyedEntity(entityId);
         pendingParentChanges.Remove(entityId);
+        pendingIngredientSpawns.Remove(entityId);
 
         if (!catchableDics.TryGetValue(entityId, out CatchableObj catchable))
             return;
@@ -410,6 +418,44 @@ public class ObjectNetworkRouter : MonoBehaviour
         }
     }
 
+    #region Pending Ingredient Spawns
+    // A null value tracks a queued spawn without a deferred pickup.
+    internal bool TrackIngredientSpawn(long entityId)
+    {
+        return pendingIngredientSpawns.TryAdd(entityId, null);
+    }
+
+    internal bool TryTakeIngredientSpawn(long entityId, out EntityPickupPacket pickup)
+    {
+        return pendingIngredientSpawns.Remove(entityId, out pickup);
+    }
+
+    internal bool TryDeferIngredientPickup(EntityPickupPacket packet)
+    {
+        if (!pendingIngredientSpawns.ContainsKey(packet.EntityId)) return false;
+
+        pendingParentChanges.Remove(packet.EntityId);
+        pendingIngredientSpawns[packet.EntityId] = packet;
+        return true;
+    }
+
+    #endregion
+
+    internal void ApplyEntityPickup(EntityPickupPacket packet, CatchableObj target)
+    {
+        if (StageReturnFlow.IsInputBlocked || PlayerSpawnManager.Instance == null) return;
+        if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerID, out PlayerBrain player))
+        {
+            Debug.LogError($"Player not found. PlayerID: {packet.PlayerID}");
+            return;
+        }
+
+        GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
+        HandleEntityPicked(target);
+        player.Interact.ApplyPicked(target);
+    }
+
+    /// <summary>Registers a catchable object by its network ID.</summary>
     public void Add(long networkId, CatchableObj obj)
     {
         catchableDics[networkId] = obj;
@@ -417,6 +463,7 @@ public class ObjectNetworkRouter : MonoBehaviour
         ApplyPendingParentChange(networkId, obj);
     }
 
+    /// <summary>Removes the catchable object registration.</summary>
     public void Remove(long networkId)
     {
         containerEjections.Remove(networkId);
@@ -425,16 +472,19 @@ public class ObjectNetworkRouter : MonoBehaviour
         pendingParentChanges.Remove(networkId);
         catchableDics.Remove(networkId);
     }
+    /// <summary>Looks up a registered catchable object.</summary>
     public bool TryGet(long networkId, out CatchableObj obj)
     {
         return catchableDics.TryGetValue(networkId, out obj);
     }
 
+    /// <summary>Tracks an entity being ejected from its container.</summary>
     public void BeginContainerEjection(CatchableObj obj, long parentId)
     {
         containerEjections[obj.NetworkId] = parentId;
     }
 
+    /// <summary>Clears the entity holder before container ejection.</summary>
     public void DetachForContainerEjection(CatchableObj obj)
     {
         NotifyParent(obj.ParentEntityId, obj, false);
@@ -446,12 +496,14 @@ public class ObjectNetworkRouter : MonoBehaviour
         obj.ParentEntityId = 0;
     }
 
+    /// <summary>Clears the matching container ejection record.</summary>
     public void EndContainerEjection(long entityId, long parentId)
     {
         if (containerEjections.TryGetValue(entityId, out long currentParent) && currentParent == parentId)
             containerEjections.Remove(entityId);
     }
 
+    /// <summary>Applies the server result for an ingredient combination.</summary>
     public bool TryApplyIngredientCombine(
         IngredientCombinePacket packet,
         out CatchableObj result,

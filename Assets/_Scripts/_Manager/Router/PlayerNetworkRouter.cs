@@ -79,6 +79,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
         subscribeRoutine = null;
     }
 
+    #region Player Health
     private void RoutePlayerHealth(IReadOnlyList<PlayerHpPacket> packets)
     {
         if (packets == null) return;
@@ -119,6 +120,8 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
         if (pending.Hp.HasValue) player.Health.ApplyServerHealth(pending.Hp.Value);
     }
 
+    #endregion
+
     private void RoutePlayerState(IReadOnlyList<PlayerMovementPacket> packets)
     {
         if (StageReturnFlow.IsInputBlocked) return;
@@ -143,26 +146,18 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
     private void RouteEntityPickup(IReadOnlyList<EntityPickupPacket> packets)
     {
         if (StageReturnFlow.IsInputBlocked) return;
-        // Pickup authority
         if (PlayerSpawnManager.Instance == null) return;
 
         foreach (EntityPickupPacket packet in packets)
         {
-            if (!PlayerSpawnManager.Instance.TryGetPlayer(packet.PlayerID, out PlayerBrain player))
+            if (objectRouter != null && objectRouter.TryGet(packet.EntityId, out CatchableObj target))
             {
-                Debug.LogError($"Player not found. PlayerID: {packet.PlayerID}");
+                objectRouter.ApplyEntityPickup(packet, target);
                 continue;
             }
 
-            if (objectRouter == null || !objectRouter.TryGet(packet.EntityId, out CatchableObj target))
-            {
+            if (objectRouter == null || !objectRouter.TryDeferIngredientPickup(packet))
                 Debug.LogError($"Pickup target not found. EntityId: {packet.EntityId}");
-                continue;
-            }
-
-            GameEvents.OnEntityPicked?.Invoke(new EntityPickedEvent(packet.EntityId));
-            objectRouter.HandleEntityPicked(target);
-            player.Interact.ApplyPicked(target);
         }
     }
 }

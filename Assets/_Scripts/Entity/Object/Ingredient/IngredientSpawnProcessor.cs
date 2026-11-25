@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Protocol;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -20,16 +21,36 @@ public sealed class IngredientSpawnProcessor : MonoBehaviour
     private static readonly ProfilerMarker ProcessMarker = new("Ingredient.GO.ProcessRequests");
     private static readonly ProfilerMarker PrewarmMarker = new("Ingredient.GO.Prewarm");
     private static ObjectPoolManager preparedPool;
-    private readonly Queue<IngredientSpawnCommand> requests = new(500);
+    private readonly Queue<(IngredientSpawnCommand Command, bool Tracked)> requests = new(500);
     private ObjectNetworkRouter objectRouter;
     public int PendingCount => requests.Count;
-    public void ClearPending() => requests.Clear();
 
+    #region Unity Callbacks
+    private void Update() => ProcessPending();
+
+    private void OnDestroy() => ClearPending();
+    #endregion
+
+    /// <summary>Clears queued spawns and their deferred pickups.</summary>
+    public void ClearPending()
+    {
+        while (requests.TryDequeue(out var request))
+        {
+            if (request.Tracked && objectRouter != null)
+                objectRouter.TryTakeIngredientSpawn(request.Command.NetworkID, out _);
+        }
+    }
+
+    /// <summary>Queues a server-authorized ingredient spawn.</summary>
     public void Enqueue(in IngredientSpawnCommand request)
     {
-        if (!StageReturnFlow.IsSettlementActive) requests.Enqueue(request);
+        if (StageReturnFlow.IsSettlementActive) return;
+        if (objectRouter == null) objectRouter = FindFirstObjectByType<ObjectNetworkRouter>();
+
+        bool tracked = objectRouter != null;
+        if (tracked && !objectRouter.TrackIngredientSpawn(request.NetworkID)) return;
+        requests.Enqueue((request, tracked));
     }
-    private void Update() => ProcessPending();
 
     public void ProcessPending()
     {
@@ -44,7 +65,15 @@ public sealed class IngredientSpawnProcessor : MonoBehaviour
         if (objectRouter == null) return;
         using var scope = ProcessMarker.Auto();
         int count = requests.Count;
-        for (int i = 0; i < count; i++) Spawn(requests.Dequeue());
+        for (int requestIdx = 0; requestIdx < count; requestIdx++)
+        {
+            var request = requests.Dequeue();
+            EntityPickupPacket pickup = null;
+            if (request.Tracked && !objectRouter.TryTakeIngredientSpawn(request.Command.NetworkID, out pickup))
+                continue;
+
+            Spawn(request.Command, pickup);
+        }
     }
 
     public static bool PrewarmIngredients(int countPerPrefab = 50)
@@ -70,7 +99,7 @@ public sealed class IngredientSpawnProcessor : MonoBehaviour
         return true;
     }
 
-    private void Spawn(in IngredientSpawnCommand request)
+    private void Spawn(in IngredientSpawnCommand request, EntityPickupPacket pickup)
     {
         bool isIngredient = DataManager.Instance.GetIngredient().TryGet(request.IngredientID, out Ingredient ingredient);
         Recipe recipe = null;
@@ -100,6 +129,8 @@ public sealed class IngredientSpawnProcessor : MonoBehaviour
         ObjectPoolManager.Instance.activeObjDict.Add(request.NetworkID, go);
         if (ConveyorBeltRegistry.TryGetBeltById(request.ConveyId, out ConveyorBeltController belt) && belt != null)
             belt.RegisterItem(request.NetworkID, go.transform, go);
+        if (pickup != null && catchable != null)
+            objectRouter.ApplyEntityPickup(pickup, catchable);
     }
 
     private static string ResolveDishAddress(Recipe recipe)
