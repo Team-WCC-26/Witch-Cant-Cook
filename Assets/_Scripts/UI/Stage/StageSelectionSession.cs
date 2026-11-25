@@ -1,9 +1,10 @@
 using System;
+using Cysharp.Threading.Tasks;
 using Protocol;
 using Server;
 using UnityEngine;
 
-// Server-owned stage state. Boards and the HUD share this receiver; clients never select a stage here.
+// Server-owned stage state shared by the stage board and HUD.
 public sealed class StageSelectionSession : MonoBehaviour
 {
     private static StageSelectionSession instance;
@@ -28,8 +29,11 @@ public sealed class StageSelectionSession : MonoBehaviour
     }
 
     public int SelectedStageId { get; private set; }
+    internal int NextStagePreviewId { get; private set; }
     public bool HasStageSelection { get; private set; }
     public bool IsStageRunning { get; private set; }
+    internal bool CanRequestStage => !hasLeftRoom && !stageEndPending &&
+        !IsStageRunning && HasStageSelection && IsRoomReady;
     public bool IsRoomReady => server != null && server.IsConnected && players != null &&
         !string.IsNullOrEmpty(players.MyID) && players.ContainsPlayer(players.MyID);
 
@@ -39,6 +43,23 @@ public sealed class StageSelectionSession : MonoBehaviour
     public event Action<StageStopPacket> StageStopped;
     public event Action<StageResultPacket> StageResultReceived;
     public event Action LobbyMoveReceived;
+
+    internal async UniTask RequestStageAsync(int stageId)
+    {
+        if (!CanRequestStage || stageId <= 0 || (stageId == SelectedStageId && NextStagePreviewId == 0)) return;
+        await server.SendData(PacketSerializer.Serialize(new StageSetPacket { StageNum = stageId }));
+    }
+
+    internal UniTask RequestEarlySettlementAsync()
+    {
+        if (hasLeftRoom || stageEndPending || !IsStageRunning || !IsRoomReady) return UniTask.CompletedTask;
+        return server.SendData(PacketSerializer.Serialize(new StageStopPacket()));
+    }
+
+    internal void PreviewNextStage(StageSettlementData result)
+    {
+        NextStagePreviewId = result.IsSuccess ? result.StageNumber + 1 : 0;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize() => _ = Instance;
@@ -78,6 +99,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         // A subsequent server stage packet replaces this initial display.
         hasLeftRoom = false;
         SelectedStageId = 1;
+        NextStagePreviewId = 0;
         IsStageRunning = false;
         HasStageSelection = true;
         stageEndPending = false;
@@ -89,6 +111,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     {
         hasLeftRoom = true;
         SelectedStageId = 0;
+        NextStagePreviewId = 0;
         IsStageRunning = false;
         HasStageSelection = false;
         stageEndPending = false;
@@ -102,6 +125,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         int stageId = PacketSerializer.Deserialize<StageSetPacket>(bytes).StageNum;
         if (stageId <= 0) return;
         SelectedStageId = stageId;
+        NextStagePreviewId = 0;
         HasStageSelection = true;
         Changed?.Invoke();
         StageSelected?.Invoke(SelectedStageId);
@@ -114,6 +138,7 @@ public sealed class StageSelectionSession : MonoBehaviour
         int stageId = PacketSerializer.Deserialize<StageStartPacket>(bytes).StageNum;
         if (stageId <= 0) return;
         SelectedStageId = stageId;
+        NextStagePreviewId = 0;
         HasStageSelection = true;
         IsStageRunning = true;
         Changed?.Invoke();
@@ -160,6 +185,7 @@ public sealed class StageSelectionSession : MonoBehaviour
     {
         if (hasLeftRoom) return;
         if (doorId != DoorId.Kitchen || stageEndPending) return;
+        NextStagePreviewId = 0;
         IsStageRunning = true;
         Changed?.Invoke();
     }

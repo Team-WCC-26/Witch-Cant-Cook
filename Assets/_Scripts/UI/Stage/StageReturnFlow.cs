@@ -24,26 +24,32 @@ public sealed class StageReturnFlow : MonoBehaviour
             return instance;
         }
     }
-    public static bool IsInputBlocked => instance != null && (instance.State.BlocksInput ||
-        (instance.room != null && instance.room.State.HasStageTimeExpired(Time.unscaledTimeAsDouble)));
+    public static bool IsInputBlocked => FeatureRevealPresentation.IsPlaying ||
+        (instance != null && (instance.State.BlocksInput ||
+        (instance.room != null && instance.room.State.HasStageTimeExpired(Time.unscaledTimeAsDouble))));
     public static bool IsSettlementActive => instance != null && instance.State.ShowsSettlement;
     public StageReturnState State { get; } = new();
     public string ConfirmationIssue { get; private set; }
     public bool IsConfirming { get; private set; }
-    public bool CanConfirmResult => !IsConfirming && !lobbyMovePending && State.Phase == StageReturnPhase.Settlement;
+    public bool CanConfirmResult => !IsConfirming && !lobbyMovePending &&
+        State.Phase == StageReturnPhase.Settlement;
+    private const string ConfirmationPrefix = "WCC_STAGE_CONFIRM_V1:";
     private readonly HashSet<string> confirmedPlayers = new();
+    private readonly Dictionary<int, HashSet<string>> shotConfirmations = new();
+    private FeatureRevealPresentation selectedPresentation;
     public bool HasResultConfirmation(string playerId) => !string.IsNullOrEmpty(playerId) && confirmedPlayers.Contains(playerId);
 
     // Future server confirmation notifications can call this with an actual participant ID.
     public void ApplyResultConfirmation(string playerId)
     {
-        if (!State.ShowsSettlement || string.IsNullOrEmpty(playerId) || !room.Lobby.Players.Contains(playerId)) return;
+        if (!State.IsInSettlementFlow || string.IsNullOrEmpty(playerId) || !room.Lobby.Players.Contains(playerId)) return;
         if (confirmedPlayers.Add(playerId)) Changed?.Invoke();
     }
     public event Action Changed;
     public event Action LobbyReturnCompleted;
     private RoomHudSession room;
     private Coroutine returning;
+    private Coroutine featureReveal;
     private bool wasRunning;
     private bool lobbyMovePending;
     private string lastSpawnIssue;
@@ -68,6 +74,7 @@ public sealed class StageReturnFlow : MonoBehaviour
     }
     private void OnDisable()
     {
+        StopFeatureReveal();
         if (room != null)
         {
             room.SettlementRecorded -= OnSettlement;
@@ -85,10 +92,14 @@ public sealed class StageReturnFlow : MonoBehaviour
     private void OnDestroy() { if (instance == this) instance = null; }
     private void ResetRoom()
     {
+        StopFeatureReveal();
+        FeatureRevealPresentation.CancelActive();
         if (returning != null) StopCoroutine(returning);
         returning = null;
         wasRunning = false;
         confirmedPlayers.Clear();
+        shotConfirmations.Clear();
+        selectedPresentation = null;
         lobbyMovePending = false;
         ConfirmationIssue = null;
         IsConfirming = false;
@@ -102,6 +113,7 @@ public sealed class StageReturnFlow : MonoBehaviour
         bool running = room.State.IsStageRunning;
         if (running && !wasRunning)
         {
+            StopFeatureReveal();
             // A genuine server start remains authoritative, including test start paths.
             if (returning != null) StopCoroutine(returning);
             returning = null;
@@ -110,15 +122,25 @@ public sealed class StageReturnFlow : MonoBehaviour
             IsConfirming = false;
             State.StartStage();
             confirmedPlayers.Clear();
+            shotConfirmations.Clear();
+            selectedPresentation = null;
             PauseOrderPresentation(false);
             Changed?.Invoke();
         }
         wasRunning = running;
+        if (State.Phase == StageReturnPhase.FeatureReveal) AdvanceConfirmedShots();
     }
     private void OnSettlement(StageSettlementData data)
     {
         if (!State.RecordSettlement(data)) return;
+        StopFeatureReveal();
+        FeatureRevealPresentation.CancelActive();
         confirmedPlayers.Clear();
+        shotConfirmations.Clear();
+        selectedPresentation = data.IsSuccess
+            ? FindObjectsByType<FeatureRevealPresentation>(FindObjectsSortMode.None)
+                .FirstOrDefault(presentation => presentation.isActiveAndEnabled && presentation.HasPresentation(data.StageNumber))
+            : null;
         SubmitTriggerZone.StopUnsentRequests();
         ConfirmationIssue = null;
         IsConfirming = false;
@@ -129,7 +151,7 @@ public sealed class StageReturnFlow : MonoBehaviour
         Changed?.Invoke();
         StageSettlementWorldUI.EnsureLoadedBoards().Forget();
     }
-    private static void StopPlayerActions()
+    internal static void StopPlayerActions()
     {
         foreach (PlayerBrain player in FindObjectsByType<PlayerBrain>(FindObjectsSortMode.None))
         {
@@ -148,6 +170,90 @@ public sealed class StageReturnFlow : MonoBehaviour
         if (!State.WaitForSettlement()) return;
         StopPlayerActions();
         Changed?.Invoke();
+    }
+
+    internal static bool TryHandleConfirmationMessage(ReadOnlyMemory<byte> data)
+    {
+        ChatMessagePacket packet = PacketSerializer.Deserialize<ChatMessagePacket>(data);
+        string message = packet?.Message;
+        if (message == null || !message.StartsWith(ConfirmationPrefix, StringComparison.Ordinal)) return false;
+        instance?.ReceivePeerConfirmation(message.Substring(ConfirmationPrefix.Length));
+        return true;
+    }
+
+    private void ReceivePeerConfirmation(string message)
+    {
+        StageSettlementData result = State.Settlement;
+        if (result == null || selectedPresentation == null || !State.IsInSettlementFlow) return;
+        string[] fields = message.Split(':');
+        if (fields.Length != 4 || !int.TryParse(fields[0], out int run) || run != result.RunNumber ||
+            !int.TryParse(fields[1], out int stage) || stage != result.StageNumber ||
+            !int.TryParse(fields[2], out int shot) || shot <= 0 ||
+            !room.Lobby.Players.Contains(fields[3])) return;
+        if (!shotConfirmations.TryGetValue(shot, out HashSet<string> players))
+            shotConfirmations.Add(shot, players = new HashSet<string>());
+        players.Add(fields[3]);
+        if (State.Phase == StageReturnPhase.FeatureReveal) AdvanceConfirmedShots();
+    }
+
+    private bool AllPlayersConfirmed(HashSet<string> players) =>
+        room.Lobby.Players.Count > 0 && room.Lobby.Players.All(players.Contains);
+
+    private void AdvanceConfirmedShots()
+    {
+        if (selectedPresentation == null) return;
+        foreach (var confirmation in shotConfirmations)
+            if (AllPlayersConfirmed(confirmation.Value))
+                selectedPresentation.AdvanceShot(confirmation.Key);
+    }
+
+    private async void SendPeerConfirmation(StageSettlementData result, int shot)
+    {
+        try
+        {
+            ServerManager server = ServerManager.Instance;
+            if (server == null || !server.IsConnected) throw new InvalidOperationException("Server disconnected.");
+            // Lobby return has already been confirmed by the server; this message advances presentation only.
+            await server.SendData(PacketSerializer.Serialize(new ChatMessagePacket
+            {
+                Message = $"{ConfirmationPrefix}{result.RunNumber}:{result.StageNumber}:{shot}:{room.Lobby.LocalPlayerId}"
+            }));
+        }
+        catch (Exception error)
+        {
+            if (State.Settlement == result && !lobbyMovePending)
+            {
+                if (selectedPresentation != null) selectedPresentation.RetryShot(shot);
+            }
+            Debug.LogException(error, this);
+        }
+    }
+
+    private IEnumerator PlayFeatureReveal(FeatureRevealPresentation presentation, StageSettlementData result)
+    {
+        // Give the settlement camera's LateUpdate a frame to restore the gameplay camera.
+        yield return null;
+        if (presentation == null || !presentation.TryPlay(result.StageNumber, null,
+            shot => SendPeerConfirmation(result, shot)))
+        {
+            Debug.LogWarning($"[Stage Return] Feature reveal could not start for cleared stage {result.StageNumber}.", this);
+        }
+        else yield return new WaitUntil(() => !FeatureRevealPresentation.IsPlaying);
+        featureReveal = null;
+        State.EndFeatureReveal();
+        selectedPresentation = null;
+        shotConfirmations.Clear();
+        Changed?.Invoke();
+        LobbyReturnCompleted?.Invoke();
+    }
+
+    private void StopFeatureReveal()
+    {
+        if (featureReveal == null) return;
+        StopCoroutine(featureReveal);
+        featureReveal = null;
+        FeatureRevealPresentation.CancelActive();
+        State.EndFeatureReveal();
     }
 
     public async void ConfirmResult()
@@ -195,6 +301,7 @@ public sealed class StageReturnFlow : MonoBehaviour
     {
         if (lobbyMovePending || (State.Phase != StageReturnPhase.Settlement &&
             State.Phase != StageReturnPhase.WaitingForServer)) return;
+        FeatureRevealPresentation.CancelActive();
         Debug.Log("[Stage Return] S_LobbyMove 수신. 로비 복귀를 시작합니다.", this);
         ConfirmationIssue = null;
         lobbyMovePending = true;
@@ -312,11 +419,14 @@ public sealed class StageReturnFlow : MonoBehaviour
                 }
             }
             room.NotifyLobbyReturned();
-            State.CompleteReturn();
+            bool showFeatureReveal = selectedPresentation != null;
+            State.CompleteReturn(showFeatureReveal);
             completed = true;
             returning = null;
+            if (showFeatureReveal)
+                featureReveal = StartCoroutine(PlayFeatureReveal(selectedPresentation, State.Settlement));
             Changed?.Invoke();
-            LobbyReturnCompleted?.Invoke();
+            if (!showFeatureReveal) LobbyReturnCompleted?.Invoke();
             Debug.Log("[Stage Return] 로비 복귀 완료. 결산 UI 종료 및 조작 복구.", this);
         }
         finally

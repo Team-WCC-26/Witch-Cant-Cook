@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,9 +8,12 @@ public class StageSelectionController : MonoBehaviour
     [SerializeField] private StageSelectionWorldUI view;
     private DataManager data;
     private StageSelectionSession session;
+    private RoomHudSession room;
+    private StageReturnFlow returnFlow;
     private StagePageIndex stages;
     private bool initialized;
     private bool lastConnected;
+    private bool sendingSelection;
 
     public int SelectedStageId => session != null ? session.SelectedStageId : 0;
 
@@ -40,8 +44,44 @@ public class StageSelectionController : MonoBehaviour
     {
         if (session != null) return;
         session = StageSelectionSession.Instance;
+        room = RoomHudSession.Instance;
+        returnFlow = StageReturnFlow.Instance;
         session.Changed += RefreshStage;
+        room.Changed += RefreshPageControls;
+        returnFlow.LobbyReturnCompleted += RefreshStage;
+        if (view != null) view.BindPageTargets(this);
         RefreshStage();
+    }
+
+    private bool CanChangePage => isActiveAndEnabled && initialized && session != null &&
+        session.CanRequestStage && room != null && room.Lobby.IsActive && !StageReturnFlow.IsInputBlocked;
+
+    internal async void RequestPageChange(PlayerBrain player, int direction)
+    {
+        if (sendingSelection || !CanChangePage || player == null || player.StateResolver is not LocalPlayerStateResolver ||
+            !stages.TryGetAdjacentStage(GetBoardStageId(), direction, out int stageId))
+            return;
+
+        sendingSelection = true;
+        try { await session.RequestStageAsync(stageId); }
+        catch (Exception error) { Debug.LogException(error, this); }
+        finally { sendingSelection = false; }
+    }
+
+    private void RefreshPageControls()
+    {
+        if (view == null) return;
+        bool canChangePage = CanChangePage;
+        int stageId = canChangePage ? GetBoardStageId() : 0;
+        view.SetPageControls(
+            canChangePage && stages.TryGetAdjacentStage(stageId, -1, out _),
+            canChangePage && stages.TryGetAdjacentStage(stageId, 1, out _));
+    }
+
+    private int GetBoardStageId()
+    {
+        int previewId = session.NextStagePreviewId;
+        return previewId > 0 && stages.TryGetStage(previewId, out _) ? previewId : session.SelectedStageId;
     }
 
     [ContextMenu("Refresh Server Stage Data (Play Mode)")]
@@ -65,6 +105,7 @@ public class StageSelectionController : MonoBehaviour
     private void RefreshStage()
     {
         if (view == null) return;
+        RefreshPageControls();
         if (session == null || !session.IsRoomReady)
         {
             view.Clear("방에 입장하면 스테이지 정보가 표시됩니다.");
@@ -80,7 +121,8 @@ public class StageSelectionController : MonoBehaviour
             view.Clear("스테이지 데이터 로딩 중");
             return;
         }
-        if (!stages.TryGetStage(session.SelectedStageId, out Stage stage))
+        int stageId = GetBoardStageId();
+        if (!stages.TryGetStage(stageId, out Stage stage))
         {
             view.Clear($"스테이지 {session.SelectedStageId}: Stage 데이터가 없습니다.");
             return;
@@ -92,6 +134,11 @@ public class StageSelectionController : MonoBehaviour
     private void OnDisable()
     {
         if (session != null) session.Changed -= RefreshStage;
+        if (room != null) room.Changed -= RefreshPageControls;
+        if (returnFlow != null) returnFlow.LobbyReturnCompleted -= RefreshStage;
+        if (view != null) view.SetPageControls(false, false);
         session = null;
+        room = null;
+        returnFlow = null;
     }
 }

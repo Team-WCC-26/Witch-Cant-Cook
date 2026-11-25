@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using Protocol;
 using Server;
 using UnityEngine;
@@ -96,3 +97,4 @@ public sealed class TEST_SetStage : MonoBehaviour
         if (instance == this) instance = null;
     }
 }
+#endif

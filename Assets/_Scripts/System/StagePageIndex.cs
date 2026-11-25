@@ -33,6 +33,17 @@ public sealed class StagePageIndex
 
     public bool TryGetStage(int stageNum, out Stage stage) => stagesByNumber.TryGetValue(stageNum, out stage);
 
+    public bool TryGetAdjacentStage(int stageNum, int direction, out int adjacentStage)
+    {
+        adjacentStage = 0;
+        int index = stageIds.BinarySearch(stageNum);
+        if (index < 0 || (direction != -1 && direction != 1)) return false;
+        int adjacentIndex = index + direction;
+        if (adjacentIndex < 0 || adjacentIndex >= stageIds.Count) return false;
+        adjacentStage = stageIds[adjacentIndex];
+        return true;
+    }
+
     public IReadOnlyList<int> GetIngredientIds(int stageId) =>
         ingredientsByStage.TryGetValue(stageId, out var ingredients) ? ingredients : Array.Empty<int>();
 }

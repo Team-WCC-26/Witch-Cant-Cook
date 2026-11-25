@@ -1,12 +1,14 @@
-public enum StageReturnPhase { Lobby, Playing, Settlement, WaitingForServer, Returning, AwaitingSettlement }
+public enum StageReturnPhase { Lobby, Playing, Settlement, WaitingForServer, Returning, AwaitingSettlement, FeatureReveal }
 
 // Local presentation state only. No currency changes or network authority here.
 public sealed class StageReturnState
 {
     public StageReturnPhase Phase { get; private set; } = StageReturnPhase.Lobby;
     public StageSettlementData Settlement { get; private set; }
-    public bool BlocksInput => Phase == StageReturnPhase.AwaitingSettlement || Phase == StageReturnPhase.Settlement ||
-        Phase == StageReturnPhase.WaitingForServer || Phase == StageReturnPhase.Returning;
+    public bool BlocksInput => Phase == StageReturnPhase.AwaitingSettlement || IsInSettlementFlow;
+    public bool IsInSettlementFlow => Phase == StageReturnPhase.Settlement ||
+        Phase == StageReturnPhase.WaitingForServer || Phase == StageReturnPhase.Returning ||
+        Phase == StageReturnPhase.FeatureReveal;
     public bool ShowsSettlement => Phase == StageReturnPhase.Settlement ||
         Phase == StageReturnPhase.WaitingForServer || Phase == StageReturnPhase.Returning;
     private int lastSettledRun;
@@ -38,6 +40,11 @@ public sealed class StageReturnState
         Phase = StageReturnPhase.WaitingForServer;
         return true;
     }
+
+    public void EndFeatureReveal()
+    {
+        if (Phase == StageReturnPhase.FeatureReveal) Phase = StageReturnPhase.Lobby;
+    }
     public bool ConfirmReturn()
     {
         if (Phase != StageReturnPhase.Settlement && Phase != StageReturnPhase.WaitingForServer) return false;
@@ -50,10 +57,10 @@ public sealed class StageReturnState
         Phase = StageReturnPhase.Settlement;
         return true;
     }
-    public bool CompleteReturn()
+    public bool CompleteReturn(bool showFeatureReveal = false)
     {
         if (Phase != StageReturnPhase.Returning) return false;
-        Phase = StageReturnPhase.Lobby;
+        Phase = showFeatureReveal ? StageReturnPhase.FeatureReveal : StageReturnPhase.Lobby;
         return true;
     }
     public void AbortReturn()

@@ -1,3 +1,4 @@
+using System.Collections;
 using DG.Tweening;
 using UnityEngine;
 
@@ -12,6 +13,9 @@ public sealed class OvenDoorController : MonoBehaviour
     private Quaternion closedRotation;
     private Tween doorTween;
     private bool isInitialized;
+    private bool isPreviewing;
+    private Quaternion rotationBeforePreview;
+    private Tween previewTween;
 
     public bool IsClosed { get; private set; }
     public bool IsMoving => doorTween != null && doorTween.IsActive();
@@ -24,6 +28,7 @@ public sealed class OvenDoorController : MonoBehaviour
 
     private void OnDisable()
     {
+        EndOpeningPreview();
         doorTween?.Kill();
         doorTween = null;
         if (!isInitialized) return;
@@ -46,6 +51,37 @@ public sealed class OvenDoorController : MonoBehaviour
         if (!InitDoor() || !IsClosed) return;
         IsClosed = false;
         MoveDoor(openRotation, openDuration);
+    }
+
+    internal bool TryPrepareOpeningPreview()
+    {
+        if (!isActiveAndEnabled || !isInitialized || door == null || IsMoving || isPreviewing) return false;
+        rotationBeforePreview = door.localRotation;
+        door.localRotation = closedRotation;
+        isPreviewing = true;
+        return true;
+    }
+
+    internal IEnumerator PlayOpeningPreview()
+    {
+        if (!isPreviewing || door == null) yield break;
+        if (openDuration <= 0f)
+        {
+            door.localRotation = openRotation;
+            yield break;
+        }
+
+        previewTween = AnimateDoor(openRotation, openDuration).SetUpdate(true).SetAutoKill(false);
+        yield return previewTween.WaitForCompletion();
+    }
+
+    internal void EndOpeningPreview()
+    {
+        if (!isPreviewing) return;
+        previewTween?.Kill();
+        previewTween = null;
+        if (door != null) door.localRotation = rotationBeforePreview;
+        isPreviewing = false;
     }
 
     private bool InitDoor()
@@ -72,6 +108,7 @@ public sealed class OvenDoorController : MonoBehaviour
 
     private void MoveDoor(Quaternion rotation, float duration)
     {
+        EndOpeningPreview();
         doorTween?.Kill();
         doorTween = null;
         MoveCollider(rotation);
@@ -82,10 +119,12 @@ public sealed class OvenDoorController : MonoBehaviour
             return;
         }
 
-        doorTween = door.DOLocalRotateQuaternion(rotation, duration)
-            .SetEase(Ease.InOutSine)
+        doorTween = AnimateDoor(rotation, duration)
             .OnComplete(() => doorTween = null);
     }
+
+    private Tween AnimateDoor(Quaternion rotation, float duration) =>
+        door.DOLocalRotateQuaternion(rotation, duration).SetEase(Ease.InOutSine);
 
     private void MoveCollider(Quaternion rotation)
     {

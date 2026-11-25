@@ -37,7 +37,7 @@ public sealed class StageSettlementCamera : MonoBehaviour
         StageSettlementCamera existing = board.GetComponentInChildren<StageSettlementCamera>(true);
         if (existing != null)
         {
-            if (existing.scrollCanvas == null) existing.scrollCanvas = canvas;
+            existing.scrollCanvas = canvas;
             return existing;
         }
 
@@ -76,7 +76,9 @@ public sealed class StageSettlementCamera : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!StageReturnFlow.IsSettlementActive)
+        if (!StageReturnFlow.IsSettlementActive || scrollCanvas == null ||
+            !scrollCanvas.TryGetComponent(out Canvas canvas) || !canvas.isActiveAndEnabled ||
+            canvas.renderMode != RenderMode.WorldSpace)
         {
             RestoreGameplayCamera();
             return;

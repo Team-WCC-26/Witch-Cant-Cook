@@ -35,6 +35,8 @@ namespace Server
         {
             PacketId wireId = id;
             id = NormalizeMoneyPacketId(id);
+            if (id == PacketId.S_ChatMessage && StageReturnFlow.TryHandleConfirmationMessage(data))
+                return;
             // Log actual receipt independently of handler registration; never replace a gameplay handler.
             if (id == PacketId.S_ServeDish)
             {
