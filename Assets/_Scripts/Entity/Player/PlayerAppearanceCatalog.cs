@@ -23,6 +23,7 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
     [SerializeField] private Part[] parts;
     [SerializeField] private List<Mesh> excludedMeshes = new List<Mesh>();
     private static PlayerAppearanceCatalog catalog;
+    private const int ExpectedPartCount = 12;
 
     public bool IsRandomExcluded(Mesh mesh)
     {
@@ -97,6 +98,112 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
             renderer.bones = mappedBones;
             renderer.localBounds = variant.bounds;
         }
+    }
+
+    /// <summary>Returns the number of variants in a catalog part.</summary>
+    public static int VariantCount(string name) => FindPart(name)?.variants.Length ?? 0;
+
+    /// <summary>Returns the catalog variant for a one-based slot.</summary>
+    public static Variant GetVariant(string name, int slot)
+    {
+        Part part = FindPart(name);
+        return part != null && slot > 0 && slot <= part.variants.Length ? part.variants[slot - 1] : null;
+    }
+
+    internal static ushort ReadSlot(Animator animator, string name)
+    {
+        Part part = FindPart(name);
+        if (part == null) return 0;
+        foreach (var renderer in animator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            if (!renderer.gameObject.activeSelf || renderer.name.Split('_')[0] != name) continue;
+            int index = Array.FindIndex(part.variants, variant => variant.mesh == renderer.sharedMesh);
+            return (ushort)(index + 1);
+        }
+        return 0;
+    }
+
+    internal static void ApplySlots(Animator animator, string[] names, ushort[] slots)
+    {
+        new SlotBinding(animator, names).Apply(slots);
+    }
+
+    internal sealed class SlotBinding
+    {
+        private readonly Dictionary<string, Transform> bones = new(StringComparer.Ordinal);
+        private readonly Dictionary<Variant, Transform[]> variantBones = new();
+        private readonly SkinnedMeshRenderer[] renderers;
+        private readonly Part[] parts;
+        private readonly int[] appliedSlots;
+        private readonly int bodyIndex;
+        private readonly int fullBodyIndex;
+
+        internal SlotBinding(Animator animator, string[] names)
+        {
+            bodyIndex = Array.IndexOf(names, "Body");
+            fullBodyIndex = Array.IndexOf(names, "Full");
+            renderers = new SkinnedMeshRenderer[names.Length];
+            parts = new Part[names.Length];
+            appliedSlots = new int[names.Length];
+            Array.Fill(appliedSlots, -1);
+
+            foreach (Transform bone in animator.GetComponentsInChildren<Transform>(true))
+                bones.TryAdd(bone.name, bone);
+            foreach (var renderer in animator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                int partIndex = Array.IndexOf(names, renderer.name.Split('_')[0]);
+                if (partIndex >= 0) renderers[partIndex] = renderer;
+            }
+            for (int index = 0; index < names.Length; index++)
+                parts[index] = FindPart(names[index]);
+        }
+
+        internal bool Apply(ushort[] slots)
+        {
+            bool changed = false;
+            bool hasFullBody = fullBodyIndex >= 0 && slots[fullBodyIndex] != 0;
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                var renderer = renderers[index];
+                int slot = hasFullBody && index != bodyIndex && index != fullBodyIndex ? 0 : slots[index];
+                if (renderer == null || appliedSlots[index] == slot || (index == bodyIndex && slot == 0)) continue;
+
+                if (slot == 0)
+                {
+                    renderer.gameObject.SetActive(false);
+                }
+                else
+                {
+                    Part part = parts[index];
+                    if (part == null || slot > part.variants.Length) continue;
+                    Variant variant = part.variants[slot - 1];
+                    if (!variantBones.TryGetValue(variant, out Transform[] mappedBones))
+                    {
+                        mappedBones = new Transform[variant.boneNames.Length];
+                        for (int boneIndex = 0; boneIndex < mappedBones.Length; boneIndex++)
+                            bones.TryGetValue(variant.boneNames[boneIndex], out mappedBones[boneIndex]);
+                        if (Array.Exists(mappedBones, bone => bone == null)) continue;
+                        variantBones.Add(variant, mappedBones);
+                    }
+                    renderer.sharedMesh = variant.mesh;
+                    renderer.sharedMaterials = variant.materials;
+                    renderer.bones = mappedBones;
+                    renderer.localBounds = variant.bounds;
+                    renderer.enabled = true;
+                    renderer.gameObject.SetActive(true);
+                }
+                appliedSlots[index] = slot;
+                changed = true;
+            }
+
+            return changed;
+        }
+    }
+
+    private static Part FindPart(string name)
+    {
+        if (catalog == null) catalog = Resources.Load<PlayerAppearanceCatalog>("PlayerAppearanceCatalog");
+        return catalog == null ? null : Array.Find(catalog.parts, part => part.name == name);
     }
 
     private int GetAllowedCount(Part part)
@@ -218,7 +325,7 @@ public sealed class PlayerAppearanceCatalog : ScriptableObject
         var entries = new List<Part>();
         foreach (var group in groups)
             entries.Add(new Part { name = group.Key, variants = group.Value.ToArray() });
-        if (entries.Count != 12) throw new InvalidOperationException($"Expected 12 appearance parts, found {entries.Count}.");
+        if (entries.Count != ExpectedPartCount) throw new InvalidOperationException($"Expected {ExpectedPartCount} appearance parts, found {entries.Count}.");
         if (!UnityEditor.AssetDatabase.IsValidFolder("Assets/Resources"))
             UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
         var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<PlayerAppearanceCatalog>(CatalogPath);
