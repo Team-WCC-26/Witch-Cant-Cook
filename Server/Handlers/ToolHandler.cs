@@ -20,6 +20,16 @@ public class ToolHandler : PacketHandlerBase
             packet.EntityId = entityId;
 
             room.BroadCast(PacketSerializer.Serialize(packet, true));
+
+            // 재접속 유예 창 재생 목록 기록 (같은 샤드 작업 안에서 관측만 수행)
+            room.RecordReplayEvent(new ReplayEventSnapshot()
+            {
+                Kind = ReplayEventKind.ToolSpawn,
+                EntityId = packet.EntityId,
+                ToolId = packet.ToolId,
+                Position = packet.Position,
+                Rotation = packet.Quaternion
+            });
         });
     }
 
@@ -39,6 +49,16 @@ public class ToolHandler : PacketHandlerBase
             packet.EntityId = entityId;
 
             room.BroadCast(PacketSerializer.Serialize(packet, true));
+
+            // 재접속 유예 창 재생 목록 기록 (같은 샤드 작업 안에서 관측만 수행)
+            room.RecordReplayEvent(new ReplayEventSnapshot()
+            {
+                Kind = ReplayEventKind.ToolRegister,
+                EntityId = packet.EntityId,
+                ToolId = packet.ToolId,
+                Position = packet.Position,
+                Rotation = packet.Quaternion
+            });
         });
     }
 

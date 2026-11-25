@@ -34,6 +34,16 @@ public class PlayerHandler : PacketHandlerBase
                 };
 
                 room.BroadCast(PacketSerializer.Serialize(ejectPacket, true));
+
+                // 재접속 유예 창 재생 목록 기록 (같은 샤드 작업 안에서 관측만 수행)
+                room.RecordReplayEvent(new ReplayEventSnapshot()
+                {
+                    Kind = ReplayEventKind.PanEject,
+                    EntityId = ejectPacket.PanEntityId,
+                    RelatedEntityId = ejectPacket.IngredientEntityId,
+                    Position = ejectPacket.Position,
+                    Seed = ejectPacket.EjectSeed
+                });
             }
         });
     }
@@ -48,6 +58,22 @@ public class PlayerHandler : PacketHandlerBase
         session.Player.PushGameplayJob(session, room =>
         {
             session.Player.ApplyDamage(Math.Min(packet.Damage, Player.MaxHp));
+        });
+    }
+
+    [PacketHandler(PacketId.C_CostumeChange)]
+    public static void ChangeCostume(Session session, PacketPackageInfo package)
+    {
+        if (session?.Player?.Room == null) return;
+
+        var packet = DeSerialize<CostumeChangePacket>(package.Body);
+
+        // 클라가 보낸 PlayerId는 신뢰하지 않고 세션의 플레이어로 덮어쓴다
+        packet.PlayerId = session.Player.PlayerId;
+
+        session.Player.PushGameplayJob(session, room =>
+        {
+            room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
 }

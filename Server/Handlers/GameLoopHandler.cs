@@ -29,8 +29,6 @@ public class GameLoopHandler : PacketHandlerBase
             if (!room.SetStage(packet.StageNum)) return;
 
             room.Start();
-
-            room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }
 

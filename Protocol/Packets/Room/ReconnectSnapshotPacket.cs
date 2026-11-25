@@ -50,6 +50,50 @@ public partial class SnapshotData
     public List<SpawnerSnapshot> Spawners { get; set; } = new();    // 벨트별 스포너 식별자 + 다음 생성 남은 시간
     public long NextOrderRemainingMs { get; set; }                  // 다음 주문 생성 딜레이 남은 시간
     public StageResultSnapshot? StageResult { get; set; }           // 정산 결과 확인 대기 중일 때만 설정 (null이 아니면 클라는 정산 UI를 띄운다)
+    public List<ReplayEventSnapshot> ReplayEvents { get; set; } = new(); // 재접속 유예 창 동안의 위치변화 이벤트 재생 목록 (시간 순서)
+}
+
+/// <summary>
+/// 재생 이벤트 구분 (ReplayEventSnapshot.Kind)
+/// <para/> 재접속 유예 창 동안 브로드캐스트된 위치변화 이벤트의 원본 패킷 종류
+/// </summary>
+public enum ReplayEventKind : byte
+{
+    None = 0,
+    Throw = 1,        // S_EntityThrow (던지기)
+    PanEject = 2,     // S_PanEject (프라이팬 배출)
+    PotEject = 3,     // S_PotEject (냄비 배출)
+    ToolSpawn = 4,    // S_ToolSpawn (도구 생성)
+    ToolRegister = 5, // S_ToolRegister (도구 등록)
+    ConveySpawn = 6,  // S_IngredientConveySpawn (벨트 재료 스폰)
+}
+
+/// <summary>
+/// 재접속 유예 창 동안의 위치변화 이벤트 재생 항목 (SnapshotData.ReplayEvents)
+/// <para/> 이벤트 원본 패킷 데이터를 Kind에 따라 해석한다:
+/// <para/> - Throw: EntityId/Position/Velocity 유효 (S_EntityThrow 준용)
+/// <para/> - PanEject: EntityId=프라이팬, RelatedEntityId=배출 재료, Position/Seed 유효 (S_PanEject 준용)
+/// <para/> - PotEject: EntityId=냄비, EntityIds=배출 엔티티, PlayerIds=내부 플레이어, Seed/DelayMs 유효 (S_PotEject 준용)
+/// <para/> - ToolSpawn/ToolRegister: EntityId/ToolId/Position/Rotation 유효 (S_ToolSpawn/S_ToolRegister 준용)
+/// <para/> - ConveySpawn: EntityId/IngredientId/ConveyId 유효, 위치는 ConveyId(벨트 스폰 지점)로 산출
+/// </summary>
+[MemoryPackable]
+public partial class ReplayEventSnapshot
+{
+    public ReplayEventKind Kind { get; set; }
+    public long RecordedAtMs { get; set; }                // 기록 시각 (모노토닉, Environment.TickCount64)
+    public long EntityId { get; set; }
+    public long RelatedEntityId { get; set; } = -1;       // 보조 엔티티 (PanEject: 배출 재료 등, 없으면 -1)
+    public Vector3 Position { get; set; }
+    public Vector3 Velocity { get; set; }
+    public Quaternion Rotation { get; set; }
+    public int Seed { get; set; }                         // 배출 시뮬레이션 시드 (PanEject/PotEject만 유효)
+    public long DelayMs { get; set; }                     // 배출 딜레이 (PotEject만 유효)
+    public int ToolId { get; set; }                       // ToolSpawn/ToolRegister만 유효
+    public int IngredientId { get; set; }                 // ConveySpawn만 유효
+    public int ConveyId { get; set; }                     // ConveySpawn만 유효
+    public List<long> EntityIds { get; set; } = new();    // PotEject 배출 엔티티 목록
+    public List<string> PlayerIds { get; set; } = new();  // PotEject 내부에 있던 플레이어 목록
 }
 
 /// <summary>

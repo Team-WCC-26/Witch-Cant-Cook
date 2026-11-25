@@ -65,8 +65,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     {
         if (!base.AddPlayer(player)) return false;
 
-        StartPlayerDamage(); // 들어가게 된 직후부터 초당 데미지
-
         if (InsidePlayers.Count >= 2) ForceEject();
 
         return true;
@@ -75,8 +73,6 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
     public override bool RemovePlayer(Player player)
     {
         var res = base.RemovePlayer(player);
-
-        if (InsidePlayers.Count == 0) StopPlayerDamage();
 
         return res;
     }
@@ -290,6 +286,20 @@ public class Pot() : ContainerTool(new MultiSlotStorage()), IFixedTool
         }
 
         Room.BroadCast(PacketSerializer.Serialize(packet, true));
+
+        // 재접속 유예 창 재생 목록 기록 (방출 지점과 같은 샤드 작업/Tick 안에서 관측만 수행)
+        ReplayEventSnapshot replayEvent = new()
+        {
+            Kind = ReplayEventKind.PotEject,
+            EntityId = packet.PotEntityId,
+            Seed = packet.EjectSeed,
+            DelayMs = packet.EjectDelayMs
+        };
+
+        replayEvent.EntityIds.AddRange(packet.EntityIds);
+        replayEvent.PlayerIds.AddRange(packet.PlayerIds);
+
+        Room.RecordReplayEvent(replayEvent);
     }
 
     private void CancelCook()
