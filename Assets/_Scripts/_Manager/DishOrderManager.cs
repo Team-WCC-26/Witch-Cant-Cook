@@ -39,6 +39,7 @@ public class DishOrderManager : MonoBehaviour
     [SerializeField] private int displayedOrders;
 
     private static DishOrderManager dishOrderManager;
+    public static DishOrderManager Instance => dishOrderManager;
 
     private ServerManager registeredServer;
     private DataManager dataManager;
@@ -75,11 +76,29 @@ public class DishOrderManager : MonoBehaviour
             view.Clear();
         }
 
-        if (views.Count == 0)
-            Debug.LogWarning("DishOrderManager: no scroll views assigned.", this);
+        // The Stage HUD can be loaded before or after this scene manager.
+        foreach (RecipeScrollView view in FindObjectsByType<RecipeScrollView>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            if (view.isActiveAndEnabled && !views.Contains(view))
+            {
+                views.Add(view);
+                view.Clear();
+            }
 
         if (StageReturnFlow.IsSettlementActive) SetStagePresentationPaused(true);
         RefreshViews();
+    }
+
+    public void RegisterView(RecipeScrollView view)
+    {
+        if (view == null || views.Contains(view)) return;
+        views.Add(view);
+        view.Clear();
+        if (!stagePresentationPaused) RefreshViews();
+    }
+
+    public void UnregisterView(RecipeScrollView view)
+    {
+        if (view != null && views.Remove(view)) view.Clear();
     }
 
     private void Start() => TryRegister();
@@ -250,6 +269,7 @@ public class DishOrderManager : MonoBehaviour
 
         foreach (RecipeScrollView view in views)
             if (view != null) view.Clear();
+        views.Clear();
     }
 
     public static void ReportSubmission(PlateInteraction plate, long plateId)

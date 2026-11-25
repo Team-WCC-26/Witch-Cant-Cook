@@ -8,6 +8,8 @@ public class RecipeScrollView : MonoBehaviour
 {
     [SerializeField] private RectTransform cardRoot;
     [SerializeField] private RecipeOrderCardUI[] cards = Array.Empty<RecipeOrderCardUI>();
+    [SerializeField, Tooltip("Keep the layout components and spacing configured in the prefab.")]
+    private bool usePrefabLayout;
     public const int Capacity = 3;
     private StageReturnFlow stageFlow;
     private Canvas recipeCanvas;
@@ -27,11 +29,13 @@ public class RecipeScrollView : MonoBehaviour
         stageFlow = StageReturnFlow.Instance;
         stageFlow.Changed += RefreshCanvasVisibility;
         RefreshCanvasVisibility();
+        if (DishOrderManager.Instance != null) DishOrderManager.Instance.RegisterView(this);
     }
 
     private void OnDisable()
     {
         if (stageFlow != null) stageFlow.Changed -= RefreshCanvasVisibility;
+        if (DishOrderManager.Instance != null) DishOrderManager.Instance.UnregisterView(this);
     }
 
     private void RefreshCanvasVisibility()
@@ -68,7 +72,7 @@ public class RecipeScrollView : MonoBehaviour
     }
     private void ConfigureLayout()
     {
-        if (cardRoot == null) return;
+        if (cardRoot == null || usePrefabLayout) return;
 
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
