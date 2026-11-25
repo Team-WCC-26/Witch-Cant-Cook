@@ -187,6 +187,10 @@ public enum PacketId : ushort // 명명 규칙 request/response로 할지 C_/S_�
     // LeaveRoomTrigger
     S_LeaveRoomTriggerState = 433,
 
+    // 코스튬
+    C_CostumeChange = 434,
+    S_CostumeChange = 435,
+
     // 기타 패킷 (00~)
     // ...
 }
