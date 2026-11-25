@@ -13,6 +13,8 @@ public sealed class InitialToolSpawnSetup : MonoBehaviour
     {
         [Tooltip("초기 배치할 이동식 도구. 현재 지원: KitchenKnife, FryingPan, Plate")]
         public Define.eToolId Tool = Define.eToolId.KitchenKnife;
+        [Min(1), Tooltip("이 스테이지부터 초기 배치에 포함합니다.")]
+        public int MinimumStage = 1;
         [Tooltip("배열 길이가 스폰 수량입니다. 각 Transform의 월드 위치와 회전을 사용합니다.")]
         public Transform[] SpawnPoints = Array.Empty<Transform>();
         public int Count => SpawnPoints?.Length ?? 0;
@@ -88,7 +90,8 @@ public sealed class InitialToolSpawnSetup : MonoBehaviour
             Debug.LogError("[Initial Tool Spawns] 씬에 활성 InitialToolSpawnSetup을 하나만 두세요.", this);
             return;
         }
-        if (!TryGetSpawns(out ToolSpawn[] spawns, out string issue))
+        int stage = StageSelectionSession.Instance.SelectedStageId;
+        if (!TryGetSpawns(stage, out ToolSpawn[] spawns, out string issue))
         {
             Debug.LogWarning($"[Initial Tool Spawns] 요청 취소: {issue}", this);
             return;
@@ -126,10 +129,18 @@ public sealed class InitialToolSpawnSetup : MonoBehaviour
     /// Collects the current world-space plan in Inspector order. Invalid configuration
     /// returns an empty array, so callers cannot accidentally send a partial setup.
     /// </summary>
-    public bool TryGetSpawns(out ToolSpawn[] spawns, out string issue)
+    public bool TryGetSpawns(out ToolSpawn[] spawns, out string issue) =>
+        TryGetSpawns(int.MaxValue, out spawns, out issue);
+
+    public bool TryGetSpawns(int stage, out ToolSpawn[] spawns, out string issue)
     {
         spawns = Array.Empty<ToolSpawn>();
         issue = null;
+        if (stage < 1)
+        {
+            issue = "서버 스테이지 번호를 확인하지 못했습니다.";
+            return false;
+        }
         if (placements == null || placements.Length == 0)
         {
             issue = "초기 도구 배치 항목이 없습니다.";
@@ -146,6 +157,7 @@ public sealed class InitialToolSpawnSetup : MonoBehaviour
                 issue = $"배치 항목 {i + 1}이 비어 있습니다.";
                 return false;
             }
+            if (stage < Mathf.Max(1, placement.MinimumStage)) continue;
             if (!Define.TryGetEntityCategory(placement.Tool, out _))
             {
                 issue = $"{placement.Tool}: 현재 도구 스폰 경로는 칼·팬·접시만 지원합니다.";

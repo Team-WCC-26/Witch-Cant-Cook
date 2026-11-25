@@ -32,6 +32,8 @@ public sealed class FeatureRevealShot : MonoBehaviour
     // The original field names preserve references on Shots saved before the list was added.
     [SerializeField, HideInInspector] private GameObject previewPrefab;
     [SerializeField, HideInInspector] private Transform spawnPoint;
+    [SerializeField, Min(0f), Tooltip("Seconds to wait before revealing the preview props after the camera arrives.")]
+    private float preRevealDelay;
     [SerializeField, Min(0f)] private float revealSeconds = 0.4f;
     [SerializeField, Min(0f)] private float holdSeconds = 0.8f;
     [SerializeField] private Sprite popupImage;
@@ -39,6 +41,7 @@ public sealed class FeatureRevealShot : MonoBehaviour
     public Transform CameraPosition => cameraPosition != null ? cameraPosition : transform;
     public float MoveSeconds => moveSeconds;
     internal OvenDoorController OvenDoor => ovenDoor;
+    internal float PreRevealDelay => preRevealDelay;
     public float RevealSeconds => revealSeconds;
     public float HoldSeconds => holdSeconds;
     public Sprite PopupImage => popupImage;

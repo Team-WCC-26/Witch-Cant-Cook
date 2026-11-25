@@ -119,7 +119,11 @@ public sealed class FeatureRevealPresentation : MonoBehaviour
 
             IReadOnlyList<FeatureRevealShot.PreviewSpawn> spawns = shot.GetPreviewSpawns();
             if (spawns.Count > 0)
+            {
+                if (shot.PreRevealDelay > 0f)
+                    yield return new WaitForSecondsRealtime(shot.PreRevealDelay);
                 yield return SpawnPreviews(spawns, shot.RevealSeconds);
+            }
             if (shot.HoldSeconds > 0f)
                 yield return new WaitForSecondsRealtime(shot.HoldSeconds);
 

@@ -22,6 +22,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     [SerializeField] private AudioSource completeAudio;
 
     [Header("가동 조명")]
+    [SerializeField, InspectorName("대기 중 내부등")] private Light idleInteriorLight;
     [SerializeField] private Light[] operatingLights = System.Array.Empty<Light>();
 
     [Header("버튼 입력 및 연출")]
@@ -41,6 +42,8 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     // 기존 프리팹과 씬의 저장값을 유지하기 위해 필드명은 보존한다. 모든 조리에 적용된다.
     [SerializeField, Min(0f), InspectorName("최소 닫힘 유지 시간")]
     private float emptyOvenWaitDuration = 3f;
+    [SerializeField, Min(0), Tooltip("이 스테이지를 클리어하고 결산과 연출을 마치면 오븐을 사용할 수 있습니다. 0은 바로 사용합니다.")]
+    private int unlockAfterStage;
 
     #endregion
 
@@ -76,7 +79,11 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private Coroutine subscribeRoutine;
     private ServerManager subscribedServer;
 
-    public bool IsLocked => state != OvenState.Idle;
+    private RoomHudSession stageRoom;
+    private StageReturnFlow stageReturn;
+    private bool stageLocked;
+
+    public bool IsLocked => stageLocked || state != OvenState.Idle;
 
     #endregion
 
@@ -85,12 +92,21 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private void Awake()
     {
         if (mainBtn != null) btnRestPos = mainBtn.localPosition;
-        RefreshOperatingLights();
+        stageLocked = unlockAfterStage > 0;
+        RefreshOvenLights();
     }
 
     private void OnEnable()
     {
-        RefreshOperatingLights();
+        if (unlockAfterStage > 0)
+        {
+            stageRoom = RoomHudSession.Instance;
+            stageReturn = StageReturnFlow.Instance;
+            stageRoom.RoomJoined += RefreshStageLock;
+            stageRoom.RoomLeft += RefreshStageLock;
+            stageReturn.LobbyReturnCompleted += RefreshStageLock;
+        }
+        RefreshStageLock();
         if (btnRelay != null) btnRelay.CollisionEntered += HandleButtonCollision;
         innerRelay = innerTrigger != null ? innerTrigger.GetComponent<ColliderRelay>() : null;
         if (innerRelay != null)
@@ -104,6 +120,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void Update()
     {
+        if (stageLocked) return;
         RemoveUnavailableIngredients();
         UpdatePlayerRecovery();
         UpdateMinimumClosedTime();
@@ -124,6 +141,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void FixedUpdate()
     {
+        if (stageLocked) return;
         UpdateLocalPlayerPresence();
         HoldIngredients(true);
     }
@@ -135,6 +153,17 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void OnDisable()
     {
+        if (stageRoom != null)
+        {
+            stageRoom.RoomJoined -= RefreshStageLock;
+            stageRoom.RoomLeft -= RefreshStageLock;
+            stageRoom = null;
+        }
+        if (stageReturn != null)
+        {
+            stageReturn.LobbyReturnCompleted -= RefreshStageLock;
+            stageReturn = null;
+        }
         if (btnRelay != null) btnRelay.CollisionEntered -= HandleButtonCollision;
         if (innerRelay != null)
         {
@@ -187,7 +216,8 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
         cookingDeadline = 0f;
         minOpenTime = float.PositiveInfinity;
         SetState(OvenState.Idle);
-        if (doorController != null) doorController.OpenDoor();
+        if (stageLocked) doorController?.SetClosedImmediately(true);
+        else doorController?.OpenDoor();
     }
     // 버튼 입력 진입점. 로컬 입력일 때만 서버 요청을 보낸다.
     public void PressButton(PlayerBrain player)
@@ -199,7 +229,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     // 서버가 확정한 재료 등록과 조리 상태를 반영한다.
     public void HandleEntityAdded(CatchableObj entity)
     {
-        if (entity == null || !entity.TryGetComponent(out IngredientReaction reaction)) return;
+        if (stageLocked || entity == null || !entity.TryGetComponent(out IngredientReaction reaction)) return;
         currentIngredients[entity.NetworkId] = reaction;
         if (state == OvenState.Idle) BeginPendingLock();
         if (state == OvenState.Cooking)
@@ -216,7 +246,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     // 서버 조리 시간과 로컬 최소 닫힘 시간은 별도로 관리한다.
     public void HandleCookStart(CookStartPacket packet)
     {
-        if (doorController == null) return;
+        if (stageLocked || doorController == null) return;
         bool alreadyCooking = state == OvenState.Cooking;
         requestVersion++;
         SetState(OvenState.Cooking);
@@ -349,7 +379,36 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #endregion
 
-    #region Operating Lights
+    #region Stage Lock
+
+    private void RefreshStageLock()
+    {
+        bool wasLocked = stageLocked;
+        stageLocked = unlockAfterStage > 0 && !HasFinishedUnlock();
+        if (stageLocked && !wasLocked)
+        {
+            ResetClientStage();
+            return;
+        }
+
+        if (stageLocked || wasLocked) doorController?.SetClosedImmediately(stageLocked);
+        RefreshOvenLights();
+    }
+
+    private bool HasFinishedUnlock()
+    {
+        if (stageRoom == null) return false;
+        // Keep the normal door closed until the presentation has finished with its preview.
+        if (stageLocked && stageReturn != null && stageReturn.State.IsInSettlementFlow) return false;
+
+        foreach (StageSettlementData settlement in stageRoom.State.Settlements)
+            if (settlement.IsSuccess && settlement.StageNumber == unlockAfterStage) return true;
+        return false;
+    }
+
+    #endregion
+
+    #region Oven Lights
 
     private void SetState(OvenState nextState)
     {
@@ -360,12 +419,15 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
                 operatingSound = SoundManager.GetOrCreate().Play(SoundId.OvenRun, transform.position, transform);
         }
         state = nextState;
-        RefreshOperatingLights();
+        RefreshOvenLights();
     }
 
-    private void RefreshOperatingLights()
+    private void RefreshOvenLights()
     {
-        bool isOperating = isActiveAndEnabled && state == OvenState.Cooking;
+        bool lightsAvailable = isActiveAndEnabled && !stageLocked;
+        bool isOperating = lightsAvailable && state == OvenState.Cooking;
+        if (idleInteriorLight != null) idleInteriorLight.enabled = lightsAvailable && !isOperating;
+
         if (operatingLights == null) return;
         foreach (Light operatingLight in operatingLights)
             if (operatingLight != null) operatingLight.enabled = isOperating;
@@ -543,6 +605,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void HandlePlayerEnter(Collider other)
     {
+        if (stageLocked) return;
         if (!TryGetLocalPlayerBody(other, out PlayerBrain player)) return;
         if (localPlayerInside != null) return;
         localPlayerInside = player;

@@ -53,6 +53,13 @@ public sealed class OvenDoorController : MonoBehaviour
         MoveDoor(openRotation, openDuration);
     }
 
+    internal void SetClosedImmediately(bool closed)
+    {
+        if (!InitDoor()) return;
+        IsClosed = closed;
+        MoveDoor(closed ? closedRotation : openRotation, 0f);
+    }
+
     internal bool TryPrepareOpeningPreview()
     {
         if (!isActiveAndEnabled || !isInitialized || door == null || IsMoving || isPreviewing) return false;
