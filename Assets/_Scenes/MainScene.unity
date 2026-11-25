@@ -58537,6 +58537,18 @@ PrefabInstance:
       propertyPath: m_Size
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6018925394451508225, guid: 52e666a031743b144913b3966b777020, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 32
+      objectReference: {fileID: 0}
+    - target: {fileID: 7818725146145355104, guid: 52e666a031743b144913b3966b777020, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7818725146145355104, guid: 52e666a031743b144913b3966b777020, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -62613,6 +62625,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 858325126}
   m_LocalEulerAnglesHint: {x: 0, y: -45, z: 0}
+--- !u!1 &815723141
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 815723142}
+  m_Layer: 0
+  m_Name: MirrorPreview
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &815723142
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 815723141}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &815949365
 GameObject:
   m_ObjectHideFlags: 0
@@ -178920,3 +178963,4 @@ SceneRoots:
   - {fileID: 269672342}
   - {fileID: 1150549597}
   - {fileID: 1182756666}
+  - {fileID: 815723142}
