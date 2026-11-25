@@ -59,7 +59,7 @@ public sealed class LobbyHudUI : UIBase
             CloseReturnConfirmation();
         RefreshDoorCountdown();
         Keyboard keyboard = Keyboard.current;
-        if (session == null || keyboard == null) return;
+        if (session == null || keyboard == null || CostumeMirror.BlocksLobbyShortcuts) return;
         if (modalOwner == this)
         {
             if (keyboard.escapeKey.wasPressedThisFrame) CancelReturn();

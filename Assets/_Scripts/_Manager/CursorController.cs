@@ -123,7 +123,7 @@ public sealed class CursorController : MonoBehaviour
         instance.RefreshState();
     }
 
-    private static bool IsUIInputBlocked() => LobbyHudUI.IsInputBlocked || StageReturnFlow.IsInputBlocked || StageRespawnController.IsInputBlocked;
+    private static bool IsUIInputBlocked() => CostumeMirror.IsOpen || LobbyHudUI.IsInputBlocked || StageReturnFlow.IsInputBlocked || StageRespawnController.IsInputBlocked;
 
     private void RefreshState(bool focus = true)
     {

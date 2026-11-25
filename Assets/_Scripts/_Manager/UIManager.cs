@@ -48,6 +48,8 @@ public class UIManager : Singleton<UIManager>
         uiList.Add(ui);
         return ui;
     }
+    internal Transform GetBackgroundParent() => ResolveParent(eUIPosition.Background);
+
     private Transform ResolveParent(eUIPosition position)
     {
         int index = (int)position;

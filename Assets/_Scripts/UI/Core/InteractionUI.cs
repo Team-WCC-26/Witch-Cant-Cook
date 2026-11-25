@@ -40,8 +40,14 @@ public sealed class InteractionUI : UIBase
         bool blocked = player.Input == null || player.Input.IsInputBlocked ||
             player.StateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default ||
             (player.Rocket != null && player.Rocket.IsFlying);
-        SetContext(player.Interact.HeldObj,
-            blocked ? null : player.Interact.FindInteractTarget(), blocked,
+        CatchableObj heldObject = player.Interact.HeldObj;
+        if (!blocked && player.Interact.IsCostumeMirrorTargeted())
+        {
+            ApplyActions("옷 갈아입기", GetSecondaryAction(heldObject, player.Interact.IsPreparingThrow));
+            return;
+        }
+
+        SetContext(heldObject, blocked ? null : player.Interact.FindInteractTarget(), blocked,
             player.Interact.IsPreparingThrow);
     }
 

@@ -20,6 +20,8 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
     private readonly Dictionary<string, PendingPlayerHealth> pendingHealth = new();
     private readonly List<string> readyHealthIds = new();
+    private readonly Dictionary<string, CostumeData> pendingCostumes = new();
+    private readonly List<string> readyCostumeIds = new();
 
     #region Unity Callbacks
     private void Awake()
@@ -36,6 +38,8 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
     private void OnDisable()
     {
         pendingHealth.Clear();
+        pendingCostumes.Clear();
+        readyCostumeIds.Clear();
         readyHealthIds.Clear();
         if (subscribeRoutine != null)
         {
@@ -46,6 +50,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
         ServerManager.Instance.Router.OnPlayerMoved -= RoutePlayerState;
         ServerManager.Instance.Router.OnPlayerHealthChanged -= RoutePlayerHealth;
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_CostumeChange);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PlayerRespawn);
         ServerManager.Instance.Router.OnEntityPickup -= RouteEntityPickup;
         isSubscribed = false;
@@ -53,6 +58,7 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
     private void Update()
     {
+        ApplyPendingCostumes();
         if (pendingHealth.Count == 0 || PlayerSpawnManager.Instance == null) return;
         readyHealthIds.Clear();
         foreach (var pair in pendingHealth)
@@ -73,11 +79,40 @@ public sealed class PlayerNetworkRouter : MonoBehaviour
 
         ServerManager.Instance.Router.OnPlayerMoved += RoutePlayerState;
         ServerManager.Instance.Router.OnPlayerHealthChanged += RoutePlayerHealth;
+        ServerManager.Instance.RegisterHandler(PacketId.S_CostumeChange, RouteCostumeChange);
         ServerManager.Instance.RegisterHandler(PacketId.S_PlayerRespawn, RoutePlayerRespawn);
         ServerManager.Instance.Router.OnEntityPickup += RouteEntityPickup;
         isSubscribed = true;
         subscribeRoutine = null;
     }
+
+    #region Player Costume
+
+    private void RouteCostumeChange(ReadOnlyMemory<byte> data)
+    {
+        var packet = PacketSerializer.Deserialize<CostumeChangePacket>(data.Span);
+        if (string.IsNullOrEmpty(packet.PlayerId)) return;
+        pendingCostumes[packet.PlayerId] = packet.Costume;
+    }
+
+    private void ApplyPendingCostumes()
+    {
+        if (pendingCostumes.Count == 0 || PlayerSpawnManager.Instance == null) return;
+        readyCostumeIds.Clear();
+        foreach (var pair in pendingCostumes)
+        {
+            if (!PlayerSpawnManager.Instance.TryGetPlayer(pair.Key, out PlayerBrain player) ||
+                player == null || player.Animator == null) continue;
+
+            CostumeMirror.ApplyReceivedCostume(player, pair.Value);
+            readyCostumeIds.Add(pair.Key);
+        }
+
+        foreach (string playerId in readyCostumeIds)
+            pendingCostumes.Remove(playerId);
+    }
+
+    #endregion
 
     #region Player Health
     private void RoutePlayerHealth(IReadOnlyList<PlayerHpPacket> packets)
