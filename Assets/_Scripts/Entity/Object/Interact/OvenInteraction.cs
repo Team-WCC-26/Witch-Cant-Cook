@@ -42,7 +42,7 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     // 기존 프리팹과 씬의 저장값을 유지하기 위해 필드명은 보존한다. 모든 조리에 적용된다.
     [SerializeField, Min(0f), InspectorName("최소 닫힘 유지 시간")]
     private float emptyOvenWaitDuration = 3f;
-    [SerializeField, Min(0), Tooltip("이 스테이지를 클리어하고 결산과 연출을 마치면 오븐을 사용할 수 있습니다. 0은 바로 사용합니다.")]
+    [SerializeField, Min(0), Tooltip("지정한 스테이지를 클리어하고 해금 연출을 마치면 오븐을 사용할 수 있습니다. 3스테이지가 시작될 때도 사용할 수 있습니다. 0은 처음부터 사용합니다.")]
     private int unlockAfterStage;
 
     #endregion
@@ -79,6 +79,8 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     private Coroutine subscribeRoutine;
     private ServerManager subscribedServer;
 
+    private const int OvenAvailableStage = 3;
+    private StageSelectionSession stageSelection;
     private RoomHudSession stageRoom;
     private StageReturnFlow stageReturn;
     private bool stageLocked;
@@ -100,6 +102,8 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
     {
         if (unlockAfterStage > 0)
         {
+            stageSelection = StageSelectionSession.Instance;
+            stageSelection.StageStarted += OnStageStarted;
             stageRoom = RoomHudSession.Instance;
             stageReturn = StageReturnFlow.Instance;
             stageRoom.RoomJoined += RefreshStageLock;
@@ -153,6 +157,11 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     private void OnDisable()
     {
+        if (stageSelection != null)
+        {
+            stageSelection.StageStarted -= OnStageStarted;
+            stageSelection = null;
+        }
         if (stageRoom != null)
         {
             stageRoom.RoomJoined -= RefreshStageLock;
@@ -381,10 +390,14 @@ public class OvenInteraction : MapObjInteraction, IEntityParentReceiver, ICookRe
 
     #region Stage Lock
 
+    private void OnStageStarted(int _) => RefreshStageLock();
+
     private void RefreshStageLock()
     {
         bool wasLocked = stageLocked;
-        stageLocked = unlockAfterStage > 0 && !HasFinishedUnlock();
+        bool isOvenStageRunning = stageSelection != null && stageSelection.IsStageRunning &&
+            stageSelection.SelectedStageId == OvenAvailableStage;
+        stageLocked = unlockAfterStage > 0 && !isOvenStageRunning && !HasFinishedUnlock();
         if (stageLocked && !wasLocked)
         {
             ResetClientStage();
