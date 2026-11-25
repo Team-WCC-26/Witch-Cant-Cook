@@ -88,7 +88,19 @@ public class RecipeOrderCardUI : MonoBehaviour
         gameObject.SetActive(true);
     }
 
-    public void SetDetailsProgress(float progress) => details?.SetProgress(progress);
+    public void SetDetailsProgress(float heightProgress, float widthProgress)
+    {
+        if (details == null) return;
+
+        float ingredientWidth = 0f;
+        if (widthProgress > 0f && ingredientRoot != null &&
+            ingredientRoot.TryGetComponent(out HorizontalLayoutGroup ingredientLayout))
+        {
+            ingredientLayout.CalculateLayoutInputHorizontal();
+            ingredientWidth = ingredientLayout.preferredWidth;
+        }
+        details.SetProgress(heightProgress, widthProgress, ingredientWidth);
+    }
 
     public void SetRemaining(DishOrder order, double now)
     {

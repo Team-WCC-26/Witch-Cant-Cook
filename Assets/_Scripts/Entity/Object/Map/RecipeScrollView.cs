@@ -21,6 +21,8 @@ public class RecipeScrollView : MonoBehaviour
     [Header("Recipe Details")]
     [SerializeField, Min(0f), Tooltip("Seconds to open or close the recipe details with Tab.")]
     private float detailsSlideDuration = .22f;
+    [SerializeField, Min(0f), Tooltip("Seconds to expand or shrink the card width to fit its details with Tab.")]
+    private float detailsWidthSlideDuration = .22f;
     public const int Capacity = 3;
     private StageReturnFlow stageFlow;
     private Canvas recipeCanvas;
@@ -31,6 +33,7 @@ public class RecipeScrollView : MonoBehaviour
 
     private bool detailsExpanded;
     private float detailsProgress;
+    private float detailsWidthProgress;
 
     private void Update()
     {
@@ -46,29 +49,21 @@ public class RecipeScrollView : MonoBehaviour
     private void AdvanceDetails(float deltaTime)
     {
         float target = detailsExpanded ? 1f : 0f;
-        if (detailsProgress == target) return;
+        if (detailsProgress == target && detailsWidthProgress == target) return;
 
-        float progress = detailsSlideDuration > 0f
-            ? Mathf.MoveTowards(detailsProgress, target, deltaTime / detailsSlideDuration)
-            : target;
-        SetDetailsProgress(progress);
+        detailsProgress = AdvanceProgress(detailsProgress, target, deltaTime, detailsSlideDuration);
+        detailsWidthProgress = AdvanceProgress(detailsWidthProgress, target, deltaTime, detailsWidthSlideDuration);
         RebuildPrefabLayout(animateOrders: false);
     }
 
-    private void SetDetailsProgress(float progress)
-    {
-        if (detailsProgress == progress) return;
-
-        detailsProgress = progress;
-        float easedProgress = Mathf.SmoothStep(0f, 1f, progress);
-        foreach (RecipeOrderCardUI card in cards)
-            if (card != null) card.SetDetailsProgress(easedProgress);
-    }
+    private static float AdvanceProgress(float progress, float target, float deltaTime, float duration) =>
+        duration > 0f ? Mathf.MoveTowards(progress, target, deltaTime / duration) : target;
 
     private void ResetDetails()
     {
         detailsExpanded = false;
-        SetDetailsProgress(0f);
+        detailsProgress = 0f;
+        detailsWidthProgress = 0f;
     }
 
     private void OnEnable()
@@ -199,6 +194,8 @@ public class RecipeScrollView : MonoBehaviour
     {
         if (!usePrefabLayout || cardRoot == null || !cardRoot.gameObject.activeInHierarchy) return;
 
+        float heightProgress = Mathf.SmoothStep(0f, 1f, detailsProgress);
+        float widthProgress = Mathf.SmoothStep(0f, 1f, detailsWidthProgress);
         // Each card fits its contents. The row must read those sizes before its first visible frame.
         for (int i = 0; i < cards.Length; i++)
         {
@@ -208,6 +205,7 @@ public class RecipeScrollView : MonoBehaviour
             if (!visible || !card.gameObject.activeInHierarchy || card.transform is not RectTransform rect)
                 continue;
 
+            card.SetDetailsProgress(heightProgress, widthProgress);
             LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
             orderSlides?.FitSlotToCard(i);
         }

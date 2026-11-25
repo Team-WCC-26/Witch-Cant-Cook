@@ -56,6 +56,10 @@ MonoBehaviour:
   - {fileID: 4503083499816646946}
   - {fileID: 5448950664474377822}
   usePrefabLayout: 1
+  horizontalSlideDuration: 0.12
+  dropDelayAfterHorizontalSlide: 0
+  orderSlideDuration: 0.22
+  detailsSlideDuration: 0.22
 --- !u!225 &7624454575708355814
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -103,11 +107,11 @@ RectTransform:
   - {fileID: 9086037316867108104}
   m_Father: {fileID: 1078210492701776830}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -24, y: -24}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 24, y: -24}
   m_SizeDelta: {x: 2732, y: 330}
-  m_Pivot: {x: 1, y: 1}
+  m_Pivot: {x: 0, y: 1}
 --- !u!114 &2777334048886497486
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -125,7 +129,7 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 2
+  m_ChildAlignment: 0
   m_Spacing: 16
   m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 0
@@ -133,7 +137,7 @@ MonoBehaviour:
   m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
+  m_ReverseArrangement: 1
 --- !u!114 &6954175513527817199
 MonoBehaviour:
   m_ObjectHideFlags: 0
