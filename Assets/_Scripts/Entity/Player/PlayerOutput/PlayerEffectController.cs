@@ -31,6 +31,10 @@ public class PlayerEffectController : MonoBehaviour
     /// </summary>
     public void ApplyBlind(float duration)
     {
+        if (duration <= 0f) return;
+        PlayerInkOverlay ink = GetComponent<PlayerInkOverlay>();
+        if (ink == null) ink = gameObject.AddComponent<PlayerInkOverlay>();
+        ink.Apply(duration);
 
         if (!PlayerSpawnManager.Instance.IsMine(brain.PlayerId))
             return;

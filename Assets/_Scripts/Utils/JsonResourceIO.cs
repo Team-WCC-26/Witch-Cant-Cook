@@ -1,8 +1,9 @@
 using System;
 using System.IO;
-using UnityEditor;
 using UnityEngine;
-using static UnityEditor.LightingExplorerTableColumn;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public static class JsonResourceIO
 {
@@ -19,6 +20,12 @@ public static class JsonResourceIO
 
         string json = JsonUtility.ToJson(wrapperObj, true);
         string path = Path.Combine(FolderPath, $"{fileNameWithoutExt}.json");
+
+        if (File.Exists(path) && string.Equals(
+            File.ReadAllText(path).Replace("\r\n", "\n").Replace("\r", "\n"),
+            json.Replace("\r\n", "\n").Replace("\r", "\n"),
+            StringComparison.Ordinal))
+            return;
 
         File.WriteAllText(path, json);
 

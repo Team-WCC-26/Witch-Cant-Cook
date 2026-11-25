@@ -13,6 +13,32 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 {
     public Dictionary<long, Object> activeObjDict = new();
     private readonly Dictionary<string, Queue<GameObject>> _poolDic = new();
+    private readonly Dictionary<string, Vector3> _prefabLocalScales = new();
+    private readonly Dictionary<GameObject, SpawnComponents> _components = new();
+    private static readonly Unity.Profiling.ProfilerMarker SpawnMarker = new("Ingredient.ObjectPool.Spawn");
+    private static readonly Unity.Profiling.ProfilerMarker CreateMarker = new("Ingredient.ObjectPool.Create");
+
+    private sealed class SpawnComponents
+    {
+        public readonly CatchableObj Catchable;
+        public readonly IngredientReaction Reaction;
+        public readonly List<MonoBehaviour> Behaviours = new();
+        public readonly List<Collider> Colliders = new();
+        public SpawnComponents(GameObject go)
+        {
+            Catchable = go.GetComponent<CatchableObj>();
+            Reaction = go.GetComponent<IngredientReaction>();
+        }
+    }
+
+    private SpawnComponents GetSpawnComponents(GameObject go)
+    {
+        if (!_components.TryGetValue(go, out SpawnComponents cached))
+            _components.Add(go, cached = new SpawnComponents(go));
+        return cached;
+    }
+
+    public int GetPooledCount(string key) => _poolDic.TryGetValue(key, out var queue) ? queue.Count : 0;
 
     // 풀 관리용 루트 트랜스폼
     private Transform _poolRoot;
@@ -43,6 +69,8 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         if (go != null)
         {
+            RestorePrefabScale(go, key);
+
             if (spawnPoint != null)
             {
                 go.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -58,12 +86,28 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         GameObject go = Pop(key, parent);
         if (go != null)
         {
-            if (go.TryGetComponent(out Rigidbody rb))
+            if (go.TryGetComponent(out Rigidbody rb) && !rb.isKinematic)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
             go.transform.SetPositionAndRotation(position, rotation);
+        }
+        return go;
+    }
+
+    public GameObject Pop(string key, Vector3 position, Quaternion rotation,
+        out CatchableObj catchable, out IngredientReaction reaction)
+    {
+        using var scope = SpawnMarker.Auto();
+        GameObject go = Pop(key, position, rotation);
+        catchable = null;
+        reaction = null;
+        if (go != null)
+        {
+            SpawnComponents cached = GetSpawnComponents(go);
+            catchable = cached.Catchable;
+            reaction = cached.Reaction;
         }
         return go;
     }
@@ -79,10 +123,11 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         {
             InitRoot(); //방어코드
 
-            ResetPoolable(go);
-
             go.SetActive(false);
+            ResetPoolable(go);
             go.transform.SetParent(_poolRoot);
+            // Restore after reparenting, which otherwise preserves the pot's world scale.
+            RestorePrefabScale(go, key);
             queue.Enqueue(go);
         }
         else
@@ -97,14 +142,28 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         {
             while (queue.Count > 0)
             {
-                UnityEngine.Object.Destroy(queue.Dequeue());
+                GameObject go = queue.Dequeue();
+                _components.Remove(go);
+                UnityEngine.Object.Destroy(go);
             }
             _poolDic.Remove(key);
         }
     }
 
+    public void ReturnRoomObjects()
+    {
+        // Active room entities are also parented below the persistent pool root.
+        if (_poolRoot != null)
+        {
+            foreach (CatchableObj item in _poolRoot.GetComponentsInChildren<CatchableObj>(true))
+                if (item != null && item.gameObject.activeInHierarchy) Push(item.gameObject);
+        }
+        activeObjDict.Clear();
+    }
+
     private GameObject CreateNewInstance(string key)
     {
+        using var scope = CreateMarker.Auto();
         GameObject prefab = ResourceManager.Instance.GetAsset<GameObject>(key);
         if (prefab == null)
         {
@@ -114,6 +173,8 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         InitRoot(); // 생성할 때 루트가 있는지 확인
 
+        _prefabLocalScales[key] = prefab.transform.localScale;
+
         // 최초 생성 시점에도 루트 오브젝트 밑에 배치되도록 설정
         GameObject go = UnityEngine.Object.Instantiate(prefab, _poolRoot);
         go.name = key; // 이름을 키값으로 강제 고정
@@ -121,11 +182,20 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
         return go;
     }
 
+    private void RestorePrefabScale(GameObject go, string key)
+    {
+        if (_prefabLocalScales.TryGetValue(key, out Vector3 scale))
+            go.transform.localScale = scale;
+    }
+
     /// <summary>
     /// 지정한 개수만큼 미리 인스턴스를 생성해서 풀에 저장한다.
     /// </summary>
     public void PrewarmPool(string key, int count)
     {
+        // Push must find the queue; otherwise it destroys the just-created prewarm object.
+        if (count <= 0) return;
+        if (!_poolDic.ContainsKey(key)) _poolDic.Add(key, new Queue<GameObject>(count));
         for (int i = 0; i < count; i++)
         {
             GameObject go = CreateNewInstance(key);
@@ -139,9 +209,12 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
     /// <summary>
     /// 풀에서 재사용하기 전에 상태 초기화
     /// </summary>
-    private static void ResetPoolable(GameObject go)
+    private void ResetPoolable(GameObject go)
     {
-        foreach (MonoBehaviour behaviour in go.GetComponents<MonoBehaviour>())
+        SpawnComponents cached = GetSpawnComponents(go);
+        // Refresh lists so dynamically added components still follow the existing reset contract.
+        go.GetComponents(cached.Behaviours);
+        foreach (MonoBehaviour behaviour in cached.Behaviours)
         {
             if (behaviour is IPoolable poolable)
             {
@@ -151,21 +224,23 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
 
         if (go.TryGetComponent(out Rigidbody rb))
         {
+            rb.isKinematic = false;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = false;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.useGravity = true;
             rb.Sleep();
         }
 
-        foreach (Collider collider in go.GetComponents<Collider>())
+        go.GetComponents(cached.Colliders);
+        foreach (Collider collider in cached.Colliders)
         {
             collider.enabled = true;
         }
     }
 
     /// <summary>
-    /// 모든 풀 반환 경로에서 컨베이어와 ECS의 NetworkID 상태를 먼저 정리합니다.
+    /// 모든 풀 반환 경로에서 기존 컨베이어 등록을 먼저 정리합니다.
     /// 오브젝트가 비활성화된 뒤에도 이전 벨트가 같은 Transform을 이동시키는 것을 방지합니다.
     /// </summary>
     private static void ReleaseNetworkBoundState(GameObject go)
@@ -180,6 +255,5 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
             belt.UnregisterItem(networkId);
         }
 
-        IngredientEntityLifecycle.RequestDestroy(networkId);
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +27,7 @@ public class PasswordInput : MonoBehaviour
     {
         _nameTxt.text = name;
         _id = id;
+        _passwordInput.SetTextWithoutNotify(string.Empty);
         gameObject.SetActive(true);
     }
 

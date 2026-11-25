@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public sealed class MapObjNetworkRouter : MonoBehaviour
 {
@@ -17,33 +18,49 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private readonly Dictionary<long, MapObjInteraction> mapObjects = new();
 
     private MapObjInteraction currentRegisterTarget;
+    [SerializeField] private LeaveRoomTriggerInteraction leaveRoomTrigger;
+    private RoomHudSession roomSession;
+    
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
-    private bool isRegisterOwner;
 
-    #region unity cycle
+    private bool isRegisterar;
+    public bool IsRegistrar => isRegisterar;
+
+    public void ResetStageRegistration()
+    {
+        registerQueue.Clear();
+        registerTargets.Clear();
+        mapObjects.Clear();
+        currentRegisterTarget = null;
+        foreach (MapObjInteraction target in FindObjectsByType<MapObjInteraction>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (target is not LeaveRoomTriggerInteraction) target.SetNetworkId(0);
+    }
+
+    #region Unity Callbacks
 
     private void OnEnable()
     {
-        StageManager.DoorOpened += OnDoorOpened;
+        DoorController.DoorOpened += OnDoorOpened;
+        roomSession = RoomHudSession.Instance;
+        roomSession.RoomJoined += ClearLeaveRoomTrigger;
+        roomSession.RoomLeft += ClearLeaveRoomTrigger;
+        roomSession.Changed += RefreshLeaveRoomTriggerVisibility;
+        RefreshLeaveRoomTriggerVisibility();
         subscribeRoutine = StartCoroutine(SubscribeWhenReady());
-    }
-
-    private IEnumerator SubscribeWhenReady()
-    {
-        // Delayed subscription
-        yield return new WaitUntil(() => ServerManager.Instance != null);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
-        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
-        isSubscribed = true;
-        subscribeRoutine = null;
     }
 
     private void OnDisable()
     {
-        StageManager.DoorOpened -= OnDoorOpened;
+        DoorController.DoorOpened -= OnDoorOpened;
+        if (roomSession != null)
+        {
+            roomSession.RoomJoined -= ClearLeaveRoomTrigger;
+            roomSession.RoomLeft -= ClearLeaveRoomTrigger;
+            roomSession.Changed -= RefreshLeaveRoomTriggerVisibility;
+        }
+        ClearLeaveRoomTrigger();
+        roomSession = null;
 
         if (subscribeRoutine != null)
         {
@@ -57,14 +74,85 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerEnter);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotEject);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_PotCookComplete);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_JumpPadEvent);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_TrashCanEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_CookingSubmitEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolPlayerExit);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_LeaveRoomTriggerState);
         isSubscribed = false;
     }
 
     #endregion
 
+    private IEnumerator SubscribeWhenReady()
+    {
+        yield return new WaitUntil(() => ServerManager.Instance != null);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolRegister, OnToolRegistered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerEnter, OnPotPlayerEntered);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotEject, OnPotEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PotCookComplete, OnPotCookCompleted);
+        ServerManager.Instance.RegisterHandler(PacketId.S_JumpPadEvent, OnJumpPadEvent);
+        ServerManager.Instance.RegisterHandler(PacketId.S_TrashCanEject, OnTrashCanEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_CookingSubmitEject, OnCookingSubmitEjected);
+        ServerManager.Instance.RegisterHandler(PacketId.S_ToolPlayerExit, OnToolPlayerExited);
+        ServerManager.Instance.RegisterHandler(PacketId.S_LeaveRoomTriggerState, OnLeaveRoomTriggerState);
+        isSubscribed = true;
+        subscribeRoutine = null;
+    }
+
+    private void OnJumpPadEvent(ReadOnlyMemory<byte> data)
+    {
+        JumpPadEventPacket packet = PacketSerializer.Deserialize<JumpPadEventPacket>(data.Span);
+        if (TryGetMapObject(packet.PadEntityId, out JumpAssist pad))
+            pad.HandleJumpPadEvent(packet);
+    }
+
+    private void OnLeaveRoomTriggerState(ReadOnlyMemory<byte> data)
+    {
+        if (!roomSession.Lobby.IsInRoom) return;
+        var packet = PacketSerializer.Deserialize<LeaveRoomTriggerStatePacket>(data.Span);
+        if (packet.TriggerEntityId <= 0) return;
+
+        if (!string.IsNullOrEmpty(packet.EjectedPlayerId) &&
+            packet.EjectedPlayerId == roomSession.Lobby.LocalPlayerId)
+        {
+            RoomTitleReturn.RunAsync(serverAlreadyRemovedPlayer: true).Forget();
+            return;
+        }
+
+        if (leaveRoomTrigger == null)
+        {
+            Debug.LogError("Assign the scene's ReturnToTitle object to the map router.", this);
+            return;
+        }
+        leaveRoomTrigger.SetNetworkId(packet.TriggerEntityId);
+        leaveRoomTrigger.ApplyState(packet.State, packet.RemainingMs);
+        RefreshLeaveRoomTriggerVisibility();
+    }
+
+    private void RefreshLeaveRoomTriggerVisibility()
+    {
+        if (leaveRoomTrigger != null)
+            leaveRoomTrigger.gameObject.SetActive(roomSession.Lobby.IsActive && leaveRoomTrigger.IsRegistered);
+    }
+
+    private void ClearLeaveRoomTrigger()
+    {
+        if (leaveRoomTrigger == null) return;
+        leaveRoomTrigger.SetNetworkId(0);
+        leaveRoomTrigger.ApplyState(LeaveRoomTriggerState.Idle, 0);
+        leaveRoomTrigger.gameObject.SetActive(false);
+    }
+
     #region Map Object Getters
+
     public bool TryGetMapObject(long entityId, out MapObjInteraction mapObj)
     {
+        if (leaveRoomTrigger != null && leaveRoomTrigger.IsRegistered && leaveRoomTrigger.NetworkId == entityId)
+        {
+            mapObj = leaveRoomTrigger;
+            return true;
+        }
         return mapObjects.TryGetValue(entityId, out mapObj);
     }
 
@@ -72,7 +160,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     {
         obj = null;
 
-        if (!mapObjects.TryGetValue(entityId, out MapObjInteraction mapObj))
+        if (!TryGetMapObject(entityId, out MapObjInteraction mapObj))
             return false;
 
         obj = mapObj as T;
@@ -93,7 +181,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         registerTargets.Clear();
         mapObjects.Clear();
         currentRegisterTarget = null;
-        isRegisterOwner = IsRegisterOwner();
+        isRegisterar = IsRegisterOwner();
 
         HashSet<MapObjInteraction> targets = new();
 
@@ -108,16 +196,21 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
 
         foreach (MapObjInteraction mapObj in targets)
         {
+            if (mapObj is LeaveRoomTriggerInteraction) continue;
             mapObj.InitializeRouter(this);
-            if (mapObj.IsRegistered) continue;
+            if (mapObj.IsRegistered)
+            {
+                mapObjects[mapObj.NetworkId] = mapObj;
+                continue;
+            }
 
             registerTargets.Add(mapObj);
 
-            if (isRegisterOwner)
+            if (isRegisterar)
                 registerQueue.Enqueue(mapObj);
         }
 
-        if (isRegisterOwner)
+        if (isRegisterar)
             RegisterNext();
     }
 
@@ -175,7 +268,7 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
         target.SetNetworkId(packet.EntityId);
         mapObjects[packet.EntityId] = target;
 
-        if (!isRegisterOwner || currentRegisterTarget != target) return;
+        if (!isRegisterar || currentRegisterTarget != target) return;
 
         currentRegisterTarget = null;
         RegisterNext();
@@ -205,6 +298,16 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     private void OnPotPlayerEntered(ReadOnlyMemory<byte> data)
     {
         ToolPlayerEnterPacket packet = MemoryPackSerializer.Deserialize<ToolPlayerEnterPacket>(data.Span);
+        if (TryGetMapObject(packet.ToolEntityId, out OvenInteraction oven))
+        {
+            oven.HandlePlayerEntryConfirmed(packet);
+            return;
+        }
+        if (TryGetMapObject(packet.ToolEntityId, out TrashCanInteraction trashCan))
+        {
+            trashCan.HandlePlayerEnter(packet);
+            return;
+        }
         if (TryGetPotReceiver(packet.ToolEntityId, out IPotNetworkReceiver receiver))
             receiver.HandlePotPlayerEnter(packet);
     }
@@ -236,5 +339,26 @@ public sealed class MapObjNetworkRouter : MonoBehaviour
     }
 
     #endregion
+
+    private void OnTrashCanEjected(ReadOnlyMemory<byte> data)
+    {
+        TrashCanEjectPacket packet = PacketSerializer.Deserialize<TrashCanEjectPacket>(data.Span);
+        if (TryGetMapObject(packet.TrashCanEntityId, out TrashCanInteraction trashCan))
+            trashCan.HandleEject(packet);
+    }
+
+    private void OnCookingSubmitEjected(ReadOnlyMemory<byte> data)
+    {
+        CookingSubmitEjectPacket packet = PacketSerializer.Deserialize<CookingSubmitEjectPacket>(data.Span);
+        if (TryGetMapObject(packet.CookingSubmitEntityId, out SubmitTriggerZone station))
+            station.HandleEject(packet);
+    }
+
+    private void OnToolPlayerExited(ReadOnlyMemory<byte> data)
+    {
+        ToolPlayerExitPacket packet = PacketSerializer.Deserialize<ToolPlayerExitPacket>(data.Span);
+        if (TryGetMapObject(packet.ToolEntityId, out TrashCanInteraction trashCan))
+            trashCan.HandlePlayerExit(packet);
+    }
 
 }

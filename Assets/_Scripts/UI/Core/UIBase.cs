@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.UI;
 
 public class UIBase : MonoBehaviour
 {
@@ -13,10 +14,12 @@ public class UIBase : MonoBehaviour
     {
         opened += Opened;
         closed += Closed;
+        BindClickSounds();
     }
 
     public void SetActive(bool isActive)
     {
+        if (isActive) BindClickSounds();
         gameObject.SetActive(isActive);
     }
 
@@ -25,4 +28,15 @@ public class UIBase : MonoBehaviour
     public virtual void Opened(object[] param) { }
 
     public virtual void Closed(object[] param) { }
+
+    private void BindClickSounds()
+    {
+        foreach (Button button in GetComponentsInChildren<Button>(true))
+        {
+            button.onClick.RemoveListener(PlayClickSound);
+            button.onClick.AddListener(PlayClickSound);
+        }
+    }
+
+    private static void PlayClickSound() => SoundManager.GetOrCreate().Play(SoundId.UIButtonClick);
 }

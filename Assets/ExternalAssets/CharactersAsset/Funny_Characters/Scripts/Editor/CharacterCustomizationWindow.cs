@@ -39,6 +39,12 @@ namespace CharacterCustomization
         private Material _glassMaterial;
         private Material _emissionMaterial;
         private string _prefabPath;
+        private PlayerAppearanceCatalog appearanceCatalog;
+        private bool showRandomExclusions;
+        private int exclusionPartIndex;
+        private Vector2 exclusionScrollPos;
+
+        private string ExclusionPrefsKey => $"CharacterCustomization.RandomExclusions.{Application.dataPath}";
 
         private Material Material
         {
@@ -72,18 +78,24 @@ namespace CharacterCustomization
 
         private IEnumerable<Part> Parts => _parts ??= LoadParts().ToList();
 
-        [MenuItem("Tools/Character Customization")]
-        private static void Init()
-        {
-            FindRoot();
-            var window = GetWindow<CharacterCustomizationWindow>("Character Customization");
-            window.minSize = new Vector2(975, 720);
-            window.Show();
-        }
-
+        #region Unity Callbacks
         private void OnEnable()
         {
             _partsEditor = new PartsEditor();
+            appearanceCatalog = PlayerAppearanceCatalog.GetEditorCatalog();
+            var legacyKeys = new HashSet<string>();
+            foreach (var variantKey in EditorPrefs.GetString(ExclusionPrefsKey, string.Empty).Split('\n'))
+            {
+                if (!string.IsNullOrEmpty(variantKey))
+                {
+                    legacyKeys.Add(variantKey);
+                }
+            }
+            if (legacyKeys.Count > 0)
+            {
+                appearanceCatalog.ImportLegacyExclusions(legacyKeys);
+                EditorPrefs.DeleteKey(ExclusionPrefsKey);
+            }
         }
 
         private void OnGUI()
@@ -93,7 +105,15 @@ namespace CharacterCustomization
             CreateRenderTexture();
             InitializeCamera();
             DrawMesh();
-            _partsEditor.OnGUI(new Rect(320, 10, position.width - 330, position.height), Parts);
+            var partsRect = new Rect(320, 10, position.width - 330, position.height - 20);
+            if (showRandomExclusions)
+            {
+                DrawRandomExclusions(partsRect);
+            }
+            else
+            {
+                _partsEditor.OnGUI(partsRect, Parts);
+            }
 
             GUI.DrawTexture(rect, _renderTexture, ScaleMode.StretchToFill, false);
 
@@ -113,6 +133,9 @@ namespace CharacterCustomization
                 Randomize();
             }
 
+            showRandomExclusions = GUI.Toggle(new Rect(10, 495, 300, 30),
+                showRandomExclusions, "Random exclusions", "Button");
+
             var isZero = _savedCombinations.Count == 0;
             var isSame = false;
             var lessThenTwo = false;
@@ -129,6 +152,56 @@ namespace CharacterCustomization
                 if (GUI.Button(lastButtonRect, "Last"))
                 {
                     Last();
+                }
+            }
+        }
+        #endregion
+
+        #region Editor
+        [MenuItem("Tools/Character Customization")]
+        private static void Init()
+        {
+            FindRoot();
+            var window = GetWindow<CharacterCustomizationWindow>("Character Customization");
+            window.minSize = new Vector2(975, 720);
+            window.Show();
+        }
+
+        private void DrawRandomExclusions(Rect rect)
+        {
+            var parts = Parts.ToArray();
+            using (new GUILayout.AreaScope(rect))
+            {
+                exclusionPartIndex = EditorGUILayout.Popup("Part", exclusionPartIndex,
+                    parts.Select(part => part.Type.ToString()).ToArray());
+                var selectedPart = parts[exclusionPartIndex];
+                EditorGUILayout.HelpBox("Check items to exclude from Randomize. Manual selection stays available.", MessageType.Info);
+
+                using (var scrollScope = new GUILayout.ScrollViewScope(exclusionScrollPos))
+                {
+                    exclusionScrollPos = scrollScope.scrollPosition;
+                    int columnCount = Mathf.Max(1, Mathf.FloorToInt((rect.width - 20) / 155));
+                    for (int rowStart = 0; rowStart < selectedPart.Variants.Count; rowStart += columnCount)
+                    {
+                        using (new GUILayout.HorizontalScope())
+                        {
+                            foreach (var variant in selectedPart.Variants.Skip(rowStart).Take(columnCount))
+                            {
+                                bool isExcluded = appearanceCatalog.IsRandomExcluded(variant.Mesh);
+                                using (new GUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(145)))
+                                {
+                                    GUILayout.Label(AssetPreview.GetAssetPreview(variant.PreviewObject),
+                                        GUILayout.Width(135), GUILayout.Height(110));
+                                    GUILayout.Label(variant.Name, EditorStyles.wordWrappedMiniLabel, GUILayout.Width(135));
+                                    bool shouldExclude = GUILayout.Toggle(isExcluded, "Excluded from random");
+                                    if (shouldExclude != isExcluded)
+                                    {
+                                        appearanceCatalog.SetRandomExcluded(variant.Mesh, shouldExclude);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -169,8 +242,23 @@ namespace CharacterCustomization
 
         private async void Randomize()
         {
+            var bodyPart = Parts.First(part => part.Type == PartType.Body);
+            if (bodyPart.Variants.All(variant => appearanceCatalog.IsRandomExcluded(variant.Mesh)))
+            {
+                EditorUtility.DisplayDialog("Random exclusions", "Allow at least one Body item before randomizing.", "OK");
+                return;
+            }
+
             foreach (var part in _parts)
             {
+                var allowedVariants = part.Variants
+                    .Where(variant => !appearanceCatalog.IsRandomExcluded(variant.Mesh)).ToList();
+                if (allowedVariants.Count == 0)
+                {
+                    part.IsEnabled = false;
+                    continue;
+                }
+
                 if (Random.value < .5f && part.Type != PartType.Body)
                 {
                     part.IsEnabled = false;
@@ -178,7 +266,7 @@ namespace CharacterCustomization
                 else
                 {
                     part.IsEnabled = true;
-                    part.SelectedVariant = part.Variants[Random.Range(0, part.Variants.Count)];
+                    part.SelectedVariant = allowedVariants[Random.Range(0, allowedVariants.Count)];
                 }
             }
 
@@ -419,5 +507,6 @@ namespace CharacterCustomization
             var root = string.Join("/", pathParts.Where(p => !string.IsNullOrEmpty(p)).ToArray()) + "/";
             AssetsPath.SetRoot(root);
         }
+        #endregion
     }
 }

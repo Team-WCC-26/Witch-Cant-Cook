@@ -47,13 +47,15 @@ public class IngredientTraitTracker : MonoBehaviour
         isTracking = false;
         target = null;
 
-        if (rb != null)
+        if (rb != null && !rb.isKinematic)
             rb.linearVelocity = Vector3.zero;
     }
 
+    private void OnDisable() => StopTracking();
+
     private void FixedUpdate()
     {
-        if (!isTracking || target == null)
+        if (!isTracking || target == null || rb == null || rb.isKinematic)
             return;
 
         Vector3 dir = target.transform.position - transform.position;

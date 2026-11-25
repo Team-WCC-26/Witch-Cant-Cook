@@ -1,20 +1,46 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// A radial ring drawn directly by the Canvas; no timer sprite/material asset is needed.
+// Drawn directly by the Canvas so both displays can share the same countdown.
+[RequireComponent(typeof(CanvasRenderer))]
 public class RecipeTimerRing : MaskableGraphic
 {
     [SerializeField, Range(0f, 1f)] private float fillAmount = 1f;
     [SerializeField, Range(.01f, .5f)] private float thickness = .15f;
+    [SerializeField] private bool horizontalBar;
+    [SerializeField] private Color barTrackColor = new Color32(110, 82, 61, 255);
+
     public float FillAmount
     {
         get => fillAmount;
         set { float next = Mathf.Clamp01(value); if (Mathf.Approximately(next, fillAmount)) return; fillAmount = next; SetVerticesDirty(); }
     }
+    private static void AddBarQuad(VertexHelper vh, Rect rect, Color32 tint)
+    {
+        int start = vh.currentVertCount;
+        vh.AddVert(new Vector3(rect.xMin, rect.yMin), tint, Vector2.zero);
+        vh.AddVert(new Vector3(rect.xMin, rect.yMax), tint, Vector2.zero);
+        vh.AddVert(new Vector3(rect.xMax, rect.yMax), tint, Vector2.zero);
+        vh.AddVert(new Vector3(rect.xMax, rect.yMin), tint, Vector2.zero);
+        vh.AddTriangle(start, start + 1, start + 2);
+        vh.AddTriangle(start, start + 2, start + 3);
+    }
+
     protected override void OnPopulateMesh(VertexHelper vh)
     {
         vh.Clear();
         Rect rect = rectTransform.rect;
+        if (horizontalBar)
+        {
+            AddBarQuad(vh, rect, barTrackColor);
+            if (fillAmount > 0f)
+            {
+                rect.width *= fillAmount;
+                AddBarQuad(vh, rect, color);
+            }
+            return;
+        }
+
         float outer = Mathf.Min(rect.width, rect.height) * .5f;
         float inner = outer * (1f - thickness);
         const int segments = 96;

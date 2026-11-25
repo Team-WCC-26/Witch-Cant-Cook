@@ -31,6 +31,16 @@ public class PlayerInputFSM
 
     public void UpdateTick()
     {
+        if (inputHandler.IsInputBlocked)
+        {
+            pendingKeyInput = KeyInput.None;
+            pendingJumpRequested = false;
+            MoveDir = Vector2.zero;
+            IsRun = false;
+            CurrentInteraction = PlayerInteraction.None;
+            CurrentJumpRequested = false;
+            return;
+        }
         MoveDir = ResolveMoveDir();
         IsRun = ResolveRun();
         CurrentInteraction = ResolveInteraction();
@@ -130,7 +140,7 @@ public class PlayerInputFSM
     // Consumes jump as a one-frame movement request.
     private bool ResolveJumpRequested()
     {
-        bool jumpRequested = pendingJumpRequested;
+        bool jumpRequested = !inputHandler.IsMovementBlocked && pendingJumpRequested;
         pendingJumpRequested = false;
         return jumpRequested;
     }

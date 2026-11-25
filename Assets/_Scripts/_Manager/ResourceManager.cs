@@ -5,30 +5,75 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 
 public class ResourceManager : Singleton<ResourceManager>
 {
     // 알맹이
     private readonly Dictionary<string, UnityEngine.Object> _assetCache = new();
+    private readonly Dictionary<string, Task<UnityEngine.Object>> pendingLoads = new();
+    public bool IsPreloaded { get; private set; }
+    public string LoadingError { get; private set; }
+    public bool HasLoadingFailed => !string.IsNullOrEmpty(LoadingError);
+    private Task initializationTask;
+    private string loadingPhase = "Waiting to initialize";
+    public string LoadingStatus
+    {
+        get
+        {
+            string pending = "";
+            int shown = 0;
+            foreach (string key in pendingLoads.Keys)
+            {
+                if (shown++ == 2) break;
+                string displayKey = key.Length > 70 ? key.Substring(0, 70) + "..." : key;
+                pending += (pending.Length == 0 ? "" : ", ") + displayKey;
+            }
+            return $"{loadingPhase} | Cached {_assetCache.Count}, pending {pendingLoads.Count}" +
+                (pending.Length == 0 ? "" : $" | Waiting: {pending}");
+        }
+    }
 
     // 로드된 에셋을 관리하는 캐시 딕셔너리
     private Dictionary<string, AsyncOperationHandle> _handleCache = new Dictionary<string, AsyncOperationHandle>();
 
 
+    #region Unity Callbacks
     protected override void Awake()
     {
         base.Awake();
-        if (IsInitialized)
+        if (Instance != this)
         {
             Debug.LogWarning("[ResourceManager] Duplicate instance initialization was prevented.");
             return;
         }
     }
 
+    private void OnApplicationQuit() => SpriteCache.ReleaseAll();
+    #endregion
+
     public async UniTask Init()
     {
-        await InitializeAsync();
-        await PreloadAssetsAsync();
+        if (IsPreloaded) return;
+        if (initializationTask == null || initializationTask.IsFaulted || initializationTask.IsCanceled)
+            initializationTask = InitializeResourcesAsync();
+        await initializationTask;
+    }
+
+    private async Task InitializeResourcesAsync()
+    {
+        LoadingError = null;
+        try
+        {
+            await InitializeAsync();
+            await PreloadAssetsAsync();
+        }
+        catch (Exception error)
+        {
+            LoadingError = error.GetBaseException().Message;
+            loadingPhase = $"FAILED: {LoadingError}";
+            throw;
+        }
     }
 
     /// <summary>
@@ -36,6 +81,7 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask InitializeAsync()
     {
+        loadingPhase = "Initializing Addressables";
         var initHandle = Addressables.InitializeAsync();
 
         await initHandle.ToUniTask();
@@ -58,6 +104,11 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public T GetAsset<T>(string key) where T : UnityEngine.Object
     {
+        if (typeof(T) == typeof(Sprite))
+        {
+            SpriteCache.TryGet(key, out Sprite sprite);
+            return sprite as T;
+        }
         if (_assetCache.TryGetValue(key, out var asset))
         {
             return asset as T;
@@ -70,6 +121,12 @@ public class ResourceManager : Singleton<ResourceManager>
     public bool TryGetAsset<T>(string key, out T asset) where T : UnityEngine.Object
     {
         asset = null;
+        if (typeof(T) == typeof(Sprite))
+        {
+            bool found = SpriteCache.TryGet(key, out Sprite sprite);
+            asset = sprite as T;
+            return found;
+        }
         if (string.IsNullOrWhiteSpace(key)) return false;
         if (!_assetCache.TryGetValue(key, out UnityEngine.Object cachedAsset)) return false;
 
@@ -82,33 +139,56 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask<T> LoadAsync<T>(string key) where T : UnityEngine.Object
     {
+        return await LoadAssetAsync<T>(key, null);
+    }
+
+    private async UniTask<T> LoadAssetAsync<T>(string key, IResourceLocation location) where T : UnityEngine.Object
+    {
+        if (typeof(T) == typeof(Sprite)) return await SpriteCache.LoadAsync(key) as T;
         // 이미 캐시에 있는 경우
         if (_assetCache.TryGetValue(key, out var cachedAsset))
         {
             return cachedAsset as T;
         }
 
-        var handle = Addressables.LoadAssetAsync<T>(key);
+        if (pendingLoads.TryGetValue(key, out Task<UnityEngine.Object> pendingLoad))
+        {
+            return await pendingLoad as T;
+        }
+
+        // Preloading and UI requests share one load and one retained handle per key.
+        var completion = new TaskCompletionSource<UnityEngine.Object>();
+        pendingLoads.Add(key, completion.Task);
+        AsyncOperationHandle<T> handle = default;
         try
         {
+            handle = location != null
+                ? Addressables.LoadAssetAsync<T>(location)
+                : Addressables.LoadAssetAsync<T>(key);
             await handle.ToUniTask();
             if (handle.Status == AsyncOperationStatus.Failed)
             {
-                Debug.LogError($"[ResourceManager] Failed to load asset: {key}");
-                return null;
+                throw handle.OperationException ?? new InvalidOperationException($"Failed to load asset: {key}");
             }
 
             // 두 dict 상태 동기화
             _handleCache.Add(key, handle);
             _assetCache.Add(key, handle.Result);
 
+            completion.TrySetResult(handle.Result);
             return handle.Result;
 
         }
         catch (Exception e)
         {
+            if (handle.IsValid()) Addressables.Release(handle);
+            completion.TrySetResult(null);
             Debug.LogError($"[ResourceManager] Failed to load asset: {key} - {e.Message}");
             return null;
+        }
+        finally
+        {
+            pendingLoads.Remove(key);
         }
     }
 
@@ -117,24 +197,27 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public async UniTask<bool> LoadAllAddressablesAsync()
     {
-        List<UniTask> loadTasks = new();
-
+        loadingPhase = "Preloading Addressables / sprites";
+        List<UniTask> loadTasks = new() { SpriteCache.PreloadAsync().AsUniTask() };
+        var addresses = new HashSet<string>(StringComparer.Ordinal);
         foreach (var locator in Addressables.ResourceLocators)
         {
             foreach (var key in locator.Keys)
             {
-                string address = key.ToString();
-
-                // 이미 캐시에 있으면 스킵
-                if (_assetCache.ContainsKey(address))
-                    continue;
-
-                loadTasks.Add(LoadAsync<UnityEngine.Object>(address));
+                if (!locator.Locate(key, typeof(UnityEngine.Object), out var locations)) continue;
+                foreach (var location in locations)
+                {
+                    if (!ShouldPreload(location)) continue;
+                    string address = location.PrimaryKey;
+                    if (!addresses.Add(address) || _assetCache.ContainsKey(address)) continue;
+                    loadTasks.Add(PreloadAssetAsync(location));
+                }
             }
         }
 
         await UniTask.WhenAll(loadTasks);
-
+        IsPreloaded = true;
+        loadingPhase = "Complete";
         return true;
     }
 
@@ -142,6 +225,36 @@ public class ResourceManager : Singleton<ResourceManager>
     /// <summary>
     /// 개별 에셋 해제
     /// </summary>
+    private static bool ShouldPreload(IResourceLocation location)
+    {
+        // Sprites and audio retain their own loading policies and handles.
+        Type resourceType = location.ResourceType;
+        if (!typeof(UnityEngine.Object).IsAssignableFrom(resourceType) ||
+            typeof(Sprite).IsAssignableFrom(resourceType) ||
+            typeof(SoundSO).IsAssignableFrom(resourceType) ||
+            typeof(AudioClip).IsAssignableFrom(resourceType)) return false;
+
+        const string audioFolder = "Assets/Addressables/Audio";
+        if (IsInFolder(location.PrimaryKey, audioFolder) || IsInFolder(location.InternalId, audioFolder)) return false;
+
+#if UNITY_EDITOR
+        // Editor locators can return a child location whose primary key is its parent folder.
+        if (UnityEditor.AssetDatabase.IsValidFolder(location.PrimaryKey) ||
+            UnityEditor.AssetDatabase.IsValidFolder(location.InternalId)) return false;
+#endif
+        return true;
+    }
+
+    private static bool IsInFolder(string path, string folder) =>
+        !string.IsNullOrEmpty(path) && (string.Equals(path, folder, StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith(folder + "/", StringComparison.OrdinalIgnoreCase));
+
+    private async UniTask PreloadAssetAsync(IResourceLocation location)
+    {
+        if (await LoadAssetAsync<UnityEngine.Object>(location.PrimaryKey, location) == null)
+            throw new InvalidOperationException($"Addressable asset failed to load: {location.PrimaryKey}");
+    }
+
     public void Release(string key)
     {
         // 핸들 확인
@@ -161,6 +274,11 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     public void ReleaseAll()
     {
+        IsPreloaded = false;
+        initializationTask = null;
+        LoadingError = null;
+        loadingPhase = "Waiting to initialize";
+        SpriteCache.ReleaseAll();
         foreach (var handle in _handleCache.Values)
         {
             Addressables.Release(handle);

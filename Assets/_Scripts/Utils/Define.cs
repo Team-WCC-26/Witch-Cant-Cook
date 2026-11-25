@@ -14,7 +14,7 @@ public class Define
         Flour = 10800,
         Tomato = 10900,
         Onion = 11000,
-        Salmon = 11100,
+        Nalchi = 11100,
         Honey = 11200,
         MandragoraRoot = 11300,
         Salt = 11400,
@@ -42,7 +42,10 @@ public class Define
         Pot = 40,
         Plate = 50,
         PrepTable = 60,
+        JumpAssist = 70,
         Oven = 80,
+        TrashCan = 90,
+        CookingSubmit = 100,
     }
 
     public static bool TryGetToolId(EntityCategory category, out eToolId toolId)

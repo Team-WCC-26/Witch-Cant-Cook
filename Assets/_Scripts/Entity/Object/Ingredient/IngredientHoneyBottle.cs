@@ -3,6 +3,7 @@ using Server;
 using System.Net.NetworkInformation;
 using UnityEngine;
 
+[RequireComponent(typeof(CatchableObj), typeof(IngredientReaction))]
 public class IngredientHoneyBottle : IngredientTrait
 {
     [Header("References")]
@@ -38,7 +39,7 @@ public class IngredientHoneyBottle : IngredientTrait
 
     private void OnBroken(Vector3 point, Vector3 normal)
     {
-        if (areaCreated) return;
+        if (!IsTraitAvailable || areaCreated) return;
         areaCreated = true;
 
         if (areaCreator != null)

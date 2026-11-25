@@ -36,12 +36,18 @@ public class UIBlind : UIBase
     {
         HideAll();
         ShuffleInkImages();
+        bool playedSound = false;
 
         // 먹물 하나씩 나타나기
         foreach (Image image in inkImages)
         {
             image.gameObject.SetActive(true);
             SetAlpha(image, 1f);
+            if (!playedSound)
+            {
+                playedSound = true;
+                SoundManager.GetOrCreate().Play(SoundId.SquidInk);
+            }
 
             yield return new WaitForSeconds(showInterval);
         }

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Unity.Cinemachine;
 using UnityEngine;
 
 public sealed class PlayerCameraController : MonoBehaviour
@@ -19,9 +21,23 @@ public sealed class PlayerCameraController : MonoBehaviour
     [SerializeField] private float minPitch = -70f;
     [SerializeField] private float maxPitch = 70f;
 
+    [Header("Trash Can Camera")]
+    [SerializeField, Min(0.01f)] private float distanceDamping = 0.3f;
+    private CinemachineThirdPersonFollow cameraFollow;
+    private float normalCameraDistance;
+    private float distanceVelocity;
+    private bool normalObstacleAvoidance;
+    private float trashCanBlend;
+    private float trashCanBlendVelocity;
+    private Vector3 trashCanTargetPos;
+    private float trashCanPitch;
+    private readonly Dictionary<TrashCanInteraction, float> trashCanDistances = new();
+
     private float yawDeg = 0f;
     private float pitchDeg = 0f;
     public Quaternion YawRotation => Quaternion.Euler(0f, yawDeg, 0f);
+    public Vector3 AimDirection => (YawRotation * Quaternion.Euler(pitchDeg, 0f, 0f) * Vector3.forward).normalized;
+    public bool IsSpecialViewActive => trashCanDistances.Count > 0 || trashCanBlend > 0f;
 
     private Vector3 itemPointLocalPosition;
     private Quaternion itemPointLocalRotation = Quaternion.identity;
@@ -29,8 +45,19 @@ public sealed class PlayerCameraController : MonoBehaviour
     private Vector3 throwPointLocalPosition;
     private Quaternion throwPointLocalRotation = Quaternion.identity;
 
-    private bool canControlCursor = false;
+    private bool canControlCamera = false;
+    private Vector3 yawRootLocalPos;
 
+#if WCC_TEST_TOOLS
+    private bool performanceRotationActive;
+    private float performanceInitialYaw;
+    private float performanceInitialPitch;
+    private float performanceYawOffset;
+    private bool performancePreviousInputBlocked;
+    public bool IsPerformanceRotationActive => performanceRotationActive;
+#endif
+
+    #region Unity Callbacks
     private void Awake()
     {
         if (brain == null && !TryGetComponent(out brain))
@@ -68,6 +95,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         }
         else
         {
+            yawRootLocalPos = yawRoot.localPosition;
             yawRoot.localRotation = Quaternion.identity;
         }
 
@@ -83,51 +111,34 @@ public sealed class PlayerCameraController : MonoBehaviour
 
     private void OnEnable()
     {
-        if (!canControlCursor)
-        {
-            return;
-        }
-
-        ApplyCursor(lockCursor);
+        if (canControlCamera) CursorController.SetGameplayOwner(this, lockCursor);
     }
 
     private void OnDisable()
     {
-        if (!canControlCursor)
-        {
-            return;
-        }
-
-        ApplyCursor(false);
-    }
-
-    public void SetLocalControlActive(bool isActive)
-    {
-        if (!isActive)
-        {
-            if (canControlCursor)
-            {
-                ApplyCursor(false);
-            }
-
-            canControlCursor = false;
-            enabled = false;
-            return;
-        }
-
-        canControlCursor = true;
-        enabled = true;
-        ApplyCursor(lockCursor);
+#if WCC_TEST_TOOLS
+        EndPerformanceRotation();
+#endif
+        ResetCameraView();
+        CursorController.ReleaseGameplayOwner(this);
     }
 
     private void Update()
     {
+        UpdateCameraView();
         if (input == null || brain == null || yawRoot == null || pitchRoot == null)
         {
             return;
         }
-
-        Vector2 look = input.RawLookDelta;
+        Vector2 look = CursorController.IsPointerInputAllowed ? input.RawLookDelta : Vector2.zero;
+#if WCC_TEST_TOOLS
+        if (performanceRotationActive)
+        {
+            yawDeg = performanceInitialYaw + performanceYawOffset;
+            pitchDeg = performanceInitialPitch;
+            look = Vector2.zero;
+        }
+#endif
 
         if (look.sqrMagnitude >= 0.000001f)
         {
@@ -140,8 +151,11 @@ public sealed class PlayerCameraController : MonoBehaviour
 
         Quaternion yawRotation = YawRotation;
 
+        // Follow the displayed body without moving its physics ancestors.
+        Vector3 followPos = brain.VisualPos + brain.transform.TransformVector(yawRootLocalPos);
+        yawRoot.position = Vector3.Lerp(followPos, trashCanTargetPos, trashCanBlend);
         yawRoot.rotation = yawRotation;
-        pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
+        pitchRoot.localRotation = Quaternion.Euler(Mathf.LerpAngle(pitchDeg, trashCanPitch, trashCanBlend), 0f, 0f);
 
         if (brain.Animator != null && brain.Animator.enabled)
         {
@@ -151,7 +165,7 @@ public sealed class PlayerCameraController : MonoBehaviour
         if (brain.ItemPoint != null)
         {
             brain.ItemPoint.SetPositionAndRotation(
-                brain.transform.position + yawRotation * itemPointLocalPosition,
+                brain.Body.VisualPos + yawRotation * itemPointLocalPosition,
                 yawRotation * itemPointLocalRotation
             );
         }
@@ -159,18 +173,135 @@ public sealed class PlayerCameraController : MonoBehaviour
         if (brain.ThrowPoint != null)
         {
             brain.ThrowPoint.transform.SetPositionAndRotation(
-                brain.transform.position + yawRotation * throwPointLocalPosition,
+                brain.Body.VisualPos + yawRotation * throwPointLocalPosition,
                 yawRotation * throwPointLocalRotation
             );
         }
     }
 
-    private void OnApplicationFocus(bool focus)
+    #endregion
+
+#if WCC_TEST_TOOLS
+    /// <summary>Locks local input and saves the current view for a rotation measurement.</summary>
+    public bool BeginPerformanceRotation()
     {
-        if (canControlCursor)
+        if (performanceRotationActive || !canControlCamera || input == null || input.IsInputBlocked
+            || yawRoot == null || pitchRoot == null || IsSpecialViewActive) return false;
+        performanceInitialYaw = yawDeg;
+        performanceInitialPitch = pitchDeg;
+        performanceYawOffset = 0f;
+        performancePreviousInputBlocked = input.IsInputBlocked;
+        performanceRotationActive = true;
+        input.IsInputBlocked = true;
+        return true;
+    }
+
+    /// <summary>Sets the measured yaw offset from the saved starting view.</summary>
+    public void SetPerformanceRotation(float yawOffset)
+    {
+        if (performanceRotationActive) performanceYawOffset = yawOffset;
+    }
+
+    /// <summary>Restores local input and the view after a rotation measurement.</summary>
+    public void EndPerformanceRotation()
+    {
+        if (!performanceRotationActive) return;
+        performanceRotationActive = false;
+        if (input != null) input.IsInputBlocked = performancePreviousInputBlocked;
+        yawDeg = performanceInitialYaw;
+        pitchDeg = performanceInitialPitch;
+        if (yawRoot != null) yawRoot.rotation = YawRotation;
+        if (pitchRoot != null) pitchRoot.localRotation = Quaternion.Euler(pitchDeg, 0f, 0f);
+    }
+#endif
+
+    public void BindCamera(CinemachineCamera virtualCamera)
+    {
+        ResetCameraView();
+        cameraFollow = virtualCamera != null ? virtualCamera.GetComponent<CinemachineThirdPersonFollow>() : null;
+        if (cameraFollow != null)
         {
-            ApplyCursor(focus && lockCursor);
+            normalCameraDistance = cameraFollow.CameraDistance;
+            normalObstacleAvoidance = cameraFollow.AvoidObstacles.Enabled;
         }
+    }
+
+    public void SetTrashCanView(TrashCanInteraction source, float offset)
+    {
+        if (offset > 0f) trashCanDistances[source] = offset;
+        else trashCanDistances.Remove(source);
+    }
+
+    public void SetLocalControlActive(bool isActive)
+    {
+        if (!isActive)
+        {
+            if (canControlCamera)
+            {
+                CursorController.ReleaseGameplayOwner(this);
+            }
+
+            canControlCamera = false;
+            enabled = false;
+            return;
+        }
+
+        canControlCamera = true;
+        enabled = true;
+        CursorController.SetGameplayOwner(this, lockCursor);
+    }
+
+    public void ResetForRespawn(Quaternion rot)
+    {
+        ResetCameraView();
+        yawDeg = NormalizeAngle(rot.eulerAngles.y);
+        pitchDeg = 0f;
+        if (yawRoot != null)
+            yawRoot.SetPositionAndRotation(brain.VisualPos + brain.transform.TransformVector(yawRootLocalPos), YawRotation);
+        if (pitchRoot != null) pitchRoot.localRotation = Quaternion.identity;
+    }
+
+    private void UpdateCameraView()
+    {
+        if (cameraFollow == null || !canControlCamera) return;
+        if (trashCanDistances.Count == 0 && trashCanBlend == 0f) return;
+        float offset = 0f;
+        TrashCanInteraction activeTrashCan = null;
+        foreach (var entry in trashCanDistances)
+        {
+            if (entry.Key == null || !entry.Key.isActiveAndEnabled || entry.Value <= offset) continue;
+            offset = entry.Value;
+            activeTrashCan = entry.Key;
+        }
+        if (activeTrashCan != null)
+        {
+            trashCanTargetPos = activeTrashCan.CameraTargetPos;
+            trashCanPitch = activeTrashCan.CameraPitch;
+        }
+        trashCanBlend = Mathf.SmoothDamp(trashCanBlend, activeTrashCan != null ? 1f : 0f,
+            ref trashCanBlendVelocity, distanceDamping, Mathf.Infinity, Time.deltaTime);
+        // Keep container walls from pulling the overhead camera back inside.
+        cameraFollow.AvoidObstacles.Enabled = normalObstacleAvoidance
+            && activeTrashCan == null && trashCanBlend < 0.001f;
+        cameraFollow.CameraDistance = Mathf.SmoothDamp(cameraFollow.CameraDistance,
+            normalCameraDistance + offset, ref distanceVelocity, distanceDamping,
+            Mathf.Infinity, Time.deltaTime);
+        if (activeTrashCan == null && trashCanBlend < 0.001f
+            && Mathf.Abs(cameraFollow.CameraDistance - normalCameraDistance) < 0.001f)
+            ResetCameraView();
+    }
+
+    private void ResetCameraView()
+    {
+        if (cameraFollow != null)
+        {
+            cameraFollow.CameraDistance = normalCameraDistance;
+            cameraFollow.AvoidObstacles.Enabled = normalObstacleAvoidance;
+        }
+        distanceVelocity = 0f;
+        trashCanBlend = 0f;
+        trashCanBlendVelocity = 0f;
+        trashCanDistances.Clear();
     }
 
     private static float NormalizeAngle(float euler)
@@ -184,9 +315,4 @@ public sealed class PlayerCameraController : MonoBehaviour
         return value;
     }
 
-    private static void ApplyCursor(bool locked)
-    {
-        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
-        Cursor.visible = !locked;
-    }
 }

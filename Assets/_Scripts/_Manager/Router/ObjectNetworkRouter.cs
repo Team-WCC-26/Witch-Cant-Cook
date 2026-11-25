@@ -12,11 +12,25 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public Dictionary<long, CatchableObj> catchableDics = new();
     private readonly Dictionary<long, long> pendingParentChanges = new();
+    private readonly Dictionary<long, IEntityThrowParentReceiver> detachedThrowParents = new();
+    private readonly Dictionary<long, long> containerEjections = new();
 
     [SerializeField] private MapObjNetworkRouter mapObjRouter;
 
     private Coroutine subscribeRoutine;
     private bool isSubscribed;
+
+    // Only after the server confirms its round entities have been cleared.
+    public void ResetClientStage()
+    {
+        var ids = new List<long>(catchableDics.Keys);
+        foreach (long id in ids) RemoveAndRelease(id);
+        catchableDics.Clear();
+        pendingParentChanges.Clear();
+        detachedThrowParents.Clear();
+        containerEjections.Clear();
+        IngredientEgg.ResetPanTransfers();
+    }
 
     private void Awake()
     {
@@ -43,12 +57,19 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityThrow, HandleEntityThrow);
         ServerManager.Instance.RegisterHandler(PacketId.S_EntityDestroy, HandleEntityDestroy);
         ServerManager.Instance.RegisterHandler(PacketId.S_ToolSpawn, HandleToolSpawn);
+        ServerManager.Instance.RegisterHandler(PacketId.S_PanEject, HandlePanEject);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientDistanceRequest, HandleIngredientDistanceRequest);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCorn, HandleIngredientCorn);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientCornStart, HandleIngredientCornStart);
+        ServerManager.Instance.RegisterHandler(PacketId.S_IngredientSquid, HandleIngredientSquid);
         isSubscribed = true;
         subscribeRoutine = null;
     }
 
     private void OnDisable()
     {
+        containerEjections.Clear();
+        detachedThrowParents.Clear();
         if (subscribeRoutine != null)
         {
             StopCoroutine(subscribeRoutine);
@@ -63,7 +84,137 @@ public class ObjectNetworkRouter : MonoBehaviour
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityThrow);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_EntityDestroy);
         ServerManager.Instance.UnRegisterHandler(PacketId.S_ToolSpawn);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_PanEject);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientDistanceRequest);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCorn);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientCornStart);
+        ServerManager.Instance.UnRegisterHandler(PacketId.S_IngredientSquid);
         isSubscribed = false;
+    }
+
+    private void HandleIngredientDistanceRequest(ReadOnlyMemory<byte> data)
+    {
+        IngredientDistanceRequestPacket request = PacketSerializer.Deserialize<IngredientDistanceRequestPacket>(data.Span);
+        PlayerSpawnManager spawnManager = PlayerSpawnManager.Instance;
+        float distance = float.MaxValue;
+        if (spawnManager != null && !string.IsNullOrEmpty(spawnManager.MyID) &&
+            spawnManager.TryGetPlayer(spawnManager.MyID, out PlayerBrain player) && player != null &&
+            catchableDics.TryGetValue(request.EntityId, out CatchableObj ingredient) && ingredient != null &&
+            ingredient.gameObject.activeInHierarchy)
+        {
+            distance = Vector3.Distance(player.PhysicsPos, ingredient.transform.position);
+        }
+        else
+        {
+            // Reply even if an entity has disappeared; the server excludes this measurement.
+            Debug.LogWarning($"Ingredient distance unavailable. EntityId: {request.EntityId}");
+        }
+
+        IngredientDistanceResponsePacket response = new()
+        {
+            EntityId = request.EntityId,
+            Distance = distance
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(response));
+    }
+
+    private void HandleIngredientCornStart(ReadOnlyMemory<byte> data)
+    {
+        IngredientCornExplodeStartPacket packet = PacketSerializer.Deserialize<IngredientCornExplodeStartPacket>(data);
+        if (catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable) && catchable != null &&
+            catchable.TryGetComponent(out IngredientCorn corn))
+            corn.HandleServerExplosionStart(packet);
+    }
+
+    private void HandleIngredientCorn(ReadOnlyMemory<byte> data)
+    {
+        IngredientCornPacket packet = PacketSerializer.Deserialize<IngredientCornPacket>(data);
+        if (catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable) && catchable != null &&
+            catchable.TryGetComponent(out IngredientCorn corn) && corn.IsTraitAvailable)
+        {
+            // Run the blast before returning the source to its pool. The server keeps this ID.
+            corn.HandleServerExplosion(packet);
+            TryReplaceCornWithPopcorn(catchable);
+        }
+    }
+
+    private void HandleIngredientSquid(ReadOnlyMemory<byte> data)
+    {
+        IngredientSquidPacket packet = PacketSerializer.Deserialize<IngredientSquidPacket>(data.Span);
+        if (packet.PlayerIds == null || packet.BlindDurationMs <= 0) return;
+
+        // Ignore queued ink after the source has been prepared or despawned.
+        if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj source) || source == null ||
+            !source.TryGetComponent(out IngredientSquid squid) || !squid.IsTraitAvailable) return;
+
+        PlayerSpawnManager spawnManager = PlayerSpawnManager.Instance;
+        if (spawnManager == null) return;
+
+        float duration = packet.BlindDurationMs / 1000f;
+        foreach (string playerId in packet.PlayerIds)
+        {
+            if (string.IsNullOrEmpty(playerId) ||
+                !spawnManager.TryGetPlayer(playerId, out PlayerBrain player) || player == null) continue;
+            player.EffectController.ApplyBlind(duration);
+        }
+    }
+
+    private bool TryReplaceCornWithPopcorn(CatchableObj source)
+    {
+        long entityId = source.NetworkId;
+        if (!catchableDics.TryGetValue(entityId, out CatchableObj registered) || registered != source)
+            return false;
+
+        Ingredient data = DataManager.Instance?.GetIngredient().GetData((int)Define.eIngredient.Popcorn);
+        ObjectPoolManager pool = ObjectPoolManager.Instance;
+        if (data == null || pool == null)
+        {
+            Debug.LogError($"[Corn Replace] Popcorn data/pool unavailable. EntityId={entityId}");
+            return false;
+        }
+
+        // Prepare a normal ingredient before touching the live corn, so a failed spawn leaves it intact.
+        Vector3 position = source.transform.position;
+        Quaternion rotation = source.transform.rotation;
+        GameObject go = pool.Pop(data.prefabName, position, rotation,
+            out CatchableObj popcorn, out IngredientReaction reaction);
+        if (go == null || popcorn == null)
+        {
+            if (go != null) pool.Push(go);
+            Debug.LogError($"[Corn Replace] Popcorn prefab unavailable. EntityId={entityId}");
+            return false;
+        }
+        FoodRecipeIdentity.Initialize(popcorn, data, null);
+        reaction?.ResetForPool();
+
+        long parentEntityId = source.ParentEntityId;
+        PlayerBrain holder = source.Holder;
+        Vector3 velocity = Vector3.zero;
+        Vector3 angularVelocity = Vector3.zero;
+        if (source.TryGetComponent(out Rigidbody sourceBody) && !sourceBody.isKinematic)
+        {
+            velocity = sourceBody.linearVelocity;
+            angularVelocity = sourceBody.angularVelocity;
+        }
+
+        // This is a local presentation replacement, never an entity destruction/spawn request.
+        RemoveAndRelease(entityId);
+        popcorn.NetworkId = entityId;
+        Register(entityId, popcorn);
+        if (popcorn.TryGetComponent(out Rigidbody body) && !body.isKinematic)
+        {
+            body.linearVelocity = velocity;
+            body.angularVelocity = angularVelocity;
+        }
+        if (holder != null)
+            holder.Interact.ApplyPicked(popcorn);
+        else if (parentEntityId > 0)
+        {
+            popcorn.ParentEntityId = parentEntityId;
+            NotifyParent(parentEntityId, popcorn, true);
+        }
+        Debug.Log($"[Corn Replace] entity={entityId}, ingredient={data.id}, corn returned to pool", popcorn);
+        return true;
     }
 
     private void HandleEntityDestroy(ReadOnlyMemory<byte> data)
@@ -76,6 +227,25 @@ public class ObjectNetworkRouter : MonoBehaviour
     {
         foreach (EntityDestroyPacket packet in packets)
             RemoveAndRelease(packet.EntityId);
+    }
+
+    private void HandlePanEject(ReadOnlyMemory<byte> data)
+    {
+        PanEjectPacket packet = PacketSerializer.Deserialize<PanEjectPacket>(data);
+        if (!catchableDics.TryGetValue(packet.PanEntityId, out CatchableObj panObj) ||
+            panObj == null || !panObj.TryGetComponent(out PanInteraction pan))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.PanEntityId, "Pan not found");
+            return;
+        }
+        if (!catchableDics.TryGetValue(packet.IngredientEntityId, out CatchableObj ingredient) ||
+            ingredient == null || !ingredient.TryGetComponent<IngredientReaction>(out _))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Ingredient not found");
+            return;
+        }
+
+        pan.TryApplyPanEject(packet, ingredient, this);
     }
 
     private void HandleEntityParentChanged(IReadOnlyList<EntityChangeParentPacket> packets)
@@ -96,8 +266,23 @@ public class ObjectNetworkRouter : MonoBehaviour
     // 부모 변경 적용
     private void ApplyParentChange(CatchableObj catchable, long parentEntityId)
     {
+        if (parentEntityId == -1) parentEntityId = 0;
+        if (catchable.ParentEntityId == -1) catchable.ParentEntityId = 0;
+        // 배출 결과보다 늦게 도착한 과거 삽입 결과로 다시 보관하지 않는다.
+        if (containerEjections.TryGetValue(catchable.NetworkId, out long ejectParentId))
+        {
+            if (parentEntityId == ejectParentId) return;
+            if (parentEntityId != 0) containerEjections.Remove(catchable.NetworkId);
+        }
+
         long previousParentId = catchable.ParentEntityId;
         if (previousParentId == parentEntityId) return;
+        if (parentEntityId != 0) PanInteraction.ForgetToss(catchable.NetworkId);
+
+        detachedThrowParents.Remove(catchable.NetworkId);
+        if (parentEntityId == 0 && TryResolveParent(previousParentId, out IEntityParentReceiver previousParent) &&
+            previousParent is IEntityThrowParentReceiver throwParent)
+            detachedThrowParents[catchable.NetworkId] = throwParent;
 
         NotifyParent(previousParentId, catchable, false);
 
@@ -115,6 +300,10 @@ public class ObjectNetworkRouter : MonoBehaviour
     public void HandleEntityPicked(CatchableObj catchable)
     {
         if (catchable == null) return;
+        containerEjections.Remove(catchable.NetworkId);
+
+        PanInteraction.ForgetToss(catchable.NetworkId);
+        detachedThrowParents.Remove(catchable.NetworkId);
 
         NotifyParent(catchable.ParentEntityId, catchable, false);
         catchable.ParentEntityId = 0;
@@ -127,8 +316,9 @@ public class ObjectNetworkRouter : MonoBehaviour
             if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
                 continue;
 
-            if (catchable.TryGetComponent(out IngredientReaction reaction))
-                reaction.GaugeUI?.ShowProgress(packet.Process);
+            if (catchable.TryGetComponent(out IngredientReaction reaction) &&
+                !reaction.IsActionCompleted(IngredientAction.Cut))
+                reaction.ApplyCutProgress(packet.Process);
         }
     }
 
@@ -138,7 +328,8 @@ public class ObjectNetworkRouter : MonoBehaviour
 
         if (!catchableDics.TryGetValue(packet.EntityId, out CatchableObj catchable))
         {
-            Debug.LogError($"Throw target not found. EntityId: {packet.EntityId}");
+            NetworkResponseWait.Error("Entity throw", packet.EntityId, "Target not found");
+            PanInteraction.ForgetToss(packet.EntityId);
             return;
         }
 
@@ -148,6 +339,12 @@ public class ObjectNetworkRouter : MonoBehaviour
         {
             throwReceiver.HandleEntityThrown(catchable);
         }
+        else if (detachedThrowParents.TryGetValue(packet.EntityId, out IEntityThrowParentReceiver detachedParent))
+        {
+            if (detachedParent is not UnityEngine.Object obj || obj != null)
+                detachedParent.HandleEntityThrown(catchable);
+        }
+        detachedThrowParents.Remove(packet.EntityId);
 
         NotifyParent(previousParentId, catchable, false);
         catchable.Holder?.Interact.ApplyThrown(catchable);
@@ -157,12 +354,26 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void RemoveAndRelease(long entityId)
     {
+        containerEjections.Remove(entityId);
+        PanInteraction.ForgetToss(entityId);
+        detachedThrowParents.Remove(entityId);
+        IngredientEgg.HandleDestroyedEntity(entityId);
         pendingParentChanges.Remove(entityId);
 
         if (!catchableDics.TryGetValue(entityId, out CatchableObj catchable))
             return;
 
         catchable.IsRespawning = false;
+
+        // Destroyed food must leave its container before pooling resets its identity.
+        // Otherwise PlateInteraction retains a pooled food reference and a submission lock.
+        if (TryResolveParent(catchable.ParentEntityId, out IEntityParentReceiver parent))
+        {
+            if (parent is TrashCanInteraction trashCan) trashCan.HandleDestroyedObj(catchable);
+            if (parent is SubmitTriggerZone station) station.HandleDestroyedObj(catchable);
+            parent.HandleEntityRemoved(catchable);
+        }
+        catchable.ParentEntityId = 0;
 
         catchableDics.Remove(entityId);
         ObjectPoolManager.Instance.activeObjDict.Remove(entityId);
@@ -173,6 +384,7 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void HandleToolSpawn(ReadOnlyMemory<byte> data)
     {
+        if (StageReturnFlow.IsSettlementActive) return;
         ToolSpawnPacket packet = MemoryPackSerializer.Deserialize<ToolSpawnPacket>(data.Span)!;
 
         if (!Define.TryGetEntityCategory((Define.eToolId)packet.ToolId, out EntityCategory category))
@@ -181,7 +393,10 @@ public class ObjectNetworkRouter : MonoBehaviour
             return;
         }
         Vector3 pos = ProtocolTypeConverter.ToUnityVector3(packet.Position);
-        Quaternion rot = Quaternion.identity;
+        var rotation = packet.Quaternion;
+        Quaternion rot = rotation.LengthSquared() > 0.000001f
+            ? new Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W).normalized
+            : Quaternion.identity;
 
         GameObject go = ObjectPoolManager.Instance.Pop(category.ToString(), pos, rot);
         if (go == null) return;
@@ -204,12 +419,37 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     public void Remove(long networkId)
     {
+        containerEjections.Remove(networkId);
+        PanInteraction.ForgetToss(networkId);
+        detachedThrowParents.Remove(networkId);
         pendingParentChanges.Remove(networkId);
         catchableDics.Remove(networkId);
     }
     public bool TryGet(long networkId, out CatchableObj obj)
     {
         return catchableDics.TryGetValue(networkId, out obj);
+    }
+
+    public void BeginContainerEjection(CatchableObj obj, long parentId)
+    {
+        containerEjections[obj.NetworkId] = parentId;
+    }
+
+    public void DetachForContainerEjection(CatchableObj obj)
+    {
+        NotifyParent(obj.ParentEntityId, obj, false);
+        if (obj.Holder != null)
+        {
+            obj.Holder.Interact.TryReleaseHeld(obj);
+            obj.OnDrop();
+        }
+        obj.ParentEntityId = 0;
+    }
+
+    public void EndContainerEjection(long entityId, long parentId)
+    {
+        if (containerEjections.TryGetValue(entityId, out long currentParent) && currentParent == parentId)
+            containerEjections.Remove(entityId);
     }
 
     public bool TryApplyIngredientCombine(
@@ -283,7 +523,7 @@ public class ObjectNetworkRouter : MonoBehaviour
     private void NotifyParent(long parentEntityId, CatchableObj entity, bool added)
     {
         // Container notification
-        if (parentEntityId == 0) return;
+        if (parentEntityId == 0 || parentEntityId == -1) return;
 
         if (!TryResolveParent(parentEntityId, out IEntityParentReceiver receiver))
         {
@@ -312,6 +552,9 @@ public class ObjectNetworkRouter : MonoBehaviour
 
     private void Unregister(long entityId)
     {
+        containerEjections.Remove(entityId);
+        PanInteraction.ForgetToss(entityId);
+        detachedThrowParents.Remove(entityId);
         pendingParentChanges.Remove(entityId);
         ReleaseNetworkBoundState(entityId);
         catchableDics.Remove(entityId);
@@ -330,7 +573,6 @@ public class ObjectNetworkRouter : MonoBehaviour
             belt.UnregisterItem(entityId);
         }
 
-        IngredientEntityLifecycle.RequestDestroy(entityId);
     }
 
     private void Register(long entityId, CatchableObj catchable)

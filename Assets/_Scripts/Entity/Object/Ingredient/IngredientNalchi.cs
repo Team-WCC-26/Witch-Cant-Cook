@@ -1,0 +1,231 @@
+using UnityEngine;
+
+[RequireComponent(typeof(CatchableObj))]
+[RequireComponent(typeof(IngredientTraitFly))]
+[RequireComponent(typeof(Rigidbody))]
+public class IngredientNalchi : IngredientTrait
+{
+    [Header("References")]
+    [SerializeField] private CatchableObj catchable;
+    [SerializeField] private IngredientTraitFly flyTrait;
+    [SerializeField] private Rigidbody rb;
+
+    [Header("Fly Timing")]
+    [Tooltip("스폰 후(또는 내려놓은 후) 비행을 시작하기까지 대기 시간.")]
+    [SerializeField] private float delayBeforeFly = 2f;
+
+    [Header("Stun")]
+    [Tooltip("물리적 충돌을 받았을 때 기절하는 시간.")]
+    [SerializeField] private float stunDuration = 10f;
+    [Tooltip("이 속도(m/s) 이상의 충돌만 기절로 처리한다. 낮으면 그냥 내려놓고 착지하는 것도 기절로 잡힌다.")]
+    [SerializeField] private float minStunImpactSpeed = 3f;
+
+    private readonly IngredientTraitTimer flyDelayTimer = new();
+    private readonly IngredientTraitTimer stunTimer = new();
+
+    private bool isStunned;
+    private bool inPan;
+    private IngredientReaction reaction;
+    private Animator flopAnimator;
+    private bool originalAnimatorEnabled;
+    private Vector3 originalAnimatorPos;
+    private Quaternion originalAnimatorRot;
+    private Vector3 originalAnimatorScale;
+    private bool CanFly => IsTraitAvailable && !inPan &&
+        (reaction == null || !reaction.IsActionCompleted(IngredientAction.Grill | IngredientAction.Cook));
+    // Spawned/wandering fish, including one stunned during flight, require a player pickup before pot intake.
+    public bool IsAutonomous { get; private set; }
+    public bool IsFlying => IsTraitAvailable && flyTrait != null && flyTrait.IsFlying;
+
+    #region Unity Callbacks
+
+    private void Awake()
+    {
+        if (catchable == null)
+            catchable = GetComponent<CatchableObj>();
+
+        if (flyTrait == null)
+            flyTrait = GetComponent<IngredientTraitFly>();
+
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+
+        reaction = GetComponent<IngredientReaction>();
+        flopAnimator = GetComponentInChildren<Animator>(true);
+        if (flopAnimator != null)
+        {
+            originalAnimatorEnabled = flopAnimator.enabled;
+            originalAnimatorPos = flopAnimator.transform.localPosition;
+            originalAnimatorRot = flopAnimator.transform.localRotation;
+            originalAnimatorScale = flopAnimator.transform.localScale;
+        }
+    }
+
+    private void Update()
+    {
+        float deltaTime = Time.deltaTime;
+        flyDelayTimer.Tick(deltaTime);
+        stunTimer.Tick(deltaTime);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        ApplyImpact(collision.relativeVelocity.magnitude);
+    }
+
+    #endregion
+
+    public void EnterPan()
+    {
+        inPan = true;
+        StopMovement();
+        SetFlopAnimation(false);
+    }
+
+    public void LeavePan()
+    {
+        inPan = false;
+        SetFlopAnimation(CanFly);
+        BeginFlyDelay();
+    }
+
+    // Also used by scripted collisions that stop short of a physics contact.
+    public void ApplyImpact(float relativeSpeed)
+    {
+        if (!CanFly || isStunned || catchable.IsHold)
+            return;
+
+        // Ignore weak contacts such as gently landing after being put down.
+        if (relativeSpeed < minStunImpactSpeed)
+            return;
+
+        EnterStun();
+    }
+
+    protected override void StartTrait()
+    {
+        catchable.OnPicked += OnPicked;
+        catchable.OnDropped += OnDropped;
+        if (reaction != null) reaction.OnActionCompleted += HandleActionCompleted;
+
+        inPan = false;
+        isStunned = false;
+        IsAutonomous = true;
+        flyTrait.StopFlying();
+        SetFlopAnimation(CanFly);
+        BeginFlyDelay();
+    }
+
+    protected override void StopTrait()
+    {
+        catchable.OnPicked -= OnPicked;
+        catchable.OnDropped -= OnDropped;
+        if (reaction != null) reaction.OnActionCompleted -= HandleActionCompleted;
+
+        StopMovement();
+        SetFlopAnimation(false);
+    }
+
+    private void HandleActionCompleted(IngredientAction action)
+    {
+        if ((action & (IngredientAction.Grill | IngredientAction.Cook)) != 0)
+        {
+            StopMovement();
+            SetFlopAnimation(false);
+        }
+    }
+
+    private void SetFlopAnimation(bool active)
+    {
+        if (flopAnimator == null) return;
+        if (active)
+        {
+            flopAnimator.enabled = originalAnimatorEnabled;
+            return;
+        }
+
+        if (!flopAnimator.enabled) return;
+
+        // Restore the model pose instead of freezing midway through a flop.
+        flopAnimator.Rebind();
+        flopAnimator.enabled = false;
+        if (flopAnimator.transform == transform) return;
+        flopAnimator.transform.localPosition = originalAnimatorPos;
+        flopAnimator.transform.localRotation = originalAnimatorRot;
+        flopAnimator.transform.localScale = originalAnimatorScale;
+    }
+
+    #region Fly
+    private void BeginFlyDelay()
+    {
+        if (!CanFly) return;
+        flyDelayTimer.StartWait(delayBeforeFly, BeginFly);
+    }
+
+    private void BeginFly()
+    {
+        if (!CanFly || isStunned || catchable.IsHold || catchable.ParentEntityId > 0)
+            return;
+
+        // The flight trait owns its physics and releases conveyor movement when takeoff succeeds.
+        flyTrait.StartFlying();
+        if (flyTrait.IsFlying) IsAutonomous = true;
+    }
+    #endregion
+
+    #region Stun
+    private void EnterStun()
+    {
+        isStunned = true;
+
+        flyDelayTimer.Stop();
+        flyTrait.StopFlying();
+
+        // kinematic을 풀어 중력이 작용하게 해서 바닥으로 떨어지도록 한다.
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+        stunTimer.StartTimer(stunDuration, RecoverFromStun);
+    }
+
+    private void RecoverFromStun()
+    {
+        isStunned = false;
+
+        // 다시 대기 후 비행을 재개한다. 기절 후 계속 바닥에 두고 싶다면 이 줄을 지우면 된다.
+        BeginFlyDelay();
+    }
+    #endregion
+
+    #region Catchable
+    private void OnPicked()
+    {
+        StopMovement();
+    }
+
+    private void StopMovement()
+    {
+        IsAutonomous = false;
+        flyDelayTimer.Stop();
+        stunTimer.Stop();
+        isStunned = false;
+
+        flyTrait.StopFlying();
+    }
+
+    private void OnDropped()
+    {
+        IsAutonomous = false;
+        if (!CanFly) return;
+        // 손에서 놓으면 물리(중력)가 적용되도록 kinematic을 해제한다.
+        // 이걸 안 해주면 CatchableObj가 들고 있는 동안 켜둔 kinematic이 그대로 남아
+        // 놓은 자리에 그대로 박제된 것처럼 보인다.
+        rb.isKinematic = false;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+        // 내려놓으면 스폰 직후와 동일하게 대기 후 다시 비행을 시작한다.
+        BeginFlyDelay();
+    }
+    #endregion
+}

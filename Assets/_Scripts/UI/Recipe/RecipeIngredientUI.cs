@@ -7,23 +7,46 @@ using Protocol;
 public class RecipeIngredientUI : MonoBehaviour
 {
     [SerializeField] private Image icon;
-    [SerializeField] private TMP_Text ingredientName;
     [SerializeField] private Image[] methodImages = Array.Empty<Image>();
     [SerializeField] private TMP_Text[] methodLabels = Array.Empty<TMP_Text>();
+    [Header("Font Sizes")]
+    [SerializeField, Min(1f)] private float methodFontSize = 16f;
     private int bindingVersion;
+    #region Unity Callbacks
+    private void OnEnable() => ApplyTypography();
     private void OnDisable() => bindingVersion++;
+    #endregion
 
-    public void Configure(Image image, TMP_Text label, Image[] methods, TMP_Text[] labels)
+    public void Configure(Image image, Image[] methods, TMP_Text[] labels)
     {
-        icon = image; ingredientName = label; methodImages = methods; methodLabels = labels;
+        icon = image; methodImages = methods; methodLabels = labels;
+        ApplyTypography();
+    }
+
+    private void ApplyTypography()
+    {
+        foreach (TMP_Text label in methodLabels) SetReadableFont(label, methodFontSize, 12f, 34f);
+    }
+
+    public static void SetReadableFont(TMP_Text text, float preferred, float minimum, float height)
+    {
+        if (text == null) return;
+        text.enableAutoSizing = true;
+        text.fontSize = preferred;
+        text.fontSizeMax = preferred;
+        text.fontSizeMin = Mathf.Min(preferred, minimum);
+        RectTransform rect = text.rectTransform;
+        // Stretched fallback labels already use the icon's full rectangle.
+        if (Mathf.Approximately(rect.anchorMin.y, rect.anchorMax.y))
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(rect.rect.height, height));
     }
 
     public void Bind(RecipeIngredientDisplayData data)
     {
+        ApplyTypography();
         int version = ++bindingVersion;
         Func<bool> current = () => this != null && bindingVersion == version;
-        RecipeSpriteLookup.Assign(icon, data?.iconName, current);
-        if (ingredientName != null) ingredientName.text = data == null ? "" : $"{data.name} ×{data.amount}";
+        SpriteCache.Assign(icon, data?.iconName, current);
         BindMethods(data?.conditionFlag ?? IngredientState.None, methodImages, methodLabels, current);
     }
 
@@ -42,7 +65,7 @@ public class RecipeIngredientUI : MonoBehaviour
                 labels[slot].gameObject.SetActive(true);
                 labels[slot].text = names[i];
             }
-            RecipeSpriteLookup.Assign(image, RecipeSpriteLookup.MethodAddress(methods[i]), stillCurrent,
+            SpriteCache.Assign(image, GetMethodIconAddress(methods[i]), stillCurrent,
                 slot < labels.Length ? labels[slot] : null);
             slot++;
         }
@@ -52,5 +75,15 @@ public class RecipeIngredientUI : MonoBehaviour
             if (i < labels.Length && labels[i] != null) labels[i].gameObject.SetActive(false);
         }
     }
+
+    private static string GetMethodIconAddress(IngredientState method) => method switch
+    {
+        IngredientState.Cut => "Cutted_Icon",
+        IngredientState.Grilled => "Pan_Icon",
+        IngredientState.Boiled => "Pot_Icon",
+        IngredientState.Roasted => "Oven_Icon",
+        _ => null
+    };
+
 }
 

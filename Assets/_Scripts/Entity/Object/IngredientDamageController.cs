@@ -12,30 +12,37 @@ public class IngredientDamageController : MonoBehaviour
     [SerializeField] private string playerTag = "Player";
 
     private float impactSpeed;
+    private Vector3 impactVelocity;
     private IngredientStat stat;
     private bool canDamage = true;
     private Coroutine damageRestoreCoroutine;
     private int damage => stat.damage;
+    // Cutting removes the mushroom's harmful bounce, including ordinary physics contacts.
+    // Check the marker regardless of its enabled state; preparation disables trait components.
+    private bool IsCutMushroom => TryGetComponent<IngredientMushroom>(out _) &&
+        TryGetComponent(out IngredientReaction reaction) && reaction.IsActionCompleted(IngredientAction.Cut);
 
-    #region Unity Methods
+    #region Unity Callbacks
     private void FixedUpdate()
     {
-        impactSpeed = catchable.Rb.linearVelocity.magnitude;
+        impactVelocity = catchable.LinearVelocity;
+        impactSpeed = impactVelocity.magnitude;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!canDamage) return;
+        if (catchable.TryGetComponent(out IngredientTraitBounce bounce) && bounce.IsSimulating) return;
+        if (!canDamage || IsCutMushroom) return;
         if (!collision.gameObject.CompareTag(playerTag)) return;
+        PlayerBrain brain = collision.gameObject.GetComponentInParent<PlayerBrain>();
+        if (brain == null || brain.StateResolver is not LocalPlayerStateResolver) return;
         if (stat == null) SetIngredinetStat();
-
-        PlayerBrain brain = collision.gameObject.GetComponent<PlayerBrain>();
+        if (stat == null) return;
         if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;
 
-        int tempDmg = CalculateDamage();
-        float healthBefore = brain.Health.CurHealth;
-        brain.Health.TakeDamage(tempDmg);
-        float healthAfter = brain.Health.CurHealth;
+        brain.Health.TakeDamage(CalculateDamage());
+        if (impactSpeed > MinDamageSpeed)
+            brain.ActionController.Movement.ApplyIngredientKnockback(impactVelocity);
     }
 
     private void OnDisable()
@@ -49,6 +56,19 @@ public class IngredientDamageController : MonoBehaviour
         canDamage = true;
     }
     #endregion
+
+    public void ApplyScriptedImpact(PlayerBrain brain, Vector3 incomingVelocity)
+    {
+        if (!canDamage || IsCutMushroom || brain == null || brain.StateResolver is not LocalPlayerStateResolver) return;
+        if (stat == null) SetIngredinetStat();
+        if (stat == null) return;
+        if (MaxThrowSpeed == 0) MaxThrowSpeed = brain.ThrowForce;
+        impactVelocity = incomingVelocity;
+        impactSpeed = incomingVelocity.magnitude;
+        brain.Health.TakeDamage(CalculateDamage());
+        if (impactSpeed > MinDamageSpeed)
+            brain.ActionController.Movement.ApplyIngredientKnockback(impactVelocity);
+    }
 
     // 지정된 시간 동안 재료의 충돌 피해를 비활성화한다.
     public void DisableDamageFor(float duration)
@@ -70,7 +90,7 @@ public class IngredientDamageController : MonoBehaviour
 
     private void SetIngredinetStat()
     {
-        Ingredient ingredient = catchable.Data as Ingredient;
+        if (catchable.Data is not Ingredient ingredient) return;
         stat = DataManager.Instance.GetIngredientStat().GetData(ingredient.statID);
     }
 

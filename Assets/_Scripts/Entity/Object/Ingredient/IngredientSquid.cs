@@ -37,13 +37,9 @@ public class IngredientSquid : IngredientTrait
 
     protected override void StartTrait()
     {
-        Debug.Log($"[Squid] OnEnable called Start");
-
         canSpray = true;
         catchable.OnPicked += OnPicked;
         catchable.OnDropped += OnDropped;
-        Debug.Log($"[Squid] OnEnable called End");
-
     }
 
     protected override void StopTrait()
@@ -53,8 +49,6 @@ public class IngredientSquid : IngredientTrait
 
         holdTimer.Stop();
         cooldownTimer.Stop();
-
-        //PushIngredientToPool(catchable);
 
     }
 
@@ -77,8 +71,12 @@ public class IngredientSquid : IngredientTrait
 
     private void TrySpray(System.Action sprayAction)
     {
+        // Networked hits come exclusively from the server's target list.
+        if (Server.ServerManager.Instance != null && Server.ServerManager.Instance.IsConnected)
+            return;
+
         Debug.Log($"[Squid] TrySpray called, canSpray={canSpray}");
-        if (!canSpray)
+        if (!IsTraitAvailable || !canSpray)
             return;
 
         canSpray = false;

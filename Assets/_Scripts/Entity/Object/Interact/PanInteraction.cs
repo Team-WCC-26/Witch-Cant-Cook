@@ -1,49 +1,85 @@
 using System.Collections;
+using System.Collections.Generic;
 using Protocol;
 using Server;
 using UnityEngine;
 
 public class PanInteraction : MonoBehaviour,
     IHeldPrimaryAction,
-    IHeldObjectReceiver,
+    IHeldIngredientReceiver,
     IEntityParentReceiver,
-    IEntityThrowParentReceiver,
-    ICookReceiver
+    ICookReceiver,
+    IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        CancelTossTracking();
+        heldInsertResponse.Cancel();
+        pendingEgg?.CancelPanInsert();
+        pendingEgg = null;
+        pendingEggId = 0;
+        RestorePanTriggerNow();
+        HideCookGauge();
+        pendingIngredientId = 0;
+        pendingCookDuration = -1f;
+        pendingTossId = 0;
+        currentIngredient = null;
+        currentStove = null;
+        lastEjectedIngredientId = 0;
+        lastEjectSeed = 0;
+    }
     [SerializeField] private CatchableObj catchable;
-
-    private Collider itemTrigger;
+    [SerializeField] private ColliderRelay itemTrigger;
     private IngredientReaction currentIngredient;
-    private Vector3 currentIngredientOriginalScale;
     private StoveInteraction currentStove;
     private long pendingIngredientId;
     private long pendingTossId;
+    private readonly NetworkResponseWait tossResponse = new();
+    [SerializeField, Min(0.1f)] private float heldInsertResponseTimeout = 3f;
+    private readonly NetworkResponseWait heldInsertResponse = new();
+    private static readonly Dictionary<long, PanInteraction> tossRequests = new();
+    private long trackedTossId;
+    private long lastEjectedIngredientId;
+    private int lastEjectSeed;
     private float pendingCookDuration = -1f;
+    private SoundHandle cookingSound;
+    private IngredientEgg pendingEgg;
+    private long pendingEggId;
 
     public CatchableObj Catchable => catchable;
     public bool HasIngredient => currentIngredient != null;
+    public bool CanTransferIngredient => currentIngredient != null &&
+        (!currentIngredient.TryGetComponent(out IngredientEgg egg) || !egg.IsRawContents);
+    public bool CanReceiveIngredient => currentIngredient == null && pendingIngredientId == 0 &&
+        catchable != null && catchable.NetworkId != 0;
 
-    #region Unity Lifecycle
+    #region Unity Callbacks
 
     private void Awake()
     {
         if (catchable == null)
             catchable = GetComponent<CatchableObj>();
+    }
 
-        if (itemTrigger == null)
-        {
-            foreach (Collider candidate in GetComponents<Collider>())
-            {
-                if (!candidate.isTrigger) continue;
-
-                itemTrigger = candidate;
-                break;
-            }
-        }
+    private void OnEnable()
+    {
+        if (itemTrigger == null) return;
+        itemTrigger.TriggerEntered += HandleTriggerEnter;
+        itemTrigger.TriggerExited += HandleTriggerExit;
     }
 
     private void OnDisable()
     {
+        CancelTossTracking();
+        heldInsertResponse.Cancel();
+        pendingEgg?.CancelPanInsert();
+        pendingEgg = null;
+        pendingEggId = 0;
+        if (itemTrigger != null)
+        {
+            itemTrigger.TriggerEntered -= HandleTriggerEnter;
+            itemTrigger.TriggerExited -= HandleTriggerExit;
+        }
         RestorePanTriggerNow();
         HideCookGauge();
         pendingIngredientId = 0;
@@ -51,20 +87,36 @@ public class PanInteraction : MonoBehaviour,
         pendingTossId = 0;
         currentStove?.ReleasePan(this);
         currentStove = null;
+        lastEjectedIngredientId = 0;
+        lastEjectSeed = 0;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void Update()
+    {
+        tossResponse.Tick();
+        heldInsertResponse.Tick();
+    }
+
+    #endregion
+
+    private void HandleTriggerEnter(Collider other)
     {
         // 팬의 유효성 확인
         if (catchable == null || catchable.NetworkId == 0) return;
 
-        if (currentIngredient != null) return; //중복 아이템 방지
-        if (pendingIngredientId != 0) return; //이미 서버에 요청 중인 재료가 있음
+        if (currentIngredient != null || pendingIngredientId != 0) return;
 
         // 팬의 X축과 Z축이 허용 범위 안에 있어야 함.
         float xAngle = Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.x));
         float zAngle = Mathf.Abs(Mathf.DeltaAngle(0f, transform.eulerAngles.z));
         if (xAngle > maxInsertAngle || zAngle > maxInsertAngle) return;
+
+        IngredientEgg egg = other.GetComponentInParent<IngredientEgg>();
+        if (egg != null)
+        {
+            egg.TryInsertIntoPan(this);
+            return;
+        }
 
         // 아이템 유효성 확인
         if (!TryGetItem(other, out IngredientReaction _, out CatchableObj ingredientCatchable)) return;
@@ -80,15 +132,14 @@ public class PanInteraction : MonoBehaviour,
         RequestInsert(ingredientCatchable);
     }
 
-    private void OnTriggerExit(Collider other)
+    private void HandleTriggerExit(Collider other)
     {
+        if (pendingEgg != null || heldInsertResponse.IsWaiting) return;
         if (!TryGetItem(other, out _, out CatchableObj ingredientCatchable)) return;
         if (ingredientCatchable.NetworkId != pendingIngredientId) return;
 
         pendingIngredientId = 0;
     }
-
-    #endregion
 
     #region Ingredient State
 
@@ -99,12 +150,15 @@ public class PanInteraction : MonoBehaviour,
     private void AttachItem(IngredientReaction ingredient, CatchableObj ingredientCatchable)
     {
         currentIngredient = ingredient;
-        currentIngredientOriginalScale = ingredient.transform.localScale;
+
+        if (ingredient.TryGetComponent(out IngredientTraitArea area))
+            area.ConvertToIngredient();
+
+        if (ingredient.TryGetComponent(out IngredientEgg egg)) egg.EnterPan();
+        if (ingredient.TryGetComponent(out IngredientNalchi nalchi)) nalchi.EnterPan();
 
         Transform slot = ingredientSlot != null ? ingredientSlot : transform;
-        ingredient.transform.SetParent(slot, false);
-        ingredient.transform.localPosition = Vector3.zero;
-        ingredient.transform.localRotation = Quaternion.identity;
+        ingredient.ApplyPanPlacement(slot);
 
         ingredientCatchable.ChangePickState(false);
         ingredientCatchable.SetPhysicsState(false);
@@ -112,14 +166,18 @@ public class PanInteraction : MonoBehaviour,
         if (pendingCookDuration < 0f) return;
 
         ingredient.GaugeUI?.StartFill(pendingCookDuration);
+        cookingSound.Stop();
+        cookingSound = SoundManager.GetOrCreate().Play(SoundId.PanCooking, transform.position, transform);
         pendingCookDuration = -1f;
     }
 
     // 재료를 팬에서 분리하고 기존 크기를 복원한다.
     private void DetachItem(IngredientReaction ingredient)
     {
+        if (ingredient.TryGetComponent(out IngredientEgg egg)) egg.LeavePan();
         ingredient.transform.SetParent(null, true);
-        ingredient.transform.localScale = currentIngredientOriginalScale;
+        ingredient.RestoreOriginalScale();
+        if (ingredient.TryGetComponent(out IngredientNalchi nalchi)) nalchi.LeavePan();
     }
 
     // Collider에서 팬에 넣을 수 있는 재료를 찾는다.
@@ -133,6 +191,8 @@ public class PanInteraction : MonoBehaviour,
         ingredientCatchable = ingredient.Catchable;
         if (ingredientCatchable == null) return false;
         if (ingredientCatchable.Category != EntityCategory.Ingredient) return false;
+        if (ingredientCatchable.Data is Ingredient data && data.id == (int)Define.eIngredient.EggInside)
+            return false;
 
         return true;
     }
@@ -156,14 +216,21 @@ public class PanInteraction : MonoBehaviour,
         if (!plate.IsEmpty) return false; // 빈 그릇이 아님
         if (currentIngredient == null) return false; // 팬에 재료가 없음
 
+        if (currentIngredient.TryGetComponent(out IngredientEgg egg) && egg.IsRawContents) return false;
+
         IngredientReaction ingredient = currentIngredient;
         CatchableObj ingredientCatchable = ingredient.Catchable;
         if (ingredientCatchable == null) return false;
 
-        HideCookGauge();
-        currentIngredient = null;
-        DetachItem(ingredient);
-        plate.HandleEntityAdded(ingredientCatchable);
+        if (!plate.TryGetComponent(out CatchableObj plateCatchable) || plateCatchable.NetworkId <= 0 ||
+            ingredientCatchable.NetworkId <= 0 || ServerManager.Instance == null) return false;
+        // Move the real server ingredient; every client receives the same parent change.
+        EntityInsertPacket packet = new()
+        {
+            SubjectEntityId = ingredientCatchable.NetworkId,
+            TargetEntityId = plateCatchable.NetworkId
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
         return true;
     }
 
@@ -176,6 +243,7 @@ public class PanInteraction : MonoBehaviour,
     [field: SerializeField, Min(0.01f)] private float tossUpForce = 2f;
     [field: SerializeField, Min(0.01f)] private float triggerDisableDuration = 0.5f;
     [field: SerializeField, Min(0.01f)] private float damageImmuneDuration = 1f;
+    [SerializeField, Min(0.01f)] private float tossResponseTimeout = 2f;
 
     private Coroutine triggerRestoreCoroutine;
 
@@ -188,23 +256,101 @@ public class PanInteraction : MonoBehaviour,
         CatchableObj ingredient = currentIngredient.Catchable;
         if (ingredient == null || ingredient.NetworkId == 0) return;
         if (ServerManager.Instance == null) return;
+        if (catchable == null || catchable.Holder == null || !catchable.IsLocalOwner) return;
+        if (catchable.Holder.StateResolver is not LocalPlayerStateResolver resolver) return;
+
+        CancelTossTracking();
+        pendingTossId = ingredient.NetworkId;
+        trackedTossId = ingredient.NetworkId;
+        tossRequests[trackedTossId] = this;
+        tossResponse.Begin("Pan toss", trackedTossId, tossResponseTimeout, () => pendingTossId = 0);
+        SendToss(resolver, trackedTossId);
+    }
+
+    private async void SendToss(LocalPlayerStateResolver resolver, long ingredientId)
+    {
+        try
+        {
+            await resolver.SendPanEject();
+        }
+        catch (System.Exception exception)
+        {
+            NetworkResponseWait.Error("Pan toss", ingredientId, $"Send failed: {exception.Message}");
+            // Keep the response deadline: a failed write does not prove the server did not receive it.
+        }
+    }
+
+    public static bool TryResolveToss(long entityId, out PanInteraction pan)
+    {
+        return tossRequests.TryGetValue(entityId, out pan) && pan != null;
+    }
+
+    public static void ForgetToss(long entityId)
+    {
+        if (TryResolveToss(entityId, out PanInteraction pan)) pan.CancelTossTracking();
+    }
+
+    public bool TryApplyPanEject(PanEjectPacket packet, CatchableObj ingredient, ObjectNetworkRouter router)
+    {
+        if (catchable == null || ingredient.Rb == null || ingredient.Col == null)
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Required physics components not found");
+            return false;
+        }
+        if (lastEjectedIngredientId == packet.IngredientEntityId && lastEjectSeed == packet.EjectSeed)
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Duplicate response ignored");
+            return false;
+        }
+
+        if (ingredient.IsHold ||
+            (ingredient.ParentEntityId != 0 && ingredient.ParentEntityId != -1 &&
+             ingredient.ParentEntityId != catchable.NetworkId) ||
+            (currentIngredient != null && currentIngredient.Catchable != ingredient))
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "Ingredient no longer belongs to this pan");
+            return false;
+        }
+
+        if (trackedTossId == packet.IngredientEntityId)
+        {
+            if (!tossResponse.TryComplete()) return false;
+        }
+        else if (catchable.IsLocalOwner && catchable.IsHold)
+        {
+            NetworkResponseWait.Error("Pan eject", packet.IngredientEntityId, "No matching local request");
+            return false;
+        }
 
         Vector3 direction = catchable.Holder != null
-            ? catchable.Holder.transform.forward
-            : transform.forward;
+            ? catchable.Holder.transform.forward : transform.forward;
         direction.y = 0f;
         direction = direction.sqrMagnitude > 0f ? direction.normalized : Vector3.forward;
+        Vector3 ejectPos = ingredient.transform.position;
 
-        EntityThrowPacket packet = new()
+        // Parent release may already have arrived through WorldState.
+        router.DetachForContainerEjection(ingredient);
+        HandleEntityRemoved(ingredient);
+        ApplyTossProtection(ingredient);
+        ingredient.ApplyThrow(new EntityThrowPacket
         {
-            EntityId = ingredient.NetworkId,
-            Position = ProtocolTypeConverter.ToNumericsVector3(ingredient.transform.position),
-            Velocity = ProtocolTypeConverter.ToNumericsVector3(
-                direction * tossForce + Vector3.up * tossUpForce)
-        };
+            EntityId = packet.IngredientEntityId,
+            Position = ProtocolTypeConverter.ToNumericsVector3(ejectPos),
+            Velocity = ProtocolTypeConverter.ToNumericsVector3(direction * tossForce + Vector3.up * tossUpForce)
+        });
+        if (ingredient.TryGetComponent(out IngredientEgg egg)) egg.HandlePanEjected();
+        lastEjectedIngredientId = packet.IngredientEntityId;
+        lastEjectSeed = packet.EjectSeed;
+        return true;
+    }
 
-        pendingTossId = ingredient.NetworkId;
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    private void CancelTossTracking()
+    {
+        if (trackedTossId != 0 && tossRequests.TryGetValue(trackedTossId, out PanInteraction pan) && pan == this)
+            tossRequests.Remove(trackedTossId);
+        trackedTossId = 0;
+        pendingTossId = 0;
+        tossResponse.Cancel();
     }
 
     private void DisablePanTrigger()
@@ -214,14 +360,15 @@ public class PanInteraction : MonoBehaviour,
         if (triggerRestoreCoroutine != null)
             StopCoroutine(triggerRestoreCoroutine);
 
-        itemTrigger.enabled = false;
+        itemTrigger.SetCollidersEnabled(false);
         triggerRestoreCoroutine = StartCoroutine(RestorePanTriggerRoutine());
     }
 
     private IEnumerator RestorePanTriggerRoutine()
     {
         yield return new WaitForSeconds(triggerDisableDuration);
-        itemTrigger.enabled = true;
+        if (itemTrigger != null)
+            itemTrigger.SetCollidersEnabled(true);
         triggerRestoreCoroutine = null;
     }
     private void RestorePanTriggerNow()
@@ -233,20 +380,18 @@ public class PanInteraction : MonoBehaviour,
         }
 
         if (itemTrigger != null)
-            itemTrigger.enabled = true;
+            itemTrigger.SetCollidersEnabled(true);
     }
 
     #endregion
 
     #region Pan Placement
 
-    // 팬을 화구 슬롯에 배치하고 조리를 시작한다.
-    public void PlaceOnStove(StoveInteraction stove, Transform slot)
+    // 위치 보정은 화구의 ObjPlacement가 담당하고 화구 연결만 갱신한다.
+    public void PlaceOnStove(StoveInteraction stove)
     {
         currentStove?.ReleasePan(this);
         currentStove = stove;
-
-        AttachPan(slot);
     }
 
     // 현재 화구에서 팬을 분리하고 조리를 중단한다.
@@ -266,6 +411,7 @@ public class PanInteraction : MonoBehaviour,
     // 현재 재료의 조리 게이지를 숨긴다.
     private void HideCookGauge()
     {
+        cookingSound.Stop();
         currentIngredient?.GaugeUI?.Hide();
     }
 
@@ -293,6 +439,21 @@ public class PanInteraction : MonoBehaviour,
 
     #region Interface Implementations
 
+    public void ReserveEgg(long eggId, IngredientEgg egg)
+    {
+        pendingEggId = eggId;
+        pendingEgg = egg;
+        pendingIngredientId = eggId;
+    }
+
+    public void ReleaseEgg(long eggId)
+    {
+        if (pendingEggId != eggId) return;
+        pendingEgg = null;
+        pendingEggId = 0;
+        pendingIngredientId = 0;
+    }
+
     // IHeldPrimaryAction: 선택된 대상에 팬 좌클릭 처리 위임
     public bool TryUsePrimary(PlayerInteract interact)
     {
@@ -316,17 +477,16 @@ public class PanInteraction : MonoBehaviour,
     // IHeldObjectReceiver: 플레이어가 들고 있는 재료 팬에 넣기
     public bool TryReceiveHeldObject(CatchableObj heldObj, PlayerInteract interact)
     {
-        //함수 인자 검증
-        if (heldObj == null) return false;
-        if (interact == null) return false;
+        if (interact == null || interact.HeldObj != heldObj || !IsHeldIngredient(heldObj)) return false;
+        // Consume a recognized insert click instead of dropping during a pending/rejected insertion.
+        if (!CanReceiveHeldIngredient(heldObj)) return true;
 
-        if (currentIngredient != null) return false; //팬에 이미 재료가 있음
-        if (pendingIngredientId != 0) return false; //이미 서버에 요청 중인 재료가 있음
-        if (!heldObj.TryGetComponent(out IngredientReaction _)) return false; //재료가 아님
-        if (heldObj.NetworkId == 0) return false;
-        if (catchable == null || catchable.NetworkId == 0) return false;
-
-        pendingIngredientId = heldObj.NetworkId;
+        long ingredientId = heldObj.NetworkId;
+        pendingIngredientId = ingredientId;
+        heldInsertResponse.Begin("Pan insert", ingredientId, heldInsertResponseTimeout, () =>
+        {
+            if (pendingIngredientId == ingredientId) pendingIngredientId = 0;
+        });
         interact.RequestEntityInteract(catchable.NetworkId);
         return true;
     }
@@ -345,8 +505,13 @@ public class PanInteraction : MonoBehaviour,
 
         if (!entity.TryGetComponent(out IngredientReaction ingredient)) return;
 
+        if (pendingEgg != null && entity.NetworkId != pendingIngredientId)
+            pendingEgg.CancelPanInsert();
+
+        heldInsertResponse.Cancel();
         pendingIngredientId = 0;
         AttachItem(ingredient, entity);
+        ReleaseEgg(pendingEggId);
     }
 
     // IEntityParentReceiver: 서버가 팬에서 제거한 재료를 분리한다.
@@ -370,11 +535,10 @@ public class PanInteraction : MonoBehaviour,
         DetachItem(ingredient);
     }
 
-    // IEntityThrowParentReceiver: 팬에서 배출된 재료의 예외 처리를 적용한다.
-    public void HandleEntityThrown(CatchableObj entity)
+    // 배출 직후 재삽입과 충돌 데미지를 잠시 막는다.
+    private void ApplyTossProtection(CatchableObj entity)
     {
         if (entity == null) return;
-        if (currentIngredient == null || currentIngredient.Catchable != entity) return;
 
         pendingTossId = 0;
         DisablePanTrigger();
@@ -394,6 +558,8 @@ public class PanInteraction : MonoBehaviour,
         }
 
         currentIngredient.GaugeUI?.StartFill(duration);
+        cookingSound.Stop();
+        cookingSound = SoundManager.GetOrCreate().Play(SoundId.PanCooking, transform.position, transform);
     }
 
     // ICookReceiver: 서버의 조리 일시정지를 반영한다.
@@ -413,4 +579,22 @@ public class PanInteraction : MonoBehaviour,
     }
 
     #endregion
+
+
+    // Shared by the action and its HUD hint so rejected ingredients never show "insert".
+    public bool CanReceiveHeldIngredient(CatchableObj heldObj)
+    {
+        return isActiveAndEnabled && ServerManager.Instance != null &&
+            CanReceiveIngredient && !heldInsertResponse.IsWaiting && IsHeldIngredient(heldObj);
+    }
+
+    private static bool IsHeldIngredient(CatchableObj heldObj)
+    {
+        return heldObj != null && heldObj.NetworkId != 0 &&
+            heldObj.Category == EntityCategory.Ingredient &&
+            !heldObj.IsSubmissionPending && !heldObj.IsSubmissionReturning &&
+            heldObj.TryGetComponent<IngredientReaction>(out _) &&
+            !heldObj.TryGetComponent<IngredientEgg>(out _) &&
+            heldObj.Data?.id != (int)Define.eIngredient.EggInside;
+    }
 }

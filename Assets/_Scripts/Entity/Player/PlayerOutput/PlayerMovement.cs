@@ -17,6 +17,82 @@ public class PlayerMovement
     #endregion
 
     private Rigidbody rb => brain.Rb;
+    private bool CanApplyPhysics => rb != null && !rb.isKinematic;
+
+    private float forcedMovementUntil;
+    private bool stopAfterForcedMovement;
+    private float ejectionStartedAt;
+    private float dampingBeforeEjection;
+    private float ejectionMaxDuration = 5f;
+    public bool IsEjectionActive { get; private set; }
+    public bool IsForcedMovementActive => IsEjectionActive || Time.time < forcedMovementUntil;
+
+    public void ApplyIngredientKnockback(Vector3 incomingVelocity)
+    {
+        if (!CanApplyPhysics || brain.StateResolver is not LocalPlayerStateResolver ||
+            brain.StateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default ||
+            brain.ActionController.IsRagdollActive || brain.Rocket.IsFlying ||
+            IsForcedMovementActive || brain.Health == null || brain.Health.CurHealth <= 0f ||
+            brain.Health.IsDmgBlocked || brain.KnockbackSpeed <= 0f) return;
+
+        Vector3 transferredVelocity = Vector3.ProjectOnPlane(incomingVelocity, Vector3.up);
+        if (transferredVelocity.sqrMagnitude <= 0.0001f) return;
+
+        BeginForcedMovement(brain.KnockbackDuration, true);
+        transferredVelocity = transferredVelocity.normalized * brain.KnockbackSpeed;
+        Vector3 horizontalVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up);
+        rb.AddForce(transferredVelocity - horizontalVelocity, ForceMode.VelocityChange);
+    }
+
+    public void BeginEjectionMovement(float maxDuration = 5f)
+    {
+        if (!IsEjectionActive)
+            dampingBeforeEjection = rb.linearDamping;
+
+        stopAfterForcedMovement = false;
+        IsEjectionActive = true;
+        ejectionStartedAt = Time.time;
+        ejectionMaxDuration = Mathf.Max(0.1f, maxDuration);
+        rb.linearDamping = dampingBeforeEjection * 0.5f;
+    }
+
+    public void UpdateEjectionMovement(bool canContinue)
+    {
+        if (!IsEjectionActive) return;
+
+        float elapsed = Time.time - ejectionStartedAt;
+        // Allow the launch impulse to take effect before checking for landing.
+        bool landed = elapsed >= 0.1f && rb.linearVelocity.y <= 0f && IsGrounded();
+        if (canContinue && !landed && elapsed < ejectionMaxDuration) return;
+
+        rb.linearDamping = dampingBeforeEjection;
+        IsEjectionActive = false;
+    }
+
+    public void BeginForcedMovement(float duration, bool stopOnEnd = false)
+    {
+        forcedMovementUntil = Time.time + Mathf.Max(0f, duration);
+        stopAfterForcedMovement = stopOnEnd;
+    }
+
+    public void UpdateForcedMovement(bool canContinue)
+    {
+        if (!stopAfterForcedMovement) return;
+        if (!canContinue || !CanApplyPhysics)
+        {
+            stopAfterForcedMovement = false;
+            return;
+        }
+        if (IsForcedMovementActive) return;
+
+        stopAfterForcedMovement = false;
+        Stop();
+    }
+
+    public void UpdateForcedMovementSpeed()
+    {
+        CurrentSpeed = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z).magnitude;
+    }
 
     public float CurrentSpeed { get; private set; }
     public bool IsGroundedNow => IsGrounded();
@@ -31,9 +107,11 @@ public class PlayerMovement
     public float FrictionMultiplier { get; set; } = 1f;
 
     private float lastGroundedTime = float.NegativeInfinity;
-    public bool CanJump =>
-        IsGroundedNow ||
-        Time.time - lastGroundedTime <= brain.CoyoteTime;
+    private float bedBounceJumpBlockedUntil;
+    public bool CanJump => CanApplyPhysics &&
+        Time.time >= bedBounceJumpBlockedUntil &&
+        !IsOnBed() &&
+        (IsGroundedNow || Time.time - lastGroundedTime <= brain.CoyoteTime);
 
     public PlayerMovement(PlayerBrain brain, float moveSpeed, float runMultiplier, float jumpPower, float acceleration, float deceleration)
     {
@@ -65,8 +143,6 @@ public class PlayerMovement
         float speed = (isRun ? moveSpeed * runMultiplier : moveSpeed) * SpeedMultiplier;
         Vector3 targetVelocity = moveDir * speed;
 
-        Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-
         // 목표 속도가 현재보다 커지는 "가속" 상황은 항상 즉각 반응하게 두고(입력이 먹통처럼 느껴지지 않게),
         // 목표 속도가 현재보다 작아지는 "감속/정지" 상황에서만 FrictionMultiplier를 적용해
         // 관성이 남아 미끄러지는 느낌을 낸다. (빙판: 밀 때는 평소처럼, 멈추거나 방향을 바꿀 때만 미끄러짐)
@@ -75,6 +151,12 @@ public class PlayerMovement
         float currentSpeed = CurrentSpeed;
         float velocityDelta = targetSpeed > currentSpeed ? acceleration : deceleration * FrictionMultiplier;
         float newSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, velocityDelta * Time.fixedDeltaTime);
+        CurrentSpeed = newSpeed;
+
+        // Remote animation uses movement speed without driving the kinematic body.
+        if (!CanApplyPhysics) return;
+
+        Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         Vector3 velocityDirection = hasMoveInput ? moveDir.normalized : currentHorizontal.normalized;
         Vector3 newHorizontal = velocityDirection * newSpeed;
         rb.linearVelocity = new Vector3(
@@ -83,12 +165,12 @@ public class PlayerMovement
             newHorizontal.z
         );
         rb.angularVelocity = Vector3.zero;
-
-        CurrentSpeed = newSpeed;
     }
 
     public void Stop()
     {
+        CurrentSpeed = 0f;
+        if (!CanApplyPhysics) return;
         rb.linearVelocity = new Vector3(
             0f,
             rb.linearVelocity.y,
@@ -100,6 +182,26 @@ public class PlayerMovement
     }
 
     #region Jump
+    public void TryBounceOnBed(Collision collision)
+    {
+        if (Time.time < bedBounceJumpBlockedUntil || !IsBed(collision.collider)) return;
+
+        for (int contactIndex = 0; contactIndex < collision.contactCount; contactIndex++)
+        {
+            ContactPoint contact = collision.GetContact(contactIndex);
+            if (contact.normal.y < 0.5f) continue;
+
+            // Replace the material rebound with a stable launch speed.
+            Vector3 velocity = rb.linearVelocity;
+            velocity.y = brain.BedBounceSpeed;
+            rb.linearVelocity = velocity;
+            lastGroundedTime = float.NegativeInfinity;
+            bedBounceJumpBlockedUntil = Time.time + Mathf.Max(0.1f, brain.CoyoteTime);
+            SoundManager.GetOrCreate().Play(SoundId.BedBounce, contact.point);
+            return;
+        }
+    }
+
     public void Jump()
     {
         if (!CanJump) return;
@@ -113,7 +215,7 @@ public class PlayerMovement
 
     public void ApplyFallGravity()
     {
-        if (rb.linearVelocity.y >= 0f) return;
+        if (!CanApplyPhysics || rb.linearVelocity.y >= 0f) return;
 
         rb.AddForce(
             Physics.gravity * (brain.FallMultiplier - 1f),
@@ -121,8 +223,25 @@ public class PlayerMovement
         );
     }
 
+    private bool IsOnBed()
+    {
+        return TryGetGround(out RaycastHit hit) && IsBed(hit.collider);
+    }
+
+    private static bool IsBed(Collider surface)
+    {
+        return surface != null && surface.sharedMaterial != null &&
+            surface.sharedMaterial.name == "BedBounce";
+    }
+
     private bool IsGrounded()
     {
+        return TryGetGround(out _);
+    }
+
+    private bool TryGetGround(out RaycastHit hit)
+    {
+        hit = default;
         if (brain.Col == null) return false;
 
         Bounds bounds = brain.Col.bounds;
@@ -142,7 +261,7 @@ public class PlayerMovement
             bounds.center,
             radius,
             Vector3.down,
-            out _,
+            out hit,
             distance,
             brain.GroundLayerMask,
             QueryTriggerInteraction.Ignore

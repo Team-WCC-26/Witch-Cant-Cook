@@ -54,8 +54,14 @@ public class LobbyCreator : MonoBehaviour
             RoomPassword = _passwordInput.text,
         };
 
-        await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
-
-        gameObject.SetActive(false);
+        try
+        {
+            await ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+            if (this != null) gameObject.SetActive(false);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception, this);
+        }
     }
 }

@@ -21,6 +21,7 @@ namespace Server
 
         public WorldStateRouter Router { get; } = new();
         public bool IsEnterRoom = false;
+        public bool IsConnected => _stream != null && _client != null && _client.Connected;
 
         private string _localHost = "127.0.0.1";
 
@@ -280,7 +281,14 @@ namespace Server
 
         public void ExitRoom()
         {
+            ExitRoomAsync().Forget();
+        }
 
+        public async UniTask ExitRoomAsync()
+        {
+            if (IsConnected)
+                await SendData(PacketSerializer.Serialize(new LeaveRoomPacket()));
+            IsEnterRoom = false;
         }
     }
 }

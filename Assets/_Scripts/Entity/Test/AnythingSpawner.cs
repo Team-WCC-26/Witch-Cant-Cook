@@ -12,23 +12,11 @@ public class AnythingSpawner : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.f2Key.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
-
-            SpawnTool((int)Define.eToolId.KitchenKnife);
-        }
-        if (Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame)
-        {
-
-            SpawnTool((int)(int)Define.eToolId.Plate);
-        }
-        if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
-        {
-
-            SpawnTool((int)(int)Define.eToolId.FryingPan);
+            IngredientNetworkBridge.Instance.SendSpawnPacketToServer((int)Define.eIngredient.Nalchi, SpawnPos);
         }
     }
-
     private void SpawnTool(int toolKey)
     {
         ToolSpawnPacket packet = new()

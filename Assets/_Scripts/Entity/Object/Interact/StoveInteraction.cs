@@ -2,14 +2,40 @@ using Protocol;
 using Server;
 using UnityEngine;
 
-public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrimaryReceiver, IEntityParentReceiver
+public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrimaryReceiver, IEntityParentReceiver, IClientStageResettable
 {
+    public void ResetClientStage()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        currentPan?.ReleaseFromStove(this);
+        currentPan = null;
+        pendingPanId = 0;
+        if (isActiveAndEnabled) placement.Released += HandlePlacementReleased;
+    }
     private PanInteraction currentPan;
     private long pendingPanId;
+    private readonly ObjPlacement placement = new();
+    public bool CanReceivePan => IsRegistered && currentPan == null;
 
     #region Unity Lifecycle
 
-    private void OnTriggerEnter(Collider other)
+    private void OnEnable() => placement.Released += HandlePlacementReleased;
+
+    private void OnDisable()
+    {
+        placement.Released -= HandlePlacementReleased;
+        placement.Dispose();
+        if (currentPan != null) ReleasePan(currentPan);
+        pendingPanId = 0;
+    }
+
+    private void OnTriggerEnter(Collider other) => TryInsertPan(other);
+
+    // 처음부터 화구 위에 생성된 팬은 OnTriggerEnter가 등록 전에 지나갈 수 있습니다.
+    private void OnTriggerStay(Collider other) => TryInsertPan(other);
+
+    private void TryInsertPan(Collider other)
     {
         //validate stove
         if (!IsRegistered) return;
@@ -26,8 +52,10 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
 
         // 들고 있는 상태의 팬은 충돌로 배치하지 않음
         if (panCatchable.IsHold) return;
-        // 이 클라이언트가 마지막으로 놓거나 던진 팬만 서버에 삽입 요청
-        if (!panCatchable.IsLocalOwner) return;
+        // 기본 스폰 팬에는 아직 소유자가 없으므로 등록 담당 클라이언트가 처리합니다.
+        bool ownsUnclaimedPan = string.IsNullOrEmpty(panCatchable.LastHolderPlayerId)
+            && Router != null && Router.IsRegistrar;
+        if (!panCatchable.IsLocalOwner && !ownsUnclaimedPan) return;
 
         pendingPanId = panCatchable.NetworkId;
         RequestInsert(panCatchable);
@@ -37,9 +65,9 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     {
         if (!TryGetPan(other, out PanInteraction pan)) return;
         if (pan.Catchable == null) return;
-        if (pan.Catchable.NetworkId != pendingPanId) return;
-
-        pendingPanId = 0;
+        if (pan.Catchable.Col != other) return;
+        if (pan.Catchable.NetworkId == pendingPanId) pendingPanId = 0;
+        if (currentPan == pan && placement.IsPlaced) placement.Release();
     }
 
     #endregion
@@ -79,8 +107,26 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     // 팬 위치를 화구 슬롯에 고정
     private void PlacePan(PanInteraction pan)
     {
+        if (!placement.TryPlace(pan.Catchable, panSlot, 1f))
+        {
+            Debug.LogError("[Stove] Failed to place the inserted pan.", this);
+            return;
+        }
         currentPan = pan;
-        pan.PlaceOnStove(this, panSlot);
+        pan.PlaceOnStove(this);
+    }
+
+    private void HandlePlacementReleased(CatchableObj item)
+    {
+        if (currentPan == null || currentPan.Catchable != item) return;
+        if (item.IsHold || !item.IsLocalOwner || item.ParentEntityId != NetworkId) return;
+        if (item.NetworkId == 0 || ServerManager.Instance == null) return;
+
+        EntityExitPacket packet = new()
+        {
+            EntityId = item.NetworkId
+        };
+        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     // 화구에서 팬을 분리한다.
@@ -88,6 +134,7 @@ public class StoveInteraction : MapObjInteraction, IHeldObjectReceiver, IPanPrim
     {
         if (currentPan != pan) return;
 
+        placement.Dispose();
         currentPan = null;
         pan.ReleaseFromStove(this);
     }

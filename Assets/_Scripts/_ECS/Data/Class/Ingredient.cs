@@ -8,5 +8,6 @@ public class Ingredient : CatchableData
     public string tag;
     public byte conditionFlag;
     public string IconName;
+    public string particleColor;
     public Ingredient() : base() { } 
 }

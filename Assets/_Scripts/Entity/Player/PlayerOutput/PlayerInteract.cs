@@ -1,25 +1,44 @@
 using Protocol;
 using Server;
-using System;
 using UnityEngine;
 
 public class PlayerInteract
 {
+    private enum PendingAttackImpact { None, Punch, Knife }
+    private const float RemotePunchRadiusBonus = 0.15f;
+    private const float RemotePunchDistanceBonus = 0.25f;
+
     private readonly PlayerBrain brain;
+    private readonly PhysicsCastProbe[] interactionCasts;
+    private PendingAttackImpact pendingAttackImpact;
+    private CatchableObj pendingKnife;
+    private float pendingImpactDeadline;
+    private CatchableObj preparedThrow;
+    private uint throwReleaseVersion;
+    private readonly CatchableFocusQuery focusQuery = new();
+    private int targetFrame = -1;
+    private CatchableObj targetHeldObj;
+    private IInteractTarget currentTarget;
+    public event System.Action<long> EntityInteractionRequested;
 
     public CatchableObj HeldObj { get; private set; }
+
+    public bool IsPreparingThrow => preparedThrow != null && preparedThrow == HeldObj;
     public bool IsHolding => HeldObj != null;
 
     public PlayerInteract(PlayerBrain brain)
     {
         this.brain = brain;
+        interactionCasts = brain.InteractionCasts;
     }
 
     public void Handle(PlayerInteraction interaction)
     {
-        DrawDebugInteractRay();
+        foreach (PhysicsCastProbe probe in interactionCasts)
+            if (probe != null) probe.DrawDebug();
 
         if (!PlayerSpawnManager.Instance.IsMine(brain.PlayerId)) return;
+        if (brain.Rocket != null && brain.Rocket.IsFlying) return;
 
         switch (interaction)
         {
@@ -46,8 +65,11 @@ public class PlayerInteract
         IInteractTarget target = FindInteractTarget();
         if (target is not CatchableObj obj)
         {
-            brain.ActionController.PunchAction();
-            target.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+            if (brain.ActionController.PunchAction())
+            {
+                pendingAttackImpact = PendingAttackImpact.Punch;
+                pendingImpactDeadline = Time.time + 2f;
+            }
             return;
         }
         if (obj.IsHold) return;
@@ -59,6 +81,16 @@ public class PlayerInteract
     private void RequestHeldPrimaryAction()
     {
         if (!IsHolding) return;
+
+        IInteractTarget target = FindInteractTarget();
+        if (target is CatchableObj item) EntityInteractionRequested?.Invoke(item.NetworkId);
+        OvenButton ovenButton = target.GetTargetComponent<OvenButton>();
+        if (ovenButton != null)
+        {
+            brain.ActionController.PunchAction();
+            ovenButton.OnPunched(brain);
+            return;
+        }
 
         if (TryUseHeldPrimaryAction()) return;
         if (TryUseHeldObjectReceiver()) return;
@@ -85,16 +117,13 @@ public class PlayerInteract
     
     private void RequestSecondaryAction()
     {
-        EntityCategory category = IsHolding ? HeldObj.Category : EntityCategory.Player;
+        if (TryGetHeldComponent(out IHeldSecondaryAction action) && action.TryUseSecondary(this)) return;
+        if (!IsHolding) return;
 
-        switch (category)
-        {
-            case EntityCategory.Player:
-                break;
-            default:
-                RequestThrow();
-                break;
-        }
+        preparedThrow = HeldObj;
+        throwReleaseVersion = brain.Input.SecondaryReleaseVersion;
+        // Press and release may arrive within the same frame.
+        if (!brain.Input.IsSecondaryHeld) RequestThrow();
     }
 
     private void RequestKeyInteract()
@@ -136,7 +165,10 @@ public class PlayerInteract
 
     public void RequestDropHeld()
     {
+        CancelThrowPreparation();
         if (!IsHolding) return;
+
+        brain.Rocket?.StopFlight();
 
         CatchableObj target = HeldObj;
         EntityThrowPacket packet = new()
@@ -156,14 +188,13 @@ public class PlayerInteract
 
     private void RequestThrow()
     {
+        CancelThrowPreparation();
         brain.ActionController.CancelAction();
         if (!IsHolding) return;
 
         CatchableObj target = HeldObj;
 
-        Transform throwOrigin = GetThrowOrigin();
-        Vector3 throwPosition = GetThrowPosition(target);
-        Vector3 velocity = GetThrowDirection(throwOrigin) * GetThrowForce();
+        GetThrowLaunch(target, out Vector3 throwPosition, out Vector3 velocity);
 
         EntityThrowPacket packet = new()
         {
@@ -177,12 +208,177 @@ public class PlayerInteract
 
     public void RequestEntityInteract(long targetEntityId)
     {
+        EntityInteractionRequested?.Invoke(targetEntityId);
         EntityInteractPacket packet = new()
         {
             TargetEntityId = targetEntityId
         };
 
         _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+    }
+
+    // Arm one impact for each remote punch animation; duplicate animation events are ignored.
+    public void QueueRemotePunchImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        pendingAttackImpact = PendingAttackImpact.Punch;
+        pendingKnife = null;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
+    public void QueueRemoteKnifeImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver) return;
+        pendingAttackImpact = PendingAttackImpact.Knife;
+        pendingKnife = HeldObj;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
+
+    public void QueueKnifeImpact()
+    {
+        SoundManager.GetOrCreate().Play(SoundId.KnifeSwing, brain.transform.position);
+        pendingAttackImpact = PendingAttackImpact.Knife;
+        pendingKnife = HeldObj;
+        pendingImpactDeadline = Time.time + 2f;
+    }
+
+    public void CancelPendingAttackImpact()
+    {
+        pendingAttackImpact = PendingAttackImpact.None;
+        pendingKnife = null;
+        pendingImpactDeadline = 0f;
+    }
+
+    public void OnPunchImpact()
+    {
+        if (!TryConsumeAttackImpact(PendingAttackImpact.Punch, out _)) return;
+
+        if (TryFindPunchedPlayer(BuildInteractRay(), GetInteractRadius(), GetInteractDistance()) is PlayerHitWobble playerHit)
+        {
+            ApplyPlayerPunch(playerHit);
+            return;
+        }
+
+        IInteractTarget target = FindInteractTarget();
+        if (target is CatchableObj) return;
+        target?.GetTargetComponent<IPunchReceiver>()?.OnPunched(brain);
+    }
+
+    public void OnRemotePunchImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver ||
+            pendingAttackImpact != PendingAttackImpact.Punch) return;
+        bool valid = Time.time <= pendingImpactDeadline &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default &&
+            !StageReturnFlow.IsInputBlocked;
+        CancelPendingAttackImpact();
+        if (!valid) return;
+
+        Transform facing = brain.FacingRoot != null ? brain.FacingRoot : brain.transform;
+        Vector3 origin = brain.Col != null ? brain.Col.bounds.center : facing.position + Vector3.up;
+        PlayerHitWobble playerHit = TryFindPunchedPlayer(
+            new Ray(origin, facing.forward),
+            GetInteractRadius() + RemotePunchRadiusBonus,
+            GetInteractDistance() + RemotePunchDistanceBonus);
+        ApplyPlayerPunch(playerHit);
+    }
+
+    private void ApplyPlayerPunch(PlayerHitWobble playerHit)
+    {
+        if (playerHit == null) return;
+        ApplyPlayerHit(brain, playerHit.GetComponent<PlayerBrain>(), SoundId.Punch);
+    }
+
+// Share victim-owned health requests, hit feedback and damage settings across attacks.
+    internal static void ApplyPlayerHit(PlayerBrain attacker, PlayerBrain target, SoundId hitSound)
+    {
+        if (attacker == null || target == null || target == attacker) return;
+        SoundManager.GetOrCreate().Play(hitSound, target.transform.position);
+        target.GetComponent<PlayerHitWobble>()?.PlayHit(attacker.transform.position);
+        if (target.StateResolver is LocalPlayerStateResolver)
+            target.Health?.TakeDamage(attacker.PunchDamage);
+    }
+
+
+    private PlayerHitWobble TryFindPunchedPlayer(Ray ray, float radius, float distance)
+    {
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray.origin,
+            radius,
+            ray.direction,
+            distance,
+            Physics.AllLayers,
+            QueryTriggerInteraction.Ignore);
+
+        float nearestDistance = float.PositiveInfinity;
+        Collider nearestCollider = null;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.transform.IsChildOf(brain.transform)) continue;
+            if (hit.distance >= nearestDistance) continue;
+            nearestDistance = hit.distance;
+            nearestCollider = hit.collider;
+        }
+
+        if (nearestCollider == null) return null;
+        PlayerBrain target = nearestCollider.GetComponentInParent<PlayerBrain>();
+        return target != null && target != brain
+            ? target.GetComponent<PlayerHitWobble>()
+            : null;
+    }
+
+    public void OnKnifeImpact()
+    {
+        if (!TryConsumeAttackImpact(PendingAttackImpact.Knife, out CatchableObj knife)) return;
+        if (HeldObj != knife || knife == null) return;
+
+        if (TryFindPunchedPlayer(BuildInteractRay(), GetInteractRadius(), GetInteractDistance()) is PlayerHitWobble playerHit)
+        {
+            ApplyPlayerHit(brain, playerHit.GetComponent<PlayerBrain>(), SoundId.KnifeHit);
+            return;
+        }
+
+        IInteractTarget impactTarget = FindInteractTarget();
+        if (impactTarget is not CatchableObj target) return;
+        if (!target.TryGetComponent(out IngredientReaction _)) return;
+        RequestEntityInteract(target.NetworkId);
+    }
+
+    public void OnRemoteKnifeImpact()
+    {
+        if (brain.StateResolver is not RemotePlayerStateResolver ||
+            pendingAttackImpact != PendingAttackImpact.Knife) return;
+        bool valid = Time.time <= pendingImpactDeadline &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default &&
+            brain.StateResolver.CurrentState.HeldEntityCategory == EntityCategory.Knife &&
+            (pendingKnife == null || HeldObj == pendingKnife) &&
+            !StageReturnFlow.IsInputBlocked;
+        CancelPendingAttackImpact();
+        if (!valid) return;
+
+        Transform facing = brain.FacingRoot != null ? brain.FacingRoot : brain.transform;
+        Vector3 origin = brain.Col != null ? brain.Col.bounds.center : facing.position + Vector3.up;
+        PlayerHitWobble playerHit = TryFindPunchedPlayer(
+            new Ray(origin, facing.forward),
+            GetInteractRadius() + RemotePunchRadiusBonus,
+            GetInteractDistance() + RemotePunchDistanceBonus);
+        if (playerHit != null)
+            ApplyPlayerHit(brain, playerHit.GetComponent<PlayerBrain>(), SoundId.KnifeHit);
+    }
+
+
+    private bool TryConsumeAttackImpact(PendingAttackImpact expected, out CatchableObj knife)
+    {
+        knife = pendingKnife;
+        if (pendingAttackImpact != expected) return false;
+
+        bool valid = Time.time <= pendingImpactDeadline &&
+            PlayerSpawnManager.Instance != null &&
+            PlayerSpawnManager.Instance.IsMine(brain.PlayerId) &&
+            brain.StateResolver.CurrentState.PhysicalMode == PlayerPhysicalMode.Default;
+        CancelPendingAttackImpact();
+        return valid;
     }
 
     public bool TryUseEquipment()
@@ -197,6 +393,9 @@ public class PlayerInteract
     {
         if (target == null) return false;
         if (HeldObj != target) return false;
+        CancelThrowPreparation();
+
+        brain.Rocket?.StopFlight();
 
         brain.ActionController.CancelAction();
         HeldObj = null;
@@ -226,12 +425,13 @@ public class PlayerInteract
     public void ApplyPicked(CatchableObj target)
     {
         if (target == null) return;
+        CancelThrowPreparation();
+
+        brain.Rocket?.StopFlight();
 
         brain.ActionController.CancelAction();
         target.OnPick(brain);
-        Transform holdParent = target.IsEquipment
-            ? brain.EquipPoint
-            : brain.ItemPoint;
+        Transform holdParent = target.ResolveHoldParent(brain);
 
         target.transform.SetParent(holdParent, false);
         LocalTransformData holdTransform = target.HoldTransform;
@@ -243,6 +443,9 @@ public class PlayerInteract
     public void ApplyThrown(CatchableObj target)
     {
         if (target == null || HeldObj != target) return;
+        CancelThrowPreparation();
+
+        brain.Rocket?.StopFlight();
 
         brain.ActionController.CancelAction();
         HeldObj = null;
@@ -250,6 +453,43 @@ public class PlayerInteract
     #endregion
 
     #region Throw Action Helper
+    public void CancelThrowPreparation()
+    {
+        preparedThrow = null;
+        brain.ThrowTrajectory?.Hide();
+    }
+
+    public void UpdateThrowPreparation()
+    {
+        if (preparedThrow == null || HeldObj != preparedThrow ||
+            brain.StateResolver is not LocalPlayerStateResolver || !brain.Input.isActiveAndEnabled ||
+            brain.Input.IsInputBlocked || brain.StateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default ||
+            (brain.Rocket != null && brain.Rocket.IsFlying))
+        {
+            CancelThrowPreparation();
+            return;
+        }
+
+        if (brain.Input.SecondaryReleaseVersion != throwReleaseVersion)
+        {
+            RequestThrow();
+            return;
+        }
+        if (!brain.Input.IsSecondaryHeld)
+        {
+            CancelThrowPreparation();
+            return;
+        }
+        GetThrowLaunch(preparedThrow, out Vector3 startPos, out Vector3 velocity);
+        brain.ThrowTrajectory.Show(preparedThrow, startPos, velocity);
+    }
+
+    private void GetThrowLaunch(CatchableObj target, out Vector3 startPos, out Vector3 velocity)
+    {
+        startPos = GetThrowPosition(target);
+        velocity = GetThrowDirection(GetThrowOrigin()) * GetThrowForce();
+    }
+
     private Transform GetThrowOrigin()
     {
         return brain.PlayerCam != null
@@ -266,8 +506,19 @@ public class PlayerInteract
 
     private Vector3 GetThrowDirection(Transform origin)
     {
-        Quaternion angleOffset = Quaternion.AngleAxis(-brain.ThrowAngle, origin.right);
-        return (angleOffset * origin.forward).normalized;
+        float pitchAngle = brain.ThrowAngle;
+        if (brain.UseDownwardThrowCompensation)
+        {
+            float lookDownAngle = Mathf.Asin(Mathf.Clamp(-origin.forward.y, -1f, 1f)) * Mathf.Rad2Deg;
+            float startAngle = Mathf.Max(0f, brain.DownwardThrowStartAngle);
+            float fullAngle = Mathf.Max(startAngle + 0.01f, brain.DownwardThrowFullAngle);
+            float correction = Mathf.InverseLerp(startAngle, fullAngle, lookDownAngle);
+            pitchAngle = Mathf.Lerp(pitchAngle, brain.DownwardThrowFinalAngle, correction);
+        }
+
+        Quaternion pitchOffset = Quaternion.AngleAxis(-pitchAngle, origin.right);
+        Quaternion yawOffset = Quaternion.AngleAxis(brain.ThrowYawAngle, Vector3.up);
+        return (yawOffset * pitchOffset * origin.forward).normalized;
     }
 
     private float GetThrowForce()
@@ -277,149 +528,145 @@ public class PlayerInteract
     #endregion
 
     #region Find Interactable Target
+    /// <summary>Returns the shared interaction target for the current frame.</summary>
     public IInteractTarget FindInteractTarget()
     {
-        if (brain.InteractDistance <= 0f)
+        if (targetFrame == Time.frameCount && targetHeldObj == HeldObj) return currentTarget;
+        targetFrame = Time.frameCount;
+        targetHeldObj = HeldObj;
+        currentTarget = ResolveInteractTarget();
+        return currentTarget;
+    }
+
+    private IInteractTarget ResolveInteractTarget()
+    {
+        // 재료를 들었을 때 솥은 화면 중앙이 초록색 표면에 닿는 경우에만 선택한다.
+        bool heldIngredient = HeldObj != null && HeldObj.Category == EntityCategory.Ingredient &&
+            HeldObj.TryGetComponent<IngredientReaction>(out _);
+        if (heldIngredient)
         {
-            throw new InvalidOperationException("InteractDistance must be greater than 0.");
+            PotInteraction pot = PotInsertSurface.Find(brain.PlayerCam, brain.transform);
+            if (pot != null) return pot;
         }
 
-        Ray ray = BuildInteractRay();
-        RaycastHit[] hits = Physics.SphereCastAll(
-            ray.origin,
-            GetInteractRadius(),
-            ray.direction,
-            brain.InteractDistance,
-            brain.InteractLayerMask,
-            QueryTriggerInteraction.Collide); // trigger collider도 상호작용 가능하도록 설정
+        foreach (PhysicsCastProbe probe in interactionCasts)
+        {
+            if (probe == null) continue;
+            RaycastHit[] hits = probe.Cast(out Ray ray);
+            IInteractTarget target = SelectInteractTarget(probe, ray, hits, heldIngredient);
+            if (target != null) return target;
+        }
+        return null;
+    }
 
+    /// <summary>Returns the selected pickup target without running a separate query.</summary>
+    public CatchableObj FindPickupFocus()
+    {
+        return !IsHolding ? FindInteractTarget() as CatchableObj : null;
+    }
+
+    /// <summary>Returns one highlight target and its pickup readiness.</summary>
+    public CatchableObj FindFocus(float previewDistance, float previewViewportRadius, out bool pickupReady)
+    {
+        CatchableObj pickup = FindPickupFocus();
+        pickupReady = pickup != null;
+        if (pickupReady) return pickup;
+        Camera camera = brain.PlayerCam;
+        if (camera == null) return null;
+        Ray ray = brain.CameraInteractionCast != null
+            ? brain.CameraInteractionCast.BuildRay()
+            : camera.ViewportPointToRay(new Vector3(.5f, .5f));
+        return focusQuery.FindPreview(camera, ray, previewDistance, previewViewportRadius, brain.transform);
+    }
+
+    private IInteractTarget SelectInteractTarget(PhysicsCastProbe probe, Ray ray,
+        RaycastHit[] hits, bool excludePot = false)
+    {
         IInteractTarget bestTarget = null;
         float bestScore = float.PositiveInfinity;
+        float bestDistance = float.PositiveInfinity;
 
         foreach (RaycastHit hit in hits)
         {
             Collider hitCollider = hit.collider;
-            if (hitCollider.transform.IsChildOf(brain.transform)) continue; // Ignore self-collisions
-
-            // Check if IInteractTarget is acceptable
+            if (hitCollider.transform.IsChildOf(brain.transform)) continue;
             IInteractTarget target = GetInteractTargetInParent(hitCollider);
-            if (target == null) continue;
-            if (!target.Accepts(GetSourceCategory())) continue;
+            if (!IsHolding && target is CatchableObj item && !CatchableFocusQuery.IsAvailable(item)) continue;
+            if (target == null || !target.Accepts(GetSourceCategory())) continue;
+            // 검정 몸통이나 내부 투입 트리거를 맞혀도 재료 넣기로 처리하지 않는다.
+            if (excludePot && target.GetTargetComponent<PotInteraction>() != null) continue;
 
-            float score = GetTargetScore(ray, hitCollider, hit.distance);
-
-            if (score >= bestScore) continue;
+            float score = probe.Type == PhysicsCastProbe.CastType.Raycast
+                ? hit.distance
+                : GetTargetScore(probe, ray, hitCollider, hit.distance);
+            if (score > bestScore || (score == bestScore && hit.distance >= bestDistance)) continue;
+            if (!IsHolding && target is CatchableObj pickup)
+            {
+                Vector3 origin = probe == brain.CameraInteractionCast && brain.PlayerCam != null
+                    ? brain.PlayerCam.transform.position : ray.origin;
+                Vector3 point = hit.distance > 0f ? hit.point : hitCollider.bounds.center;
+                if (!focusQuery.IsVisible(origin, point, pickup, brain.transform)) continue;
+            }
 
             bestTarget = target;
             bestScore = score;
+            bestDistance = hit.distance;
         }
-
         return bestTarget;
     }
 
     private EntityCategory GetSourceCategory()
     {
-        return HeldObj != null
-            ? HeldObj.Category
-            : EntityCategory.Player;
+        return HeldObj != null ? HeldObj.Category : EntityCategory.Player;
     }
 
-    private float GetTargetScore(Ray ray, Collider targetCollider, float distance)
+    private static float GetTargetScore(PhysicsCastProbe probe, Ray ray, Collider targetCollider, float distance)
     {
         Vector3 targetCenter = targetCollider.bounds.center;
         Vector3 castCenter = ray.GetPoint(Mathf.Max(0f, Vector3.Dot(targetCenter - ray.origin, ray.direction)));
-
-        //ray 중심으로부터 얼마나 벗어났는가
         float offset = Vector3.Distance(castCenter, targetCenter);
-        float offsetScore = Mathf.Clamp01(offset / GetInteractRadius());
-
-        //ray 시작점과의 거리
-        float distanceRatio = Mathf.Clamp01(distance / brain.InteractDistance);
+        float offsetScore;
+        if (probe.Type == PhysicsCastProbe.CastType.BoxCast)
+        {
+            Vector3 localOffset = Quaternion.Inverse(probe.BoxRot) * (targetCenter - castCenter);
+            Vector3 halfExtents = probe.GetBoxHalfExtents();
+            offsetScore = Mathf.Clamp01(Mathf.Max(Mathf.Abs(localOffset.x) / halfExtents.x,
+                Mathf.Abs(localOffset.y) / halfExtents.y, Mathf.Abs(localOffset.z) / halfExtents.z));
+        }
+        else offsetScore = Mathf.Clamp01(offset / Mathf.Max(0.01f, probe.Radius));
+        float distanceRatio = Mathf.Clamp01(distance / probe.Distance);
         int distanceScore = Mathf.Min(Mathf.FloorToInt(distanceRatio * 3f), 2);
-
-        float targetScore = offsetScore + distanceScore;
-        return targetScore;
+        return offsetScore + distanceScore;
     }
 
-    // Collider의 부모 계층에서 상호작용 대상을 찾는다.
     private static IInteractTarget GetInteractTargetInParent(Collider collider)
     {
         foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
         {
-            if (behaviour is IInteractTarget target)
-                return target;
+            if (behaviour is IInteractTarget target) return target;
         }
-
         return null;
     }
-
     #endregion
 
-    #region Interact Ray
+    #region Player Hit Query Settings
     private Ray BuildInteractRay()
     {
-        Transform origin = brain.PlayerCam != null
-            ? brain.PlayerCam.transform
-            : brain.transform;
-
-        Vector3 start = origin.position + origin.TransformDirection(brain.InteractRayStartOffset);
-        return new Ray(start, origin.forward);
+        if (brain.CameraInteractionCast != null) return brain.CameraInteractionCast.BuildRay();
+        Transform origin = brain.PlayerCam != null ? brain.PlayerCam.transform : brain.transform;
+        return new Ray(origin.position + origin.TransformDirection(brain.InteractRayStartOffset), origin.forward);
     }
 
     private float GetInteractRadius()
     {
-        return Mathf.Max(0.01f, brain.InteractRadius);
+        return Mathf.Max(0.01f, brain.CameraInteractionCast != null
+            ? brain.CameraInteractionCast.Radius : brain.InteractRadius);
     }
 
-    private void DrawDebugInteractRay()
+    private float GetInteractDistance()
     {
-        if (!brain.DebugInteraction) return;
-
-        Ray ray = BuildInteractRay();
-        float radius = GetInteractRadius();
-        Vector3 end = ray.origin + ray.direction * brain.InteractDistance;
-
-        DrawDebugCircle(ray.origin, ray.direction, radius, Color.red);
-        DrawDebugCircle(end, ray.direction, radius, Color.red);
-        DrawDebugSphereCastEdges(ray.origin, end, ray.direction, radius, Color.red);
-    }
-
-    private static void DrawDebugSphereCastEdges(Vector3 start, Vector3 end, Vector3 direction, float radius, Color color)
-    {
-        BuildCircleBasis(direction, out Vector3 right, out Vector3 up);
-
-        Debug.DrawLine(start + right * radius, end + right * radius, color);
-        Debug.DrawLine(start - right * radius, end - right * radius, color);
-        Debug.DrawLine(start + up * radius, end + up * radius, color);
-        Debug.DrawLine(start - up * radius, end - up * radius, color);
-    }
-
-    private static void DrawDebugCircle(Vector3 center, Vector3 direction, float radius, Color color)
-    {
-        const int SegmentCount = 24;
-
-        BuildCircleBasis(direction, out Vector3 right, out Vector3 up);
-        Vector3 previous = center + right * radius;
-
-        for (int i = 1; i <= SegmentCount; i++)
-        {
-            float angle = i * Mathf.PI * 2.0f / SegmentCount;
-            Vector3 next = center + (right * Mathf.Cos(angle) + up * Mathf.Sin(angle)) * radius;
-            Debug.DrawLine(previous, next, color);
-            previous = next;
-        }
-    }
-
-    private static void BuildCircleBasis(Vector3 direction, out Vector3 right, out Vector3 up)
-    {
-        right = Vector3.Cross(direction, Vector3.up);
-        if (right.sqrMagnitude < 0.001f)
-        {
-            right = Vector3.Cross(direction, Vector3.forward);
-        }
-
-        right.Normalize();
-        up = Vector3.Cross(right, direction).normalized;
+        return brain.CameraInteractionCast != null
+            ? brain.CameraInteractionCast.Distance : brain.InteractDistance;
     }
     #endregion
 }

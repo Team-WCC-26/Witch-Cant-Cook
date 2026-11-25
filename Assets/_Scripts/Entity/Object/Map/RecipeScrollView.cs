@@ -3,24 +3,93 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Attach to the scroll root. Only the child cards are hidden; the 3D scroll remains visible.
+// Displays up to three orders using the existing recipe card views.
 public class RecipeScrollView : MonoBehaviour
 {
     [SerializeField] private RectTransform cardRoot;
     [SerializeField] private RecipeOrderCardUI[] cards = Array.Empty<RecipeOrderCardUI>();
+    [SerializeField, Tooltip("Keep the layout components and spacing configured in the prefab.")]
+    private bool usePrefabLayout;
     public const int Capacity = 3;
+    private StageReturnFlow stageFlow;
+    private Canvas recipeCanvas;
+    private CanvasGroup hudGroup;
+    private bool canvasStateCached;
+    private bool originalCanvasEnabled;
 
-    public void Configure(RectTransform root, RecipeOrderCardUI[] views) { cardRoot = root; cards = views; }
+    private void OnEnable()
+    {
+        if (!canvasStateCached)
+        {
+            recipeCanvas = GetComponent<Canvas>();
+            hudGroup = GetComponent<CanvasGroup>();
+            originalCanvasEnabled = recipeCanvas != null && recipeCanvas.enabled;
+            canvasStateCached = true;
+        }
+        stageFlow = StageReturnFlow.Instance;
+        stageFlow.Changed += RefreshCanvasVisibility;
+        RefreshCanvasVisibility();
+        if (DishOrderManager.Instance != null) DishOrderManager.Instance.RegisterView(this);
+    }
+
+    private void OnDisable()
+    {
+        if (stageFlow != null) stageFlow.Changed -= RefreshCanvasVisibility;
+        if (DishOrderManager.Instance != null) DishOrderManager.Instance.UnregisterView(this);
+    }
+
+    private void RefreshCanvasVisibility()
+    {
+        if (recipeCanvas != null) recipeCanvas.enabled = originalCanvasEnabled && !stageFlow.State.ShowsSettlement;
+        if (hudGroup != null)
+        {
+            hudGroup.alpha = stageFlow.State.ShowsSettlement ? 0f : 1f;
+            hudGroup.blocksRaycasts = !stageFlow.State.ShowsSettlement;
+        }
+    }
+
+    public void Configure(RectTransform root, RecipeOrderCardUI[] views)
+    {
+        cardRoot = root;
+        cards = views;
+        ConfigureLayout();
+    }
     private void Awake()
     {
+        ResolveCards();
         ConfigureLayout();
         // Another object's OnEnable may already have bound an order before our Awake.
         foreach (RecipeOrderCardUI card in cards)
             if (card != null && card.OrderId < 0) card.Clear();
     }
+    private void ResolveCards()
+    {
+        // Prefab replacement can leave the scene's card references empty.
+        // Preserve explicit bindings; recover existing cards even when hidden.
+        if (cardRoot == null || Array.Exists(cards, card => card != null)) return;
+
+        cards = cardRoot.GetComponentsInChildren<RecipeOrderCardUI>(true);
+    }
     private void ConfigureLayout()
     {
-        if (cardRoot == null) return;
+        if (cardRoot == null || usePrefabLayout) return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
+        {
+            VerticalLayoutGroup oldLayout = cardRoot.GetComponent<VerticalLayoutGroup>();
+            if (oldLayout != null) oldLayout.enabled = false;
+
+            HorizontalLayoutGroup row = cardRoot.GetComponent<HorizontalLayoutGroup>();
+            if (row == null) row = cardRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.childAlignment = TextAnchor.UpperRight;
+            row.spacing = 16f;
+            row.childControlWidth = false;
+            row.childControlHeight = false;
+            row.childForceExpandWidth = false;
+            row.childForceExpandHeight = false;
+            return;
+        }
 
         VerticalLayoutGroup layout = cardRoot.GetComponent<VerticalLayoutGroup>();
 
@@ -34,6 +103,7 @@ public class RecipeScrollView : MonoBehaviour
     }
     public void Show(IReadOnlyList<DishOrder> orders, double now, Func<int, RecipeCardData> resolveRecipe = null)
     {
+        ResolveCards();
         for (int i = 0; i < cards.Length; i++)
         {
             RecipeOrderCardUI card = cards[i];
@@ -53,6 +123,8 @@ public class RecipeScrollView : MonoBehaviour
     }
     public void Clear()
     {
+        // DishOrderManager.OnEnable can run before this view's Awake.
+        ResolveCards();
         foreach (RecipeOrderCardUI card in cards) if (card != null) card.Clear();
     }
 

@@ -1,6 +1,7 @@
 using Protocol;
 using Server;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public sealed class LocalPlayerStateResolver : PlayerStateResolver
 {
@@ -12,12 +13,18 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     private bool pendingJumpRequested = false;
     private bool isJumpLocked = false;
     private bool hasJumpLockStarted = false;
+    private float nextJumpAllowedTime;
+    private float rocketEndSnapshotUntil;
+    private Vector3 rocketEndPosition;
+    private Quaternion rocketEndRotation;
+    // Initialize local input and physical state resolution.
     public LocalPlayerStateResolver(PlayerBrain brain) : base(brain)
     {
         inputFSM = new PlayerInputFSM(brain);
         physicalFSM = new PlayerPhysicalFSM(brain);
     }
 
+    // Resolve local input into the current player state.
     public override void UpdateTick()
     {
         inputFSM.UpdateTick();
@@ -32,7 +39,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         Vector2 moveDir = brain.Input.RawMoveDir;
         bool isRun = brain.Input.RawIsRunning;
 
-        if (physicalMode != PlayerPhysicalMode.Default)
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
         {
             moveDir = Vector2.zero;
             isRun = false;
@@ -54,6 +61,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         ));
     }
 
+    // Advance physical state and send movement snapshots.
     public override void FixedTick()
     {
         physicalFSM.FixedTick();
@@ -65,7 +73,7 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         EntityCategory heldEntityCategory = ResolveHeldEntityCategory();
         bool jumpRequested = ConsumeJumpRequest(physicalMode);
 
-        if (physicalMode != PlayerPhysicalMode.Default)
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked)
         {
             moveDir = Vector2.zero;
             isRun = false;
@@ -94,29 +102,110 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         }
 
         sendTimer = 0f;
-        SendMovementPacket();
+        _ = SendMovementPacket();
     }
 
+    public void ResetForRespawn()
+    {
+        physicalFSM.ResetForRespawn();
+        pendingJumpRequested = false;
+        isJumpLocked = false;
+        hasJumpLockStarted = false;
+        nextJumpAllowedTime = 0f;
+        rocketEndSnapshotUntil = 0f;
+        SetCurrentState(new PlayerCombinedState(PlayerPhysicalMode.Default));
+    }
+
+    // Request the local ragdoll state.
     public void EnterRagdoll()
     {
         physicalFSM.EnterRagdoll();
     }
 
-    private void SendMovementPacket()
+    // Pause or resume ragdoll recovery.
+    public void SetRagdollRecoveryPaused(bool paused)
     {
-        Quaternion facingRotation = brain.CameraController != null
+        physicalFSM.SetRecoveryPaused(paused);
+    }
+
+    // Send the current or final rocket movement snapshot.
+    public void SendRocketSnapshot(bool ended)
+    {
+        // Keep the terminal pose for two send intervals so batching preserves short flights.
+        rocketEndSnapshotUntil = ended ? Time.time + SendInterval * 2f : 0f;
+        if (ended)
+        {
+            rocketEndPosition = brain.Rb != null ? brain.Rb.position : brain.transform.position;
+            rocketEndRotation = Quaternion.LookRotation(brain.Rocket.FlightDirection, Vector3.up);
+        }
+        if (ServerManager.Instance == null) return;
+        sendTimer = 0f;
+        _ = SendMovementPacket();
+    }
+
+    // Send the pan ejection snapshot.
+    public UniTask SendPanEject()
+    {
+        return SendMovementPacket(true);
+    }
+
+    private UniTask SendMovementPacket(bool ejectPan = false)
+    {
+        PlayerCombinedState outgoingState = CurrentState;
+        if (ejectPan)
+        {
+            // A one-shot Drop in the movement snapshot is the existing server pan-eject command.
+            outgoingState = new PlayerCombinedState(
+                CurrentState.PhysicalMode,
+                CurrentState.MoveDir,
+                CurrentState.IsRun,
+                PlayerInteraction.HeldPrimary,
+                EntityCategory.Pan,
+                CurrentState.JumpRequested);
+        }
+        else if (brain.ActionController.ConsumePrimaryAction(out EntityCategory category)
+            && CurrentState.PhysicalMode == PlayerPhysicalMode.Default)
+        {
+            // Send the action that actually played, once, without changing local input state.
+            outgoingState = new PlayerCombinedState(
+                CurrentState.PhysicalMode,
+                CurrentState.MoveDir,
+                CurrentState.IsRun,
+                category == EntityCategory.Player
+                    ? PlayerInteraction.DefaultPrimary
+                    : PlayerInteraction.HeldPrimary,
+                category,
+                CurrentState.JumpRequested
+            );
+        }
+
+        Quaternion facingRotation = brain.ActionController.IsRagdollActive
+            ? brain.Body.PhysicsRot : brain.CameraController != null
             ? brain.CameraController.YawRotation
             : brain.transform.rotation;
+        Vector3 position = brain.PhysicsPos;
+
+        // Reuse the existing special-action snapshot marker; no new wire format is required.
+        bool endingRocket = Time.time < rocketEndSnapshotUntil;
+        if (brain.Rocket != null && (brain.Rocket.IsFlying || endingRocket) &&
+            brain.Interact.HeldObj != null && brain.Interact.HeldObj.GetComponent<IngredientCarrot>() != null &&
+            CurrentState.PhysicalMode == PlayerPhysicalMode.Default)
+        {
+            outgoingState = new PlayerCombinedState(CurrentState.PhysicalMode,
+                Vector2.zero, false, PlayerInteraction.SpecialInteract, EntityCategory.Ingredient);
+            facingRotation = endingRocket ? rocketEndRotation : Quaternion.LookRotation(brain.Rocket.FlightDirection, Vector3.up);
+            if (endingRocket) position = rocketEndPosition;
+        }
 
         PlayerMovementPacket packet = new()
         {
             PlayerId = brain.PlayerId,
-            Position = DataConverter.UnityToNumerics(brain.transform.position),
+            Position = DataConverter.UnityToNumerics(position),
             Rotation = DataConverter.UnityToNumerics(facingRotation),
-            CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(CurrentState)
+            CombinedState = ProtocolTypeConverter.ToProtocolCombinedState(outgoingState)
         };
 
-        _ = ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
+        return ServerManager.Instance.SendData(PacketSerializer.Serialize(packet));
     }
 
     private EntityCategory ResolveHeldEntityCategory()
@@ -130,7 +219,12 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     // Keeps jump input alive until the next physics tick.
     private void CacheJumpRequest(PlayerPhysicalMode physicalMode)
     {
-        if (physicalMode != PlayerPhysicalMode.Default)
+        if (brain.Rocket != null && brain.Rocket.IsFlying)
+        {
+            pendingJumpRequested = false;
+            return;
+        }
+        if (physicalMode != PlayerPhysicalMode.Default || brain.Input.IsInputBlocked || brain.Input.IsMovementBlocked)
         {
             pendingJumpRequested = false;
             isJumpLocked = false;
@@ -143,7 +237,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
             return;
         }
 
-        pendingJumpRequested |= inputFSM.CurrentJumpRequested;
+        pendingJumpRequested |= inputFSM.CurrentJumpRequested ||
+            (brain.Input.RawIsJumpHeld && brain.ActionController.IsGroundedNow);
     }
 
     // Consumes jump once when physics is ready to apply it.
@@ -151,8 +246,12 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
     {
         bool jumpRequested =
             physicalMode == PlayerPhysicalMode.Default
+            && !brain.Input.IsInputBlocked && !brain.Input.IsMovementBlocked
             && pendingJumpRequested
             && !isJumpLocked
+            && Time.time >= nextJumpAllowedTime
+            && !brain.ActionController.Movement.IsForcedMovementActive
+            && !(brain.Rocket != null && brain.Rocket.IsFlying)
             && brain.ActionController.CanRequestJump;
 
         if (jumpRequested)
@@ -187,6 +286,8 @@ public sealed class LocalPlayerStateResolver : PlayerStateResolver
         {
             isJumpLocked = false;
             hasJumpLockStarted = false;
+            // Repeat delay starts at landing, not at the previous takeoff.
+            nextJumpAllowedTime = Time.time + brain.JumpRepeatDelay;
         }
     }
     #endregion
