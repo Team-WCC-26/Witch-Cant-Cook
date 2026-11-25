@@ -81,16 +81,6 @@ public sealed class CostumeMirror : MonoBehaviour
         if (!IsOpen) Open(player);
     }
 
-    internal static bool IsTargeted(Ray ray, float distance)
-    {
-        if (!Physics.Raycast(ray, out RaycastHit hit, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            return false;
-
-        Transform target = hit.transform;
-        while (target != null && target.name != "AWS_Mirror") target = target.parent;
-        return target != null;
-    }
-
     private static async void Open(PlayerBrain player)
     {
         IsOpen = true;

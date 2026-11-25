@@ -41,12 +41,6 @@ public sealed class InteractionUI : UIBase
             player.StateResolver.CurrentState.PhysicalMode != PlayerPhysicalMode.Default ||
             (player.Rocket != null && player.Rocket.IsFlying);
         CatchableObj heldObject = player.Interact.HeldObj;
-        if (!blocked && player.Interact.IsCostumeMirrorTargeted())
-        {
-            ApplyActions("옷 갈아입기", GetSecondaryAction(heldObject, player.Interact.IsPreparingThrow));
-            return;
-        }
-
         SetContext(heldObject, blocked ? null : player.Interact.FindInteractTarget(), blocked,
             player.Interact.IsPreparingThrow);
     }
@@ -81,6 +75,7 @@ public sealed class InteractionUI : UIBase
         if (target is Object unityTarget && unityTarget == null) target = null;
         if (heldObject != null && (heldObject.IsSubmissionPending || heldObject.IsSubmissionReturning))
             return string.Empty;
+        if (target is CostumeMirrorTarget) return "옷 갈아입기";
         if (target.GetTargetComponent<OvenButton>() != null) return "버튼 누르기";
         if (heldObject == null) return "주먹질 / 집기";
         if (heldObject.TryGetComponent<KnifeInteraction>(out _)) return "휘두르기 / 손질하기";

@@ -17,6 +17,7 @@ public enum EntityCategory
     Pot = 1 << 10,
     TrashCan = 1 << 11,
     CookingSubmit = 1 << 12,
+    CostumeMirror = 1 << 13,
 
     All = ~0
 }

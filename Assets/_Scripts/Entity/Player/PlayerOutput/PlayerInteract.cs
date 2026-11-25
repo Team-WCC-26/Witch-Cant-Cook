@@ -43,11 +43,9 @@ public class PlayerInteract
         switch (interaction)
         {
             case PlayerInteraction.DefaultPrimary:
-                if (IsCostumeMirrorTargeted()) CostumeMirror.OpenFor(brain);
-                else RequestDefaultPrimaryAction();
-                break;
             case PlayerInteraction.HeldPrimary:
-                if (IsCostumeMirrorTargeted()) CostumeMirror.OpenFor(brain);
+                if (FindInteractTarget() is CostumeMirrorTarget) CostumeMirror.OpenFor(brain);
+                else if (interaction == PlayerInteraction.DefaultPrimary) RequestDefaultPrimaryAction();
                 else RequestHeldPrimaryAction();
                 break;
             case PlayerInteraction.Secondary:
@@ -539,9 +537,6 @@ public class PlayerInteract
         currentTarget = ResolveInteractTarget();
         return currentTarget;
     }
-
-    internal bool IsCostumeMirrorTargeted() =>
-        CostumeMirror.IsTargeted(BuildInteractRay(), GetInteractDistance());
 
     private IInteractTarget ResolveInteractTarget()
     {
