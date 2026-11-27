@@ -4,6 +4,7 @@ namespace Protocol;
 
 [MemoryPackable]
 [PacketId(PacketId.C_CostumeChange)]
+[PacketId(PacketId.S_CostumeChange)]
 public partial class CostumeChangePacket
 {
     public string? PlayerId { get; set; }

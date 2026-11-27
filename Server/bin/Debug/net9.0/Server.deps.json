@@ -18,7 +18,8 @@
       },
       "MemoryPack/1.21.4": {
         "dependencies": {
-          "MemoryPack.Core": "1.21.4"
+          "MemoryPack.Core": "1.21.4",
+          "MemoryPack.Generator": "1.21.4"
         }
       },
       "MemoryPack.Core/1.21.4": {
@@ -29,6 +30,7 @@
           }
         }
       },
+      "MemoryPack.Generator/1.21.4": {},
       "Microsoft.Extensions.Configuration/8.0.0": {
         "dependencies": {
           "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
@@ -107,7 +109,8 @@
           "Microsoft.Extensions.Configuration": "8.0.0",
           "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
           "Microsoft.Extensions.Configuration.FileExtensions": "8.0.0",
-          "Microsoft.Extensions.FileProviders.Abstractions": "8.0.0"
+          "Microsoft.Extensions.FileProviders.Abstractions": "8.0.0",
+          "System.Text.Json": "8.0.5"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.Configuration.Json.dll": {
@@ -165,7 +168,8 @@
       "Microsoft.Extensions.Diagnostics.Abstractions/8.0.0": {
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
-          "Microsoft.Extensions.Options": "8.0.0"
+          "Microsoft.Extensions.Options": "8.0.0",
+          "System.Diagnostics.DiagnosticSource": "8.0.0"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.Diagnostics.Abstractions.dll": {
@@ -301,7 +305,8 @@
           "Microsoft.Extensions.Logging": "8.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
           "Microsoft.Extensions.Logging.Configuration": "8.0.0",
-          "Microsoft.Extensions.Options": "8.0.0"
+          "Microsoft.Extensions.Options": "8.0.0",
+          "System.Text.Json": "8.0.5"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.Logging.Console.dll": {
@@ -344,7 +349,8 @@
           "Microsoft.Extensions.Logging": "8.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
           "Microsoft.Extensions.Options": "8.0.0",
-          "Microsoft.Extensions.Primitives": "8.0.0"
+          "Microsoft.Extensions.Primitives": "8.0.0",
+          "System.Text.Json": "8.0.5"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.Logging.EventSource.dll": {
@@ -417,7 +423,8 @@
           "Microsoft.Extensions.Hosting.Abstractions": "8.0.0",
           "Microsoft.Extensions.Options.ConfigurationExtensions": "8.0.0",
           "SuperSocket.Primitives": "2.0.2",
-          "SuperSocket.Server.Abstractions": "2.0.2"
+          "SuperSocket.Server.Abstractions": "2.0.2",
+          "System.Text.Json": "8.0.5"
         },
         "runtime": {
           "lib/net9.0/SuperSocket.Command.dll": {
@@ -431,7 +438,8 @@
           "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
           "Microsoft.Extensions.ObjectPool": "8.0.0",
           "Microsoft.Extensions.Options": "8.0.0",
-          "SuperSocket.ProtoBase": "2.0.2"
+          "SuperSocket.ProtoBase": "2.0.2",
+          "System.IO.Pipelines": "8.0.0"
         },
         "runtime": {
           "lib/net9.0/SuperSocket.Connection.dll": {
@@ -499,6 +507,7 @@
           }
         }
       },
+      "System.Diagnostics.DiagnosticSource/8.0.0": {},
       "System.Diagnostics.EventLog/8.0.0": {
         "runtime": {
           "lib/net8.0/System.Diagnostics.EventLog.dll": {
@@ -521,13 +530,15 @@
           }
         }
       },
+      "System.IO.Pipelines/8.0.0": {},
+      "System.Text.Json/8.0.5": {},
       "Protocol/1.0.0": {
         "dependencies": {
           "MemoryPack": "1.21.4"
         },
         "runtime": {
           "Protocol.dll": {
-            "assemblyVersion": "1.0.0.0",
+            "assemblyVersion": "1.0.0",
             "fileVersion": "1.0.0.0"
           }
         }
@@ -553,6 +564,13 @@
       "sha512": "sha512-6RszGorZ0ejNmp37ZcboPBMvvPCuNW2jlrdQfcs/lMzE5b3pmPF6hsm/laDc34hRlbAST1ZxaX/DvYu2DF5sBQ==",
       "path": "memorypack.core/1.21.4",
       "hashPath": "memorypack.core.1.21.4.nupkg.sha512"
+    },
+    "MemoryPack.Generator/1.21.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-g14EsSS85yn0lHTi0J9ivqlZMf09A2iI51fmI+0KkzIzyCbWOBWPi5mdaY7YWmXprk12aYh9u/qfWHQUYthlwg==",
+      "path": "memorypack.generator/1.21.4",
+      "hashPath": "memorypack.generator.1.21.4.nupkg.sha512"
     },
     "Microsoft.Extensions.Configuration/8.0.0": {
       "type": "package",
@@ -806,12 +824,33 @@
       "path": "supersocket.server.abstractions/2.0.2",
       "hashPath": "supersocket.server.abstractions.2.0.2.nupkg.sha512"
     },
+    "System.Diagnostics.DiagnosticSource/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-c9xLpVz6PL9lp/djOWtk5KPDZq3cSYpmXoJQY524EOtuFl5z9ZtsotpsyrDW40U1DRnQSYvcPKEUV0X//u6gkQ==",
+      "path": "system.diagnostics.diagnosticsource/8.0.0",
+      "hashPath": "system.diagnostics.diagnosticsource.8.0.0.nupkg.sha512"
+    },
     "System.Diagnostics.EventLog/8.0.0": {
       "type": "package",
       "serviceable": true,
       "sha512": "sha512-fdYxcRjQqTTacKId/2IECojlDSFvp7LP5N78+0z/xH7v/Tuw5ZAxu23Y6PTCRinqyu2ePx+Gn1098NC6jM6d+A==",
       "path": "system.diagnostics.eventlog/8.0.0",
       "hashPath": "system.diagnostics.eventlog.8.0.0.nupkg.sha512"
+    },
+    "System.IO.Pipelines/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-FHNOatmUq0sqJOkTx+UF/9YK1f180cnW5FVqnQMvYUN0elp6wFzbtPSiqbo1/ru8ICp43JM1i7kKkk6GsNGHlA==",
+      "path": "system.io.pipelines/8.0.0",
+      "hashPath": "system.io.pipelines.8.0.0.nupkg.sha512"
+    },
+    "System.Text.Json/8.0.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-0f1B50Ss7rqxXiaBJyzUu9bWFOO2/zSlifZ/UNMdiIpDYe4cY4LQQicP4nirK1OS31I43rn062UIJ1Q9bpmHpg==",
+      "path": "system.text.json/8.0.5",
+      "hashPath": "system.text.json.8.0.5.nupkg.sha512"
     },
     "Protocol/1.0.0": {
       "type": "project",

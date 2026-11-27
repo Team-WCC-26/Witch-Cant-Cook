@@ -73,6 +73,9 @@ public class PlayerHandler : PacketHandlerBase
 
         session.Player.PushGameplayJob(session, room =>
         {
+            // 후발 참가자 동기화를 위해 서버에도 저장한다 (DB 연동 전까지 세션 수명 유지)
+            session.Player.Costume = packet.Costume;
+
             room.BroadCast(PacketSerializer.Serialize(packet, true));
         });
     }

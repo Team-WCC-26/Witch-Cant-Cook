@@ -197,6 +197,9 @@ public class RoomHandler : PacketHandlerBase
         player.Send(PacketSerializer.Serialize(roomMoneyPacket, true));
 
         targetRoom.SendLeaveRoomTriggerState(player);
+
+        // 참가 시점 코스튬 동기화 (기존 플레이어 ↔ 새 참가자 양방향)
+        targetRoom.SyncCostumes(player);
     }
 
     private static void JoinFail(Session session, bool isRoomNull = true)
