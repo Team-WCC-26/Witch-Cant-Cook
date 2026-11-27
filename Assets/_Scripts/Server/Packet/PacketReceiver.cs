@@ -121,14 +121,17 @@ namespace Server
 
                 if (dataSize < length + 6) return;
 
-                byte[] packet = new byte[length];
-                Array.Copy(_buffer, _readPos + HEADER_SIZE, packet, 0, length);
-                var body = new ReadOnlyMemory<byte>(packet);
+                if (id % 2 == 1)
+                {
+                    byte[] packet = new byte[length];
+                    Array.Copy(_buffer, _readPos + HEADER_SIZE, packet, 0, length);
+                    var body = new ReadOnlyMemory<byte>(packet);
 
-                // 마지막 수신 시각을 dispatch 직전마다 갱신한다 - 수신 정지 워치독의 판단 근거
-                Volatile.Write(ref _lastReceiveTickMs, TimeUtil.NowMs());
+                    // 마지막 수신 시각을 dispatch 직전마다 갱신한다 - 수신 정지 워치독의 판단 근거
+                    Volatile.Write(ref _lastReceiveTickMs, TimeUtil.NowMs());
 
-                ServerManager.Instance.DispatchPacket((PacketId)id, body);
+                    ServerManager.Instance.DispatchPacket((PacketId)id, body);
+                }
 
                 _readPos += length + 6;
             }

@@ -645,6 +645,35 @@ public class Room
         player.Send(PacketSerializer.Serialize(_leaveRoomTrigger.CreateStatePacket(null), true));
     }
 
+    /// <summary>
+    /// 참가 시점 코스튬 동기화: 저장된 기존 플레이어들의 코스튬을 새 참가자에게 보내고,
+    /// 새 참가자의 저장된 코스튬(이전 룸/재접속 전 값)을 기존 플레이어들에게 알린다
+    /// <para/> 사용시 PushJob안에 넣어줘야 함
+    /// </summary>
+    public void SyncCostumes(Player player)
+    {
+        foreach (var roomPlayer in _players)
+        {
+            if (ReferenceEquals(roomPlayer, player)) continue;
+
+            CostumeChangePacket joinerPacket = new()
+            {
+                PlayerId = player.PlayerId,
+                Costume = player.Costume
+            };
+
+            roomPlayer.Send(PacketSerializer.Serialize(joinerPacket, true));
+
+            CostumeChangePacket existingPacket = new()
+            {
+                PlayerId = roomPlayer.PlayerId,
+                Costume = roomPlayer.Costume
+            };
+
+            player.Send(PacketSerializer.Serialize(existingPacket, true));
+        }
+    }
+
     public bool InsertEntity(long targetId, long subjectId)
     {
         if (!_entities.TryGetValue(targetId, out var target) || target.IsDestroyed) return false;

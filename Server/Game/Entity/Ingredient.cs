@@ -77,10 +77,10 @@ public class Ingredient() : Entity, ICookable, IInteractable
             return true;
         }
 
-        if (player.HoldingEntity is Dish dish)
-        {
-            return dish.Insert(this);
-        }
+        //if (player.HoldingEntity is Dish dish)
+        //{
+        //    return dish.Insert(this);
+        //}
 
         //if (player.HoldingEntity is not ICombinable combinable) return false;
 

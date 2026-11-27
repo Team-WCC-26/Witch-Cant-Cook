@@ -78,6 +78,9 @@ public class Player : Entity
         }
     }
 
+    // 코스튬 상태 (변경 시 즉시 브로드캐스트되고, 참가자 간 동기화에 사용된다 — 틱 동기화 대상은 아니다)
+    public CostumeData Costume { get; set; }
+
     // 연결 상태 (재접속/유예 판정과 전송 분기에 사용, 크로스 스레드에서 읽힌다)
     public volatile PlayerConnectionState ConnectionState = PlayerConnectionState.Live;
 
@@ -192,7 +195,7 @@ public class Player : Entity
         Hp -= damage;
 
         // HP가 0이 되면 부활시킨다 (스폰 지점으로 복귀)
-        if (Hp == 0) Respawn();
+        if (Hp <= 0) Respawn();
     }
 
     // 즉사 처리: HP를 0으로 만들고 부활시킨다 (오븐 조리 완료 등)
