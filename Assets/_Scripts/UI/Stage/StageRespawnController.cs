@@ -27,19 +27,37 @@ public sealed class StageRespawnController : MonoBehaviour
             return;
         }
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-        if (keyboard.escapeKey.wasPressedThisFrame)
+        if (wantsPopup && popup != null) popup.SetRespawnAvailable(CanRespawn());
+        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
         {
             if (wantsPopup) Close();
             else
             {
                 wantsPopup = true;
-                if (popup != null) popup.SetActive(true);
+                if (popup != null)
+                {
+                    popup.SetRespawnAvailable(CanRespawn());
+                    popup.SetActive(true);
+                }
                 else if (!loading) LoadPopup();
             }
             return;
         }
-        if (!wantsPopup || popup == null || !keyboard.spaceKey.wasPressedThisFrame) return;
+        if (wantsPopup && popup != null && keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
+            TryRespawn();
+    }
+
+    private static bool CanRespawn()
+    {
+        PlayerSpawnManager players = PlayerSpawnManager.Instance;
+        return players != null && !string.IsNullOrEmpty(players.MyID) &&
+            players.TryGetPlayer(players.MyID, out PlayerBrain player) && player != null &&
+            player.Health != null && !player.Health.IsRagdoll;
+    }
+
+    private void TryRespawn()
+    {
+        if (!wantsPopup || !CanOpen() || !CanRespawn()) return;
         PlayerSpawnManager players = PlayerSpawnManager.Instance;
         if (players != null && players.RespawnPlayer(players.MyID)) Close();
     }
@@ -75,6 +93,8 @@ public sealed class StageRespawnController : MonoBehaviour
                 return;
             }
             popup = loadedPopup;
+            popup.RespawnRequested += TryRespawn;
+            popup.SetRespawnAvailable(CanRespawn());
             popup.SetActive(wantsPopup && isActiveAndEnabled && CanOpen());
         }
         catch (Exception error)
