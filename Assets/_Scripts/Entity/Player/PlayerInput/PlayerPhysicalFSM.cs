@@ -4,6 +4,8 @@ public class PlayerPhysicalFSM
 {
     private readonly PlayerBrain brain;
 
+    private const float RespawnStunMultiplier = 2f;
+    private float recoveryElapsed;
     private bool isRecoveryPaused;
 
     public PlayerPhysicalMode CurrentMode { get; private set; }
@@ -26,6 +28,16 @@ public class PlayerPhysicalFSM
                 {
                     SetMode(PlayerPhysicalMode.Default);
                 }
+                else if (!isRecoveryPaused && RoomHudSession.Instance.State.IsStageRunning &&
+                    StageReturnFlow.Instance.State.Phase == StageReturnPhase.Playing && !StageReturnFlow.IsInputBlocked)
+                {
+                    recoveryElapsed += Time.fixedDeltaTime;
+                    if (recoveryElapsed >= brain.RagdollStunDuration * RespawnStunMultiplier)
+                    {
+                        recoveryElapsed = 0f;
+                        PlayerSpawnManager.Instance?.RespawnPlayer(brain.PlayerId);
+                    }
+                }
                 break;
         }
     }
@@ -37,6 +49,7 @@ public class PlayerPhysicalFSM
             return;
         }
 
+        recoveryElapsed = 0f;
         brain.Health.SetRagdollActive(true);
         SetMode(PlayerPhysicalMode.Ragdoll);
     }
@@ -51,6 +64,7 @@ public class PlayerPhysicalFSM
     public void SetRecoveryPaused(bool paused)
     {
         if (isRecoveryPaused == paused) return;
+        recoveryElapsed = 0f;
         isRecoveryPaused = paused;
     }
 
