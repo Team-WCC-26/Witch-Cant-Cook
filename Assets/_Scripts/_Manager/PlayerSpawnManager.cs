@@ -177,6 +177,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
         RoomHudSession.Instance.OnPlayerLeft(packet.PlayerID);
 
         if (!players.TryGetValue(packet.PlayerID, out PlayerBrain player)) return;
+        player.Interact.ApplyHeldDrop(player.Interact.HeldObj);
         Destroy(player.gameObject);
     }
 
@@ -206,7 +207,7 @@ public sealed class PlayerSpawnManager : Singleton<PlayerSpawnManager>
             remote.ResetForStageReturn(new Pose(point.position, point.rotation));
         player.ActionController.Movement.UpdateEjectionMovement(false);
         player.ActionController.Movement.BeginForcedMovement(0f);
-        if (player.Interact.HeldObj is CatchableObj held && player.Interact.TryReleaseHeld(held)) held.OnDrop();
+        player.Interact.ApplyHeldDrop(player.Interact.HeldObj);
         Vector3 previousPos = player.transform.position;
         Quaternion rotationDelta = point.rotation * Quaternion.Inverse(player.transform.rotation);
         var bodyPoses = new List<(Rigidbody body, Vector3 pos, Quaternion rot)>();

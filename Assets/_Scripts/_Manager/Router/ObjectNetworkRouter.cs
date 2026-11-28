@@ -283,7 +283,12 @@ public class ObjectNetworkRouter : MonoBehaviour
         }
 
         long previousParentId = catchable.ParentEntityId;
-        if (previousParentId == parentEntityId) return;
+        if (previousParentId == parentEntityId)
+        {
+            if (parentEntityId == 0 && catchable.Holder != null)
+                catchable.Holder.Interact.ApplyHeldDrop(catchable);
+            return;
+        }
         if (parentEntityId != 0) PanInteraction.ForgetToss(catchable.NetworkId);
 
         detachedThrowParents.Remove(catchable.NetworkId);

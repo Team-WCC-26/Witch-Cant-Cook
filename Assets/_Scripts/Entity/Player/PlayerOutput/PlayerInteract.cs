@@ -422,9 +422,17 @@ public class PlayerInteract
     #endregion
 
     #region Actual Interaction
+    /// <summary>Releases a held object and restores its dropped state.</summary>
+    public void ApplyHeldDrop(CatchableObj target)
+    {
+        if (TryReleaseHeld(target)) target.OnDrop();
+    }
+
+    /// <summary>Attaches a picked object to the player.</summary>
     public void ApplyPicked(CatchableObj target)
     {
         if (target == null) return;
+        if (HeldObj != target) ApplyHeldDrop(HeldObj);
         CancelThrowPreparation();
 
         brain.Rocket?.StopFlight();
