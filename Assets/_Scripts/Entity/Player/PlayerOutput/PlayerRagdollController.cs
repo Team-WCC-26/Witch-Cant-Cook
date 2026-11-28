@@ -23,6 +23,7 @@ public class PlayerRagdollController
     private readonly List<BodyPart> recoveryParts = new();
     private readonly int recoveryGroundMask = ~LayerMask.GetMask("Ragdoll");
     private float recoveryStableTime;
+    private float recoveryUnstableTime;
 
     private bool isRagdoll;
     private bool isLaunched;
@@ -82,6 +83,7 @@ public class PlayerRagdollController
         isRagdoll = true;
         brain.Health?.SetRagdollActive(true);
         recoveryStableTime = 0f;
+        recoveryUnstableTime = 0f;
         ragdollRootLocalPos = brain.Animator.transform.localPosition;
         ragdollRootLocalRot = brain.Animator.transform.localRotation;
         pelvisBody = null;
@@ -128,6 +130,8 @@ public class PlayerRagdollController
     {
         if (isLaunchPending || isLaunched) return;
         Enter();
+        recoveryStableTime = 0f;
+        recoveryUnstableTime = 0f;
         pendingLaunchPos = pos;
         pendingLaunchImpulse = impulse;
         launchCollapseTime = 0f;
@@ -139,6 +143,7 @@ public class PlayerRagdollController
         Enter();
         if (pelvisBody == null) return;
         recoveryStableTime = 0f;
+        recoveryUnstableTime = 0f;
         isLaunchPending = false;
         // Preserve root-mass tuning without multiplying impulse by the bone count.
         Vector3 velocityChange = impulse / Mathf.Max(0.01f, brain.Rb.mass);
@@ -188,15 +193,24 @@ public class PlayerRagdollController
         hasRemoteTarget = true;
     }
 
-    // Restart recovery whenever the main body loses support or moves too fast.
+    // Tolerate brief interruptions without counting them toward recovery.
     public bool TickRecovery(bool paused, float deltaTime)
     {
-        if (!isRagdoll || isLaunchPending || paused || !IsStableForRecovery())
+        if (!isRagdoll || isLaunchPending || paused)
         {
             recoveryStableTime = 0f;
+            recoveryUnstableTime = 0f;
             return false;
         }
 
+        if (!IsStableForRecovery())
+        {
+            recoveryUnstableTime += deltaTime;
+            if (recoveryUnstableTime > RecoverySettleDuration) recoveryStableTime = 0f;
+            return false;
+        }
+
+        recoveryUnstableTime = 0f;
         recoveryStableTime += deltaTime;
         return recoveryStableTime >= RecoverySettleDuration + brain.RagdollStunDuration;
     }
@@ -241,6 +255,7 @@ public class PlayerRagdollController
         isRagdoll = false;
         brain.Health?.SetRagdollActive(false);
         recoveryStableTime = 0f;
+        recoveryUnstableTime = 0f;
         isLaunched = false;
         isLaunchPending = false;
         pelvisBody = null;
